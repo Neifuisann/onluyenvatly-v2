@@ -115,14 +115,14 @@ v1 inventory and baseline (2026-09-28, read-only; full output in `tmp/v1-invento
 S0-06 account checklist (put secrets only in Vercel/GitHub, never in the repo):
 - [x] GitHub repo under the **personal** account; push `main` (`Neifuisann/onluyenvatly-v2`, public)
 - [ ] Branch protection on `main`. Done: required checks `Lint, types, unit, build` + `E2E smoke`, no force-push, no deletion. To do: turn on "Require a pull request before merging" (0 approvals)
-- [ ] GitHub secret `DATABASE_URL_DIRECT` (staging DB) so `migrate.yml` stops failing
+- [ ] GitHub secrets: `NEON_DATABASE_URL` (+ `_POOLED`) done; `DATABASE_URL_DIRECT` exists but must be the Supabase **session pooler** URL (`:5432` on `pooler.supabase.com`), see 12 §2
 - [ ] Vercel project `onluyenvatly-v2`. Done: created. To do: connect the GitHub repo (Settings → Git), check Fluid compute is on and Node is 22.x. Region `sin1` comes from `vercel.json`
-- [ ] Supabase v2 project in **Singapore (ap-southeast-1)**; note pooler (`:6543`) and direct URLs
-- [ ] Neon project `staging` (Singapore region); URL → Vercel **Preview** env `DATABASE_URL`
+- [x] Supabase v2 project in **Singapore (ap-southeast-1)**; pooler (`:6543`) URL in Vercel Production `DATABASE_URL`
+- [ ] Neon project `staging`: created, schema migrated. To do: pooled URL → Vercel **Preview** env `DATABASE_URL`
 - [ ] Google AI Studio: two Gemini keys (prod, staging)
 - [ ] Cloudflare R2 bucket `onluyenvatly-backups` + API token; `age` key pair (private key offline)
 - [ ] Sentry project (Next.js), UptimeRobot monitor on `https://onluyenvatly-v2.vercel.app/api/health`
-- [ ] Generate `SESSION_PEPPER` and `CRON_SECRET` per environment; fill Vercel env vars per `.env.example`
+- [ ] `SESSION_PEPPER`: Production done; Preview still needs its own value. `CRON_SECRET` from S9-05
 
 ---
 
@@ -149,7 +149,7 @@ S0-06 account checklist (put secrets only in Vercel/GitHub, never in the repo):
 |---|---|---|
 | S1-01 | ✅ Done | OKLCH tokens (07 §3.1) + class-based dark mode, no-flash theme script, `ThemeToggle`; `pnpm check:contrast` in CI (all pairs ≥ AA) |
 | S1-02 | ✅ Done | `AppShell` (sidebar ≥ 1024 px, bottom tabs / admin nav strip on phones, skip link, `aria-current`), `PublicHeader`, UI primitives, `/dev/ui` (404 in production) |
-| S1-03 | 🟡 Local only | Schema + migrations `0000_init`, `0001_settings_row`, RLS on every table, `migrate.yml`. Applied to PGlite locally; **Neon/Supabase apply waits for S0-06** (accounts + `DATABASE_URL_DIRECT` secret per environment) |
+| S1-03 | 🟡 Staging applied | Schema + migrations `0000`–`0002`, RLS on every table, `migrate.yml` (picks the Neon or Supabase secret by target). **Neon staging migrated 2026-09-28** (Actions run 36389687205). Supabase production waits for the session-pooler `DATABASE_URL_DIRECT` |
 | S1-04 | ✅ Done | `features/auth/core` ≈ 98 % lines/branches (CI gate: 95 %); session lifecycle integration-tested |
 | S1-05 | ✅ Done | Actions + `rateLimit()`; 06 §4 limits enforced in integration tests |
 | S1-06 | ✅ Done | Login/register/pending pages, `proxy.ts`, `?next=` validation; E2E `auth.spec.ts` (journey 1 minus approval) |
