@@ -17,7 +17,7 @@
 **Coverage targets:** `features/grading`, `features/rating`, `features/lessons/parser` ≥ **95 %** lines; overall domain modules ≥ 80 %. UI is not coverage-gated.
 
 ## 2. Golden tests for business rules (ported from v1 behaviour)
-`src/features/grading/grade.test.ts` must include:
+`src/features/grading/domain/grade.test.ts` (with `points.test.ts`, `short-answer.test.ts`, and `src/features/attempts/domain/build-items.test.ts` for pool selection and the seeded shuffle; both folders are gated at ≥ 95 % lines and branches) must include:
 - TF 4 statements: 4/3/2/1/0 correct → 1 / 0.5 / 0.25 / 0.1 / 0 × points; unanswered statement counts as wrong.
 - TF with 3 statements → proportional.
 - MCQ with shuffled options: displayed letter mapped back through `o[]`.

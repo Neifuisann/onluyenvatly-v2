@@ -266,10 +266,13 @@ Implemented in `src/features/lessons/domain/` (`parser.ts`, `serializer.ts`, wit
 - v1 → v2 normalization (10 §4) lives in `legacy.ts`. It is tested against synthetic v1-shaped lessons in `tests/fixtures/v1-sample/` and, once exported (S0-05), the real fixtures in `tests/fixtures/v1/`.
 
 ## 4. Grading rules (pure function `grade()`)
-- **mcq:** full points if `answer === selectedOriginalIndex`, else 0. The client submits the *displayed* letter; the server maps it back through the stored option order.
+Implemented in `src/features/grading/domain/` (`grade.ts`, `points.ts`, `short-answer.ts`); items are built in `src/features/attempts/domain/build-items.ts`. All money-style: marks are rounded half up to cents and sums are done in integer cents.
+- **mcq:** full points if `answer === selectedOriginalIndex`, else 0. The client submits the *displayed* letter; the server maps it back through the stored option order. A letter outside the options or any other value scores 0.
 - **tf (thpt2025, 4 statements):** k correct statements (unanswered counts as wrong) → k=4: 1.0, 3: 0.5, 2: 0.25, 1: 0.1, 0: 0 × points. With ≠ 4 statements or `proportional`: k/n.
-- **short:** normalize both sides (trim, `,`→`.`, remove spaces and a trailing `.`), parse as a number. Correct if `|a − b| ≤ tolerance` (default 0, compared after rounding to the canonical answer's decimals). If parsing fails, compare the normalized strings.
-- **Points plan:** `per-question` uses `q.points ?? 1`. `per-type-total` splits each type's total across the selected questions of that type with the v1 remainder-cent algorithm, so the sum is exact.
+- **short:** normalize both sides (trim, `,`→`.`, remove spaces and a trailing `.`), parse as a number. Correct if `|a − b| ≤ tolerance` (default 0). Numbers are compared exactly up to floating-point noise: `"1,5" = "1.5" = " 1.50 "`, but an unrounded `0.628` is not `0.63`, as on the THPT answer sheet. If either side isn't a number, compare the normalized strings, ignoring case. Empty → 0.
+- **Points plan:** `per-question` uses `q.points ?? 1`. `per-type-total` splits each type's total across the selected questions of that type, in display order, with the v1 remainder-cent algorithm (1.00 over 3 → 0.34, 0.33, 0.33), so the sum is exact. A type without a total falls back to per-question points. The plan is fixed into `items[].p` at start.
+- **Selection and order (seeded per attempt):** the pool picks `poolTypeCounts` questions of each type at random and keeps the teacher's order. `shuffleQuestions` shuffles within each type and groups mcq → tf → short (v1 behaviour, the THPT layout). `shuffleOptions` stores a random option order for each mcq item.
+- Each item's outcome is `correct` (full marks), `partial` (tf only), `wrong` or `blank`.
 - `score10 = round2(score / max_score × 10)`.
 
 ## 5. Row-level security
