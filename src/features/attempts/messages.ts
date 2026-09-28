@@ -53,6 +53,21 @@ export const runnerCopy = {
     "Phím tắt: 1–4 chọn đáp án, ←/→ chuyển câu, F đánh dấu, Enter câu sau.",
 } as const;
 
+/** `SaveIndicator` and the offline banner (07 §4, §5.2). */
+export const saveCopy = {
+  saved: "Đã lưu",
+  local: "Đã lưu trên máy",
+  saving: "Đang lưu…",
+  offline: "Mất kết nối – đã lưu trên máy",
+  closed: "Bài làm đã đóng",
+  signedOut: "Phiên đăng nhập đã hết hạn",
+  offlineBanner:
+    "Mất kết nối – bài làm vẫn được lưu trên máy. Hệ thống sẽ tự gửi lại khi có mạng.",
+  signedOutBanner:
+    "Phiên đăng nhập đã hết hạn. Bài làm vẫn được lưu trên máy; hãy đăng nhập lại để gửi.",
+  signIn: "Đăng nhập lại",
+} as const;
+
 /** `SubmitDialog` (07 §4). */
 export const submitCopy = {
   title: "Nộp bài?",

@@ -4,6 +4,7 @@ import { ANSWER_MARKER } from "./fixtures/lessons";
 import {
   loginOnce,
   openTest,
+  press,
   type StorageState,
   singleView,
   visible,
@@ -39,7 +40,9 @@ test("runner: every question type, flag, navigator, list view and keys", async (
       bodies.push(await res.text().catch(() => ""));
   });
   await openTest(page, "e2e-runner");
-  await expect(page.getByText("Đã làm 0/4 câu", { exact: true })).toBeVisible();
+  await expect(
+    page.getByRole("progressbar", { name: "Đã làm 0/4 câu" }),
+  ).toBeVisible();
 
   // 1: mcq by tap; tapping again clears it.
   const optionB = page.getByRole("button", { name: /^B\. 5 cm/ });
@@ -48,7 +51,9 @@ test("runner: every question type, flag, navigator, list view and keys", async (
   await optionB.click();
   await expect(optionB).toHaveAttribute("aria-pressed", "false");
   await optionB.click();
-  await expect(page.getByText("Đã làm 1/4 câu", { exact: true })).toBeVisible();
+  await expect(
+    page.getByRole("progressbar", { name: "Đã làm 1/4 câu" }),
+  ).toBeVisible();
 
   // 2: keyboard (→ next, 2 = B).
   await page.keyboard.press("ArrowRight");
@@ -86,7 +91,9 @@ test("runner: every question type, flag, navigator, list view and keys", async (
   const input = page.getByLabel("Câu trả lời của bạn");
   await input.fill("0,63");
   await expect(page.getByText("Hệ thống ghi nhận: 0.63")).toBeVisible();
-  await expect(page.getByText("Đã làm 4/4 câu", { exact: true })).toBeVisible();
+  await expect(
+    page.getByRole("progressbar", { name: "Đã làm 4/4 câu" }),
+  ).toBeVisible();
 
   // Navigator: a bottom sheet on phones, a side panel on desktop.
   if (isMobile)
@@ -114,6 +121,47 @@ test("runner: every question type, flag, navigator, list view and keys", async (
     expect(body).not.toContain(ANSWER_MARKER);
     expect(body).not.toMatch(/"(?:answer|explanation|tolerance)"\s*:/);
   }
+});
+
+test("journey 2: reload keeps answers; offline answers sync when back online", async ({
+  page,
+  context,
+  request,
+}) => {
+  const url = await openTest(page, "e2e-runner");
+  const saveState = page.getByRole("status").filter({ hasText: /lưu|kết nối/ });
+
+  // Offline: kept on the device, banner shown; online again: synced.
+  await context.setOffline(true);
+  await press(page, /^C\. 10 cm/);
+  await expect(saveState).toHaveText("Mất kết nối – đã lưu trên máy");
+  await expect(page.getByText(/bài làm vẫn được lưu trên máy/)).toBeVisible();
+  await context.setOffline(false);
+  await expect(saveState).toHaveText("Đã lưu");
+
+  // The server has it: without the local copy, a reload still shows C.
+  await page.evaluate(() => localStorage.clear());
+  await page.reload();
+  await expect(
+    page.getByRole("button", { name: /^C\. 10 cm/ }),
+  ).toHaveAttribute("aria-pressed", "true");
+
+  // Unsynced changes survive a reload through localStorage.
+  await press(page, /^A\. 2 cm/);
+  await expect(saveState).toHaveText("Đã lưu trên máy");
+  await page.reload();
+  await expect(page.getByRole("button", { name: /^A\. 2 cm/ })).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
+
+  // The save endpoint refuses other origins.
+  const id = url.split("/").pop();
+  const forged = await request.post(`/api/attempts/${id}/save`, {
+    headers: { origin: "https://evil.example" },
+    data: { answers: [null, null, null, null], flagged: [] },
+  });
+  expect(forged.status()).toBe(403);
 });
 
 test("runner fits the phone, passes axe in light and dark", async ({

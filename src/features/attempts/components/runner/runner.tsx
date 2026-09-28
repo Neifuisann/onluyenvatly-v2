@@ -11,7 +11,9 @@ import {
   Square,
 } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
+import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { OPTION_LETTERS } from "@/features/grading/domain/grade";
@@ -22,12 +24,14 @@ import {
   restoreFlagged,
   summarize,
 } from "../../domain/runner-state";
-import { runnerCopy as t } from "../../messages";
+import { saveCopy, runnerCopy as t } from "../../messages";
 import { QuestionCard } from "./question-card";
 import { QuestionNavigator } from "./question-navigator";
+import { SaveIndicator } from "./save-indicator";
 import { RunnerProvider, useRunner, useRunnerApi } from "./store";
 import { SubmitDialog } from "./submit-dialog";
 import type { RunnerQuestion } from "./types";
+import { useAutosave } from "./use-autosave";
 
 export type RunnerProps = {
   attemptId: string;
@@ -57,8 +61,12 @@ export function Runner(props: RunnerProps) {
   );
 }
 
-function RunnerScreen({ lessonId, title, questions }: RunnerProps) {
+function RunnerScreen({ attemptId, lessonId, title, questions }: RunnerProps) {
   const api = useRunnerApi();
+  const router = useRouter();
+  // Closed elsewhere (another tab submitted, the deadline passed): the page
+  // itself redirects to the result once refreshed.
+  const save = useAutosave(attemptId, () => router.refresh());
   const current = useRunner((s) => s.current);
   const answers = useRunner((s) => s.answers);
   const flagged = useRunner((s) => s.flagged.includes(s.current));
@@ -204,10 +212,32 @@ function RunnerScreen({ lessonId, title, questions }: RunnerProps) {
               style={{ width: `${(answered / total) * 100}%` }}
             />
           </div>
-          <span className="shrink-0 text-muted-foreground text-xs">
-            {t.progress(answered, total)}
-          </span>
+          <SaveIndicator status={save.status} />
         </div>
+        {(save.status === "offline" || save.status === "signed-out") && (
+          <div className="border-t bg-surface">
+            <Alert
+              variant="danger"
+              className="mx-auto max-w-5xl rounded-none border-0"
+            >
+              {save.status === "offline" ? (
+                saveCopy.offlineBanner
+              ) : (
+                <>
+                  {saveCopy.signedOutBanner}{" "}
+                  <a
+                    href={`/login?next=${encodeURIComponent(`/attempts/${attemptId}`)}`}
+                    target="_blank"
+                    rel="noopener"
+                    className="font-medium underline"
+                  >
+                    {saveCopy.signIn}
+                  </a>
+                </>
+              )}
+            </Alert>
+          </div>
+        )}
       </header>
 
       <main

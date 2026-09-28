@@ -119,6 +119,37 @@ export function restoreAnswers(saved: unknown, count: number): RunnerAnswers {
   });
 }
 
+/** What the browser keeps in localStorage per attempt (07 §7). */
+export type LocalCopy = {
+  answers: unknown;
+  flagged: unknown;
+  /** Changed since the last save the server confirmed. */
+  dirty: boolean;
+};
+
+/**
+ * On load, unsynced local changes win over the server copy (they are newer:
+ * the browser saves on every change, the server every 30 s). A clean local
+ * copy is ignored, so a save from another device shows up.
+ */
+export function localToRestore(
+  local: LocalCopy | null,
+  count: number,
+): Pick<RunnerState, "answers" | "flagged"> | null {
+  if (!local?.dirty) return null;
+  if (!Array.isArray(local.answers) || local.answers.length !== count)
+    return null;
+  return {
+    answers: restoreAnswers(local.answers, count),
+    flagged: restoreFlagged(local.flagged, count),
+  };
+}
+
+/** Autosave retry backoff: 2, 4, 8, 16, then every 30 s. */
+export function retryDelayMs(failures: number): number {
+  return Math.min(30_000, 2_000 * 2 ** Math.max(0, failures - 1));
+}
+
 export function restoreFlagged(saved: unknown, count: number): number[] {
   if (!Array.isArray(saved)) return [];
   return [

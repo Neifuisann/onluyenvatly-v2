@@ -59,6 +59,17 @@ export async function singleView(page: Page) {
   await expect(page.getByRole("button", { name: "Xem tất cả" })).toBeVisible();
 }
 
+/** Presses a toggle (mcq option, Đ/S) unless it is already on. */
+export async function press(page: Page, name: string | RegExp) {
+  const button = page.getByRole("button", {
+    name,
+    exact: typeof name === "string",
+  });
+  if ((await button.getAttribute("aria-pressed")) !== "true")
+    await button.click();
+  await expect(button).toHaveAttribute("aria-pressed", "true");
+}
+
 /** Visible copy of a control that exists in both the bottom bar and the side panel. */
 export const visible = (page: Page, name: string | RegExp) =>
   page.getByRole("button", { name, exact: typeof name === "string" }).filter({

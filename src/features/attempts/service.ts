@@ -1,15 +1,17 @@
 import "server-only";
 import { randomInt } from "node:crypto";
-import { and, count, eq, ne } from "drizzle-orm";
+import { and, count, eq, gte, isNull, ne, or, sql } from "drizzle-orm";
 import { db } from "@/db/client";
 import { attempts, lessons } from "@/db/schema";
 import { toCents } from "@/features/grading/domain/points";
 import { getLessonWithAnswers } from "@/features/lessons/queries";
 import { LessonConfigSchema } from "@/features/lessons/schema";
+import type { ErrorCode } from "@/lib/messages";
 import { rateLimit } from "@/lib/rate-limit";
 import { err, ok, type Result } from "@/lib/result";
 import { buildItems } from "./domain/build-items";
 import { createRng } from "./domain/random";
+import type { SaveProgressInput } from "./schemas";
 
 /** 06 §4. Tune here only; the integration tests read these values. */
 export const ATTEMPT_LIMITS = {
@@ -109,6 +111,69 @@ export async function startAttempt(
 
   const winner = await findOpenAttempt(user.id, lessonId);
   return winner ? ok({ attemptId: winner, resumed: true }) : err("CONFLICT");
+}
+
+/** 02 §4.1: the server accepts saves and submits until deadline + 30 s. */
+export const DEADLINE_GRACE_MS = 30_000;
+
+/**
+ * Autosave (05 §3): one guarded UPDATE on the hot path. Only when that
+ * matches nothing does a second read explain why.
+ */
+export async function saveProgress(
+  userId: string,
+  attemptId: string,
+  input: SaveProgressInput,
+  now = new Date(),
+): Promise<Result<{ savedAt: string }>> {
+  const graceCutoff = new Date(now.getTime() - DEADLINE_GRACE_MS);
+  const [saved] = await db
+    .update(attempts)
+    .set({
+      answers: input.answers,
+      flagged: cleanFlags(input.flagged, input.answers.length),
+      lastSavedAt: now,
+    })
+    .where(
+      and(
+        eq(attempts.id, attemptId),
+        eq(attempts.userId, userId),
+        eq(attempts.status, "in_progress"),
+        or(isNull(attempts.deadlineAt), gte(attempts.deadlineAt, graceCutoff)),
+        sql`jsonb_array_length(${attempts.items}) = ${input.answers.length}`,
+      ),
+    )
+    .returning({ id: attempts.id });
+  if (saved) return ok({ savedAt: now.toISOString() });
+  return err(await whyNotWritable(userId, attemptId, input, graceCutoff));
+}
+
+/** Unique item indexes inside the test, ascending. */
+const cleanFlags = (flags: number[], count: number) =>
+  [...new Set(flags.filter((i) => i < count))].sort((a, b) => a - b);
+
+async function whyNotWritable(
+  userId: string,
+  attemptId: string,
+  input: { answers: unknown[] },
+  graceCutoff: Date,
+): Promise<ErrorCode> {
+  const [row] = await db
+    .select({
+      userId: attempts.userId,
+      status: attempts.status,
+      deadlineAt: attempts.deadlineAt,
+      count: sql<number>`jsonb_array_length(${attempts.items})`,
+    })
+    .from(attempts)
+    .where(eq(attempts.id, attemptId))
+    .limit(1);
+  // Someone else's attempt looks the same as a missing one.
+  if (!row || row.userId !== userId) return "NOT_FOUND";
+  if (row.status !== "in_progress") return "ATTEMPT_CLOSED";
+  if (row.deadlineAt && row.deadlineAt < graceCutoff) return "DEADLINE_PASSED";
+  if (Number(row.count) !== input.answers.length) return "VALIDATION";
+  return "CONFLICT";
 }
 
 async function findOpenAttempt(userId: string, lessonId: number) {

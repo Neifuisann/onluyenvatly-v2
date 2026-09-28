@@ -8,7 +8,12 @@ import {
   type Question,
 } from "@/features/lessons/schema";
 import { resetDb, type TestDb } from "@/test/db";
-import { ATTEMPT_LIMITS, startAttempt } from "./service";
+import {
+  ATTEMPT_LIMITS,
+  DEADLINE_GRACE_MS,
+  saveProgress,
+  startAttempt,
+} from "./service";
 
 vi.mock("@/db/client", async () => (await import("@/test/db")).mockDbModule());
 // `"use cache"` is a no-op outside Next; stub the tag helpers.
@@ -244,6 +249,86 @@ describe("startAttempt", () => {
       expect((await startAttempt(student, lessonId, ctx)).ok).toBe(true);
     expect(await startAttempt(student, lessonId, ctx)).toMatchObject({
       code: "RATE_LIMITED",
+    });
+  });
+});
+
+describe("saveProgress", () => {
+  const input = {
+    answers: ["B", [true, null, false, null], " 0,63"],
+    flagged: [2, 1, 2, 7],
+  };
+
+  async function started(config: Partial<LessonConfig> = {}) {
+    const lessonId = await addLesson(config);
+    const r = await startAttempt(student, lessonId, ctx);
+    if (!r.ok) throw new Error("start failed");
+    return r.data.attemptId;
+  }
+  const row = async (id: string) =>
+    (await tdb.select().from(attempts).where(eq(attempts.id, id)))[0];
+
+  it("stores answers, cleaned flags and the save time", async () => {
+    const id = await started();
+    const later = new Date(NOW.getTime() + 60_000);
+    expect(await saveProgress(student.id, id, input, later)).toEqual({
+      ok: true,
+      data: { savedAt: later.toISOString() },
+    });
+    expect(await row(id)).toMatchObject({
+      answers: input.answers,
+      flagged: [1, 2],
+      lastSavedAt: later,
+      status: "in_progress",
+    });
+  });
+
+  it("hides other students' and unknown attempts", async () => {
+    const id = await started();
+    const other = await addUser("student", "0900000009");
+    expect(await saveProgress(other, id, input, NOW)).toMatchObject({
+      code: "NOT_FOUND",
+    });
+    expect(
+      await saveProgress(
+        student.id,
+        "00000000-0000-4000-8000-000000000000",
+        input,
+        NOW,
+      ),
+    ).toMatchObject({ code: "NOT_FOUND" });
+    expect((await row(id))?.answers).toEqual([null, null, null]);
+  });
+
+  it("accepts saves until deadline + 30 s grace, then refuses", async () => {
+    const id = await started({ timeLimitSec: 60 });
+    const at = (ms: number) => new Date(NOW.getTime() + ms);
+    expect(
+      (
+        await saveProgress(
+          student.id,
+          id,
+          input,
+          at(60_000 + DEADLINE_GRACE_MS),
+        )
+      ).ok,
+    ).toBe(true);
+    expect(
+      await saveProgress(student.id, id, input, at(60_001 + DEADLINE_GRACE_MS)),
+    ).toMatchObject({ code: "DEADLINE_PASSED" });
+  });
+
+  it("refuses closed attempts and misaligned answers", async () => {
+    const id = await started();
+    expect(
+      await saveProgress(student.id, id, { ...input, answers: ["A"] }, NOW),
+    ).toMatchObject({ code: "VALIDATION" });
+    await tdb
+      .update(attempts)
+      .set({ status: "submitted" })
+      .where(eq(attempts.id, id));
+    expect(await saveProgress(student.id, id, input, NOW)).toMatchObject({
+      code: "ATTEMPT_CLOSED",
     });
   });
 });

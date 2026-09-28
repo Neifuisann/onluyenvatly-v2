@@ -3,9 +3,11 @@ import {
   chooseOption,
   goTo,
   isAnswered,
+  localToRestore,
   type RunnerState,
   restoreAnswers,
   restoreFlagged,
+  retryDelayMs,
   setStatement,
   setText,
   summarize,
@@ -98,6 +100,25 @@ describe("restore", () => {
     ]);
     expect(restoreAnswers("junk", 2)).toEqual([null, null]);
     expect(restoreAnswers(["A", "B", "C"], 2)).toEqual(["A", "B"]);
+  });
+
+  it("restores unsynced local changes only, and only if they fit", () => {
+    const local = { answers: ["A", null], flagged: [1], dirty: true };
+    expect(localToRestore(local, 2)).toEqual({
+      answers: ["A", null],
+      flagged: [1],
+    });
+    expect(localToRestore({ ...local, dirty: false }, 2)).toBeNull();
+    expect(localToRestore(local, 3)).toBeNull();
+    expect(localToRestore({ ...local, answers: "x" }, 2)).toBeNull();
+    expect(localToRestore(null, 2)).toBeNull();
+  });
+
+  it("backs off retries up to 30 s", () => {
+    expect([1, 2, 3, 4, 5, 9].map(retryDelayMs)).toEqual([
+      2000, 4000, 8000, 16000, 30000, 30000,
+    ]);
+    expect(retryDelayMs(0)).toBe(2000);
   });
 
   it("keeps valid, unique flag indexes only", () => {

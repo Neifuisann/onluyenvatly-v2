@@ -17,8 +17,12 @@ export function QuestionNavigator({
   const answers = useRunner((s) => s.answers);
   const flagged = useRunner((s) => s.flagged);
   const current = useRunner((s) => s.current);
+  const answered = answers.filter(isAnswered).length;
   return (
     <div className="space-y-3">
+      <p className="text-muted-foreground text-sm">
+        {t.progress(answered, answers.length)}
+      </p>
       <ol className="grid grid-cols-6 gap-2 sm:grid-cols-8 lg:grid-cols-5">
         {answers.map((a, i) => {
           const done = isAnswered(a);
