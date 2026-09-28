@@ -111,3 +111,14 @@ export const shellCopy = {
   toStudentView: "Xem trang học sinh",
   toAdmin: "Trang quản trị",
 } as const;
+
+/** Walking-skeleton pages (replaced in S4-06 and S6-06). */
+export const placeholderCopy = {
+  dashboardEmptyTitle: "Chưa có bài tập nào",
+  dashboardEmptyBody: "Giáo viên sẽ sớm đăng bài tập. Bạn quay lại sau nhé.",
+  adminEmptyTitle: "Chưa có dữ liệu",
+  adminEmptyBody: "Số liệu về học sinh và bài làm sẽ hiển thị ở đây.",
+  homeTitle: "Ôn Luyện Vật Lý",
+  homeBody:
+    "Luyện đề Vật lý THPT theo cấu trúc đề thi mới. Phiên bản mới đang được xây dựng.",
+} as const;
