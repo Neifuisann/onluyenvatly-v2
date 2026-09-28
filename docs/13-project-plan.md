@@ -149,12 +149,12 @@ S0-06 account checklist (put secrets only in Vercel/GitHub, never in the repo):
 |---|---|---|
 | S1-01 | ✅ Done | OKLCH tokens (07 §3.1) + class-based dark mode, no-flash theme script, `ThemeToggle`; `pnpm check:contrast` in CI (all pairs ≥ AA) |
 | S1-02 | ✅ Done | `AppShell` (sidebar ≥ 1024 px, bottom tabs / admin nav strip on phones, skip link, `aria-current`), `PublicHeader`, UI primitives, `/dev/ui` (404 in production) |
-| S1-03 | ✅ Done | Schema + migrations `0000`–`0002`, RLS on every table, `migrate.yml` (picks the Neon or Supabase secret by target). Applied to Neon staging and Supabase production on 2026-09-28. Preview `/api/health` reports `db: ok`; production reports `db: down` (Vercel Production `DATABASE_URL` value under investigation) |
+| S1-03 | ✅ Done | Schema + migrations `0000`–`0002`, RLS on every table, `migrate.yml` (picks the Neon or Supabase secret by target). Applied to Neon staging and Supabase production on 2026-09-28. Preview and production `/api/health` both report `db: ok` (production uses the Supabase transaction pooler; the direct `db.<ref>` host is IPv6-only and unreachable from Vercel) |
 | S1-04 | ✅ Done | `features/auth/core` ≈ 98 % lines/branches (CI gate: 95 %); session lifecycle integration-tested |
 | S1-05 | ✅ Done | Actions + `rateLimit()`; 06 §4 limits enforced in integration tests |
 | S1-06 | ✅ Done | Login/register/pending pages, `proxy.ts`, `?next=` validation; E2E `auth.spec.ts` (journey 1 minus approval) |
 | S1-07 | ✅ Done | `pnpm seed` (dev: settings + admin, password printed once) and `--profile e2e` (local DBs only) |
-| S1-08 | 🟡 Grade pending | Headers + CSP in `next.config.ts` (no nonce, see 06 §4). Verified on production 2026-09-28: CSP, HSTS (preload), X-Frame-Options DENY, nosniff, Referrer-Policy, Permissions-Policy, COOP. The securityheaders.com grade is still to be recorded |
+| S1-08 | ✅ Done | Headers + CSP in `next.config.ts` (no nonce, see 06 §4). securityheaders.com on production (2026-09-28): **grade A** (capped at A by the documented `'unsafe-inline'` in the CSP). CSP, HSTS (preload), X-Frame-Options DENY, nosniff, Referrer-Policy, Permissions-Policy, COOP all present |
 
 ---
 
@@ -373,6 +373,6 @@ Pilot data note: the final migration upserts only rows with `legacy_id`. Attempt
 | Sprint | Dates | Planned d | Done d | Demo notes | Retro: keep / change |
 |---|---|---|---|---|---|
 | S0 | 2026-09-28 → | 4.0 | 3.25 (S0-01–05, S0-07, S0-10, most of S0-08) | v1 inventory and anonymized real fixtures | Keep: run against real data early, since it found 4 migration/rendering bugs the synthetic fixtures missed. Open: S0-06 (Preview env vars, AI/R2/Sentry/UptimeRobot), S0-09 |
-| S1 | 2026-09-28 → | 4.5 | 4.0 (all tasks coded; S1-03 remote apply and S1-08 grade wait for S0-06) | | |
+| S1 | 2026-09-28 → | 4.5 | 4.5 (all tasks done; S1-03 applied to Neon + Supabase, S1-08 grade A) | Production /api/health green | Keep: log error codes, never messages, so outages are diagnosable without leaking connection strings |
 | S2 | 2026-09-28 → | 4.5 | All seven tasks implemented; S2-05 rehearsed on Neon with real v1 data; LCP check and image copy remain | Synthetic catalog and legacy-link demo; mobile/desktop light/dark browser checks | Keep domain/property tests and explicit answer-safe projections; run coverage separately from the production build to avoid local PGlite startup contention |
 | … | | | | | |
