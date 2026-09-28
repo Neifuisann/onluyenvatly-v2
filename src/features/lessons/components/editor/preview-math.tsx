@@ -16,6 +16,7 @@ import {
 import { type MathSegment, mathSegments } from "@/lib/markdown-lite";
 import { cn } from "@/lib/utils";
 import { renderTexBatch } from "../../admin-actions";
+import type { Question } from "../../schema";
 
 const key = (tex: string, display: boolean) => `${display ? "D" : "I"}${tex}`;
 
@@ -114,4 +115,14 @@ export function PreviewMathText({
       })}
     </div>
   );
+}
+
+/** Every piece of text a question shows, for the KaTeX batch. */
+export function questionTexts(questions: readonly Question[]): string[] {
+  return questions.flatMap((q) => [
+    q.stem,
+    q.explanation ?? "",
+    ...(q.type === "mcq" ? q.options.map((o) => o.text) : []),
+    ...(q.type === "tf" ? q.statements.map((s) => s.text) : []),
+  ]);
 }

@@ -172,7 +172,7 @@ export const adminLessonsCopy = {
 export const editorCopy = {
   back: "Danh sách bài",
   tabsLabel: "Phần soạn bài",
-  tabs: { content: "Nội dung", settings: "Cài đặt" },
+  tabs: { content: "Nội dung", settings: "Cài đặt", preview: "Làm thử" },
   editorLabel: "Nội dung bài (định dạng văn bản)",
   editorLoading: "Đang tải trình soạn thảo…",
   paneLabel: "Chế độ xem",
@@ -212,6 +212,11 @@ export const editorCopy = {
   perAttempt: (total: number, points: string | null) =>
     `Mỗi lượt làm: ${total} câu${points === null ? "" : ` · ${points}đ`}`,
   unsaved: "Chưa lưu",
+  tryLead:
+    "Làm thử như học sinh trên nội dung đang soạn (kể cả chưa lưu): bộ câu hỏi, thứ tự và điểm theo cài đặt. Có hiện đáp án; không lưu bài làm.",
+  tryAgain: "Tạo lượt mới",
+  tryHasErrors: (n: number) =>
+    `Nội dung còn ${n} lỗi; các câu lỗi có thể hiển thị hoặc chấm chưa đúng.`,
   draftSource: "Đang sửa bản nháp",
   publishedSource: "Đang sửa từ bản đã xuất bản",
   notFoundTitle: "Không tìm thấy bài tập",

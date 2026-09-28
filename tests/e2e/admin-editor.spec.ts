@@ -4,7 +4,12 @@ import { expect, type Page, test } from "@playwright/test";
 import { normalizeV1Questions } from "../../src/features/lessons/domain/legacy.ts";
 import { serializeLesson } from "../../src/features/lessons/domain/serializer.ts";
 import { loginAdminOnce } from "./admin-helpers";
-import type { StorageState } from "./runner-helpers";
+import {
+  press,
+  type StorageState,
+  singleView,
+  visible,
+} from "./runner-helpers";
 
 /**
  * S5-02 editor on the seeded draft: live parse → validation panel linking to
@@ -206,4 +211,70 @@ test("settings: a valid change saves and survives a reload; stats follow live", 
   await page.getByLabel(/^Theo thang THPT 2025/).check();
   await page.getByRole("button", { name: "Lưu cài đặt" }).click();
   await expect(saved).toBeVisible();
+});
+
+const TRY_TEXT = `Câu 1: Đơn vị của chu kì là
+*A. giây
+B. mét
+
+Câu 2: Tính $T$ (s) khi $f = 0,5$ Hz.
+Answer: 2
+Giải thích: $T = 1/f = 2$ s.`;
+
+test("Làm thử: the real runner in preview mode, keys shown, nothing saved", async ({
+  page,
+}) => {
+  const posts: string[] = [];
+  page.on("request", (r) => {
+    if (r.method() === "POST") posts.push(new URL(r.url()).pathname);
+  });
+  await openDraftEditor(page);
+  await paste(page, TRY_TEXT);
+  await page.getByRole("tab", { name: "Làm thử" }).click();
+  const panel = page.getByRole("tabpanel", { name: "Làm thử" });
+  await expect(panel).toContainText("Xem trước · không lưu bài làm");
+  await singleView(page);
+
+  // Question 1: the key is shown; a wrong choice says so, the right one too.
+  await expect(panel).toContainText("Đáp án: A");
+  await press(page, /^B\. mét/);
+  await expect(panel.getByText("Trả lời sai")).toBeVisible();
+  await press(page, /^A\. giây/);
+  await expect(panel.getByText("Trả lời đúng")).toBeVisible();
+
+  // Question 2: short answer with the explanation and server-rendered KaTeX.
+  await visible(page, "Sau").click();
+  await expect(panel).toContainText("Đáp án: 2");
+  await expect(panel).toContainText("Giải thích");
+  await expect(panel.locator(".katex").first()).toBeVisible();
+  await page.getByLabel("Câu trả lời của bạn").fill("2,0");
+  await expect(panel.getByText("Trả lời đúng")).toBeVisible();
+
+  for (const scheme of ["light", "dark"] as const) {
+    await page.emulateMedia({ colorScheme: scheme, reducedMotion: "reduce" });
+    const axe = await new AxeBuilder({ page }).analyze();
+    expect(
+      axe.violations.filter((v) =>
+        ["serious", "critical"].includes(v.impact ?? ""),
+      ),
+    ).toEqual([]);
+  }
+  expect(
+    await page.evaluate(() => document.documentElement.scrollWidth),
+  ).toBeLessThanOrEqual(page.viewportSize()?.width ?? 0);
+
+  await visible(page, "Nộp bài").click();
+  await page
+    .getByRole("dialog", { name: "Nộp bài?" })
+    .getByRole("button", { name: "Nộp bài", exact: true })
+    .click();
+  const result = page.getByRole("dialog", { name: "Kết quả xem trước" });
+  await expect(result).toContainText("2/2 điểm");
+  await expect(result).toContainText("2/2 câu đúng");
+  await result.getByRole("button", { name: "Làm lại" }).click();
+  await expect(panel.getByText("Chưa trả lời").first()).toBeVisible();
+
+  // No attempt: nothing went to the attempt endpoints; the page stayed.
+  expect(posts.filter((p) => p.startsWith("/api/attempts"))).toEqual([]);
+  await expect(page).toHaveURL(/\/admin\/lessons\/\d+\/edit$/);
 });

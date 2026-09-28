@@ -28,7 +28,12 @@ type Json = { ok?: boolean };
  * tab is hidden, when the network comes back, and by `sendBeacon` on page
  * hide. Failures retry with backoff. A 409/404 means the attempt closed.
  */
-export function useAutosave(attemptId: string, onClosed: () => void) {
+export function useAutosave(
+  attemptId: string,
+  onClosed: () => void,
+  /** Off in the editor's preview (S5-06): nothing is stored anywhere. */
+  enabled = true,
+) {
   const api = useRunnerApi();
   const [status, setStatus] = useState<SaveStatus>("saved");
   const q = useRef({
@@ -122,6 +127,7 @@ export function useAutosave(attemptId: string, onClosed: () => void) {
   }, [snapshot, q, url]);
 
   useEffect(() => {
+    if (!enabled) return;
     // Unsynced answers from before a reload or a lost connection win.
     const restored = localToRestore(
       readLocal(attemptId),
@@ -171,7 +177,7 @@ export function useAutosave(attemptId: string, onClosed: () => void) {
       // Leaving through an in-app link: no pagehide, so flush here.
       beacon();
     };
-  }, [api, attemptId, beacon, q, sync]);
+  }, [api, attemptId, beacon, enabled, q, sync]);
 
   return {
     status,

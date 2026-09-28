@@ -25,9 +25,8 @@ import { cn } from "@/lib/utils";
 import { editorStats } from "../../domain/editor-stats";
 import type { ParseResult } from "../../domain/parser";
 import { editorCopy as t } from "../../messages";
-import type { LessonConfig, Question } from "../../schema";
+import type { LessonConfig } from "../../schema";
 import type { CodeEditorHandle } from "./code-editor";
-import { TexProvider } from "./preview-math";
 import { PreviewQuestion } from "./preview-question";
 
 // CodeMirror stays out of every other admin page's bundle (08 §1).
@@ -45,16 +44,6 @@ function EditorSkeleton() {
       ))}
     </div>
   );
-}
-
-/** Every piece of text a question shows, for the KaTeX batch. */
-function textsOf(questions: readonly Question[]): string[] {
-  return questions.flatMap((q) => [
-    q.stem,
-    q.explanation ?? "",
-    ...(q.type === "mcq" ? q.options.map((o) => o.text) : []),
-    ...(q.type === "tf" ? q.statements.map((s) => s.text) : []),
-  ]);
 }
 
 /**
@@ -76,7 +65,6 @@ export function ContentTab({
   const editor = useRef<CodeEditorHandle | null>(null);
   const [pane, setPane] = useState<"edit" | "preview">("edit");
   const { questions, issues, lines } = parsed;
-  const texts = useMemo(() => textsOf(questions), [questions]);
   const points = useMemo(
     () => pointsPlan(questions, config.points),
     [questions, config.points],
@@ -278,20 +266,18 @@ export function ContentTab({
               description={t.emptyBody}
             />
           ) : (
-            <TexProvider texts={texts}>
-              <div className="flex flex-col gap-3">
-                {questions.map((q, i) => (
-                  <PreviewQuestion
-                    key={q.id}
-                    question={q}
-                    index={i}
-                    points={points[i] ?? 0}
-                    hasIssue={withIssue.has(i)}
-                    onGoTo={() => goTo(lines[i] ?? 1)}
-                  />
-                ))}
-              </div>
-            </TexProvider>
+            <div className="flex flex-col gap-3">
+              {questions.map((q, i) => (
+                <PreviewQuestion
+                  key={q.id}
+                  question={q}
+                  index={i}
+                  points={points[i] ?? 0}
+                  hasIssue={withIssue.has(i)}
+                  onGoTo={() => goTo(lines[i] ?? 1)}
+                />
+              ))}
+            </div>
           )}
         </section>
       </div>

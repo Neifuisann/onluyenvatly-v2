@@ -30,6 +30,8 @@ import {
 import type { LessonConfig, Question } from "../../schema";
 import { ContentTab } from "./content-tab";
 import { CoverPicker } from "./cover-picker";
+import { questionTexts, TexProvider } from "./preview-math";
+import { PreviewTab } from "./preview-tab";
 import { PublishBar } from "./publish-bar";
 import { SettingsTab } from "./settings-tab";
 
@@ -52,7 +54,7 @@ const statusClass = {
   archived: "bg-warning/25 text-foreground",
 } as const;
 
-const TABS = ["content", "settings"] as const;
+const TABS = ["content", "settings", "preview"] as const;
 type Tab = (typeof TABS)[number];
 
 /**
@@ -76,6 +78,10 @@ export function LessonEditor({ lesson }: { lesson: EditorLesson }) {
       generateId: () => `q_new${++n}`,
     });
   }, [deferred, lesson.previous]);
+  const texts = useMemo(
+    () => questionTexts(parsed.questions),
+    [parsed.questions],
+  );
   const available = useMemo(
     () => countByType(parsed.questions),
     [parsed.questions],
@@ -233,38 +239,56 @@ export function LessonEditor({ lesson }: { lesson: EditorLesson }) {
           </button>
         ))}
       </div>
-      {/* Both panels stay mounted so the editor keeps its undo history. */}
-      <div
-        role="tabpanel"
-        id="panel-content"
-        aria-labelledby="tab-content"
-        hidden={tab !== "content"}
-      >
-        <ContentTab
-          initialText={lesson.sourceText}
-          onTextChange={setText}
-          parsed={parsed}
-          config={statsConfig}
-        />
-      </div>
-      <div
-        role="tabpanel"
-        id="panel-settings"
-        aria-labelledby="tab-settings"
-        hidden={tab !== "settings"}
-      >
-        <SettingsTab
-          form={form}
-          onChange={onChange}
-          errorOf={errorOf}
-          onTouch={(field) => setTouched((s) => new Set([...s, field]))}
-          available={available}
-          onSave={save}
-          pending={pending}
-          message={message}
-        />
-        <CoverPicker lessonId={lesson.id} coverPath={lesson.coverPath} />
-      </div>
+      {/* Content and settings stay mounted so the editor keeps its undo history. */}
+      <TexProvider texts={texts}>
+        <div
+          role="tabpanel"
+          id="panel-content"
+          aria-labelledby="tab-content"
+          hidden={tab !== "content"}
+        >
+          <ContentTab
+            initialText={lesson.sourceText}
+            onTextChange={setText}
+            parsed={parsed}
+            config={statsConfig}
+          />
+        </div>
+        <div
+          role="tabpanel"
+          id="panel-settings"
+          aria-labelledby="tab-settings"
+          hidden={tab !== "settings"}
+        >
+          <SettingsTab
+            form={form}
+            onChange={onChange}
+            errorOf={errorOf}
+            onTouch={(field) => setTouched((s) => new Set([...s, field]))}
+            available={available}
+            onSave={save}
+            pending={pending}
+            message={message}
+          />
+          <CoverPicker lessonId={lesson.id} coverPath={lesson.coverPath} />
+        </div>
+        <div
+          role="tabpanel"
+          id="panel-preview"
+          aria-labelledby="tab-preview"
+          hidden={tab !== "preview"}
+        >
+          {/* Mounted only while open: each visit is a fresh try on the latest text. */}
+          {tab === "preview" && (
+            <PreviewTab
+              title={form.title || lesson.meta.title}
+              questions={parsed.questions}
+              config={settings.ok ? settings.config : lesson.config}
+              errors={errors}
+            />
+          )}
+        </div>
+      </TexProvider>
     </div>
   );
 }

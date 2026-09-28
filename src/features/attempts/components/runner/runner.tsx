@@ -24,7 +24,8 @@ import {
   restoreFlagged,
   summarize,
 } from "../../domain/runner-state";
-import { saveCopy, runnerCopy as t } from "../../messages";
+import { previewCopy, saveCopy, runnerCopy as t } from "../../messages";
+import { PreviewProvider, PreviewResult, type RunnerPreview } from "./preview";
 import { QuestionCard } from "./question-card";
 import { QuestionNavigator } from "./question-navigator";
 import { SaveIndicator } from "./save-indicator";
@@ -51,6 +52,11 @@ export type RunnerProps = {
   startedAt: string;
   /** The lesson's exam guard (S4-04). */
   examGuard: boolean;
+  /**
+   * The editor's preview (S5-06): keys shown, graded in the browser, no
+   * autosave, no submit, no exam guard, no attempt.
+   */
+  preview?: RunnerPreview;
 };
 
 type View = "single" | "list";
@@ -67,7 +73,13 @@ export function Runner(props: RunnerProps) {
         current: 0,
       })}
     >
-      <RunnerScreen {...props} />
+      {props.preview ? (
+        <PreviewProvider value={props.preview}>
+          <RunnerScreen {...props} />
+        </PreviewProvider>
+      ) : (
+        <RunnerScreen {...props} />
+      )}
     </RunnerProvider>
   );
 }
@@ -81,14 +93,15 @@ function RunnerScreen({
   serverNow,
   startedAt,
   examGuard,
+  preview,
 }: RunnerProps) {
   const api = useRunnerApi();
   const router = useRouter();
   // Before autosave, so a "hidden" event is recorded before the hide-time save.
-  useExamGuard(examGuard, startedAt, serverNow);
+  useExamGuard(examGuard && !preview, startedAt, serverNow);
   // Closed elsewhere (another tab submitted, the deadline passed): the page
   // itself redirects to the result once refreshed.
-  const save = useAutosave(attemptId, () => router.refresh());
+  const save = useAutosave(attemptId, () => router.refresh(), !preview);
   const { submit, submitting, error } = useSubmit(attemptId, save);
   const current = useRunner((s) => s.current);
   const answers = useRunner((s) => s.answers);
@@ -97,6 +110,8 @@ function RunnerScreen({
   const [view, setView] = useState<View>("single");
   const [navOpen, setNavOpen] = useState(false);
   const [submitOpen, setSubmitOpen] = useState(false);
+  const [resultOpen, setResultOpen] = useState(false);
+  const Main = preview ? "div" : "main";
   const total = questions.length;
   const last = current === total - 1;
   const { answered } = summarize({ answers, flagged: [], current });
@@ -178,17 +193,30 @@ function RunnerScreen({
   const question = questions[current];
 
   return (
-    <div className="flex min-h-dvh flex-col">
-      <header className="sticky top-0 z-20 border-b bg-background/95 backdrop-blur">
+    <div
+      className={cn(
+        "flex flex-col",
+        preview ? "rounded-lg border bg-background" : "min-h-dvh",
+      )}
+    >
+      <header
+        className={cn(
+          "border-b bg-background/95 backdrop-blur",
+          // In the editor the admin header stays on top.
+          !preview && "sticky top-0 z-20",
+        )}
+      >
         <div className="mx-auto flex h-14 max-w-5xl items-center gap-1 px-2">
-          <Link
-            href={lessonId ? `/lessons/${lessonId}` : "/dashboard"}
-            aria-label={t.exit}
-            title={t.exit}
-            className="flex size-11 items-center justify-center rounded-md hover:bg-muted"
-          >
-            <ArrowLeft aria-hidden className="size-5" />
-          </Link>
+          {!preview && (
+            <Link
+              href={lessonId ? `/lessons/${lessonId}` : "/dashboard"}
+              aria-label={t.exit}
+              title={t.exit}
+              className="flex size-11 items-center justify-center rounded-md hover:bg-muted"
+            >
+              <ArrowLeft aria-hidden className="size-5" />
+            </Link>
+          )}
           <Button
             type="button"
             variant="ghost"
@@ -247,7 +275,13 @@ function RunnerScreen({
               style={{ width: `${(answered / total) * 100}%` }}
             />
           </div>
-          <SaveIndicator status={save.status} />
+          {preview ? (
+            <span className="shrink-0 rounded-full border px-2 py-0.5 text-muted-foreground text-xs">
+              {previewCopy.badge}
+            </span>
+          ) : (
+            <SaveIndicator status={save.status} />
+          )}
         </div>
         {examGuard && (
           <p className="mx-auto max-w-5xl px-4 pb-2 text-muted-foreground text-xs">
@@ -280,11 +314,11 @@ function RunnerScreen({
         )}
       </header>
 
-      <main
-        id="main"
+      <Main
+        id={preview ? undefined : "main"}
         className="mx-auto w-full max-w-5xl flex-1 px-4 py-4 lg:grid lg:grid-cols-[minmax(0,1fr)_15rem] lg:items-start lg:gap-8"
       >
-        <h1 className="sr-only">{title}</h1>
+        {!preview && <h1 className="sr-only">{title}</h1>}
         <div className="space-y-4">
           {view === "single"
             ? question && (
@@ -337,7 +371,12 @@ function RunnerScreen({
             {t.keyboardHint}
           </p>
         </div>
-        <aside className="sticky top-32 hidden space-y-4 rounded-lg border bg-surface p-4 lg:block">
+        <aside
+          className={cn(
+            "sticky hidden space-y-4 rounded-lg border bg-surface p-4 lg:block",
+            preview ? "top-4" : "top-32",
+          )}
+        >
           <h2 className="font-semibold text-sm">{t.navigatorTitle}</h2>
           <QuestionNavigator onPick={pick} />
           <Button
@@ -349,7 +388,7 @@ function RunnerScreen({
             {t.submit}
           </Button>
         </aside>
-      </main>
+      </Main>
 
       <footer className="sticky bottom-0 z-20 border-t bg-surface pb-[env(safe-area-inset-bottom)] lg:hidden">
         <div className="mx-auto flex max-w-5xl items-center gap-2 px-3 py-2">
@@ -428,10 +467,17 @@ function RunnerScreen({
         open={submitOpen}
         onClose={() => setSubmitOpen(false)}
         onPick={pick}
-        onConfirm={() => void submit()}
+        onConfirm={() => {
+          if (!preview) return void submit();
+          setSubmitOpen(false);
+          setResultOpen(true);
+        }}
         submitting={submitting}
         error={error}
       />
+      {preview && (
+        <PreviewResult open={resultOpen} onClose={() => setResultOpen(false)} />
+      )}
     </div>
   );
 }
