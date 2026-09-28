@@ -210,6 +210,11 @@ export const lessons = pgTable(
     createdAt: timestamptz("created_at").notNull().defaultNow(),
     updatedAt: timestamptz("updated_at").notNull().defaultNow(),
     publishedAt: timestamptz("published_at"),
+    /**
+     * Soft delete (S5-01): a lesson with attempts is archived and hidden from
+     * the admin list instead of deleted, so old results keep their review.
+     */
+    deletedAt: timestamptz("deleted_at"),
   },
   (t) => [
     index("lessons_status_sort_idx").on(t.status, t.sortOrder),

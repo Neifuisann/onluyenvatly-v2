@@ -263,6 +263,12 @@ Decisions made while building (recorded in 04/05/07): items carry their points (
 
 **Demo:** the teacher writes a new 10-question test with formulas and an image, publishes it, and a student takes it.
 
+**Implementation status:** in progress on `claude/adoring-cannon-ihp6dt`, one commit per task.
+
+| ID | Status | Evidence / remaining acceptance |
+|---|---|---|
+| S5-01 | ✅ Implemented, E2E verified | `/admin/lessons`: accent-insensitive search, status chips, drag (pointer, so touch too) or ↑/↓ reorder saved at once, duplicate (a draft right below its source), archive/restore, delete (soft with `deleted_at` when attempts exist, migration `0006`). Every action writes `audit_log` in its transaction. Integration tests (PGlite) cover order persistence, stale lists, ties, soft/hard delete and audit rows; `admin-lessons.spec` covers the journey at desktop and 360 px, axe light/dark. No TanStack Table (07 §4 note) |
+
 ---
 
 ### Sprint 6: Admin II, people & insight

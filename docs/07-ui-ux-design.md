@@ -82,7 +82,7 @@ Built on shadcn/ui (copied into `src/components/ui`) plus app components:
 | `RatingChart`, `AccuracyByChapter` | Recharts, lazy-loaded |
 | `LeaderboardTable` | Rank, avatar/initials, name, class, tier, rating, 7-day delta; sticky "me" row |
 | `EmptyState`, `ErrorState`, `Skeleton*` | Every list has all three |
-| Admin: `DataTable` (TanStack Table), `LessonEditor` (CodeMirror 6 + live preview), `ImageDropzone`, `StatsBar` | |
+| Admin: `DataTable` (TanStack Table), `LessonEditor` (CodeMirror 6 + live preview), `ImageDropzone`, `StatsBar` | S5-01: the lesson list is a plain server-filtered table (`LessonTable`), no TanStack: ~170 rows need no client sorting or paging. Reorder by dragging the handle (pointer events, so touch works too) or ↑/↓ on the focused handle, announced in a live region; only on the unfiltered list |
 
 ## 5. Key screens (mobile wireframes)
 

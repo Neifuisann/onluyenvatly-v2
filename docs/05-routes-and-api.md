@@ -100,6 +100,8 @@ S2-07 implements the lesson redirect only. The authenticated lookup validates th
 ### `features/lessons/admin-actions.ts` (admin)
 `saveDraft`, `publish`, `unpublish`, `archive`, `duplicate`, `deleteLesson` (soft delete if it has attempts), `reorder({ ids[] })`, `createUploadUrl({ contentType, bytes })`, `generateDescription`, `suggestTags`, `pregenerateExplanations`.
 
+As built (S5-01): the list actions are `reorder({ ids })`, `duplicate(id)`, `archive(id)`, `restore(id)` and `deleteLesson(id)`. Each runs `requireAdmin()`, Zod, then one transaction in `admin-service.ts` that also writes its `audit_log` row (`lesson.reorder`, `lesson.duplicate`, `lesson.archive`, `lesson.restore`, `lesson.delete` with `{ soft }`), then `updateTag` for what students can see (`lessons` for order/status; `lesson:{id}` for status; `:public`/`:answers` too on a hard delete) and `refresh()` for the uncached admin list. `reorder` takes every lesson not deleted in the new order and refuses a stale list (`CONFLICT`), so orders written from two tabs never interleave; it rewrites `sort_order` as 0…n−1. `duplicate` copies metadata, config and the draft (else published) content into a new draft placed right below the source. `restore` brings an archived lesson back as a draft. `/admin/lessons` itself reads `getAdminLessons({ q, status })` (`admin-queries.ts`) per request, uncached, with the same accent-insensitive search as the catalog.
+
 ### `features/students/admin-actions.ts`
 `approve(ids[])`, `reject(ids[])`, `resetPassword(id)` → returns a temp password once, `resetDevice(id)`, `revokeSessions(id)`, `setStatus(id, status)`, `deleteStudent(id)` (cascades; audit), `createAdmin(...)`.
 

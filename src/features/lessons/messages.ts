@@ -99,3 +99,68 @@ export const catalogCopy = {
   errorBody: "Có thể do mất kết nối. Bạn thử tải lại nhé.",
   retry: "Thử lại",
 } as const;
+
+/** `/admin/lessons` (S5-01). */
+export const adminLessonsCopy = {
+  title: "Bài tập",
+  lead: "Sắp xếp, nhân bản, lưu trữ hoặc xóa bài tập.",
+  searchLabel: "Tìm bài tập",
+  searchPlaceholder: "Tìm theo tên, mô tả hoặc thẻ",
+  searchSubmit: "Tìm",
+  statusGroup: "Lọc theo trạng thái",
+  statusAll: "Tất cả",
+  statuses: {
+    draft: "Nháp",
+    published: "Đã xuất bản",
+    archived: "Lưu trữ",
+  },
+  hasDraft: "Có bản nháp",
+  count: (n: number) => `${n} bài`,
+  columns: {
+    order: "Thứ tự",
+    title: "Tên bài",
+    status: "Trạng thái",
+    grade: "Khối",
+    questions: "Số câu",
+    attempts: "Lượt làm",
+    updated: "Cập nhật",
+    actions: "Thao tác",
+  },
+  grade: (g: number) => `Lớp ${g}`,
+  questions: (n: number) => `${n} câu`,
+  attempts: (n: number) => `${n} lượt`,
+  dragHandle: (title: string) =>
+    `Kéo để sắp xếp “${title}”. Dùng phím mũi tên lên/xuống để di chuyển.`,
+  moved: (title: string, position: number, total: number) =>
+    `Đã chuyển “${title}” tới vị trí ${position}/${total}.`,
+  reorderHint:
+    "Bỏ tìm kiếm và bộ lọc trạng thái để kéo thả sắp xếp thứ tự bài.",
+  reorderSaved: "Đã lưu thứ tự mới.",
+  duplicate: "Nhân bản",
+  duplicated: "Đã tạo bản sao (nháp).",
+  archive: "Lưu trữ",
+  archived: "Đã lưu trữ bài. Học sinh không còn thấy bài này.",
+  restore: "Khôi phục",
+  restored: "Đã khôi phục bài về trạng thái nháp.",
+  delete: "Xóa",
+  deleteTitle: "Xóa bài tập?",
+  deleteHard: (title: string) =>
+    `“${title}” chưa có lượt làm nào và sẽ bị xóa vĩnh viễn cùng mọi phiên bản.`,
+  deleteSoft: (title: string, attempts: number) =>
+    `“${title}” đã có ${attempts} lượt làm. Bài sẽ được ẩn khỏi danh sách và học sinh, nhưng kết quả cũ vẫn được giữ.`,
+  deleteConfirm: "Xóa bài",
+  deletedHard: "Đã xóa bài.",
+  deletedSoft: "Đã ẩn bài. Kết quả cũ vẫn được giữ.",
+  cancel: "Hủy",
+  close: "Đóng",
+  view: "Xem bài",
+  staleList:
+    "Danh sách bài đã thay đổi ở nơi khác. Tải lại trang rồi sắp xếp lại.",
+  emptyTitle: "Chưa có bài tập nào",
+  emptyBody: "Tạo bài mới hoặc chạy công cụ chuyển dữ liệu từ bản cũ.",
+  noMatchTitle: "Không có bài phù hợp",
+  noMatchBody: "Thử từ khóa khác hoặc bỏ bộ lọc trạng thái.",
+  clear: "Xóa bộ lọc",
+  errorTitle: "Không tải được danh sách bài tập",
+  loading: "Đang tải danh sách bài tập",
+} as const;
