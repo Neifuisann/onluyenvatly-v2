@@ -1,6 +1,6 @@
 import "server-only";
 import { and, eq, ne } from "drizzle-orm";
-import { db } from "@/db/client";
+import { db, type Executor } from "@/db/client";
 import { sessions, users } from "@/db/schema";
 import { env } from "@/lib/env.server";
 import { checkSession, sessionExpiry } from "./core/session-policy";
@@ -29,11 +29,12 @@ export async function createSession(
   userId: string,
   meta: SessionMeta,
   now = new Date(),
+  tx: Executor = db,
 ): Promise<{ token: string; sessionId: string; expiresAt: Date }> {
   const token = generateSessionToken();
   const sessionId = hash(token);
   const expiresAt = sessionExpiry(now);
-  await db.insert(sessions).values({
+  await tx.insert(sessions).values({
     id: sessionId,
     userId,
     expiresAt,
@@ -105,8 +106,9 @@ export async function revokeSession(sessionId: string): Promise<void> {
 export async function revokeUserSessions(
   userId: string,
   exceptSessionId?: string,
+  tx: Executor = db,
 ): Promise<void> {
-  await db
+  await tx
     .delete(sessions)
     .where(
       exceptSessionId
