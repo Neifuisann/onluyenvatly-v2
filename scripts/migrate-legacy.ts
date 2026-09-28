@@ -93,16 +93,29 @@ try {
   let users: UserReport | undefined;
   let lessons: LessonReport | undefined;
   let jobs: MediaJob[] = [];
+  // One round trip per row: against a remote DB this takes minutes, so show
+  // that it's alive. Everything is one transaction; Ctrl-C leaves no partial data.
+  let phase = "users";
+  const tick = setInterval(() => {
+    const s = Math.round((Date.now() - startedAt.getTime()) / 1000);
+    console.log(`  … ${phase} (${s} s)`);
+  }, 10_000);
   try {
     await db.transaction(async (tx) => {
+      console.log("Migrating users…");
       users = await migrateUsers(tx, source.students);
+      phase = "lessons";
+      console.log("Migrating lessons…");
       const out = await migrateLessons(tx, source.lessons);
       lessons = out.report;
       jobs = out.media;
+      phase = "commit";
       if (dryRun) throw new DryRunRollback();
     });
   } catch (e) {
     if (!(e instanceof DryRunRollback)) throw e;
+  } finally {
+    clearInterval(tick);
   }
   if (!users || !lessons) throw new Error("migration produced no report");
 
