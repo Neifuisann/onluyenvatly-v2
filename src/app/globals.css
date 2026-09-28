@@ -156,3 +156,22 @@
     }
   }
 }
+
+/* MathText (S2-04): question text with server-rendered KaTeX (07 §3.2). */
+@layer components {
+  .math-text > p + p {
+    margin-top: 0.75em;
+  }
+
+  .math-text .katex {
+    font-size: 1.05em;
+  }
+
+  /* Long display formulas scroll instead of widening a 360 px screen. */
+  .math-text .math-display {
+    display: block;
+    max-width: 100%;
+    overflow-x: auto;
+    overflow-y: hidden;
+  }
+}

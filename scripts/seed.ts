@@ -12,6 +12,7 @@
  */
 import { randomBytes } from "node:crypto";
 import { parseArgs } from "node:util";
+import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
 import * as schema from "../src/db/schema.ts";
@@ -19,6 +20,8 @@ import {
   hashPassword,
   passwordIssue,
 } from "../src/features/auth/core/password.ts";
+import { serializeLesson } from "../src/features/lessons/domain/serializer.ts";
+import { e2eLessons, e2eQuestions } from "../tests/e2e/fixtures/lessons.ts";
 import {
   E2E_PASSWORD,
   e2eAdmin,
@@ -140,6 +143,45 @@ async function main() {
       });
   }
   // Fresh rate-limit counters so reruns within a minute stay under the limits.
+  for (const lesson of e2eLessons) {
+    await db.transaction(async (tx) => {
+      const values = {
+        ...lesson,
+        questionCount: 1,
+        typeCounts: { mcq: 1 },
+        publishedAt: new Date("2026-01-01"),
+      };
+      const [row] = await tx
+        .insert(schema.lessons)
+        .values(values)
+        .onConflictDoUpdate({ target: schema.lessons.legacyId, set: values })
+        .returning({ id: schema.lessons.id });
+      if (!row) throw new Error("Lesson seed failed");
+      const content = {
+        questions: e2eQuestions,
+        sourceText: serializeLesson(e2eQuestions),
+      };
+      const [version] = await tx
+        .insert(schema.lessonVersions)
+        .values({ lessonId: row.id, version: 1, ...content })
+        .onConflictDoUpdate({
+          target: [
+            schema.lessonVersions.lessonId,
+            schema.lessonVersions.version,
+          ],
+          set: content,
+        })
+        .returning({ id: schema.lessonVersions.id });
+      if (!version) throw new Error("Version seed failed");
+      await tx
+        .update(schema.lessons)
+        .set({
+          currentVersionId: lesson.status === "published" ? version.id : null,
+          draftVersionId: lesson.status === "draft" ? version.id : null,
+        })
+        .where(eq(schema.lessons.id, row.id));
+    });
+  }
   await db.delete(schema.rateLimits);
   // Tests assume the defaults.
   await db

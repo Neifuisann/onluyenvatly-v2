@@ -40,7 +40,7 @@ export async function submitSomething(input: unknown): Promise<Result<Output>> {
 - Timestamps are `timestamptz`, stored in UTC and formatted in `Asia/Ho_Chi_Minh` via `lib/dates.ts`.
 
 ## 4. Caching
-- Shared data uses the `cached(fn, { tags, life })` wrapper from `lib/cache.ts`. Tag names come only from `lib/cache-tags.ts`.
+- Shared data uses explicit `"use cache"`, `cacheTag` and `cacheLife` inside server-only query functions, matching the installed Next.js 16 Cache Components API. Tag names come only from `lib/cache-tags.ts`. The proposed runtime `cached(fn, ...)` wrapper was not introduced: the directive is a compiler boundary.
 - Per-user data is never shared-cached. Use `React.cache` for per-request dedupe.
 - Every mutation lists which tags it invalidates. The reviewer checks for missing invalidation.
 

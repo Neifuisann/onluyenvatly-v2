@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { AppShell } from "@/components/app-shell/app-shell";
 import { EmptyState } from "@/components/empty-state";
+import { MathText } from "@/components/math-text/math-text";
 import { PublicHeader } from "@/components/public-header";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Alert } from "@/components/ui/alert";
@@ -115,6 +116,15 @@ export default function DevUiPage() {
             Chú thích 0,8125 rem.
           </p>
           <p className="font-mono text-2xl tabular-nums">32:15 · 7,75/10</p>
+        </Section>
+
+        <Section title="MathText (Markdown-lite + KaTeX)">
+          <MathText
+            className="text-stem"
+            text={
+              "Một vật dao động điều hòa với phương trình $x = 5\\cos(2\\pi t + \\frac{\\pi}{3})$ cm.\n**Tốc độ cực đại** của vật là *bao nhiêu*?\n\n$$v_{max} = \\omega A = 2\\pi \\cdot 5 = 10\\pi \\approx 31{,}4\\ \\text{cm/s}$$\n\nLỗi cú pháp vẫn hiển thị: $\\frac{1}{$"
+            }
+          />
         </Section>
 
         <Section title="Nút">

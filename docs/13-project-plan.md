@@ -153,6 +153,20 @@ S0-06 account checklist (put secrets only in Vercel/GitHub, never in the repo):
 
 **Demo:** browse the 170 real lessons in v2 with fast search.
 
+**Implementation status (2026-09-28):** Sprint 2 code is ready for review on `feat/S2-lessons-catalog`. This does not yet satisfy the merge, preview, teacher-review, or real-data acceptance gates in §1.
+
+| ID | Status | Evidence / remaining acceptance |
+|---|---|---|
+| S2-01 | Implemented, local DB verified | Lessons/version/media migration, accent-insensitive search and index-use test; remote apply awaits S0-06 |
+| S2-02 | Implemented | Strict question/config schemas; public-question property tests strip answers, tolerance and explanations |
+| S2-03 | Implemented, real fixtures pending | Parser/serializer, stable ids, error positions, 1,000-case round trip and synthetic v1 fixtures pass; S0-05 real export still needed |
+| S2-04 | Implemented | Server-rendered Markdown-lite/KaTeX, fixture rendering tests; production client-chunk scan finds no KaTeX JS |
+| S2-05 | Implemented, remote rehearsal pending | Local synthetic dry-run/apply/idempotency verified in the prior implementation; Neon/v1 count reconciliation and real media copy await S0-05/S0-06 |
+| S2-06 | Implemented, local browser verified | Cached catalog/facets, search/filter/sort, URL history, 24-card cumulative pagination and all states; preview Lighthouse LCP < 1.8 s remains pending |
+| S2-07 | Implemented within S2 dependencies | Cached safe overview and authenticated legacy 308 lookup; unpublished lessons hidden from students. Attempt history, progress filters and start/continue depend on S3-01/S3-03 |
+
+Validation: lint, typecheck, all **320 unit/integration tests** and coverage gates, production build, and token contrast checks pass. Lessons-domain line coverage is **96.76%** (parser **99.36%**). Browser coverage includes catalog/overview at 360 px and desktop, light/dark, zero serious/critical axe violations, legacy bookmarks, invalid/missing ids, and no question/answer content in student HTML or RSC. Synthetic fixtures remain clearly separated from real migration acceptance.
+
 ---
 
 ### Sprint 3: Quiz engine (core)
@@ -339,4 +353,5 @@ Pilot data note: the final migration upserts only rows with `legacy_id`. Attempt
 |---|---|---|---|---|---|
 | S0 | 2026-09-28 → | 4.0 | 1.5 (S0-01, S0-07, S0-10, most of S0-08; scripts for S0-03/04/05) | | |
 | S1 | 2026-09-28 → | 4.5 | 4.0 (all tasks coded; S1-03 remote apply and S1-08 grade wait for S0-06) | | |
+| S2 | 2026-09-28 → | 4.5 | All seven tasks implemented; external acceptance gates above remain | Synthetic catalog and legacy-link demo; mobile/desktop light/dark browser checks | Keep domain/property tests and explicit answer-safe projections; run coverage separately from the production build to avoid local PGlite startup contention |
 | … | | | | | |

@@ -34,6 +34,9 @@
 - The sample in 04 §3.3, and every v1 lesson's `source_text` round trip: `parse(serialize(q)) == q` for all migrated lessons (a fixture snapshot of v1 lessons, anonymized).
 
 ## 3. E2E journeys (Playwright)
+
+`lessons.spec.ts` covers the S2 catalog/overview in desktop Chromium and a 360 px Android viewport: accent-insensitive search, filters, cumulative pagination, back/reload and search focus, legacy 308 redirects, invalid/missing/unpublished lookups, student HTML/RSC answer-leak checks, light/dark screenshots, and zero serious/critical axe violations. `pnpm seed --profile e2e` now also upserts 27 published synthetic lessons plus a draft and archived lesson, with version content containing a private explanation marker for leak detection. The seed remains local/CI-only. The Next.js streamed shell requires JavaScript; a GET form alone does not provide a no-JavaScript page.
+
 1. **Register → pending → admin approves → login → dashboard.**
 2. **Take a test end to end:** start, answer all 3 types, flag, reload mid-test (answers restored), go offline, answer, come back online (sync), submit → result shows the correct score for known answers.
 3. **Timer:** lesson with a 1-minute limit → auto-submit happens → server rejects a late save.
