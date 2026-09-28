@@ -16,7 +16,9 @@ import {
   duplicateLesson,
   reorderLessons,
   setArchived,
+  updateLessonSettings,
 } from "./admin-service";
+import { type SettingsForm, toSettingsForm } from "./domain/settings-form";
 import { DEFAULT_LESSON_CONFIG, type Question } from "./schema";
 
 vi.mock("@/db/client", async () => (await import("@/test/db")).mockDbModule());
@@ -379,5 +381,92 @@ describe("getLessonForEditing", () => {
       .set({ deletedAt: new Date() })
       .where(eq(lessons.id, id));
     expect(await getLessonForEditing(id)).toBeNull();
+  });
+});
+
+describe("updateLessonSettings", () => {
+  const formFor = (patch: Partial<SettingsForm>): SettingsForm => ({
+    ...toSettingsForm(
+      {
+        title: "A",
+        description: null,
+        grade: null,
+        chapter: null,
+        tags: [],
+      },
+      DEFAULT_LESSON_CONFIG,
+    ),
+    ...patch,
+  });
+
+  it("saves metadata and config and recomputes the card counts", async () => {
+    const a = await addLesson("A", 0, { withVersion: true });
+    const result = await updateLessonSettings(
+      admin,
+      a,
+      formFor({
+        title: "Đề mới",
+        grade: "11",
+        tags: "ôn tập",
+        timeLimitMin: "15",
+        poolMode: "byType",
+        poolByType: { mcq: "1", tf: "", short: "" },
+      }),
+    );
+    expect(result).toEqual({ ok: true, data: { id: a } });
+    const [row] = await tdb.select().from(lessons).where(eq(lessons.id, a));
+    expect(row).toMatchObject({
+      title: "Đề mới",
+      grade: 11,
+      tags: ["ôn tập"],
+      config: {
+        ...DEFAULT_LESSON_CONFIG,
+        timeLimitSec: 900,
+        pool: { enabled: true, byType: { mcq: 1 } },
+      },
+      // The published version has 1 mcq + 1 short; the pool keeps the mcq.
+      questionCount: 1,
+      typeCounts: { mcq: 1 },
+    });
+    expect((await audit()).map((r) => r.action)).toEqual(["lesson.settings"]);
+  });
+
+  it("refuses a pool the content can't fill, with field messages", async () => {
+    const a = await addLesson("A", 0, { withVersion: true });
+    const result = await updateLessonSettings(
+      admin,
+      a,
+      formFor({
+        poolMode: "size",
+        poolSize: "3",
+        revealAnswers: "after_deadline",
+      }),
+    );
+    expect(result).toMatchObject({
+      ok: false,
+      code: "VALIDATION",
+      fieldErrors: {
+        poolSize: "Bài chỉ có 2 câu, không lấy được nhiều hơn.",
+        startsAt: expect.any(String),
+        timeLimitMin: expect.any(String),
+      },
+    });
+    const [row] = await tdb.select().from(lessons).where(eq(lessons.id, a));
+    expect(row?.config).toEqual(DEFAULT_LESSON_CONFIG);
+    expect(await audit()).toEqual([]);
+  });
+
+  it("saves a lesson without content and misses deleted ones", async () => {
+    const { id } = await createLesson(admin);
+    expect(
+      (await updateLessonSettings(admin, id, formFor({ title: "Bài 1" }))).ok,
+    ).toBe(true);
+    await tdb
+      .update(lessons)
+      .set({ deletedAt: new Date() })
+      .where(eq(lessons.id, id));
+    expect(
+      await updateLessonSettings(admin, id, formFor({ title: "Bài 2" })),
+    ).toMatchObject({ ok: false, code: "NOT_FOUND" });
   });
 });

@@ -32,8 +32,14 @@ export default async function EditLessonPage({
     <LessonEditor
       lesson={{
         id: lesson.id,
-        title: lesson.title,
         status: lesson.status,
+        meta: {
+          title: lesson.title,
+          description: lesson.description,
+          grade: lesson.grade,
+          chapter: lesson.chapter,
+          tags: lesson.tags,
+        },
         sourceText: lesson.sourceText,
         previous,
         config: config.success ? config.data : DEFAULT_LESSON_CONFIG,

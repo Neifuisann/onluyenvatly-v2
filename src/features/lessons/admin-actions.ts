@@ -13,8 +13,10 @@ import {
   duplicateLesson as duplicateLessonService,
   reorderLessons,
   setArchived,
+  updateLessonSettings,
 } from "./admin-service";
 import { LessonIdSchema, ReorderSchema } from "./domain/admin-list";
+import { SettingsFormSchema } from "./domain/settings-form";
 
 /**
  * Admin lesson actions (05 §2). Every one: `requireAdmin()` first, Zod, the
@@ -119,4 +121,29 @@ export async function renderTexBatch(
   const parsed = TexBatchSchema.safeParse(input);
   if (!parsed.success) return err("VALIDATION");
   return ok(parsed.data.map(({ tex, display }) => renderTex(tex, display)));
+}
+
+const SaveSettingsSchema = z.strictObject({
+  id: LessonIdSchema,
+  form: SettingsFormSchema,
+});
+
+/** "Cài đặt" tab (S5-03): metadata + config, live at once. */
+export async function saveSettings(
+  input: unknown,
+): Promise<Result<{ id: number }>> {
+  const user = await requireAdmin();
+  const parsed = SaveSettingsSchema.safeParse(input);
+  if (!parsed.success) return err("VALIDATION");
+  const result = await updateLessonSettings(
+    user,
+    parsed.data.id,
+    parsed.data.form,
+  );
+  if (result.ok) {
+    // Cards (title, grade, time, counts) and the overview's rules.
+    invalidateLesson(parsed.data.id);
+    refresh();
+  }
+  return result;
 }

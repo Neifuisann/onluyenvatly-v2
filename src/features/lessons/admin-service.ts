@@ -5,8 +5,9 @@ import { attempts, lessons, lessonVersions } from "@/db/schema";
 import { writeAudit } from "@/lib/audit";
 import { err, ok, type Result } from "@/lib/result";
 import { copyTitle, isReorderOf } from "./domain/admin-list";
-import { summarizeLesson } from "./domain/summary";
-import { adminLessonsCopy } from "./messages";
+import { fromSettingsForm, type SettingsForm } from "./domain/settings-form";
+import { countByType, summarizeLesson } from "./domain/summary";
+import { adminLessonsCopy, settingsCopy } from "./messages";
 import {
   DEFAULT_LESSON_CONFIG,
   LessonConfigSchema,
@@ -266,5 +267,68 @@ export async function createLesson(actor: Actor): Promise<{ id: number }> {
       targetId: row.id,
     });
     return { id: row.id };
+  });
+}
+
+/**
+ * Saves the "Cài đặt" tab (S5-03): metadata and `LessonConfig`, which are not
+ * versioned and apply at once. The pool is checked against the content
+ * attempts use (the published version, else the draft), and the card counts
+ * are recomputed from the published version.
+ */
+export async function updateLessonSettings(
+  actor: Actor,
+  id: number,
+  form: SettingsForm,
+): Promise<Result<{ id: number }>> {
+  return db.transaction(async (tx) => {
+    const [lesson] = await tx
+      .select({
+        currentVersionId: lessons.currentVersionId,
+        draftVersionId: lessons.draftVersionId,
+      })
+      .from(lessons)
+      .where(and(eq(lessons.id, id), notDeleted))
+      .for("update")
+      .limit(1);
+    if (!lesson) return err("NOT_FOUND");
+    const versionId = lesson.currentVersionId ?? lesson.draftVersionId;
+    const [version] = versionId
+      ? await tx
+          .select({ questions: lessonVersions.questions })
+          .from(lessonVersions)
+          .where(eq(lessonVersions.id, versionId))
+          .limit(1)
+      : [];
+    const questions = QuestionsSchema.safeParse(version?.questions);
+    const result = fromSettingsForm(
+      form,
+      questions.success ? countByType(questions.data) : undefined,
+    );
+    if (!result.ok)
+      return err("VALIDATION", {
+        message: settingsCopy.invalid,
+        fieldErrors: result.errors,
+      });
+    const summary =
+      lesson.currentVersionId && questions.success
+        ? summarizeLesson(questions.data, result.config)
+        : {};
+    await tx
+      .update(lessons)
+      .set({
+        ...result.meta,
+        config: result.config,
+        ...summary,
+        updatedAt: sql`now()`,
+      })
+      .where(eq(lessons.id, id));
+    await writeAudit(tx, {
+      actorId: actor.id,
+      action: "lesson.settings",
+      targetType: "lesson",
+      targetId: id,
+    });
+    return ok({ id });
   });
 }

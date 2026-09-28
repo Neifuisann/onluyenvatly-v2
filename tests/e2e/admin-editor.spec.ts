@@ -125,3 +125,85 @@ test("pasting a real v1 lesson previews every question without errors", async ({
   // Every formula arrives from the server; no source placeholders remain.
   await expect(page.locator("main article code")).toHaveCount(0);
 });
+
+async function openSettings(page: Page) {
+  // Reloading with unsaved changes asks first; accept like a teacher would.
+  page.on("dialog", (d) => d.accept());
+  await openDraftEditor(page);
+  await page.getByRole("tab", { name: "Cài đặt" }).click();
+  await expect(page.getByLabel("Tên bài")).toHaveValue("E2E – Bản nháp kín");
+}
+
+test("settings: invalid combinations are blocked with messages", async ({
+  page,
+}) => {
+  await openSettings(page);
+  await page.getByLabel(/^Sau giờ làm bài chung/).check();
+  await page.getByLabel("Lấy ngẫu nhiên theo tổng số câu").check();
+  await page.getByLabel("Số câu mỗi lượt").fill("9");
+  await page.getByRole("button", { name: "Lưu cài đặt" }).click();
+  // (Next's route announcer is an alert too.)
+  await expect(
+    page.getByRole("alert").filter({ hasText: "Cài đặt chưa hợp lệ" }),
+  ).toBeVisible();
+  await expect(
+    page.getByLabel("Giờ mở bài", { exact: true }),
+  ).toHaveAccessibleDescription(/cần có giờ mở bài/);
+  await expect(
+    page.getByLabel("Thời gian làm bài (phút)"),
+  ).toHaveAccessibleDescription(/cần có thời gian làm bài/);
+  await expect(page.getByLabel("Số câu mỗi lượt")).toHaveAccessibleDescription(
+    /Bài chỉ có 1 câu/,
+  );
+  await expect(page.getByLabel("Số câu mỗi lượt")).toHaveAttribute(
+    "aria-invalid",
+    "true",
+  );
+  // Nothing was sent: a reload shows the saved settings.
+  await page.reload();
+  await page.getByRole("tab", { name: "Cài đặt" }).click();
+  await expect(page.getByLabel("Ngay sau khi nộp")).toBeChecked();
+  await expect(page.getByLabel("Tắt: làm tất cả các câu")).toBeChecked();
+
+  for (const scheme of ["light", "dark"] as const) {
+    await page.emulateMedia({ colorScheme: scheme, reducedMotion: "reduce" });
+    const axe = await new AxeBuilder({ page }).analyze();
+    expect(
+      axe.violations.filter((v) =>
+        ["serious", "critical"].includes(v.impact ?? ""),
+      ),
+    ).toEqual([]);
+  }
+});
+
+test("settings: a valid change saves and survives a reload; stats follow live", async ({
+  page,
+}, info) => {
+  test.skip(info.project.name !== "chromium", "writes the shared draft");
+  await openSettings(page);
+  // Live: the stats bar follows valid settings before they are saved.
+  await page.getByLabel("Chia đều tổng điểm của từng loại").check();
+  await page.getByLabel("Tổng điểm trắc nghiệm").fill("2,5");
+  await page.getByRole("tab", { name: "Nội dung" }).click();
+  if (isPhone(page)) await page.getByText("Xem trước", { exact: true }).click();
+  await expect(page.getByText(/^Tổng: 1 câu/)).toHaveText(/· 2,5đ$/);
+  await page.getByRole("tab", { name: "Cài đặt" }).click();
+  await page.getByLabel(/^Theo điểm của từng câu/).check();
+
+  // Saved: only fields no other spec reads, restored at the end.
+  const saved = page.getByRole("status").filter({ hasText: "Đã lưu cài đặt." });
+  await page.getByLabel("Thời gian làm bài (phút)").fill("50");
+  await page.getByLabel("Theo tỉ lệ số ý đúng").check();
+  await page.getByRole("button", { name: "Lưu cài đặt" }).click();
+  await expect(saved).toBeVisible();
+  await expect(page.getByText("Chưa lưu")).toHaveCount(0);
+  await page.reload();
+  await page.getByRole("tab", { name: "Cài đặt" }).click();
+  await expect(page.getByLabel("Thời gian làm bài (phút)")).toHaveValue("50");
+  await expect(page.getByLabel("Theo tỉ lệ số ý đúng")).toBeChecked();
+
+  await page.getByLabel("Thời gian làm bài (phút)").fill("");
+  await page.getByLabel(/^Theo thang THPT 2025/).check();
+  await page.getByRole("button", { name: "Lưu cài đặt" }).click();
+  await expect(saved).toBeVisible();
+});

@@ -104,6 +104,8 @@ As built (S5-01): the list actions are `reorder({ ids })`, `duplicate(id)`, `arc
 
 As built (S5-02): there is no `/admin/lessons/new` page. "Tạo bài mới" on the list is the form action `createLesson()`: it inserts an empty draft (default config, last in the order, `lesson.create` audit row) and redirects to `/admin/lessons/[id]/edit`, so the editor always works on a saved row. The editor page reads `getLessonForEditing(id)` (per request, admin only): metadata, config, and the draft's source text and questions, else the published version's. `renderTexBatch([{ tex, display }])` (≤ 300 formulas, ≤ 5,000 characters each) returns KaTeX HTML for the live preview, so KaTeX stays on the server (06 §4).
 
+As built (S5-03): `saveSettings({ id, form })` saves the "Cài đặt" tab: title, description, grade, chapter, tags and `LessonConfig`. The form travels as its raw input values (`SettingsFormSchema`), and the server runs the same pure `fromSettingsForm` as the browser, with the pool checked against the question counts of the version attempts use (published, else draft). Invalid input returns `VALIDATION` with `fieldErrors` per field. Metadata and config are not versioned, so they apply at once, also on a published lesson; attempts in progress keep their items and points (fixed at start). The service recomputes `question_count`/`type_counts` from the published version under the new pool, writes `lesson.settings` to the audit log, and the action invalidates `lessons` and `lesson:{id}`.
+
 ### `features/students/admin-actions.ts`
 `approve(ids[])`, `reject(ids[])`, `resetPassword(id)` → returns a temp password once, `resetDevice(id)`, `revokeSessions(id)`, `setStatus(id, status)`, `deleteStudent(id)` (cascades; audit), `createAdmin(...)`.
 
