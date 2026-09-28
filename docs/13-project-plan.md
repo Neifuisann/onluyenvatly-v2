@@ -149,12 +149,12 @@ S0-06 account checklist (put secrets only in Vercel/GitHub, never in the repo):
 |---|---|---|
 | S1-01 | ✅ Done | OKLCH tokens (07 §3.1) + class-based dark mode, no-flash theme script, `ThemeToggle`; `pnpm check:contrast` in CI (all pairs ≥ AA) |
 | S1-02 | ✅ Done | `AppShell` (sidebar ≥ 1024 px, bottom tabs / admin nav strip on phones, skip link, `aria-current`), `PublicHeader`, UI primitives, `/dev/ui` (404 in production) |
-| S1-03 | 🟡 Staging applied | Schema + migrations `0000`–`0002`, RLS on every table, `migrate.yml` (picks the Neon or Supabase secret by target). **Neon staging migrated 2026-09-28** (Actions run 36389687205). Supabase production waits for the session-pooler `DATABASE_URL_DIRECT` |
+| S1-03 | ✅ Done | Schema + migrations `0000`–`0002`, RLS on every table, `migrate.yml` (picks the Neon or Supabase secret by target). Applied to Neon staging and Supabase production on 2026-09-28. Preview `/api/health` reports `db: ok`; production reports `db: down` (Vercel Production `DATABASE_URL` value under investigation) |
 | S1-04 | ✅ Done | `features/auth/core` ≈ 98 % lines/branches (CI gate: 95 %); session lifecycle integration-tested |
 | S1-05 | ✅ Done | Actions + `rateLimit()`; 06 §4 limits enforced in integration tests |
 | S1-06 | ✅ Done | Login/register/pending pages, `proxy.ts`, `?next=` validation; E2E `auth.spec.ts` (journey 1 minus approval) |
 | S1-07 | ✅ Done | `pnpm seed` (dev: settings + admin, password printed once) and `--profile e2e` (local DBs only) |
-| S1-08 | 🟡 Preview check | Headers + CSP in `next.config.ts` (no nonce, see 06 §4). securityheaders.com grade needs the preview URL (S0-06) |
+| S1-08 | 🟡 Grade pending | Headers + CSP in `next.config.ts` (no nonce, see 06 §4). Verified on production 2026-09-28: CSP, HSTS (preload), X-Frame-Options DENY, nosniff, Referrer-Policy, Permissions-Policy, COOP. The securityheaders.com grade is still to be recorded |
 
 ---
 

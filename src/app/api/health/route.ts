@@ -10,8 +10,15 @@ export async function GET() {
   let dbOk = true;
   try {
     await db.execute(sql`select 1`);
-  } catch {
+  } catch (error) {
     dbOk = false;
+    // Code only (28P01 bad password, XX000 unknown pooler tenant, ENOTFOUND,
+    // CONNECT_TIMEOUT…): the message can echo connection details.
+    const code = (error as { code?: unknown }).code;
+    console.error(
+      "health: db check failed:",
+      typeof code === "string" ? code : "unknown",
+    );
   }
   return Response.json(
     {
