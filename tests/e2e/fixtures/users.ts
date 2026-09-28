@@ -15,7 +15,12 @@ export const e2eAdmin = {
  * account's other sessions (single-session policy), so parallel specs must
  * never share an admin.
  */
-export const E2E_SPEC_ADMINS = ["lessons", "editor", "publish"] as const;
+export const E2E_SPEC_ADMINS = [
+  "lessons",
+  "editor",
+  "publish",
+  "media",
+] as const;
 export type E2eSpecAdmin = (typeof E2E_SPEC_ADMINS)[number];
 export const e2eSpecAdminUsername = (spec: E2eSpecAdmin, project: string) =>
   `e2e-${spec}-${project === "mobile" ? "m" : "d"}`;

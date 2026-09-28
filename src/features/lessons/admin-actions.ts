@@ -13,6 +13,7 @@ import {
   duplicateLesson as duplicateLessonService,
   reorderLessons,
   setArchived,
+  setLessonCover,
   updateLessonSettings,
 } from "./admin-service";
 import {
@@ -26,6 +27,7 @@ import {
 import { LessonIdSchema, ReorderSchema } from "./domain/admin-list";
 import { SourceTextSchema } from "./domain/content";
 import { SettingsFormSchema } from "./domain/settings-form";
+import { MediaPathSchema } from "./schema";
 
 /**
  * Admin lesson actions (05 §2). Every one: `requireAdmin()` first, Zod, the
@@ -229,5 +231,26 @@ export async function discardDraft(
   if (!id.success) return err("VALIDATION");
   const result = await discardDraftService(user, id.data);
   if (result.ok) refresh();
+  return result;
+}
+
+const CoverSchema = z.strictObject({
+  id: LessonIdSchema,
+  path: MediaPathSchema.nullable(),
+});
+
+/** Cover image (S5-05): live at once, like the settings. */
+export async function setCover(
+  input: unknown,
+): Promise<Result<{ id: number }>> {
+  const user = await requireAdmin();
+  const parsed = CoverSchema.safeParse(input);
+  if (!parsed.success) return err("VALIDATION");
+  const result = await setLessonCover(user, parsed.data.id, parsed.data.path);
+  if (result.ok) {
+    // Catalog cards show the cover.
+    invalidateLesson(parsed.data.id);
+    refresh();
+  }
   return result;
 }

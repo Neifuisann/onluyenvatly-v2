@@ -4,13 +4,22 @@ import {
   CircleAlert,
   CircleCheck,
   FileText,
+  ImagePlus,
   TriangleAlert,
 } from "lucide-react";
 import dynamic from "next/dynamic";
 import { useMemo, useRef, useState } from "react";
 import { EmptyState } from "@/components/empty-state";
+import { Alert } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { pointsPlan } from "@/features/grading/domain/points";
+import {
+  ACCEPT_ATTR,
+  uploadImage,
+} from "@/features/media/components/upload-image";
+import { imageMarkup } from "@/features/media/domain/upload";
+import { uploadCopy } from "@/features/media/messages";
 import { formatScore } from "@/lib/dates";
 import { cn } from "@/lib/utils";
 import { editorStats } from "../../domain/editor-stats";
@@ -86,6 +95,7 @@ export function ContentTab({
     [issues],
   );
   const errors = issues.filter((i) => i.severity === "error").length;
+  const images = useImageUpload(editor);
 
   const goTo = (line: number, col?: number) => {
     setPane("edit");
@@ -123,16 +133,46 @@ export function ContentTab({
       <div className="grid gap-4 lg:grid-cols-2">
         <div
           className={cn(
-            "h-[70dvh] overflow-hidden rounded-lg border bg-surface lg:sticky lg:top-4 lg:h-[calc(100dvh-12rem)]",
+            "flex min-w-0 flex-col gap-2 lg:sticky lg:top-4 lg:self-start",
             pane !== "edit" && "max-lg:hidden",
           )}
         >
-          <CodeEditor
-            initialValue={initialText}
-            onChange={onTextChange}
-            label={t.editorLabel}
-            handleRef={editor}
-          />
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              onClick={() => images.pick()}
+            >
+              <ImagePlus aria-hidden />
+              {uploadCopy.insertImage}
+            </Button>
+            <input
+              ref={images.input}
+              type="file"
+              accept={ACCEPT_ATTR}
+              multiple
+              hidden
+              onChange={images.onPicked}
+            />
+            <span className="text-muted-foreground text-xs">
+              {uploadCopy.insertHint}
+            </span>
+          </div>
+          {images.status && (
+            <Alert variant={images.status.error ? "danger" : "info"}>
+              {images.status.text}
+            </Alert>
+          )}
+          <div className="h-[70dvh] overflow-hidden rounded-lg border bg-surface lg:h-[calc(100dvh-15rem)]">
+            <CodeEditor
+              initialValue={initialText}
+              onChange={onTextChange}
+              onFiles={images.upload}
+              label={t.editorLabel}
+              handleRef={editor}
+            />
+          </div>
         </div>
 
         <section
@@ -257,4 +297,56 @@ export function ContentTab({
       </div>
     </div>
   );
+}
+
+/**
+ * Pasted, dropped or picked images (S5-05): each is resized, uploaded
+ * straight to Storage and inserted as `![](media:…)` on its own line where
+ * it was pasted, even if the text changed meanwhile.
+ */
+function useImageUpload(editor: React.RefObject<CodeEditorHandle | null>) {
+  const input = useRef<HTMLInputElement>(null);
+  const [pending, setPending] = useState(0);
+  const [status, setStatus] = useState<{ text: string; error: boolean }>();
+
+  const upload = async (files: File[], pos?: number) => {
+    const marker = editor.current?.mark(pos);
+    if (!marker) return;
+    setPending((n) => n + files.length);
+    setStatus({ text: uploadCopy.uploading(files.length), error: false });
+    let inserted = 0;
+    let failure: string | undefined;
+    for (const file of files) {
+      const result = await uploadImage(file);
+      setPending((n) => n - 1);
+      if (result.ok) {
+        editor.current?.insertLine(
+          marker,
+          imageMarkup(result.data.path, result.data),
+        );
+        inserted += 1;
+      } else failure = result.message;
+    }
+    editor.current?.release(marker);
+    setStatus(
+      failure
+        ? { text: failure, error: true }
+        : { text: uploadCopy.inserted(inserted), error: false },
+    );
+  };
+
+  return {
+    input,
+    status:
+      pending > 0
+        ? { text: uploadCopy.uploading(pending), error: false }
+        : status,
+    upload: (files: File[], pos: number) => void upload(files, pos),
+    pick: () => input.current?.click(),
+    onPicked: (e: React.ChangeEvent<HTMLInputElement>) => {
+      const files = [...(e.target.files ?? [])];
+      e.target.value = "";
+      if (files.length) void upload(files);
+    },
+  };
 }

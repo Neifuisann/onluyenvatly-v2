@@ -29,12 +29,14 @@ import {
 } from "../../messages";
 import type { LessonConfig, Question } from "../../schema";
 import { ContentTab } from "./content-tab";
+import { CoverPicker } from "./cover-picker";
 import { PublishBar } from "./publish-bar";
 import { SettingsTab } from "./settings-tab";
 
 export type EditorLesson = {
   id: number;
   status: "draft" | "published" | "archived";
+  coverPath: string | null;
   meta: LessonMeta;
   sourceText: string;
   /** Last saved questions, so new parses keep their ids (04 §3.1). */
@@ -261,6 +263,7 @@ export function LessonEditor({ lesson }: { lesson: EditorLesson }) {
           pending={pending}
           message={message}
         />
+        <CoverPicker lessonId={lesson.id} coverPath={lesson.coverPath} />
       </div>
     </div>
   );

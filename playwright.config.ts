@@ -1,4 +1,9 @@
 import { defineConfig, devices } from "@playwright/test";
+import {
+  FAKE_STORAGE_KEY,
+  FAKE_STORAGE_PORT,
+  FAKE_STORAGE_URL,
+} from "./tests/e2e/fake-storage";
 
 const PORT = Number(process.env.PORT ?? 3000);
 const baseURL = process.env.E2E_BASE_URL ?? `http://localhost:${PORT}`;
@@ -19,11 +24,26 @@ export default defineConfig({
     },
   ],
   ...(!process.env.E2E_BASE_URL && {
-    webServer: {
-      command: `pnpm start --port ${PORT}`,
-      url: `${baseURL}/api/health`,
-      reuseExistingServer: !process.env.CI,
-      timeout: 120_000,
-    },
+    webServer: [
+      // Supabase Storage stand-in for image uploads (S5-05).
+      {
+        command: "node tests/e2e/fake-storage.ts",
+        url: `${FAKE_STORAGE_URL}/health`,
+        reuseExistingServer: !process.env.CI,
+        env: { FAKE_STORAGE_PORT: String(FAKE_STORAGE_PORT) },
+      },
+      {
+        command: `pnpm start --port ${PORT}`,
+        url: `${baseURL}/api/health`,
+        reuseExistingServer: !process.env.CI,
+        timeout: 120_000,
+        // Signed uploads go to the stand-in; the build inlines the matching
+        // NEXT_PUBLIC_MEDIA_BASE_URL (ci.yml, .env.example).
+        env: {
+          SUPABASE_URL: FAKE_STORAGE_URL,
+          SUPABASE_SERVICE_ROLE_KEY: FAKE_STORAGE_KEY,
+        },
+      },
+    ],
   }),
 });

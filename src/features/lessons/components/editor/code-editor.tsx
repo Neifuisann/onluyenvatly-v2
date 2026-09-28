@@ -19,10 +19,30 @@ import { tags as t } from "@lezer/highlight";
 import { type RefObject, useEffect, useImperativeHandle, useRef } from "react";
 import { classifyLine } from "../../domain/text-format";
 
+/** A document position that follows edits made after it was taken. */
+export type Marker = { pos: number };
+
 export type CodeEditorHandle = {
   /** Moves the cursor to a 1-based line/column and focuses the editor. */
   goTo: (line: number, col?: number) => void;
+  /** Remembers a position (default: the cursor) across later edits. */
+  mark: (pos?: number) => Marker;
+  /**
+   * Inserts `text` as its own line at the marker's line (replacing it when
+   * blank, else below it) and moves the marker past it, so several
+   * inserts keep their order.
+   */
+  insertLine: (marker: Marker, text: string) => void;
+  /** Stops tracking a marker. */
+  release: (marker: Marker) => void;
 };
+
+const IMAGE_TYPE = /^image\//;
+
+/** Image files in a paste or drop, if any. */
+function imageFiles(data: DataTransfer | null): File[] {
+  return [...(data?.files ?? [])].filter((f) => IMAGE_TYPE.test(f.type));
+}
 
 /**
  * Highlighting from the parser's own line grammar (04 §3.3): headers,
@@ -120,11 +140,14 @@ const theme = EditorView.theme({
 export default function CodeEditor({
   initialValue,
   onChange,
+  onFiles,
   label,
   handleRef,
 }: {
   initialValue: string;
   onChange: (value: string) => void;
+  /** Images pasted or dropped at `pos` (S5-05). */
+  onFiles?: (files: File[], pos: number) => void;
   label: string;
   handleRef: RefObject<CodeEditorHandle | null>;
 }) {
@@ -132,6 +155,9 @@ export default function CodeEditor({
   const view = useRef<EditorView | null>(null);
   const change = useRef(onChange);
   change.current = onChange;
+  const files = useRef(onFiles);
+  files.current = onFiles;
+  const markers = useRef(new Set<Marker>());
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: created once; later values come from the editor itself
   useEffect(() => {
@@ -157,7 +183,28 @@ export default function CodeEditor({
             spellcheck: "false",
           }),
           EditorView.updateListener.of((u) => {
-            if (u.docChanged) change.current(u.state.doc.toString());
+            if (!u.docChanged) return;
+            for (const m of markers.current) m.pos = u.changes.mapPos(m.pos);
+            change.current(u.state.doc.toString());
+          }),
+          EditorView.domEventHandlers({
+            paste(e, v) {
+              const images = imageFiles(e.clipboardData);
+              if (!images.length || !files.current) return false;
+              e.preventDefault();
+              files.current(images, v.state.selection.main.head);
+              return true;
+            },
+            drop(e, v) {
+              const images = imageFiles(e.dataTransfer);
+              if (!images.length || !files.current) return false;
+              e.preventDefault();
+              const pos =
+                v.posAtCoords({ x: e.clientX, y: e.clientY }) ??
+                v.state.selection.main.head;
+              files.current(images, pos);
+              return true;
+            },
           }),
         ],
       }),
@@ -182,6 +229,28 @@ export default function CodeEditor({
         effects: EditorView.scrollIntoView(pos, { y: "center" }),
       });
       v.focus();
+    },
+    mark(pos) {
+      const m = { pos: pos ?? view.current?.state.selection.main.head ?? 0 };
+      markers.current.add(m);
+      return m;
+    },
+    insertLine(marker, text) {
+      const v = view.current;
+      if (!v) return;
+      const line = v.state.doc.lineAt(Math.min(marker.pos, v.state.doc.length));
+      const blank = line.text.trim() === "";
+      const from = blank ? line.from : line.to;
+      const insert = blank ? text : `\n${text}`;
+      v.dispatch({
+        changes: { from, to: line.to, insert },
+        selection: { anchor: from + insert.length },
+        scrollIntoView: true,
+      });
+      marker.pos = from + insert.length;
+    },
+    release(marker) {
+      markers.current.delete(marker);
     },
   }));
 

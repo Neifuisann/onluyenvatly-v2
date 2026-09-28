@@ -1,0 +1,22 @@
+/** Image upload copy (S5-05). */
+export const uploadCopy = {
+  notImage: "Chỉ tải lên được ảnh PNG, JPEG, WebP hoặc GIF.",
+  tooBig: "Ảnh quá lớn (tối đa 25 MB trước khi thu nhỏ).",
+  decodeFailed: "Không đọc được ảnh này. Thử lưu lại dưới dạng PNG hoặc JPEG.",
+  stillTooBig: "Ảnh sau khi thu nhỏ vẫn lớn hơn 2 MB.",
+  uploadFailed: "Tải ảnh lên không thành công. Kiểm tra kết nối rồi thử lại.",
+  uploading: (n: number) => `Đang tải ${n} ảnh lên…`,
+  inserted: (n: number) => (n === 1 ? "Đã chèn ảnh." : `Đã chèn ${n} ảnh.`),
+  insertImage: "Chèn ảnh",
+  insertHint: "Hoặc dán (Ctrl+V) hay kéo thả ảnh vào trình soạn thảo.",
+  cover: "Ảnh bìa",
+  coverHint: "Hiện trên thẻ bài tập. Ảnh được thu nhỏ còn tối đa 1280 px.",
+  coverNone: "Chưa có ảnh bìa.",
+  coverAlt: "Ảnh bìa hiện tại",
+  coverPick: "Chọn ảnh bìa",
+  coverChange: "Đổi ảnh bìa",
+  coverRemove: "Bỏ ảnh bìa",
+  coverSaved: "Đã lưu ảnh bìa.",
+  coverRemoved: "Đã bỏ ảnh bìa.",
+  coverNoPreview: "Đã có ảnh bìa (chưa cấu hình địa chỉ kho ảnh để xem).",
+} as const;

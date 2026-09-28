@@ -33,6 +33,7 @@ export default async function EditLessonPage({
       lesson={{
         id: lesson.id,
         status: lesson.status,
+        coverPath: lesson.coverPath,
         meta: {
           title: lesson.title,
           description: lesson.description,

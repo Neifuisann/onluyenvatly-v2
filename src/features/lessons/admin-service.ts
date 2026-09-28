@@ -2,6 +2,7 @@ import "server-only";
 import { and, eq, gt, isNull, or, sql } from "drizzle-orm";
 import { db } from "@/db/client";
 import { attempts, lessons, lessonVersions } from "@/db/schema";
+import { mediaExists } from "@/features/media/service";
 import { writeAudit } from "@/lib/audit";
 import { err, ok, type Result } from "@/lib/result";
 import { copyTitle, isReorderOf } from "./domain/admin-list";
@@ -328,6 +329,35 @@ export async function updateLessonSettings(
       action: "lesson.settings",
       targetType: "lesson",
       targetId: id,
+    });
+    return ok({ id });
+  });
+}
+
+/**
+ * The lesson card's cover (S5-05). Like the settings, not versioned: it
+ * shows at once. Only files uploaded through `createUploadUrl` (or migrated)
+ * are accepted.
+ */
+export async function setLessonCover(
+  actor: Actor,
+  id: number,
+  path: string | null,
+): Promise<Result<{ id: number }>> {
+  if (path !== null && !(await mediaExists(path))) return err("VALIDATION");
+  return db.transaction(async (tx) => {
+    const [row] = await tx
+      .update(lessons)
+      .set({ coverPath: path, updatedAt: sql`now()` })
+      .where(and(eq(lessons.id, id), notDeleted))
+      .returning({ id: lessons.id });
+    if (!row) return err("NOT_FOUND");
+    await writeAudit(tx, {
+      actorId: actor.id,
+      action: "lesson.cover",
+      targetType: "lesson",
+      targetId: id,
+      data: { removed: path === null },
     });
     return ok({ id });
   });
