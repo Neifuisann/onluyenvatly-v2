@@ -30,13 +30,25 @@ export const MediaPathSchema = z
     "Đường dẫn ảnh không hợp lệ.",
   );
 
-export const MediaSchema = z.strictObject({
-  path: MediaPathSchema,
-  /** Pixel size when known (uploads); lets the page reserve space. */
-  w: z.number().int().positive().max(20_000).optional(),
-  h: z.number().int().positive().max(20_000).optional(),
-  alt: z.string().max(300).optional(),
-});
+/**
+ * Text format: `![alt](media:path =WxH)` (04 §3.3), so `alt` has no `]` or
+ * line break and the size is given as a pair or not at all.
+ */
+export const MediaSchema = z
+  .strictObject({
+    path: MediaPathSchema,
+    /** Pixel size when known (uploads); lets the page reserve space. */
+    w: z.number().int().positive().max(20_000).optional(),
+    h: z.number().int().positive().max(20_000).optional(),
+    alt: z
+      .string()
+      .max(300)
+      .regex(/^[^\]\n]*$/)
+      .optional(),
+  })
+  .refine((m) => (m.w === undefined) === (m.h === undefined), {
+    message: "Ảnh cần cả chiều rộng và chiều cao.",
+  });
 export type Media = z.infer<typeof MediaSchema>;
 
 const base = {
@@ -45,7 +57,7 @@ const base = {
   stem: nonBlank(10_000, "Câu hỏi chưa có nội dung."),
   image: MediaSchema.optional(),
   /** Explicit points override (`[2 pts]` in the text format). */
-  points: z.number().positive().max(100).optional(),
+  points: z.number().min(0).max(100).optional(),
   /** Teacher-written, shown only after submit. */
   explanation: z.string().max(20_000).optional(),
 };

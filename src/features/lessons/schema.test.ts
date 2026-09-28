@@ -51,6 +51,7 @@ describe("QuestionSchema", () => {
       { id: "q_1", type: "short", stem: "S", answer: " " },
     ],
     ["negative points", { ...mcq, points: -1 }],
+    ["points above 100", { ...mcq, points: 101 }],
   ])("rejects %s", (_, value) => {
     expect(QuestionSchema.safeParse(value).success).toBe(false);
   });

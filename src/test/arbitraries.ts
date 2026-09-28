@@ -46,17 +46,27 @@ export const textArb = fc
   .array(lineArb, { minLength: 1, maxLength: 3 })
   .map((ls) => ls.join("\n"));
 
-export const mediaArb: fc.Arbitrary<Media> = fc.record(
-  {
-    path: fc.stringMatching(/^[a-z0-9]{1,12}$/).map((s) => `2026/09/${s}.webp`),
-    w: fc.integer({ min: 1, max: 2000 }),
-    h: fc.integer({ min: 1, max: 2000 }),
-    alt: fc.constantFrom("Hình 1", "Đồ thị", "mạch điện"),
-  },
-  { requiredKeys: ["path"] },
-);
+export const mediaArb: fc.Arbitrary<Media> = fc
+  .tuple(
+    fc.stringMatching(/^[a-z0-9]{1,12}$/),
+    fc.option(
+      fc.tuple(
+        fc.integer({ min: 1, max: 2000 }),
+        fc.integer({ min: 1, max: 2000 }),
+      ),
+      { nil: undefined },
+    ),
+    fc.option(fc.constantFrom("Hình 1", "Đồ thị", "mạch điện"), {
+      nil: undefined,
+    }),
+  )
+  .map(([name, size, alt]) => ({
+    path: `2026/09/${name}.webp`,
+    ...(size && { w: size[0], h: size[1] }),
+    ...(alt !== undefined && { alt }),
+  }));
 
-const pointsArb = fc.constantFrom(0.1, 0.25, 0.5, 1, 1.5, 2);
+const pointsArb = fc.constantFrom(0, 0.1, 0.25, 0.5, 1, 1.5, 2);
 
 const baseArb = fc.record(
   {

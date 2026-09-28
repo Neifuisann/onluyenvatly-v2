@@ -25,6 +25,12 @@ export default defineConfig({
       include: ["src/features/**", "src/lib/**"],
       exclude: ["**/*.test.*", "**/components/**", "**/*.tsx"],
       thresholds: {
+        "src/features/lessons/domain/**": {
+          lines: 95,
+          functions: 95,
+          branches: 85,
+          statements: 95,
+        },
         "src/features/auth/core/**": {
           lines: 95,
           functions: 95,

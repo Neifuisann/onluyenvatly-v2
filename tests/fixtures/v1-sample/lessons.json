@@ -1,0 +1,200 @@
+[
+  {
+    "id": 1712000000001,
+    "title": "Đề ôn GK1 – Dao động cơ",
+    "description": "Con lắc lò xo, con lắc đơn. <b>28 câu</b>",
+    "grade": "12",
+    "subject": "Dao động cơ",
+    "tags": ["giữa kì", "Lớp 12"],
+    "order": 3,
+    "views": 120,
+    "color": "#4f46e5",
+    "lesson_image": "https://abc.supabase.co/storage/v1/object/public/lesson-images/cover%20gk1.png",
+    "created": "2025-09-01T08:00:00.000Z",
+    "last_updated": "2025-09-10T08:00:00.000Z",
+    "time_limit_enabled": true,
+    "time_limit_hours": 0,
+    "time_limit_minutes": 50,
+    "time_limit_seconds": 0,
+    "shuffle_questions": true,
+    "shuffle_answers": true,
+    "enable_question_pool": false,
+    "question_pool_size": 0,
+    "question_type_distribution": { "abcd": 3, "truefalse": 1, "number": 1 },
+    "points_distribution": { "abcd": 6, "truefalse": 3, "number": 1 },
+    "questions": [
+      {
+        "id": "q_1",
+        "type": "abcd",
+        "question": "Một vật dao động điều hòa với phương trình $x = 5\\cos(2\\pi t)$ cm. Biên độ là [0.25 pts]",
+        "options": [
+          { "text": "2 cm", "line": 2 },
+          { "text": "5 cm", "line": 3 },
+          { "text": "10 cm", "line": 4 },
+          { "text": "$2\\pi$ cm", "line": 5 }
+        ],
+        "correct": "B",
+        "points": 0.25
+      },
+      {
+        "id": "q_2",
+        "type": "abcd",
+        "question": "Cho đồ thị như hình [img src=\"https://abc.supabase.co/storage/v1/object/public/lesson-images/do-thi-1.png\"]<br>Chu kì dao động là",
+        "options": ["0,5 s", "1 s", "2 s", ""],
+        "correct": "c",
+        "points": 2
+      },
+      {
+        "id": "q_3",
+        "type": "multiple_choice",
+        "question": "Công thức tính chu kì con lắc đơn:\n$$T = 2\\pi\\sqrt{\\frac{l}{g}}$$\nĐại lượng $l$ là",
+        "options": [
+          "chiều dài dây",
+          "khối lượng",
+          "A. không phải phương án",
+          "gia tốc"
+        ],
+        "correct": "A"
+      },
+      {
+        "id": "q_4",
+        "type": "truefalse",
+        "question": "Xét các phát biểu sau về con lắc lò xo:",
+        "options": [
+          "Chu kì phụ thuộc vào khối lượng vật.",
+          "Chu kì phụ thuộc vào biên độ.",
+          "Cơ năng tỉ lệ với bình phương biên độ.",
+          "Tần số tăng khi tăng khối lượng."
+        ],
+        "correct": [true, false, "true", "false"],
+        "points": 1
+      },
+      {
+        "id": "q_5",
+        "type": "number",
+        "question": "Tính chu kì (s) của con lắc có $k = 100$ N/m, $m = 1$ kg.",
+        "options": [],
+        "correct": "0,63",
+        "points": 0.5
+      },
+      {
+        "id": "q_6",
+        "type": "essay",
+        "question": "Trình bày định luật bảo toàn cơ năng.",
+        "options": [],
+        "correct": ""
+      }
+    ]
+  },
+  {
+    "id": "1712000000002",
+    "title": "Sóng cơ và sự truyền sóng",
+    "description": null,
+    "grade": 12,
+    "subject": "Sóng cơ",
+    "tags": "[\"sóng\", \"Lớp 12\"]",
+    "order": 1,
+    "lesson_image": null,
+    "created": "2025-10-01T08:00:00.000Z",
+    "last_updated": null,
+    "time_limit_enabled": false,
+    "shuffle_questions": false,
+    "shuffle_answers": false,
+    "enable_question_pool": true,
+    "question_pool_size": 3,
+    "question_type_distribution": { "abcd": 2, "truefalse": 0, "number": 1 },
+    "questions": [
+      {
+        "type": "true_false",
+        "question": "Phát biểu nào đúng về sóng ngang?",
+        "options": [
+          { "text": "Phương dao động vuông góc phương truyền." },
+          { "text": "Truyền được trong chân không." },
+          { "text": "Có bước sóng $\\lambda = vT$." }
+        ],
+        "correct": [true, false, true]
+      },
+      {
+        "id": 7,
+        "type": "fill_blank",
+        "question": "Tốc độ truyền sóng (m/s) khi $\\lambda = 2$ m, $f = 5$ Hz là",
+        "correct": 10
+      },
+      {
+        "id": "q_1",
+        "type": "abcd",
+        "question": "Sóng cơ <i>không</i> truyền được trong&nbsp;môi trường nào?",
+        "options": [
+          { "text": "Rắn" },
+          { "text": "Lỏng" },
+          { "text": "Khí" },
+          {
+            "text": "Chân không",
+            "imageUrl": "https://abc.supabase.co/storage/v1/object/public/lesson-images/vacuum.png"
+          }
+        ],
+        "correct": "D"
+      },
+      {
+        "id": "q_1",
+        "type": "abcd",
+        "question": "Câu hỏi có id trùng, lấy id dự phòng",
+        "options": ["a", "b"],
+        "correct": "A"
+      },
+      {
+        "type": "abcd",
+        "question": "Đáp án không tồn tại",
+        "options": ["a", "b", "c", "d"],
+        "correct": "F"
+      }
+    ]
+  },
+  {
+    "id": 1712000000003,
+    "title": "Điện trường – Lớp 11",
+    "description": "Ôn tập chương Điện trường",
+    "grade": "Lớp 11",
+    "subject": "Điện trường",
+    "tags": "điện, lớp 11",
+    "order": 2,
+    "created": "2025-11-01T08:00:00.000Z",
+    "time_limit_enabled": true,
+    "time_limit_hours": 0,
+    "time_limit_minutes": 0,
+    "time_limit_seconds": 30,
+    "questions": [
+      {
+        "id": "q_1",
+        "type": "abcd",
+        "question": "Hai điện tích điểm đặt cách nhau $r$\n\\frac{kq_1q_2}{r^2}\nLực tương tác là [1 pts]",
+        "options": [
+          "$F = k\\frac{|q_1q_2|}{r^2}$",
+          "$F = kq_1q_2r$",
+          "$F = \\frac{q_1q_2}{kr}$",
+          "$F = 0$"
+        ],
+        "correct": "A",
+        "points": 1
+      },
+      {
+        "id": "q_2",
+        "type": "number",
+        "question": "Cường độ điện trường (V/m) tại điểm cách $q = 10^{-9}$ C một khoảng 3 cm?",
+        "correct": "1,0.10^4"
+      },
+      {
+        "id": "q_3",
+        "type": "truefalse",
+        "question": "Về đường sức điện:",
+        "options": [
+          "Không cắt nhau.",
+          "Là đường cong kín.",
+          "Xuất phát từ điện tích dương.",
+          "Mật độ thể hiện độ lớn E."
+        ],
+        "correct": "true,false"
+      }
+    ]
+  }
+]

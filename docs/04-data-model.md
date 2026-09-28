@@ -182,13 +182,13 @@ RETURNING count;
 
 ### 3.1 `Question`
 ```ts
-type Media = { path: string; w: number; h: number; alt?: string };
+type Media = { path: string; w?: number; h?: number; alt?: string }; // w and h together or not at all
 
 type QuestionBase = {
   id: string;            // "q_" + 8-char nanoid, stable across edits of the same question
   stem: string;          // Markdown-lite + LaTeX ($...$, $$...$$)
   image?: Media;
-  points?: number;       // explicit points override ([2 pts] in the text format)
+  points?: number;       // explicit points override ([2 pts] in the text format), 0–100
   explanation?: string;  // teacher-written, shown after submit
 };
 
@@ -250,7 +250,18 @@ d) Tần số tăng khi tăng khối lượng.
 Câu 3: Tính chu kì (s) của con lắc có $k = 100$ N/m, $m = 1$ kg.
 Answer: 0,63
 ```
-Rules: `*` marks the correct option or true statement. `A.`–`F.` means MCQ, `a)`–`d)` means true/false, `Answer:` means short. `[x pts]` sets points. Lines that don't match anything continue the previous element. New in v2: an optional `Giải thích:` block ends a question with a teacher explanation, and `![alt](media:path)` embeds an image.
+Rules: `*` marks the correct option or true statement. `A.`–`F.` means MCQ, `a)`–`h)` means true/false, `Answer:` means short. `[x pts]` sets points. Lines that don't match anything continue the previous element. New in v2: an optional `Giải thích:` block ends a question with a teacher explanation, and `![alt](media:path)` embeds an image.
+
+Implemented in `src/features/lessons/domain/` (`parser.ts`, `serializer.ts`, with the shared line grammar in `text-format.ts`). `parse(serialize(qs)) == qs` is property-tested. Details:
+- Header `Câu N:` (or `Câu N.` followed by a space), any case. The number is ignored and the serializer renumbers. Text before the first header is dropped with a warning.
+- Points: `[0.25 pts]`, `[1 pt]`, `[1,5 điểm]` on their own line, or at the end of the header line (a v1 habit).
+- Short answers: `Answer: 0,63` is stored canonically as `"0.63"`. `Answer: 1.5 ± 0.05` (or `+-`) sets an absolute tolerance.
+- Images: a line `![alt](media:2026/09/x.webp =640x360)` (size optional) sets the image of the stem, or of the MCQ option just above it. One image per element; true/false statements take none.
+- `Giải thích:` runs until the next `Câu N:` and keeps blank lines.
+- Escaping: a text line that would read as structural (e.g. a stem line starting with `A.`) is written as `\A. …`. The `\` is stripped only when the rest of the line is structural, so LaTeX lines such as `\frac{…}` are untouched.
+- Every issue has a 1-based line and column, an error/warning severity and a Vietnamese message (`features/lessons/messages.ts`) for the editor's validation panel.
+- Question ids: the text carries none. Parsing with the lesson's previous questions reuses ids by stem (ignoring case, spacing and accents), then by position and type. New questions get `q_` + 8 random characters.
+- v1 → v2 normalization (10 §4) lives in `legacy.ts`. It is tested against synthetic v1-shaped lessons in `tests/fixtures/v1-sample/` and, once exported (S0-05), the real fixtures in `tests/fixtures/v1/`.
 
 ## 4. Grading rules (pure function `grade()`)
 - **mcq:** full points if `answer === selectedOriginalIndex`, else 0. The client submits the *displayed* letter; the server maps it back through the stored option order.
