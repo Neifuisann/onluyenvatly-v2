@@ -8,6 +8,7 @@ import {
   normalizeV1Grade,
   normalizeV1Questions,
   normalizeV1Tags,
+  TF_DEFAULT_STEM,
 } from "./legacy";
 import { parseLessonText } from "./parser";
 import { serializeLesson } from "./serializer";
@@ -124,6 +125,61 @@ describe("normalizeV1Questions", () => {
     expect(questions[1]).toMatchObject({ answer: "1,0.10^4" });
     expect(problems).toContainEqual(
       expect.objectContaining({ index: 2, severity: "error" }),
+    );
+  });
+
+  it("keeps image-only stems and gives text-less tf groups a lead-in", () => {
+    const img =
+      '[img src="https://x.supabase.co/storage/v1/object/public/lesson-images/lesson-1.jpg"]';
+    const { questions, problems } = normalizeV1Questions([
+      {
+        type: "abcd",
+        question: img,
+        options: [{ text: "Hình 1." }, { text: "Hình 2." }],
+        correct: "B",
+      },
+      {
+        type: "truefalse",
+        question: `${img}\n[0.8 pts]`,
+        options: [{ text: "a" }, { text: "b" }],
+        correct: [true, false],
+      },
+      {
+        type: "truefalse",
+        question: "",
+        options: [{ text: "a" }, { text: "b" }],
+        correct: [false, true],
+      },
+    ]);
+    expect(QuestionsSchema.safeParse(questions).success).toBe(true);
+    expect(questions.map((q) => [q.stem, q.image?.path])).toEqual([
+      ["", "legacy/lesson-1.jpg"],
+      ["", "legacy/lesson-1.jpg"],
+      [TF_DEFAULT_STEM, undefined],
+    ]);
+    expect(problems).toEqual([
+      expect.objectContaining({ index: 2, severity: "warning" }),
+    ]);
+  });
+
+  it("keeps extra images inline instead of dropping them", () => {
+    const url = (n: number) =>
+      `https://x.supabase.co/storage/v1/object/public/lesson-images/lesson-${n}.jpg`;
+    const { questions, problems } = normalizeV1Questions([
+      {
+        type: "number",
+        question: `Cho hình [img src="${url(1)}"] và [img src="${url(2)}"]`,
+        correct: "3",
+      },
+    ]);
+    expect(problems).toEqual([]);
+    expect(questions[0]).toMatchObject({
+      stem: "Cho hình và ![](media:legacy/lesson-2.jpg)",
+      image: { path: "legacy/lesson-1.jpg" },
+    });
+    const text = serializeLesson(questions);
+    expect(parseLessonText(text, { previous: questions }).questions).toEqual(
+      questions,
     );
   });
 

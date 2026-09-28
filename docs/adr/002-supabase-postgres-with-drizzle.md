@@ -1,6 +1,6 @@
 # ADR-002: Keep Supabase Postgres (Free); access it with Drizzle ORM through the transaction pooler
 
-- **Status:** Proposed
+- **Status:** Accepted (owner, 2026-09-28)
 - **Date:** 2026-09-28
 
 ## Context

@@ -57,12 +57,14 @@ export function splitMath(src: string): Segment[] {
     if (rest.startsWith("\\[") && close(i + 2, "\\]", true)) continue;
     if (rest.startsWith("\\(") && close(i + 2, "\\)", false)) continue;
     if (rest.startsWith("$") && !rest.startsWith("$$")) {
-      // Pandoc rule: `$` must hug its content, and the closing `$` must not
-      // be followed by a digit, so prices like "5$ và 10$" stay text.
-      const m = /^\$(?=\S)((?:\\\$|[^$])*?[^\s\\])\$(?!\d)/.exec(rest);
+      // The opening `$` must hug its content and the closing `$` must not be
+      // followed by a digit, so prices like "5$ và 10$" stay text. Space before
+      // the closing `$` is allowed: v1 (KaTeX auto-render) accepted
+      // "$\frac{PV}{T} = $" and real lessons use it.
+      const m = /^\$(?=\S)((?:\\\$|[^$])*?[^\\])\$(?!\d)/.exec(rest);
       if (m?.[1]) {
         flush();
-        out.push({ math: true, tex: m[1], display: false });
+        out.push({ math: true, tex: m[1].trimEnd(), display: false });
         i += m[0].length;
         continue;
       }

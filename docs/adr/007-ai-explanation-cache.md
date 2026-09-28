@@ -1,6 +1,6 @@
 # ADR-007: Generate each AI explanation once, store it in the DB, and serve it to everyone
 
-- **Status:** Proposed
+- **Status:** Accepted (owner, 2026-09-28)
 - **Date:** 2026-09-28
 
 ## Context

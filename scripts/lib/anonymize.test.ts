@@ -50,4 +50,18 @@ describe("findPhoneLikeStrings", () => {
       [],
     );
   });
+
+  it("ignores decimals and timestamp ids", () => {
+    expect(
+      findPhoneLikeStrings({
+        points: "[0.10714285714285714 pts]",
+        id: "1790575960058",
+        v: "x = 0,1234567891 m",
+      }),
+    ).toEqual([]);
+  });
+
+  it("still flags a phone at the end of a sentence", () => {
+    expect(findPhoneLikeStrings({ a: "SĐT: 0912345678." })).toEqual(["$.a"]);
+  });
 });

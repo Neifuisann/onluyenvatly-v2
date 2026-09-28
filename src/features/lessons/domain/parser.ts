@@ -297,7 +297,7 @@ function finalize(
     });
 
   const stem = joinText(d.stem.lines);
-  if (!stem) add("EMPTY_STEM", M.EMPTY_STEM);
+  if (!stem && !d.stem.image) add("EMPTY_STEM", M.EMPTY_STEM);
   const base = {
     id,
     stem,
@@ -357,6 +357,12 @@ function finalize(
   return q;
 }
 
+/** Stem identity for id reuse; an image-only stem is known by its image. */
+function matchKey(stem: string, image: Media | undefined): string {
+  const key = stemKey(stem);
+  return key || (image ? `\u0000img:${image.path}` : "");
+}
+
 /** Reuse previous ids: same stem first, then same position and type. */
 function assignIds(drafts: readonly Draft[], options: ParseOptions): string[] {
   const previous = (options.previous ?? []).filter(
@@ -368,11 +374,12 @@ function assignIds(drafts: readonly Draft[], options: ParseOptions): string[] {
 
   const byStem = new Map<string, string[]>();
   for (const q of previous) {
-    const key = stemKey(q.stem);
-    byStem.set(key, [...(byStem.get(key) ?? []), q.id]);
+    const key = matchKey(q.stem, q.image);
+    if (key) byStem.set(key, [...(byStem.get(key) ?? []), q.id]);
   }
   drafts.forEach((d, i) => {
-    const candidates = byStem.get(stemKey(joinText(d.stem.lines))) ?? [];
+    const key = matchKey(joinText(d.stem.lines), d.stem.image);
+    const candidates = (key && byStem.get(key)) || [];
     const id = candidates.find((c) => !used.has(c));
     if (id) {
       ids[i] = id;

@@ -51,7 +51,9 @@ Hot spots to watch:
 
 ## 3. Monthly usage model
 
-Assumptions (measure the real values from v1 in Sprint 0 and update this table):
+**v1 baseline (S0-04, 2026-09-28):** 292 students; 9–54 active per week over the last 12 weeks; ~28 tests/day (p95 116); busiest hours 9h and 19h (VN); the busiest 10 minutes had 43 submits; v1 serves at most ~200k requests/month (owner, Vercel Usage tab). Quiz game: never used. The assumptions below are deliberately higher than this baseline.
+
+Assumptions:
 - 300 registered students, ~180 active in a typical month.
 - An active student does 12 tests a month and browses ~20 other pages.
 - 1 test ≈ 6 page/RSC requests + ~30 autosaves (only when changed) + 1 submit + ~3 explanation clicks (mostly DB-cache hits).
@@ -65,9 +67,9 @@ Assumptions (measure the real values from v1 in Sprint 0 and update this table):
 | Vercel Fast Data Transfer | ~185k × 25 KB + static JS ≈ **6–10 GB** | 100 GB | ~10 % |
 | **Vercel Fast Origin Transfer** | dynamic responses ~185k × 15 KB (compressed) ≈ **3 GB** | 10 GB | **~30 %** ← watch |
 | Vercel image optimization | ~0 (only static marketing images, built once) | 5K | ~0 % |
-| **Supabase DB size** | ~140 MB after year 1 (04 §6) + migrated v1 data | 500 MB | measure in Sprint 0 |
+| **Supabase DB size** | ~140 MB after year 1 (04 §6) + ~40 MB migrated v1 data (v1 itself is 205 MB) | 500 MB | ~36 % |
 | Supabase egress (DB + storage) | DB results ~1 GB + images ~1 GB | 5 GB (+5 GB cached) | ~40 % ← watch |
-| Supabase storage | existing images + ~50 MB/year | 1 GB | measure |
+| Supabase storage | 18 MB existing images (2,527) + ~50 MB/year | 1 GB | ~7 % |
 | Gemini requests | explanation cache misses (~100–300/day at first, falling as the cache fills) + imports | free tier RPD | see 09 |
 
 **Rule:** if any line goes over **60 %** in the daily quota check (12 §5), stop feature work and optimise. The usual fixes are more caching, less prefetching, longer autosave intervals, and smaller payloads.

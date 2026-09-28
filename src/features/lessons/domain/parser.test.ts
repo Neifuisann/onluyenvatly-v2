@@ -234,6 +234,36 @@ describe("question ids across edits", () => {
     expect(questions.map((q) => q.id)).toEqual(["q_aaaa", "q_bbbb", "q_fresh"]);
   });
 
+  it("matches image-only stems by their image", () => {
+    const imageOnly: Question[] = [
+      {
+        id: "q_img1",
+        type: "short",
+        stem: "",
+        image: { path: "legacy/a.jpg" },
+        answer: "1",
+      },
+      {
+        id: "q_img2",
+        type: "short",
+        stem: "",
+        image: { path: "legacy/b.jpg" },
+        answer: "2",
+      },
+    ];
+    const { questions, issues } = parseLessonText(
+      "Câu 1:\n![](media:legacy/b.jpg)\nAnswer: 2\nCâu 2:\n![](media:legacy/a.jpg)\nAnswer: 1",
+      { ...counter(), previous: imageOnly },
+    );
+    expect(issues).toEqual([]);
+    expect(questions.map((q) => q.id)).toEqual(["q_img2", "q_img1"]);
+  });
+
+  it("still rejects a question with neither text nor image", () => {
+    const { issues } = parseLessonText("Câu 1:\nAnswer: 2", counter());
+    expect(issues.map((i) => i.code)).toContain("EMPTY_STEM");
+  });
+
   it("compares stems without case, spacing or accents", () => {
     expect(stemKey("  Dao   ĐỘNG\ncơ ")).toBe(stemKey("dao động cơ"));
   });

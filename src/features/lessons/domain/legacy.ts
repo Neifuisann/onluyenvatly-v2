@@ -97,16 +97,24 @@ export function cleanLegacyText(raw: string): {
   return { text, hadHtml };
 }
 
-const IMG_TAG = /\[img\s+src\s*=\s*"([^"]+)"\s*\]/gi;
+/** Lead-in for v1 true/false groups that had no stem text (lesson content, not UI copy). */
+export const TF_DEFAULT_STEM = "Mỗi mệnh đề sau đúng hay sai?";
+
+/** With the spaces around it, so "hình [img] và" becomes "hình và". */
+const IMG_TAG = /([ \t]*)\[img\s+src\s*=\s*"([^"]+)"\s*\]([ \t]*)/gi;
 const POINTS_MARKER = /\s*\[\s*(\d+(?:[.,]\d+)?)\s*pts?\s*\]/gi;
 
-/** Pull `[img src="…"]` tags out of a text; the first becomes the element's image. */
+/** Pull `[img src="…"]` tags out of a text (callers decide where each image goes). */
 function extractImages(text: string): { text: string; urls: string[] } {
   const urls: string[] = [];
-  const rest = text.replace(IMG_TAG, (_, url: string) => {
-    urls.push(url);
-    return "";
-  });
+  const rest = text.replace(
+    IMG_TAG,
+    (_, before: string, url: string, after: string) => {
+      urls.push(url);
+      // Keep one space only when the tag sat between two words.
+      return before && after ? " " : before || after;
+    },
+  );
   return { text: rest, urls };
 }
 
@@ -170,21 +178,23 @@ export function normalizeV1Questions(
     return { path };
   };
 
-  /** Clean one piece of text and take its first image. */
+  /**
+   * Clean one piece of text. The first image becomes the element's image;
+   * any others stay inline as Markdown-lite images at the end of the text.
+   */
   const element = (value: unknown, index: number, extraUrl?: string | null) => {
     const { text: cleaned, hadHtml } = cleanLegacyText(textOf(value));
     if (hadHtml)
       problems.push({ index, severity: "warning", message: "HTML removed" });
     const { text, urls } = extractImages(cleaned);
-    const all = [...(extraUrl ? [extraUrl] : []), ...urls];
-    if (all.length > 1)
-      problems.push({
-        index,
-        severity: "warning",
-        message: `${all.length - 1} extra image(s) dropped`,
-      });
-    const image = all[0] ? toMedia(all[0], index) : undefined;
-    return { text: cleanLegacyText(text).text, image };
+    const [first, ...extra] = [...(extraUrl ? [extraUrl] : []), ...urls];
+    const image = first ? toMedia(first, index) : undefined;
+    const inline = extra
+      .map((url) => toMedia(url, index))
+      .filter((m) => m !== undefined)
+      .map((m) => `![](media:${m.path})`);
+    const body = cleanLegacyText(text).text;
+    return { text: [body, ...inline].filter(Boolean).join(" "), image };
   };
 
   for (const [index, item] of raw.entries()) {
@@ -223,6 +233,15 @@ export function normalizeV1Questions(
     }
 
     const stem = element(stemRaw, index, imageFieldOf(v1));
+    // v1 allowed a true/false group with no lead-in; v2 needs stem text or an image.
+    if (type === "tf" && !stem.text.trim() && !stem.image) {
+      stem.text = TF_DEFAULT_STEM;
+      problems.push({
+        index,
+        severity: "warning",
+        message: "true/false group had no text; default lead-in added",
+      });
+    }
     const base = {
       id: "",
       stem: stem.text,

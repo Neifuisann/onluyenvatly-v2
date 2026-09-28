@@ -68,15 +68,27 @@ export const mediaArb: fc.Arbitrary<Media> = fc
 
 const pointsArb = fc.constantFrom(0, 0.1, 0.25, 0.5, 1, 1.5, 2);
 
-const baseArb = fc.record(
+const baseFields = {
+  id: fc.stringMatching(/^[A-Za-z0-9]{8}$/).map((s) => `q_${s}`),
+  stem: textArb,
+  image: mediaArb,
+  points: pointsArb,
+  explanation: textArb,
+};
+
+/** Mostly stems with text; sometimes an image-only stem (v1 had those). */
+const baseArb = fc.oneof(
   {
-    id: fc.stringMatching(/^[A-Za-z0-9]{8}$/).map((s) => `q_${s}`),
-    stem: textArb,
-    image: mediaArb,
-    points: pointsArb,
-    explanation: textArb,
+    weight: 9,
+    arbitrary: fc.record(baseFields, { requiredKeys: ["id", "stem"] }),
   },
-  { requiredKeys: ["id", "stem"] },
+  {
+    weight: 1,
+    arbitrary: fc.record(
+      { ...baseFields, stem: fc.constant("") },
+      { requiredKeys: ["id", "stem", "image"] },
+    ),
+  },
 );
 
 export const mcqArb: fc.Arbitrary<McqQuestion> = fc

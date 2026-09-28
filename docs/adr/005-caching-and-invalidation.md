@@ -1,6 +1,6 @@
 # ADR-005: Cache shared data with Next.js tagged caching; no in-memory caches, no Redis
 
-- **Status:** Proposed
+- **Status:** Accepted (owner, 2026-09-28)
 - **Date:** 2026-09-28
 
 ## Context

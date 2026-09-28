@@ -186,7 +186,7 @@ type Media = { path: string; w?: number; h?: number; alt?: string }; // w and h 
 
 type QuestionBase = {
   id: string;            // "q_" + 8-char nanoid, stable across edits of the same question
-  stem: string;          // Markdown-lite + LaTeX ($...$, $$...$$)
+  stem: string;          // Markdown-lite + LaTeX ($...$, $$...$$); may be blank when `image` is set
   image?: Media;
   points?: number;       // explicit points override ([2 pts] in the text format), 0–100
   explanation?: string;  // teacher-written, shown after submit
@@ -256,7 +256,7 @@ Implemented in `src/features/lessons/domain/` (`parser.ts`, `serializer.ts`, wit
 - Header `Câu N:` (or `Câu N.` followed by a space), any case. The number is ignored and the serializer renumbers. Text before the first header is dropped with a warning.
 - Points: `[0.25 pts]`, `[1 pt]`, `[1,5 điểm]` on their own line, or at the end of the header line (a v1 habit).
 - Short answers: `Answer: 0,63` is stored canonically as `"0.63"`. `Answer: 1.5 ± 0.05` (or `+-`) sets an absolute tolerance.
-- Images: a line `![alt](media:2026/09/x.webp =640x360)` (size optional) sets the image of the stem, or of the MCQ option just above it. One image per element; true/false statements take none.
+- Images: a line `![alt](media:2026/09/x.webp =640x360)` (size optional) sets the image of the stem, or of the MCQ option just above it. One image per element; true/false statements take none. A stem may be only an image (`Câu 1:` followed by the image line); such questions keep their id across edits by image path. More images can sit inline in the text.
 - `Giải thích:` runs until the next `Câu N:` and keeps blank lines.
 - Escaping: a text line that would read as structural (e.g. a stem line starting with `A.`) is written as `\A. …`. The `\` is stripped only when the rest of the line is structural, so LaTeX lines such as `\frac{…}` are untouched.
 - Every issue has a 1-based line and column, an error/warning severity and a Vietnamese message (`features/lessons/messages.ts`) for the editor's validation panel.
@@ -284,6 +284,6 @@ RLS is **enabled on every table with no policies**. The app connects with a role
 | indexes + everything else | | | ~40 MB |
 | **Total** | | | **≈ 140 MB/year** |
 
-Compare with v1, which stores the full question text and options inside every result. Measure v1's actual DB size in Sprint 0 (`select pg_size_pretty(pg_database_size(current_database()))`) and put it in this table.
+Compare with v1, which stores the full question text and options inside every result. **v1 measured on 2026-09-28 (S0-03): 205 MB total**, of which `results` is 174 MB for 24,206 rows (~7 KB each, because every result embeds the questions), `rating_history` 9 MB, `lessons` 4 MB (170 rows). The v2 `attempts` layout (~1.2 KB) makes the migrated history roughly 30 MB.
 
 Retention: `guard_events` is trimmed after 180 days, `audit_log` after 180 days, `sessions` when expired, and `rate_limits` rows older than 1 day are deleted.

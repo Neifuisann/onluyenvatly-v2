@@ -1,6 +1,6 @@
 # ADR-004: Server-authoritative attempts and grading; remove the client "encryption" layer
 
-- **Status:** Proposed
+- **Status:** Accepted (owner, 2026-09-28)
 - **Date:** 2026-09-28
 
 ## Context

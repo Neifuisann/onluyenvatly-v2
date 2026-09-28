@@ -48,6 +48,8 @@ export type LessonReport = {
   updated: number;
   /** Lessons edited in v2 since the last run; their content was left alone. */
   keptV2Content: string[];
+  /** v1 rows in `lessons` that are not lessons (e.g. the quiz-game placeholder). */
+  skipped: { legacyId: string; reason: string }[];
   questionsV1: number;
   questionsMigrated: number;
   problems: LessonProblem[];
@@ -154,6 +156,14 @@ export async function migrateUsers<Q extends PgQueryResultHKT>(
   return report;
 }
 
+/**
+ * v1 kept the quiz-game config as a row in `lessons` (id `quiz_game`, null
+ * questions). The game was dropped (01 §7 #4), so the row is skipped.
+ */
+export const V1_NON_LESSON_IDS: ReadonlyMap<string, string> = new Map([
+  ["quiz_game", "quiz-game placeholder, not a lesson"],
+]);
+
 const DATA_URL = /^data:image\/(png|jpe?g|webp|gif);base64,/i;
 
 function coverJob(
@@ -188,6 +198,7 @@ export async function migrateLessons<Q extends PgQueryResultHKT>(
     inserted: 0,
     updated: 0,
     keptV2Content: [],
+    skipped: [],
     questionsV1: 0,
     questionsMigrated: 0,
     problems: [],
@@ -196,6 +207,11 @@ export async function migrateLessons<Q extends PgQueryResultHKT>(
 
   for (const row of v1Lessons) {
     const legacyId = str(row.id);
+    const skipReason = V1_NON_LESSON_IDS.get(legacyId);
+    if (skipReason) {
+      report.skipped.push({ legacyId, reason: skipReason });
+      continue;
+    }
     const problem = (p: LegacyProblem) =>
       report.problems.push({ ...p, legacyId });
 
@@ -355,7 +371,7 @@ export function renderReport(r: {
     "| Entity | v1 | inserted | updated | skipped / kept |",
     "|---|---|---|---|---|",
     `| students → users | ${r.users.v1} | ${r.users.inserted} | ${r.users.updated} | ${r.users.skipped.length} |`,
-    `| lessons | ${r.lessons.v1} | ${r.lessons.inserted} | ${r.lessons.updated} | ${r.lessons.keptV2Content.length} kept (edited in v2) |`,
+    `| lessons | ${r.lessons.v1} | ${r.lessons.inserted} | ${r.lessons.updated} | ${r.lessons.skipped.length} skipped, ${r.lessons.keptV2Content.length} kept (edited in v2) |`,
     `| questions | ${r.lessons.questionsV1} | ${r.lessons.questionsMigrated} migrated | | ${r.lessons.questionsV1 - r.lessons.questionsMigrated} not migrated |`,
     `| media | | ${r.media.copied} copied | ${r.media.existing} already there | ${r.media.skipped ? "copy skipped" : `${r.media.failed.length} failed`} |`,
     "",
@@ -376,6 +392,12 @@ export function renderReport(r: {
     "| Student legacy id | Reason |",
     "|---|---|",
     ...r.users.skipped.map((s) => `| ${s.legacyId} | ${s.reason} |`),
+    "",
+    `## Skipped lessons (${r.lessons.skipped.length})`,
+    "",
+    "| Lesson legacy id | Reason |",
+    "|---|---|",
+    ...r.lessons.skipped.map((s) => `| ${s.legacyId} | ${s.reason} |`),
     "",
     `## Lessons kept (edited in v2): ${r.lessons.keptV2Content.join(", ") || "none"}`,
     "",

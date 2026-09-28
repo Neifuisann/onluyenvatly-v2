@@ -141,7 +141,7 @@ try {
   console.log(
     [
       `users: +${users.inserted} ~${users.updated} skipped ${users.skipped.length}`,
-      `lessons: +${lessons.inserted} ~${lessons.updated} kept ${lessons.keptV2Content.length}`,
+      `lessons: +${lessons.inserted} ~${lessons.updated} kept ${lessons.keptV2Content.length} skipped ${lessons.skipped.length}`,
       `questions: ${lessons.questionsMigrated}/${lessons.questionsV1} (errors ${errors})`,
       `media: copied ${media.copied}, existing ${media.existing}, failed ${media.failed.length}`,
       "report: tmp/migration-report.md",

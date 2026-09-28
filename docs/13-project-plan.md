@@ -82,26 +82,47 @@ gantt
 | ID | Status | Notes |
 |---|---|---|
 | S0-01 | ✅ Done | Answers in 01 §7 (domain left open, not blocking) |
-| S0-02 | ⏳ Owner | ADRs still `Proposed`; owner flips each to `Accepted` in `docs/adr/` |
-| S0-03 | ⏳ Run script | `pnpm v1:inventory > tmp/v1-inventory.md` (read-only), then copy numbers into 04 §6 and 10 §2 |
-| S0-04 | ⏳ Run script + dashboards | Same script gives results/week, active students, peak hour, burst size, quiz-game use. Requests/day comes from the v1 Vercel Usage tab. Record in 08 §3 |
-| S0-05 | ⏳ Run script | `pnpm v1:fixtures` writes `tests/fixtures/v1/*.json`, anonymized; review the diff before committing |
-| S0-06 | ⏳ Manual | Account checklist below |
+| S0-02 | ✅ Done | Owner accepted all 7 ADRs (2026-09-28) |
+| S0-03 | ✅ Done | Inventory run 2026-09-28 (summary below; also in 04 §6 and 10 §2). Script fixed to use `tx.savepoint()` (it hung after a failed query) |
+| S0-04 | ✅ Done | DB-side baseline below; v1 traffic per the owner: at most ~200k requests/month (≈ 6.7k/day). Recorded in 08 §3 |
+| S0-05 | ✅ Done | `tests/fixtures/v1/` (10 lessons, 20 rating rows, 50 results). Reviewed: no names, phones, emails, IPs, device ids or user agents; student ids pseudonymized. Phone check no longer flags decimals or timestamp ids |
+| S0-06 | ⏳ Owner accounts | GitHub repo done; Vercel project `onluyenvatly-v2` created (not yet connected to GitHub, no env vars). The rest of the checklist below needs the owner |
 | S0-07 | ✅ Done | Next 16 + TS strict + Tailwind v4 + shadcn config + Biome + Vitest + Playwright + pnpm; `src/` layout; `lib/env.ts` (Zod); `/api/health`. `/api/health` on preview still needs S0-06 |
-| S0-08 | 🟡 Partial | `.github/workflows/ci.yml` (lint, types, unit + coverage, build, E2E smoke). Branch protection needs the GitHub repo |
+| S0-08 | 🟡 Partial | CI green on PRs #1 and #2; branch protection on `main` complete. `migrate.yml` fails on every push to `main` until the `DATABASE_URL_DIRECT` secret exists (S0-06) |
 | S0-09 | ⏳ Manual | Rehearsal checklist in 10 §6 |
 | S0-10 | ✅ Done | `AGENTS.md` (+ `CLAUDE.md` → `@AGENTS.md`) |
 
+v1 inventory and baseline (2026-09-28, read-only; full output in `tmp/v1-inventory.md`):
+
+| Item | Value |
+|---|---|
+| DB size | 205 MB (`results` 174 MB, `rating_history` 9 MB, `lessons` 4 MB) |
+| Students | 292 (291 approved) |
+| Lessons | 170 rows = 169 lessons + the `quiz_game` placeholder; 1 empty; avg 30.4 questions, max 104 |
+| Question types | `abcd` 4,378 · `truefalse` 614 · `number` 153; 0 stems with HTML |
+| Results | 24,206 (2025-04-03 → now), 55 without a student |
+| Ratings / history | 273 ratings (1033–2177, avg 1579) · 23,409 history rows |
+| Sessions (not migrated) | 13 |
+| Storage | `lesson-images`: 2,527 objects, 18 MB (only bucket) |
+| Tests/day (last 30 d) | avg 28.4, p95/max 116 |
+| Active students/week (12 wk) | 9–54; busiest weeks 127–177 tests |
+| Busiest hours (VN) | 9h, 19h, 7h, 21h |
+| Busiest 10 min | 43 submits (load-test burst size) |
+| Requests (owner, Vercel Usage) | ≤ ~200k/month |
+| Quiz game | `quiz_results` does not exist: never used (drop confirmed, 01 §7) |
+| Leftover tables | `temp_lesson_content`, `ai_interactions` do not exist |
+
 S0-06 account checklist (put secrets only in Vercel/GitHub, never in the repo):
-- [ ] GitHub repo under the **personal** account; push `main`
-- [ ] Branch protection on `main`: require PR + the `Lint, types, unit, build` and `E2E smoke` checks, no force-push
-- [ ] Vercel project `onluyenvatly-v2` from the repo; function region `sin1` (also set in `vercel.json`), Fluid compute on, Node 22
-- [ ] Supabase v2 project in **Singapore (ap-southeast-1)**; note pooler (`:6543`) and direct URLs
-- [ ] Neon project `staging` (Singapore region); URL → Vercel **Preview** env `DATABASE_URL`
+- [x] GitHub repo under the **personal** account; push `main` (`Neifuisann/onluyenvatly-v2`, public)
+- [x] Branch protection on `main`: PR required (0 approvals), checks `Lint, types, unit, build` + `E2E smoke`, no force-push, no deletion
+- [ ] GitHub secrets: `NEON_DATABASE_URL` (+ `_POOLED`) done; `DATABASE_URL_DIRECT` exists but must be the Supabase **session pooler** URL (`:5432` on `pooler.supabase.com`), see 12 §2
+- [x] Vercel project `onluyenvatly-v2`: created, GitHub connected; Next.js preset, region `sin1` and Node 22 are pinned in `vercel.json`/`engines`
+- [x] Supabase v2 project in **Singapore (ap-southeast-1)**; pooler (`:6543`) URL in Vercel Production `DATABASE_URL`
+- [ ] Neon project `staging`: created, schema migrated. To do: pooled URL → Vercel **Preview** env `DATABASE_URL`
 - [ ] Google AI Studio: two Gemini keys (prod, staging)
 - [ ] Cloudflare R2 bucket `onluyenvatly-backups` + API token; `age` key pair (private key offline)
 - [ ] Sentry project (Next.js), UptimeRobot monitor on `https://onluyenvatly-v2.vercel.app/api/health`
-- [ ] Generate `SESSION_PEPPER` and `CRON_SECRET` per environment; fill Vercel env vars per `.env.example`
+- [ ] `SESSION_PEPPER`: Production done; Preview still needs its own value. `CRON_SECRET` from S9-05
 
 ---
 
@@ -128,7 +149,7 @@ S0-06 account checklist (put secrets only in Vercel/GitHub, never in the repo):
 |---|---|---|
 | S1-01 | ✅ Done | OKLCH tokens (07 §3.1) + class-based dark mode, no-flash theme script, `ThemeToggle`; `pnpm check:contrast` in CI (all pairs ≥ AA) |
 | S1-02 | ✅ Done | `AppShell` (sidebar ≥ 1024 px, bottom tabs / admin nav strip on phones, skip link, `aria-current`), `PublicHeader`, UI primitives, `/dev/ui` (404 in production) |
-| S1-03 | 🟡 Local only | Schema + migrations `0000_init`, `0001_settings_row`, RLS on every table, `migrate.yml`. Applied to PGlite locally; **Neon/Supabase apply waits for S0-06** (accounts + `DATABASE_URL_DIRECT` secret per environment) |
+| S1-03 | 🟡 Staging applied | Schema + migrations `0000`–`0002`, RLS on every table, `migrate.yml` (picks the Neon or Supabase secret by target). **Neon staging migrated 2026-09-28** (Actions run 36389687205). Supabase production waits for the session-pooler `DATABASE_URL_DIRECT` |
 | S1-04 | ✅ Done | `features/auth/core` ≈ 98 % lines/branches (CI gate: 95 %); session lifecycle integration-tested |
 | S1-05 | ✅ Done | Actions + `rateLimit()`; 06 §4 limits enforced in integration tests |
 | S1-06 | ✅ Done | Login/register/pending pages, `proxy.ts`, `?next=` validation; E2E `auth.spec.ts` (journey 1 minus approval) |
@@ -159,9 +180,9 @@ S0-06 account checklist (put secrets only in Vercel/GitHub, never in the repo):
 |---|---|---|
 | S2-01 | Implemented, local DB verified | Lessons/version/media migration, accent-insensitive search and index-use test; remote apply awaits S0-06 |
 | S2-02 | Implemented | Strict question/config schemas; public-question property tests strip answers, tolerance and explanations |
-| S2-03 | Implemented, real fixtures pending | Parser/serializer, stable ids, error positions, 1,000-case round trip and synthetic v1 fixtures pass; S0-05 real export still needed |
-| S2-04 | Implemented | Server-rendered Markdown-lite/KaTeX, fixture rendering tests; production client-chunk scan finds no KaTeX JS |
-| S2-05 | Implemented, remote rehearsal pending | Local synthetic dry-run/apply/idempotency verified in the prior implementation; Neon/v1 count reconciliation and real media copy await S0-05/S0-06 |
+| S2-03 | Implemented, real fixtures pass | Parser/serializer, stable ids, error positions, 1,000-case round trip; the 10 real v1 lessons round-trip losslessly. Stems may be image-only (schema, parser, id matching by image path), as 4 v1 questions are |
+| S2-04 | Implemented | Server-rendered Markdown-lite/KaTeX, fixture rendering tests; production client-chunk scan finds no KaTeX JS. Real fixtures found `$\frac{PV}{T} = $` (space before the closing `$`, accepted by v1's KaTeX auto-render); now rendered |
+| S2-05 | Real-data dry run green; remote rehearsal pending | Dry run of all v1 data into local PGlite (rolled back): 292/292 students, 169 lessons (+ `quiz_game` placeholder skipped), **5,145/5,145 questions, 0 errors**. Text-less tf groups (4) get a default lead-in (warning); extra stem images are kept inline instead of dropped. Apply to Neon/v2 and the media copy await S0-06 |
 | S2-06 | Implemented, local browser verified | Cached catalog/facets, search/filter/sort, URL history, 24-card cumulative pagination and all states; preview Lighthouse LCP < 1.8 s remains pending |
 | S2-07 | Implemented within S2 dependencies | Cached safe overview and authenticated legacy 308 lookup; unpublished lessons hidden from students. Attempt history, progress filters and start/continue depend on S3-01/S3-03 |
 
@@ -351,7 +372,7 @@ Pilot data note: the final migration upserts only rows with `legacy_id`. Attempt
 ## 6. Sprint log (append each week)
 | Sprint | Dates | Planned d | Done d | Demo notes | Retro: keep / change |
 |---|---|---|---|---|---|
-| S0 | 2026-09-28 → | 4.0 | 1.5 (S0-01, S0-07, S0-10, most of S0-08; scripts for S0-03/04/05) | | |
+| S0 | 2026-09-28 → | 4.0 | 3.25 (S0-01–05, S0-07, S0-10, most of S0-08) | v1 inventory and anonymized real fixtures | Keep: run against real data early, since it found 4 migration/rendering bugs the synthetic fixtures missed. Open: S0-06 (Preview env vars, AI/R2/Sentry/UptimeRobot), S0-09 |
 | S1 | 2026-09-28 → | 4.5 | 4.0 (all tasks coded; S1-03 remote apply and S1-08 grade wait for S0-06) | | |
 | S2 | 2026-09-28 → | 4.5 | All seven tasks implemented; external acceptance gates above remain | Synthetic catalog and legacy-link demo; mobile/desktop light/dark browser checks | Keep domain/property tests and explicit answer-safe projections; run coverage separately from the production build to avoid local PGlite startup contention |
 | … | | | | | |
