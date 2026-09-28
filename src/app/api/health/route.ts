@@ -13,8 +13,10 @@ export async function GET() {
   } catch (error) {
     dbOk = false;
     // Code only (28P01 bad password, XX000 unknown pooler tenant, ENOTFOUND,
-    // CONNECT_TIMEOUT…): the message can echo connection details.
-    const code = (error as { code?: unknown }).code;
+    // CONNECT_TIMEOUT…): the message can echo connection details. Drizzle
+    // wraps driver errors in DrizzleQueryError, with the original as `cause`.
+    const cause = (error as { cause?: { code?: unknown } }).cause;
+    const code = cause?.code ?? (error as { code?: unknown }).code;
     console.error(
       "health: db check failed:",
       typeof code === "string" ? code : "unknown",
