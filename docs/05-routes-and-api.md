@@ -41,6 +41,8 @@ Conventions:
 
 **S4 dashboard implementation:** `/dashboard` makes 3 per-user queries (session, `getDashboardStats`, `getContinueAttempt`). The rank reuses `getLeaderboard({ grade: myGrade, period: "all" })` and the recommendations reuse `getCatalog` for my grade (both shared caches): the first 4 lessons in the teacher's order that I have neither submitted nor have in progress. The rating sparkline is inline SVG rendered on the server.
 
+**S4 profile implementation:** `/profile?page=` (cumulative history, 20 per step, at most 25 steps) makes 4 per-user reads in parallel: `getProfileSummary` (rating, peak, tests, average, active days), `getRatingHistory` (latest 500 points, for the lazy Recharts chart), `getAccuracy` (points earned/available per question type and chapter over the latest 100 tests; the question type is resolved in SQL from `lesson_versions` and nothing else from the questions leaves the database) and `getMyHistory`. The streak counts consecutive Vietnam-time days with a submitted test, ending today or yesterday.
+
 ### Admin (layout: `requireAdmin()`)
 
 | Path | Content |

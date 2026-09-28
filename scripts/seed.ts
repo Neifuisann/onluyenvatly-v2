@@ -155,18 +155,30 @@ async function main() {
       .where(eq(schema.ratings.userId, student.id));
     const fixture = e2eRatings[s.key];
     if (fixture) {
-      const { rating, weekDelta } = fixture;
-      await db
-        .insert(schema.ratings)
-        .values({ userId: student.id, rating, peak: rating, ratedAttempts: 1 });
-      await db.insert(schema.ratingEvents).values({
+      const { rating, weekDelta, earlier } = fixture;
+      const day = 24 * 60 * 60 * 1000;
+      const event = (after: number, delta: number, daysAgo: number) => ({
         userId: student.id,
-        before: rating - weekDelta,
-        delta: weekDelta,
-        after: rating,
+        before: after - delta,
+        delta,
+        after,
         formula: "v2",
-        createdAt: new Date(Date.now() - 24 * 60 * 60 * 1000),
+        createdAt: new Date(Date.now() - daysAgo * day),
       });
+      await db.insert(schema.ratings).values({
+        userId: student.id,
+        rating,
+        peak: rating,
+        ratedAttempts: earlier === undefined ? 1 : 2,
+      });
+      await db
+        .insert(schema.ratingEvents)
+        .values([
+          ...(earlier === undefined
+            ? []
+            : [event(rating - weekDelta, earlier, 10)]),
+          event(rating, weekDelta, 1),
+        ]);
     }
   }
   // Fresh rate-limit counters so reruns within a minute stay under the limits.

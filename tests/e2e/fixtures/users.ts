@@ -47,6 +47,21 @@ export const e2eStudents = [
     status: "active",
     grade: 12,
   },
+  // S4-07 profile spec, one per Playwright project.
+  {
+    key: "profile",
+    phone: "0900000008",
+    fullName: "Học Sinh Hồ Sơ",
+    status: "active",
+    grade: 12,
+  },
+  {
+    key: "profile2",
+    phone: "0900000009",
+    fullName: "Học Sinh Hồ Sơ Hai",
+    status: "active",
+    grade: 12,
+  },
   {
     key: "pending",
     phone: "0900000004",
@@ -72,15 +87,19 @@ export function e2eStudent(key: E2eStudentKey) {
 }
 
 /**
- * Leaderboard fixtures (S4-05), reset on every seed: a rating plus one
- * rating change a day ago. Runner students start unrated and earn theirs in
- * the runner specs, so `active` sits well above anything they can reach.
+ * Rating fixtures (S4-05/07), reset on every seed: a rating plus one change a
+ * day ago and, with `earlier`, one more 10 days ago (outside the weekly
+ * board). Runner students start unrated and earn theirs in the runner specs,
+ * so `active` sits well above anything they can reach.
  */
 export const e2eRatings: Partial<
-  Record<E2eStudentKey, { rating: number; weekDelta: number }>
+  Record<E2eStudentKey, { rating: number; weekDelta: number; earlier?: number }>
 > = {
   active: { rating: 2100, weekDelta: -12 },
   active2: { rating: 1650, weekDelta: 150 },
+  // Two points, so the profile chart has a line: 1 500 → 1 520 → 1 560.
+  profile: { rating: 1560, weekDelta: 40, earlier: 20 },
+  profile2: { rating: 1560, weekDelta: 40, earlier: 20 },
   // Not active accounts: never listed, whatever their rating.
   pending: { rating: 2400, weekDelta: 300 },
   rejected: { rating: 2500, weekDelta: 300 },
