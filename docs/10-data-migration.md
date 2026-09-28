@@ -1,0 +1,88 @@
+# 10 — Data Migration (v1 → v2)
+
+## 1. Strategy
+- **Big-bang cutover with a rehearsed script**, not dual-writes. The dataset is small (hundreds of users, thousands of results), so a full copy takes minutes.
+- v2 lives in a **separate Supabase project** (Free allows 2 active projects), preferably in `ap-southeast-1`. v1 keeps running untouched until cutover, and it's the rollback target.
+- The migration script `scripts/migrate-legacy.ts` is **idempotent**. It upserts by `legacy_id`, so it can be re-run for rehearsals and for the final delta.
+- Staging: during development the "second" free project is the v2 prod-to-be. For a separate staging environment, use a local Supabase (Docker via the `supabase` CLI) or a Neon free branch. Don't create a 3rd Supabase Free project, because only 2 can be active at once.
+
+## 2. Pre-migration inventory (Sprint 0)
+Run against v1 (read-only) and record the results in this doc:
+```sql
+select pg_size_pretty(pg_database_size(current_database()));
+select relname, n_live_tup, pg_size_pretty(pg_total_relation_size(relid))
+from pg_stat_user_tables order by pg_total_relation_size(relid) desc;
+select count(*) filter (where is_approved) approved, count(*) from students;
+select count(*), min(timestamp), max(timestamp) from results;
+select jsonb_path_query_array(questions, '$[*].type') ... -- distinct question types
+select count(*) from results where student_id is null;
+select count(*) from lessons where questions is null or jsonb_array_length(questions)=0;
+```
+Also export the `session` table count (it isn't migrated; everyone logs in again) and the storage bucket object count and size.
+
+## 3. Mapping
+
+| v1 | v2 | Transform |
+|---|---|---|
+| `students` | `users` (role `student`) | `id→legacy_id`; `full_name`; `phone_number→phone` (normalize: strip spaces, `+84→0`); `date_of_birth`; `password_hash` as is (bcrypt); `is_approved → status` (`active`/`pending`); `approved_device_id → approved_device_id` **only if** device policy stays on (otherwise null); `avatar_url → avatar_path` (strip base URL); `created_at` |
+| hard-coded admin | `users` (role `admin`) | Created by `seed.ts` with a new password the owner chooses |
+| `lessons` | `lessons` + `lesson_versions` (version 1) | `id→legacy_id`; `title`, `description`, `grade`, `subject→chapter`, `tags`, `lesson_image→cover_path`, `order→sort_order`, `views`, `created`, `last_updated→updated_at`; status `published` (v1 has no draft concept, so check with the owner); `questions` → normalized `Question[]` (see §4); config from `time_limit_*`, `shuffle_*`, `enable_question_pool`, `question_pool_size`, `question_type_distribution`, `points_distribution`; `source_text` regenerated from questions by the serializer |
+| `results` | `attempts` (status `submitted`, mode from `mode`) | `id→legacy_result_id`; `lesson_id` via legacy map; `student_id` via legacy map; `questions` (per-answer objects) → `items/answers/earned` matched to question ids by normalized stem text; `score`, `total_points→max_score`; `timestamp→submitted_at`; `time_taken`; `exam_guard_flags → guard_events`; `ip_address` |
+| `ratings` | `ratings` | Copy the current rating **as is** (don't recompute) |
+| `rating_history` | `rating_events` | Copy; link `attempt_id` when a result matches (same student, lesson, ±2 min timestamp) |
+| `quizzes`, `quiz_results` | archived to JSON in backups | Only migrate if the quiz game is kept (P2) |
+| `temp_lesson_content`, `ai_interactions`, `system_settings`, `session` | not migrated | Archived in the final v1 dump |
+| Storage `lesson-images` | Storage `media` | Copy objects (script using the Storage API), keep paths under `legacy/`; rewrite URLs in lesson JSON |
+| `materials/*` (repo) | `src/content/ly-thuyet/*.mdx` | One-time conversion script + manual review |
+| `public/lesson_handout/*.jpg` | `public/handouts/*.webp` | `sharp` conversion script |
+
+## 4. Question normalization rules
+- `type`: `abcd|multiple_choice → mcq`; `truefalse|true_false → tf`; `number|fill_blank → short`; anything else → report and skip (and list it for the owner).
+- mcq `correct: "B"` → `answer: 1`; options `string | {text}` → `{text}`; options with `image`/`imageUrl` → `image: {path}`.
+- tf: `options[]` + `correct: [true,false,…]` (booleans or `"true"/"false"` strings) → `statements[{text, answer}]`.
+- short: `correct` (number or string) → `answer` string with a `.` decimal separator.
+- Stems: strip `[x pts]` markers into `points`; keep LaTeX as is; convert `<br>` to newlines; strip other HTML tags into plain text (log each lesson that had HTML for manual review).
+- Question ids: keep the v1 `id` if present and unique (e.g. `q_1`), else generate one.
+- Validation: every migrated question is parsed through the v2 Zod schema. Failures go into `migration-report.md` with lesson id and question index. The target is 0 failures before cutover.
+
+## 5. Result → attempt matching
+v1 results store copies of the questions, not references. For each result question:
+1. Normalize the stem (same `normalizeQuestionText` as v1 `adaptiveQuizService`) and find the question in the lesson's current questions.
+2. If found, record `{q: id}`, the student's answer (converted to v2 format), and `earned` (keep v1's recorded `earnedPoints`, since history is not re-graded).
+3. If not found (the lesson was edited since), create a **legacy version** of the lesson from that result's embedded questions (deduplicated by hash) and point the item at it. This preserves review pages for old results.
+4. Rebuild `mistakes` from migrated attempts: wrong items, ordered by time.
+
+## 6. Cutover runbook
+| When | Step | Owner |
+|---|---|---|
+| T-14 d | Full rehearsal on a fresh v2 project: run migrate, run verification SQL, click through 10 random students and lessons | Dev |
+| T-7 d | Announce to students: date, "log in again with the same phone and password", new look | Teacher |
+| T-7 d | Lower v1 activity: no new lessons in v1 after T-2 d (or re-run the lesson part of the migration) | Teacher |
+| T-0, 22:00 (low traffic) | Put v1 in read-only mode: set an env flag that makes `POST /api/results` return 503 with a message, and redeploy v1 | Dev |
+| T-0 | Final `pg_dump` of v1 (kept for 1 year) | Dev |
+| T-0 | Run `migrate-legacy.ts` (delta, idempotent) → verification SQL (§7) | Dev |
+| T-0 | Point the domain / `onluyenvatly.vercel.app` project to v2 (see note) | Dev |
+| T-0 | Smoke test: log in as 3 migrated students, take a test, check leaderboard and admin | Dev + teacher |
+| T+1 d | Monitor errors, quota, support messages | Dev |
+| T+14 d | Decommission v1: rotate its keys, pause the v1 Supabase project (keep the dump) | Dev |
+
+**Domain note:** deploy v2 as a *new Vercel project* (e.g. `onluyenvatly-v2.vercel.app`). A `*.vercel.app` name can belong to only one project at a time. At cutover, remove `onluyenvatly.vercel.app` from the v1 project's Domains settings (the v1 project keeps working on another alias, which you should rename first, e.g. `onluyenvatly-v1.vercel.app`), then add it to the v2 project. Expect about a minute of downtime and no DNS propagation. Rollback is the same steps in reverse. Rehearse this with two throwaway projects in Sprint 0. If a custom domain is bought later, this becomes a simple DNS/project switch.
+
+**Rehearsal checklist (S0-09, with two throwaway projects `olvl-a`, `olvl-b`; not yet run):**
+1. [ ] Deploy any page to both projects (A says "A", B says "B"). Time each step from here on.
+2. [ ] In A → Settings → Domains, add `olvl-rehearsal.vercel.app`. Confirm it serves "A".
+3. [ ] In A, add the alias `olvl-rehearsal-old.vercel.app` and confirm it serves "A" (this is the rename step for v1).
+4. [ ] Remove `olvl-rehearsal.vercel.app` from A; add it to B. Note the downtime seen by `curl` in a loop.
+5. [ ] Reverse the switch (rollback path) and note the downtime.
+6. [ ] Instant Rollback: deploy B twice (v1 text, v2 text), use Deployments → previous → Instant Rollback, confirm the old text, then undo it.
+7. [ ] Record timings and anything surprising here, then delete both projects.
+
+## 7. Verification checklist (automated in `scripts/verify-migration.ts`)
+- Counts: users (students) = v1 students; lessons = v1 lessons; attempts = v1 results (minus documented skips); ratings = v1 ratings.
+- For 20 random students: the rating equals v1; the number of attempts equals v1; the latest attempt score equals v1.
+- For every lesson: the question count equals v1; the Zod parse passes; the answer-stripped view contains no `answer`.
+- 5 random v1 password hashes verify against known test accounts (use accounts the teacher controls).
+- Leaderboard top 20 is identical to v1.
+
+## 8. Rollback
+Within 14 days: move the domain alias back to v1 and turn off v1 read-only mode. Attempts made in v2 after cutover would be lost to v1. Export them with `scripts/export-v2-attempts.ts` if needed. This is acceptable because rollback is only for severe failures in the first days.

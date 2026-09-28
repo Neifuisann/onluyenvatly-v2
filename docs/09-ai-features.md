@@ -1,0 +1,63 @@
+# 09 — AI Features (Google Gemini, free tier)
+
+## 1. Use cases
+
+| # | Feature | Who | Priority | Model env | Streaming | Cache |
+|---|---|---|---|---|---|---|
+| AI1 | Explain a question after submit | Student | P0 | `GEMINI_MODEL_TEXT` (flash-lite class) | Yes (short) | **DB, per question hash, shared** |
+| AI2 | Import PDF / DOCX / image → lesson text format | Admin | P0 | `GEMINI_MODEL_IMPORT` (flash class, multimodal) | Yes | None (one-off) |
+| AI3 | Generate lesson description | Admin | P1 | TEXT | No | Stored on lesson |
+| AI4 | Suggest tags | Admin | P1 | TEXT | No | Stored on lesson |
+| AI5 | Pre-generate explanations for a lesson | Admin | P1 | TEXT | Background batches | DB |
+| AI6 | Lesson quality check (missing answers, ambiguous stems, wrong units) | Admin | P2 | IMPORT | Yes | None |
+| AI7 | Cover image generation | Admin | P2 | Pollinations (free) or none | — | Storage |
+
+Dropped from v1: the free-form "chat assist" in the editor (low value, highest token use). It can come back as P2 if the teacher asks for it.
+
+## 2. Integration design
+- SDK: `@google/genai`, one wrapper in `src/features/ai/gemini.ts` exposing `generateText()`, `streamText()` and `generateFromFile()`. The wrapper handles timeouts (explain 25 s, import 280 s), retry with jitter on 429/503 (max 2), and structured logging of token counts.
+- Model names always come from env. Free-tier models and limits change, and v1 changed models 3 times in a few weeks. Check the model and your limits in Google AI Studio (Rate limits page) at the start of each semester.
+- **Global daily budget** (`settings.ai_daily_budget`, default 200 generations/day). A counter row in `rate_limits` (`ai:global:{date}`) is checked before every generation. When exhausted, explain returns `AI_QUOTA` and the UI shows "Hết lượt giải thích AI hôm nay, hãy thử lại vào ngày mai" (no AI explanations left today, try again tomorrow).
+- **Kill switch:** `settings.ai_enabled`.
+
+## 3. AI1: explanation prompt (Vietnamese)
+System instruction:
+> Bạn là giáo viên Vật lý THPT tại Việt Nam. Giải thích ngắn gọn, chính xác, đúng chương trình GDPT 2018. Dùng LaTeX trong $...$ cho công thức. Không bịa số liệu. Nếu đề thiếu dữ kiện, nói rõ.
+
+User content (structured):
+```
+Loại câu: {mcq|tf|short}
+Đề bài: {stem}
+Các lựa chọn / phát biểu: {…}
+Đáp án đúng: {…}
+Lời giải của giáo viên (nếu có): {…}
+Yêu cầu: 1) Ý chính cần nhớ (1–2 câu) 2) Các bước giải ngắn 3) Vì sao các lựa chọn sai là sai (với trắc nghiệm) 4) Mẹo tránh nhầm.
+Tối đa 250 từ.
+```
+- The **student's own answer is not sent**. That keeps the explanation shareable across students, and the UI adds "Bạn đã chọn C" (you chose C) next to it.
+- Output is rendered as Markdown (no HTML) plus KaTeX on the server when stored.
+- Rough size: ~600 input + ~450 output tokens per explanation.
+
+## 4. AI2: document import
+1. The admin uploads a PDF, DOCX or image (≤ 10 MB) directly to a private Storage bucket `imports/` via a signed URL. Bytes don't go through the function body.
+2. `POST /api/ai/import { path }` (route handler, `maxDuration = 300`). It downloads the file server-side and:
+   - DOCX → `mammoth` → text + images (images re-uploaded to `media/`) → Gemini "normalize to format".
+   - PDF / image → sent to Gemini as inline data with the format spec.
+3. The prompt includes the **exact text format spec** from 04 §3.3 plus 2 few-shot examples. Output streams back as plain text.
+4. The editor receives the stream into a new draft, and the parser immediately validates it. The admin fixes any flagged items.
+5. The import file is deleted from `imports/` after 24 h (daily cron).
+
+Quality guardrails: the prompt requires `*` markers only where the source shows the answer. If the answer key is missing, leave it unmarked so the validator flags "thiếu đáp án" (missing answer) instead of letting the AI guess.
+
+## 5. Evaluation (cheap and manual)
+- `tests/ai/fixtures/`: 10 representative questions (mcq/tf/short, with formulas and figures) and 3 source PDFs.
+- `pnpm ai:eval` runs the prompts on the fixtures and writes Markdown into `tests/ai/out/` for a human (the teacher) to review. Run it when changing models or prompts. It's not part of CI because it uses quota.
+- Keep a changelog of prompt versions in `src/features/ai/prompts.ts` (`PROMPT_VERSION`), stored with each explanation.
+
+## 6. Failure modes
+| Failure | Behaviour |
+|---|---|
+| 429 / quota | Explain: show cached explanation if any, else message. Import: stop the stream with a clear error, keep the partial text in the draft |
+| Timeout | Same as above; explanations aren't stored if incomplete |
+| Hallucinated answer in an explanation | The correct answer is always given to the model; 👎 votes flag it for the teacher; the teacher can edit or replace it |
+| Model deprecated | Change the env var; no code change |
