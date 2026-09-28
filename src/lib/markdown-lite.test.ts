@@ -26,6 +26,13 @@ describe("splitMath", () => {
     expect(splitMath("$ x $")).toEqual([{ math: false, v: "$ x $" }]);
   });
 
+  it("accepts space before the closing dollar like v1 did", () => {
+    expect(splitMath("$\\frac{PV}{T} = $ hằng số")).toEqual([
+      { math: true, tex: "\\frac{PV}{T} =", display: false },
+      { math: false, v: " hằng số" },
+    ]);
+  });
+
   it("keeps escaped dollars inside inline math", () => {
     expect(splitMath("$a\\$b$")).toEqual([
       { math: true, tex: "a\\$b", display: false },

@@ -30,6 +30,18 @@ describe("QuestionSchema", () => {
     ["mcq answer out of range", { ...mcq, answer: 2 }],
     ["mcq with one option", { ...mcq, options: [{ text: "x" }], answer: 0 }],
     ["blank stem", { ...mcq, stem: "   " }],
+    [
+      "blank tf stem without image",
+      {
+        id: "q_1",
+        type: "tf",
+        stem: "",
+        statements: [
+          { text: "x", answer: true },
+          { text: "y", answer: false },
+        ],
+      },
+    ],
     ["unknown keys", { ...mcq, correct: "B" }],
     ["bad id", { ...mcq, id: "123" }],
     [
@@ -54,6 +66,13 @@ describe("QuestionSchema", () => {
     ["points above 100", { ...mcq, points: 101 }],
   ])("rejects %s", (_, value) => {
     expect(QuestionSchema.safeParse(value).success).toBe(false);
+  });
+
+  it("allows an image-only stem", () => {
+    expect(
+      QuestionSchema.safeParse({ ...mcq, stem: "", image: { path: "a.webp" } })
+        .success,
+    ).toBe(true);
   });
 
   it("allows an image-only option", () => {

@@ -53,13 +53,21 @@ export type Media = z.infer<typeof MediaSchema>;
 
 const base = {
   id: QuestionIdSchema,
-  /** Markdown-lite + LaTeX (`$…$`, `$$…$$`). */
-  stem: nonBlank(10_000, "Câu hỏi chưa có nội dung."),
+  /** Markdown-lite + LaTeX (`$…$`, `$$…$$`). May be blank when `image` is set. */
+  stem: z.string().max(10_000),
   image: MediaSchema.optional(),
   /** Explicit points override (`[2 pts]` in the text format). */
   points: z.number().min(0).max(100).optional(),
   /** Teacher-written, shown only after submit. */
   explanation: z.string().max(20_000).optional(),
+};
+
+/** A question needs stem text, an image, or both (like an MCQ option). */
+const hasStem = (q: { stem: string; image?: Media | undefined }) =>
+  q.stem.trim().length > 0 || q.image !== undefined;
+const STEM_REQUIRED = {
+  message: "Câu hỏi chưa có nội dung.",
+  path: ["stem"],
 };
 
 export const McqOptionSchema = z
@@ -79,6 +87,7 @@ export const McqQuestionSchema = z
     /** Index into `options`. */
     answer: z.number().int().min(0),
   })
+  .refine(hasStem, STEM_REQUIRED)
   .refine((q) => q.answer < q.options.length, {
     message: "Đáp án đúng không nằm trong các phương án.",
     path: ["answer"],
@@ -89,21 +98,25 @@ export const TfStatementSchema = z.strictObject({
   answer: z.boolean(),
 });
 
-export const TfQuestionSchema = z.strictObject({
-  ...base,
-  type: z.literal("tf"),
-  /** Usually 4 (a–d), kept in order. */
-  statements: z.array(TfStatementSchema).min(2).max(8),
-});
+export const TfQuestionSchema = z
+  .strictObject({
+    ...base,
+    type: z.literal("tf"),
+    /** Usually 4 (a–d), kept in order. */
+    statements: z.array(TfStatementSchema).min(2).max(8),
+  })
+  .refine(hasStem, STEM_REQUIRED);
 
-export const ShortQuestionSchema = z.strictObject({
-  ...base,
-  type: z.literal("short"),
-  /** Canonical, `.` decimal separator, e.g. "1.5". */
-  answer: nonBlank(100, "Câu trả lời ngắn chưa có đáp án."),
-  /** Absolute tolerance, default 0. */
-  tolerance: z.number().min(0).max(1e9).optional(),
-});
+export const ShortQuestionSchema = z
+  .strictObject({
+    ...base,
+    type: z.literal("short"),
+    /** Canonical, `.` decimal separator, e.g. "1.5". */
+    answer: nonBlank(100, "Câu trả lời ngắn chưa có đáp án."),
+    /** Absolute tolerance, default 0. */
+    tolerance: z.number().min(0).max(1e9).optional(),
+  })
+  .refine(hasStem, STEM_REQUIRED);
 
 export const QuestionSchema = z.discriminatedUnion("type", [
   McqQuestionSchema,

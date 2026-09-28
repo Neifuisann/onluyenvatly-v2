@@ -127,13 +127,12 @@ console.log(`# v1 inventory (${new Date().toISOString()})\n`);
 try {
   await sql.begin("read only", async (tx) => {
     for (const [title, query] of queries) {
-      await tx`savepoint q`;
+      // tx.savepoint (not raw SAVEPOINT) so a failed query (e.g. a table v1 never
+      // created) rolls back cleanly instead of leaving postgres.js hanging.
       try {
-        const rows = await tx.unsafe<Row[]>(query);
+        const rows = await tx.savepoint((sp) => sp.unsafe<Row[]>(query));
         console.log(`## ${title}\n\n${toMarkdown(rows)}\n`);
-        await tx`release savepoint q`;
       } catch (e) {
-        await tx`rollback to savepoint q`;
         console.log(`## ${title}\n\n_query failed: ${(e as Error).message}_\n`);
       }
     }

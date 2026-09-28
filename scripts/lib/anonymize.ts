@@ -66,7 +66,9 @@ export function anonymize(value: unknown, pseudo: Pseudonymizer): unknown {
   return out;
 }
 
-const PHONE_RE = /(?:\+?84|0)(?:[\s.-]?\d){9}/;
+// Not inside a longer digit run or decimal (point values like 0.1071428…,
+// millisecond-timestamp ids), which v1 data is full of.
+const PHONE_RE = /(?<![\d.,])(?:\+?84|0)(?:[\s.-]?\d){9}(?![\d.,]?\d)/;
 
 /** Returns paths of string values that still look like a VN phone number. */
 export function findPhoneLikeStrings(value: unknown, path = "$"): string[] {

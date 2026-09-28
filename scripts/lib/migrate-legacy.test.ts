@@ -207,6 +207,18 @@ describe("migrateLessons", () => {
     expect(row).toMatchObject({ status: "draft", currentVersionId: null });
   });
 
+  it("skips v1's quiz-game placeholder row", async () => {
+    const { report } = await migrateLessons(db, [
+      { id: "quiz_game", title: "Trò chơi chinh phục", questions: null },
+    ]);
+    expect(report).toMatchObject({
+      inserted: 0,
+      skipped: [{ legacyId: "quiz_game", reason: expect.any(String) }],
+      problems: [],
+    });
+    expect(await db.$count(lessons)).toBe(0);
+  });
+
   it("turns a base64 cover into a covers/ job", async () => {
     const { media } = await migrateLessons(db, [
       {
