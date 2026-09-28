@@ -151,7 +151,7 @@ Indexes:
 v2 computes the delta from `performance` and `time_bonus` rounded to 3 decimals, exactly as stored, so replaying a student's events (delete attempt, 05) reproduces every delta. `ratings` rows are created at 1500 on the first rated submit and locked `FOR UPDATE` in the submit transaction, so two tests submitted at once both count, one after the other.
 
 ### `attempt_overrides`
-`(user_id, lesson_id)` PK, `extra_attempts` smallint (1–100), `granted_by` uuid null, `created_at`. Extra tries a teacher grants one student on one lesson (see scheduled tests above). Read only when a lesson has a limit or has closed; granted from the student admin pages (S6-02).
+`(user_id, lesson_id)` PK, `extra_attempts` smallint (1–100), `granted_by` uuid null, `created_at`. Extra tries a teacher grants one student on one lesson (see scheduled tests above). Read only when a lesson has a limit or has closed; granted from the student detail page (S6-02, `grantExtraAttempts`: 1–100 replaces the grant, 0 removes it; audit `student.grant_attempts` / `student.revoke_attempts`).
 
 ### `mistakes`
 | Column | Type | Notes |
@@ -190,7 +190,7 @@ RETURNING count;
 As built (S5-05): `createUploadUrl` writes the row when it signs the upload, with the size the browser reported, so the quota check (`sum(bytes)` + the new file ≤ 900 MB) counts uploads in flight. Paths are `yyyy/mm/<uuid>.webp` (`.jpg` from browsers that can't encode WebP). A row whose object never arrived is an orphan for the daily cron (S9-05) to remove. `lessons.cover_path` only accepts a path that has a `media` row.
 
 ### `audit_log`
-`id` bigint, `actor_id` uuid, `action` text (`student.approve`, `lesson.publish`, `attempt.delete`…), `target_type`, `target_id`, `data` jsonb, `created_at`. Kept for 180 days.
+`id` bigint, `actor_id` uuid, `action` text (`student.approve`, `lesson.publish`, `attempt.delete`…), `target_type`, `target_id`, `data` jsonb, `created_at`. Kept for 180 days. Student actions (S6): `student.approve`, `student.reject`, `student.reset_password`, `student.revoke_sessions`, `student.disable`, `student.enable`, `student.delete` (`{ attempts, lessons }`), `student.grant_attempts`, `student.revoke_attempts`, `admin.create`; `data` carries ids and counts only, never a name, phone or password.
 
 ## 3. JSON contracts (Zod schemas in `src/features/lessons/schema.ts`)
 

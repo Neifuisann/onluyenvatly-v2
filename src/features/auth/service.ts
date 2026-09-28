@@ -4,11 +4,11 @@ import { eq } from "drizzle-orm";
 import { db } from "@/db/client";
 import { users } from "@/db/schema";
 import { getSettings } from "@/features/settings/queries";
-import { fieldMessages } from "@/lib/messages";
-import { rateLimitAll } from "@/lib/rate-limit";
+import { fieldMessages, passwordIssueMessages } from "@/lib/messages";
+import { rateLimit, rateLimitAll } from "@/lib/rate-limit";
 import { err, ok, type Result } from "@/lib/result";
 import { parseIdentifier, type Role, statusError } from "./core/login-policy";
-import { hashPassword, verifyPassword } from "./core/password";
+import { hashPassword, passwordIssue, verifyPassword } from "./core/password";
 import type { LoginInput, RegisterInput } from "./schemas";
 import { createSession, revokeUserSessions, type SessionMeta } from "./session";
 
@@ -18,6 +18,8 @@ export const AUTH_LIMITS = {
   loginPerIdentifierMinute: [5, "1m"],
   loginPerIdentifierHour: [20, "1h"],
   registerPerIp: [3, "1h"],
+  /** Guessing the current password is what this limit stops. */
+  changePasswordPerUser: [5, "10m"],
 } as const;
 
 /** Rate-limit keys never hold a raw phone number. */
@@ -28,7 +30,7 @@ export async function loginWithPassword(
   input: Pick<LoginInput, "identifier" | "password">,
   meta: SessionMeta,
   now = new Date(),
-): Promise<Result<{ token: string; role: Role }>> {
+): Promise<Result<{ token: string; role: Role; mustChangePassword: boolean }>> {
   const identifier = parseIdentifier(input.identifier);
   const idKey = keyOf(
     identifier?.value ?? input.identifier.trim().toLowerCase(),
@@ -47,7 +49,13 @@ export async function loginWithPassword(
 
   const user = identifier
     ? await db.query.users.findFirst({
-        columns: { id: true, role: true, status: true, passwordHash: true },
+        columns: {
+          id: true,
+          role: true,
+          status: true,
+          passwordHash: true,
+          mustChangePassword: true,
+        },
         where:
           identifier.kind === "phone"
             ? eq(users.phone, identifier.value)
@@ -72,7 +80,11 @@ export async function loginWithPassword(
       .where(eq(users.id, user.id));
     return session.token;
   });
-  return ok({ token, role: user.role });
+  return ok({
+    token,
+    role: user.role,
+    mustChangePassword: user.mustChangePassword,
+  });
 }
 
 export async function registerStudent(
@@ -119,4 +131,53 @@ export async function registerStudent(
   // Lost a race with a parallel registration for the same phone.
   if (!created) return phoneTaken();
   return ok({ id: created.id });
+}
+
+/**
+ * Changes the signed-in user's own password (05 §2 `changePassword`): checks
+ * the current one, applies the policy, clears `must_change_password` and logs
+ * every other session out. Used by the forced change after an admin reset
+ * (S6-02) and by the settings page (S8-04).
+ */
+export async function changeOwnPassword(
+  user: { id: string; sessionId: string },
+  input: { current: string; password: string },
+  now = new Date(),
+): Promise<Result<null>> {
+  const limit = await rateLimit(
+    `change-password:${user.id}`,
+    AUTH_LIMITS.changePasswordPerUser[0],
+    AUTH_LIMITS.changePasswordPerUser[1],
+    now,
+  );
+  if (!limit.ok) return err("RATE_LIMITED");
+
+  const row = await db.query.users.findFirst({
+    columns: { passwordHash: true, phone: true },
+    where: eq(users.id, user.id),
+  });
+  if (!row) return err("NOT_FOUND");
+  if (!(await verifyPassword(input.current, row.passwordHash)))
+    return err("VALIDATION", {
+      fieldErrors: { current: fieldMessages.currentPasswordWrong },
+    });
+  if (input.password === input.current)
+    return err("VALIDATION", {
+      fieldErrors: { password: fieldMessages.passwordSame },
+    });
+  const issue = passwordIssue(input.password, row.phone);
+  if (issue)
+    return err("VALIDATION", {
+      fieldErrors: { password: passwordIssueMessages[issue] },
+    });
+
+  const passwordHash = await hashPassword(input.password);
+  await db.transaction(async (tx) => {
+    await tx
+      .update(users)
+      .set({ passwordHash, mustChangePassword: false, updatedAt: now })
+      .where(eq(users.id, user.id));
+    await revokeUserSessions(user.id, user.sessionId, tx);
+  });
+  return ok(null);
 }

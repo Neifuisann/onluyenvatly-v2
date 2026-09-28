@@ -45,7 +45,7 @@ flowchart TD
 ### Passwords
 - New passwords: at least 8 characters, not all digits, not the phone number. Checked with Zod on client and server.
 - Hash: bcryptjs cost 10 (≈ 60–120 ms on a Vercel function). Login rate limits keep the CPU cost bounded (see 08).
-- Admin reset: generates a 10-character temporary password and sets `must_change_password = true`. The student has to change it on next login.
+- Admin reset: generates a 10-character temporary password and sets `must_change_password = true`. The student has to change it on next login. As built (S6-02): the reset also deletes every session of the student and shows the password to the teacher once (never stored in clear, logged or audited). While the flag is set, login sends the user to `/change-password` (carrying `?next=`), and `requireUser()` (so also `requireStudent()` and `requireAdmin()`) redirects there from every page and action. Only the change page and `changePassword`, which use `requireSessionUser()`, plus `logout`, are exempt. `changePassword` needs the current (temporary) password, is rate limited (5 per 10 minutes per user), applies the policy, clears the flag and revokes the other sessions. A unit test (`auth/authz.test.ts`) calls every export of every `features/*/admin-actions.ts` (and the media actions) as a student, a visitor and an admin who must change the password: each redirects (`/dashboard`, `/login`, `/change-password`) before reading input, writes nothing and invalidates no tag.
 
 ## 2. Authorization matrix
 

@@ -1,0 +1,81 @@
+import { expect, test } from "@playwright/test";
+import { E2E_PASSWORD, e2eStudent } from "./fixtures/users";
+import type { StorageState } from "./runner-helpers";
+
+/**
+ * Journey 8 (11 §3), started in S6-02: who reaches which protected page.
+ * Visitors go to `/login`, students are sent to their own home and never see
+ * an admin page. Every admin server action refusing a non-admin is covered
+ * for all actions at once by `features/auth/authz.test.ts`, which finds them
+ * on disk. Later sprints add their admin routes here.
+ */
+
+const UUID = "00000000-0000-4000-8000-000000000000";
+const ADMIN_PAGES = [
+  "/admin",
+  "/admin/lessons",
+  "/admin/lessons/1/edit",
+  "/admin/students",
+  `/admin/students/${UUID}`,
+];
+const STUDENT_PAGES = ["/dashboard", "/lessons", "/leaderboard", "/profile"];
+
+test.beforeEach(async ({ page }) => {
+  await page.setExtraHTTPHeaders({
+    "x-forwarded-for": `10.49.${Math.floor(Math.random() * 250)}.${Math.floor(Math.random() * 250) + 1}`,
+  });
+});
+
+test.describe("a visitor", () => {
+  for (const path of [...ADMIN_PAGES, ...STUDENT_PAGES, "/change-password"]) {
+    test(`is sent from ${path} to the login page`, async ({ page }) => {
+      await page.goto(path);
+      await expect(page).toHaveURL(/\/login/);
+      await expect(page.getByRole("heading", { level: 1 })).toHaveText(
+        "Đăng nhập",
+      );
+    });
+  }
+});
+
+test.describe("a student", () => {
+  // One login for the group: the per-identifier login limit is 5 a minute.
+  let storageState: StorageState;
+  test.beforeAll(async ({ browser }) => {
+    const context = await browser.newContext();
+    const page = await context.newPage();
+    await page.setExtraHTTPHeaders({
+      "x-forwarded-for": `10.49.${Math.floor(Math.random() * 250)}.1`,
+    });
+    await page.goto("/login");
+    await page.getByLabel("Số điện thoại").fill(e2eStudent("active3").phone);
+    await page.getByLabel("Mật khẩu", { exact: true }).fill(E2E_PASSWORD);
+    await page.getByRole("button", { name: "Đăng nhập", exact: true }).click();
+    await page.waitForURL((url) => url.pathname === "/dashboard");
+    storageState = await context.storageState();
+    await context.close();
+  });
+  test.use({
+    // biome-ignore lint/correctness/noEmptyPattern: Playwright requires destructured fixture dependencies.
+    storageState: async ({}, use) => {
+      await use(storageState);
+    },
+  });
+
+  for (const path of ADMIN_PAGES) {
+    test(`is sent from ${path} to the dashboard`, async ({ page }) => {
+      await page.goto(path);
+      await expect(page).toHaveURL(/\/dashboard$/);
+      await expect(page.getByRole("heading", { level: 1 })).toContainText(
+        "Chào",
+      );
+    });
+  }
+
+  test("opens the student pages", async ({ page }) => {
+    for (const path of STUDENT_PAGES) {
+      await page.goto(path);
+      await expect(page).toHaveURL(new RegExp(`${path}$`));
+    }
+  });
+});

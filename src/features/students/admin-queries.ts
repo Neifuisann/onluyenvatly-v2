@@ -6,13 +6,21 @@ import {
   desc,
   eq,
   gt,
+  isNull,
   like,
   type SQL,
   sql,
 } from "drizzle-orm";
 import { cacheLife, cacheTag } from "next/cache";
 import { db } from "@/db/client";
-import { attempts, lessons, ratings, sessions, users } from "@/db/schema";
+import {
+  attemptOverrides,
+  attempts,
+  lessons,
+  ratings,
+  sessions,
+  users,
+} from "@/db/schema";
 import { tags } from "@/lib/cache-tags";
 import {
   BULK_LIMIT,
@@ -241,4 +249,47 @@ export async function getStudentSessions(
     .where(and(eq(sessions.userId, userId), gt(sessions.expiresAt, now)))
     .orderBy(desc(sessions.lastSeenAt))
     .limit(20);
+}
+
+export type StudentOverrideRow = {
+  lessonId: number;
+  lessonTitle: string;
+  extraAttempts: number;
+};
+
+export async function getStudentOverrides(
+  userId: string,
+): Promise<StudentOverrideRow[]> {
+  return db
+    .select({
+      lessonId: attemptOverrides.lessonId,
+      lessonTitle: lessons.title,
+      extraAttempts: attemptOverrides.extraAttempts,
+    })
+    .from(attemptOverrides)
+    .innerJoin(lessons, eq(lessons.id, attemptOverrides.lessonId))
+    .where(eq(attemptOverrides.userId, userId))
+    .orderBy(asc(lessons.title));
+}
+
+export type GrantableLesson = {
+  id: number;
+  title: string;
+  /** The student has submitted an attempt on it. */
+  attempted: boolean;
+};
+
+/** Every lesson not deleted (~170), those the student took listed first. */
+export async function getGrantableLessons(
+  userId: string,
+): Promise<GrantableLesson[]> {
+  return db
+    .select({
+      id: lessons.id,
+      title: lessons.title,
+      attempted: sql<boolean>`exists (select 1 from attempts a where a.user_id = ${userId} and a.lesson_id = lessons.id and a.status = 'submitted')`,
+    })
+    .from(lessons)
+    .where(isNull(lessons.deletedAt))
+    .orderBy(asc(lessons.sortOrder), asc(lessons.id));
 }

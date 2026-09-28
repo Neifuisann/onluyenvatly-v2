@@ -8,11 +8,21 @@ import { env } from "@/lib/env.server";
 import { getRequestMeta } from "@/lib/request";
 import { err, type FormState } from "@/lib/result";
 import { SESSION_COOKIE, sessionCookieOptions } from "./core/cookie";
-import { landingPath } from "./core/login-policy";
+import { landingPath, postLoginPath } from "./core/login-policy";
 import { safeNextPath } from "./core/next-path";
+import { requireSessionUser } from "./guards";
 import { getCurrentUser } from "./queries";
-import { fieldErrorsOf, LoginSchema, RegisterSchema } from "./schemas";
-import { loginWithPassword, registerStudent } from "./service";
+import {
+  ChangePasswordSchema,
+  fieldErrorsOf,
+  LoginSchema,
+  RegisterSchema,
+} from "./schemas";
+import {
+  changeOwnPassword,
+  loginWithPassword,
+  registerStudent,
+} from "./service";
 import { revokeSession, revokeUserSessions } from "./session";
 
 /**
@@ -50,7 +60,13 @@ export async function login(
     result.data.token,
     sessionCookieOptions(env.NODE_ENV === "production"),
   );
-  redirect(landingPath(result.data.role, safeNextPath(parsed.data.next)));
+  redirect(
+    postLoginPath(
+      result.data.role,
+      result.data.mustChangePassword,
+      safeNextPath(parsed.data.next),
+    ),
+  );
 }
 
 export async function register(
@@ -93,4 +109,28 @@ export async function logoutAll(): Promise<void> {
   if (user) await revokeUserSessions(user.id);
   (await cookies()).delete(SESSION_COOKIE);
   redirect("/login");
+}
+
+/**
+ * Own password change (05 §2). The one action a user with
+ * `must_change_password` may call, so it uses `requireSessionUser()`.
+ * Never refills the password fields.
+ */
+export async function changePassword(
+  _prev: FormState,
+  formData: FormData,
+): Promise<FormState> {
+  const user = await requireSessionUser();
+  const parsed = ChangePasswordSchema.safeParse({
+    current: text(formData, "current"),
+    password: text(formData, "password"),
+    confirm: text(formData, "confirm"),
+    next: text(formData, "next"),
+  });
+  if (!parsed.success)
+    return err("VALIDATION", { fieldErrors: fieldErrorsOf(parsed.error) });
+
+  const result = await changeOwnPassword(user, parsed.data);
+  if (!result.ok) return result;
+  redirect(landingPath(user.role, safeNextPath(parsed.data.next)));
 }

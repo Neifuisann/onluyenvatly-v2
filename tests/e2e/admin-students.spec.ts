@@ -10,9 +10,10 @@ import {
 import type { StorageState } from "./runner-helpers";
 
 /**
- * S6-01 student admin: journey 1 in full (register → pending → the teacher
+ * S6-01/02 student admin: journey 1 in full (register → pending → the teacher
  * approves → login → dashboard), the pending queue with bulk actions, the
- * list and the detail page. Each project
+ * list and detail pages, and every student action (reset password → forced
+ * change, disable/enable, revoke sessions, extra tries, delete). Each project
  * has its own admin and its own students (fixtures/users); the seed puts them
  * back, so run `pnpm seed --profile e2e` before running this again. The tests
  * run in order because later ones use what earlier ones changed.
@@ -35,6 +36,9 @@ test.use({
     await use(storageState);
   },
 });
+
+/** What the student changes the temporary password into. */
+const NEW_PASSWORD = "moi-Mat-khau-2026";
 
 const rand = (n: number) => Math.floor(Math.random() * n);
 const randomPhone = () => `09${String(rand(1e8)).padStart(8, "0")}`;
@@ -261,4 +265,198 @@ test("the list searches by name and phone, filters, and opens the detail page", 
   await expect(page.getByText("Học sinh chưa nộp bài nào.")).toBeVisible();
   await expectNoOverflow(page);
   await expectAccessible(page);
+});
+
+test("reset password: temporary password shown once, sessions revoked, change forced", async ({
+  page,
+  browser,
+}, info) => {
+  const student = mine("manage", info.project.name);
+  const before = await visitor(browser);
+  await loginToDashboard(before.page, student.phone);
+
+  await openStudent(page, student.phone, student.fullName);
+  // The student's session, with a short device name.
+  await expect(page.getByText(/^Chrome ·/)).toBeVisible();
+
+  await page.getByRole("button", { name: "Đặt lại mật khẩu" }).click();
+  const confirm = page.getByRole("dialog", { name: "Đặt lại mật khẩu?" });
+  await confirm.getByRole("button", { name: "Đặt lại", exact: true }).click();
+  const shown = page.getByRole("dialog", { name: "Mật khẩu tạm" });
+  await expect(shown).toBeVisible();
+  const temp = (
+    await shown
+      .getByRole("status", { name: "Mật khẩu tạm của học sinh" })
+      .textContent()
+  )?.trim();
+  expect(temp).toMatch(/^[A-HJ-NP-Za-km-np-z2-9]{10}$/);
+  await shown
+    .getByRole("button", { name: "Đóng", exact: true })
+    .first()
+    .click();
+  // Gone with the dialog, and the page shows the reset is pending.
+  await expect(page.getByText(temp ?? "?")).toHaveCount(0);
+  await expect(page.getByText("Đang chờ đổi mật khẩu tạm")).toBeVisible();
+
+  // Logged out everywhere.
+  await before.page.goto("/dashboard");
+  await expect(before.page).toHaveURL(/\/login/);
+  await before.context.close();
+
+  // The temporary password only leads to the change page.
+  const after = await visitor(browser);
+  const s = after.page;
+  await login(s, student.phone, temp);
+  await expect(s).toHaveURL(/\/change-password$/);
+  for (const path of ["/dashboard", "/lessons", "/profile"]) {
+    await s.goto(path);
+    await expect(s).toHaveURL(/\/change-password$/);
+  }
+  await expect(
+    s.getByRole("heading", { level: 1, name: "Đổi mật khẩu" }),
+  ).toBeVisible();
+  await expectNoOverflow(s);
+  await expectAccessible(s);
+
+  const form = s.locator("main form").first();
+  const submit = form.getByRole("button", { name: "Đổi mật khẩu" });
+  await form.getByLabel("Mật khẩu hiện tại").fill("khong-phai-mat-khau-nay");
+  await form.getByLabel("Mật khẩu", { exact: true }).fill(NEW_PASSWORD);
+  await form.getByLabel("Nhập lại mật khẩu mới").fill(NEW_PASSWORD);
+  await submit.click();
+  await expect(s.getByText("Mật khẩu hiện tại chưa đúng.")).toBeVisible();
+  await expect(s).toHaveURL(/\/change-password$/);
+
+  await form.getByLabel("Mật khẩu hiện tại").fill(temp ?? "");
+  await form.getByLabel("Nhập lại mật khẩu mới").fill("khac-hoan-toan-1");
+  await submit.click();
+  await expect(s.getByText("Hai mật khẩu chưa khớp.")).toBeVisible();
+
+  await form.getByLabel("Mật khẩu hiện tại").fill(temp ?? "");
+  await form.getByLabel("Mật khẩu", { exact: true }).fill(temp ?? "");
+  await form.getByLabel("Nhập lại mật khẩu mới").fill(temp ?? "");
+  await submit.click();
+  await expect(
+    s.getByText("Mật khẩu mới cần khác mật khẩu hiện tại."),
+  ).toBeVisible();
+
+  await form.getByLabel("Mật khẩu hiện tại").fill(temp ?? "");
+  await form.getByLabel("Mật khẩu", { exact: true }).fill(NEW_PASSWORD);
+  await form.getByLabel("Nhập lại mật khẩu mới").fill(NEW_PASSWORD);
+  await submit.click();
+  await expect(s).toHaveURL(/\/dashboard$/);
+  await s.goto("/lessons");
+  await expect(s).toHaveURL(/\/lessons$/);
+  await after.context.close();
+
+  // Only the new password works now, and the reset is no longer pending.
+  const again = await visitor(browser);
+  await login(again.page, student.phone, temp);
+  await expect(
+    again.page.getByText("Sai số điện thoại hoặc mật khẩu."),
+  ).toBeVisible();
+  await loginToDashboard(again.page, student.phone, NEW_PASSWORD);
+  await again.context.close();
+  await page.reload();
+  await expect(page.getByText("Đang chờ đổi mật khẩu tạm")).toHaveCount(0);
+});
+
+test("disable, enable, revoke sessions and extra tries", async ({
+  page,
+  browser,
+}, info) => {
+  const student = mine("access", info.project.name);
+  const s = await visitor(browser);
+  await loginToDashboard(s.page, student.phone);
+
+  await openStudent(page, student.phone, student.fullName);
+  await page.getByRole("button", { name: "Khóa tài khoản" }).click();
+  await page
+    .getByRole("dialog", { name: "Khóa tài khoản này?" })
+    .getByRole("button", { name: "Khóa", exact: true })
+    .click();
+  await expect(output(page)).toHaveText("Đã khóa tài khoản.");
+  await expect(
+    page.getByRole("button", { name: "Mở lại tài khoản" }),
+  ).toBeVisible();
+  await expect(
+    page.getByText("Đã khóa", { exact: true }).first(),
+  ).toBeVisible();
+
+  // Logged out at once, and can't log in again.
+  await s.page.goto("/dashboard");
+  await expect(s.page).toHaveURL(/\/login/);
+  await login(s.page, student.phone);
+  await expect(s.page.getByText(/không được phép đăng nhập/)).toBeVisible();
+
+  await page.getByRole("button", { name: "Mở lại tài khoản" }).click();
+  await expect(output(page)).toHaveText("Đã mở lại tài khoản.");
+  await loginToDashboard(s.page, student.phone, E2E_PASSWORD);
+
+  // Log out everywhere on the teacher's word.
+  await page.reload();
+  await expect(page.getByText(/^Chrome ·/)).toBeVisible();
+  await page.getByRole("button", { name: "Đăng xuất mọi thiết bị" }).click();
+  await page
+    .getByRole("dialog", { name: "Đăng xuất học sinh khỏi mọi thiết bị?" })
+    .getByRole("button", { name: "Đăng xuất", exact: true })
+    .click();
+  await expect(output(page)).toHaveText(/^Đã đăng xuất \d+ phiên đăng nhập\.$/);
+  await s.page.goto("/dashboard");
+  await expect(s.page).toHaveURL(/\/login/);
+  await s.context.close();
+  await expect(
+    page.getByText("Không có phiên đăng nhập nào đang hoạt động."),
+  ).toBeVisible();
+
+  // Extra tries: a lesson is required, then set and taken back.
+  const grant = page.getByRole("region", { name: "Thêm lượt làm bài" });
+  await grant.getByRole("button", { name: "Cấp lượt" }).click();
+  await expect(grant.getByText("Chọn một bài tập.")).toBeVisible();
+  await grant
+    .getByLabel("Bài tập", { exact: true })
+    .selectOption({ label: "E2E – Đã công bố đáp án" });
+  await grant.getByLabel("Số lượt thêm").fill("2");
+  await grant.getByRole("button", { name: "Cấp lượt" }).click();
+  await expect(grant.getByRole("status").first()).toHaveText(
+    "Đã cấp thêm 2 lượt.",
+  );
+  await expect(grant.getByText("+2 lượt")).toBeVisible();
+  await grant.getByLabel("Số lượt thêm").fill("101");
+  await grant.getByRole("button", { name: "Cấp lượt" }).click();
+  await expect(grant.getByText("Nhập số lượt từ 1 đến 100.")).toBeVisible();
+  await grant
+    .getByRole("button", { name: "Bỏ lượt thêm: E2E – Đã công bố đáp án" })
+    .click();
+  await expect(grant.getByText("Chưa cấp lượt thêm nào.")).toBeVisible();
+});
+
+test("delete needs the student's name, then removes the account", async ({
+  page,
+  browser,
+}, info) => {
+  const student = mine("remove", info.project.name);
+  await openStudent(page, student.phone, student.fullName);
+  await page.getByRole("button", { name: "Xóa học sinh" }).click();
+  const dialog = page.getByRole("dialog", { name: "Xóa học sinh?" });
+  const remove = dialog.getByRole("button", { name: "Xóa vĩnh viễn" });
+  await expect(remove).toBeDisabled();
+  await dialog.getByLabel(/^Gõ “/).fill("Một Người Khác");
+  await remove.click();
+  await expect(
+    dialog.getByText("Tên chưa khớp với tên học sinh."),
+  ).toBeVisible();
+
+  await dialog.getByLabel(/^Gõ “/).fill(student.fullName.toLowerCase());
+  await remove.click();
+  await expect(page).toHaveURL(/\/admin\/students\?view=all$/);
+  await page.goto(`/admin/students?view=all&q=${student.phone}`);
+  await expect(page.getByText("Không có học sinh phù hợp")).toBeVisible();
+
+  const gone = await visitor(browser);
+  await login(gone.page, student.phone);
+  await expect(
+    gone.page.getByText("Sai số điện thoại hoặc mật khẩu."),
+  ).toBeVisible();
+  await gone.context.close();
 });

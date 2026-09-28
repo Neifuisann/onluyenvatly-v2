@@ -4,12 +4,16 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireAdmin } from "@/features/auth/guards";
 import {
+  getGrantableLessons,
   getStudentAttempts,
   getStudentDetail,
+  getStudentOverrides,
   getStudentSessions,
   STUDENT_ATTEMPTS_LIMIT,
 } from "@/features/students/admin-queries";
+import { GrantAttempts } from "@/features/students/components/grant-attempts";
 import { StatusBadge } from "@/features/students/components/status-badge";
+import { StudentActions } from "@/features/students/components/student-actions";
 import { StudentAttempts } from "@/features/students/components/student-attempts";
 import { StudentProfile } from "@/features/students/components/student-profile";
 import { StudentSessions } from "@/features/students/components/student-sessions";
@@ -18,17 +22,19 @@ import { studentsCopy as t } from "@/features/students/messages";
 
 export const metadata: Metadata = { title: t.title };
 
-/** `/admin/students/[id]` (S6-01): profile, rating, sessions, attempts. */
+/** `/admin/students/[id]` (S6-01/02): profile, rating, actions, sessions, attempts. */
 export default async function AdminStudentPage({
   params,
 }: PageProps<"/admin/students/[id]">) {
   await requireAdmin();
   const id = StudentIdSchema.safeParse((await params).id);
   if (!id.success) notFound();
-  const [student, attempts, sessions] = await Promise.all([
+  const [student, attempts, sessions, overrides, lessons] = await Promise.all([
     getStudentDetail(id.data),
     getStudentAttempts(id.data),
     getStudentSessions(id.data),
+    getStudentOverrides(id.data),
+    getGrantableLessons(id.data),
   ]);
   if (!student) notFound();
 
@@ -52,6 +58,35 @@ export default async function AdminStudentPage({
       </div>
 
       <StudentProfile student={student} />
+
+      <section
+        aria-labelledby="student-actions"
+        className="rounded-lg border bg-surface p-4"
+      >
+        <h2 id="student-actions" className="mb-3 font-semibold">
+          {t.actionsSection}
+        </h2>
+        <StudentActions
+          id={student.id}
+          fullName={student.fullName}
+          status={student.status}
+          attemptTotal={student.attemptTotal}
+        />
+      </section>
+
+      <section
+        aria-labelledby="student-grants"
+        className="rounded-lg border bg-surface p-4"
+      >
+        <h2 id="student-grants" className="mb-3 font-semibold">
+          {t.grantSection}
+        </h2>
+        <GrantAttempts
+          userId={student.id}
+          lessons={lessons}
+          overrides={overrides}
+        />
+      </section>
 
       <section aria-labelledby="student-sessions" className="space-y-3">
         <h2 id="student-sessions" className="font-semibold">

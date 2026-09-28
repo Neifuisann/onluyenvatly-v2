@@ -46,6 +46,12 @@ export const fieldMessages = {
   dateOfBirth: "Ngày sinh không hợp lệ.",
   grade: "Chọn khối 10, 11 hoặc 12.",
   className: "Tên lớp tối đa 20 ký tự.",
+  username:
+    "Tên đăng nhập gồm 3–32 ký tự: chữ thường, số, dấu . _ -, bắt đầu bằng chữ.",
+  usernameTaken: "Tên đăng nhập này đã được dùng.",
+  currentPasswordWrong: "Mật khẩu hiện tại chưa đúng.",
+  passwordSame: "Mật khẩu mới cần khác mật khẩu hiện tại.",
+  passwordMismatch: "Hai mật khẩu chưa khớp.",
 } as const;
 
 export const authCopy = {
@@ -81,6 +87,15 @@ export const authCopy = {
   pendingBack: "Về trang đăng nhập",
   logout: "Đăng xuất",
   logoutAll: "Đăng xuất khỏi mọi thiết bị",
+  changePasswordTitle: "Đổi mật khẩu",
+  changePasswordLead: "Đặt mật khẩu mới cho tài khoản của bạn.",
+  changePasswordForced:
+    "Giáo viên đã đặt lại mật khẩu cho bạn. Hãy đặt mật khẩu mới của riêng bạn để tiếp tục.",
+  currentPassword: "Mật khẩu hiện tại",
+  currentPasswordHint: "Là mật khẩu tạm giáo viên đã đưa cho bạn.",
+  confirmPassword: "Nhập lại mật khẩu mới",
+  changePasswordSubmit: "Đổi mật khẩu",
+  changePasswordPending: "Đang lưu…",
 } as const;
 
 export const shellCopy = {

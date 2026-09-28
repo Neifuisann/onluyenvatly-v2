@@ -285,7 +285,7 @@ Decisions made while building (recorded in 04/05/07): items carry their points (
 | ID | Task | Est | Depends | Acceptance criteria |
 |---|---|---|---|---|
 | S6-01 | Students: pending queue with bulk approve/reject; list with search/filter; detail page (attempts, rating, sessions) | 1.0 | S1-05 | E2E journey 1 full (with approval) |
-| S6-02 | Student actions: reset password (temp, `must_change_password` flow), reset device, revoke sessions, disable, delete (cascade + audit), create admin | 0.75 | S6-01 | Authz spec covers every action |
+| S6-02 | Student actions: reset password (temp, `must_change_password` flow), ~~reset device~~ (dropped, 01 §7), revoke sessions, disable, delete (cascade + audit), extra attempts, create admin | 0.75 | S6-01 | Authz spec covers every action |
 | S6-03 | Global settings page (`settings` row, cached; device policy, single session, registration, AI, rating formula, announcement) | 0.5 | S1-03 | Changing policy takes effect on the next login |
 | S6-04 | Results page: filters, attempt detail incl. guard events timeline, delete attempt + rating replay, CSV export | 0.75 | S4-01 | Replay equals a fresh computation (test) |
 | S6-05 | Lesson statistics: distribution, per-question % correct, wrong-option breakdown, students per option (cached 5 min) | 0.75 | S3-06 | Numbers match a hand-computed fixture |
@@ -294,11 +294,12 @@ Decisions made while building (recorded in 04/05/07): items carry their points (
 
 **Demo:** the teacher approves new students, reviews a lesson's hardest question, and exports results.
 
-**Implementation status (2026-09-29):** S6-01 implemented on `feat/S6-admin-people-insight`. Lint, types, unit/integration tests and the S6 E2E specs pass locally against PGlite. Owner decisions 01 §7 shape S6: no device binding (no "reset device" action, no device policy setting) and no rating-formula toggle.
+**Implementation status (2026-09-29):** S6-01 and S6-02 implemented on `feat/S6-admin-people-insight`, one commit each. Lint, types, unit/integration tests, the production build and the full Playwright suite (desktop Chromium + 360 px) except `admin-media.spec` (needs a build pointed at the Storage stand-in, 11 §3) pass locally against PGlite. Owner decisions 01 §7 shape S6: no device binding, so there is no "reset device" action here and (S6-03) no device policy setting; no rating-formula toggle.
 
 | ID | Status | Evidence / remaining acceptance |
 |---|---|---|
 | S6-01 | ✅ Implemented, E2E verified | `/admin/students`: the pending queue (oldest first, checkbox per row, select all, bulk Duyệt / Từ chối with a confirm, one audit row per student) and the "Tất cả" tab (accent-insensitive name words or phone prefix served by `users_full_name_trgm_idx`, status and grade chips, cumulative 50 per page, `prefetch={false}`); `/admin/students/[id]` with profile, rating and tier, sessions (short device name, IP), latest 50 attempts. Nav badge from a shared-cached `getPendingCount` (tag `pendingStudents`, invalidated by register, approve, reject and delete); the count is in the link's `aria-label` (no `sr-only` text, which escaped the scrolling phone nav strip and overflowed the page at 360 px). Integration tests (PGlite) cover approve/reject skips, audit rows, search, paging and detail; **E2E journey 1 in full** (`admin-students.spec`, both projects) |
+| S6-02 | ✅ Implemented, E2E verified | `resetPassword` (10-character temp password shown once, sessions revoked, never stored, logged or audited), `revokeSessions`, `setStatus` (disable revokes sessions; re-enable, also for a wrongly rejected student), `deleteStudent` (name typed and checked on the server; cascade, `attempt_count` of the affected lessons recomputed, audit with counts only), `grantExtraAttempts` (`attempt_overrides` upsert, 0 removes), `createAdmin` (action and service; its form comes with S6-03). **Must-change-password flow:** `/change-password` + `changePassword` (rate limited, policy, clears the flag, revokes other sessions); login redirects there, and `requireUser()` redirects there from every page and action while the flag is set. **Authz:** `auth/authz.test.ts` calls every export of every `admin-actions.ts` (and the media actions) as a student, a visitor and an admin who must change the password; `authz.spec` started (visitor → login, student → dashboard for every `/admin/*` page). Pure rules in `students/domain` (gated at 95 %) |
 
 ---
 
