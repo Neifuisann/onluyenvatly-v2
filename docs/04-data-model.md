@@ -162,6 +162,8 @@ v2 computes the delta from `performance` and `time_bonus` rounded to 3 decimals,
 
 Index `(user_id, status, updated_at DESC)`.
 
+Rules (`features/review/domain/mistakes.ts`, applied in the submit transaction): any item short of full marks (wrong, partially right tf, or blank) upserts the row: `wrong_count + 1`, streak 0, `open` (a resolved mistake reopens). A correct answer adds 1 to the streak of an **open** mistake and resolves it at 2; correct answers never create rows. At most one multi-row upsert and one UPDATE per submit.
+
 ### `question_explanations`
 `question_hash` text PK, `lesson_id`, `question_id`, `source` enum (`ai`,`teacher`), `model` text, `content_md` text, `votes_up`, `votes_down` int, `created_at`, `updated_at`.
 

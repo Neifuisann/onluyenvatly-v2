@@ -5,6 +5,7 @@ import {
   attempts,
   lessons,
   lessonVersions,
+  mistakes,
   ratingEvents,
   ratings,
   users,
@@ -569,6 +570,91 @@ describe("submitAttempt", () => {
       await submitAttempt(student.id, id, right, at(1000));
       expect(await events()).toHaveLength(0);
       expect(await rating()).toBeUndefined();
+    });
+  });
+
+  describe("mistakes (S4-02)", () => {
+    const bank = async () =>
+      Object.fromEntries(
+        (
+          await tdb
+            .select()
+            .from(mistakes)
+            .where(eq(mistakes.userId, student.id))
+        ).map((m) => [
+          m.questionId,
+          `${m.status} w${m.wrongCount} s${m.correctStreak}`,
+        ]),
+      );
+    // Retake the same lesson: each start is a new attempt after a submit.
+    async function take(lessonId: number, answers: unknown[], ms: number) {
+      const r = await startAttempt(student, lessonId, { ...ctx, now: at(ms) });
+      if (!r.ok) throw new Error("start failed");
+      await submitAttempt(
+        student.id,
+        r.data.attemptId,
+        { ...right, answers: answers as typeof right.answers },
+        at(ms + 1000),
+      );
+      return r.data.attemptId;
+    }
+
+    it("opens wrong, partial and blank questions, not correct ones", async () => {
+      const { id, lessonId } = await started();
+      await submitAttempt(
+        student.id,
+        id,
+        { ...right, answers: ["A", [true, false, true, true], null] },
+        at(1000),
+      );
+      expect(await bank()).toEqual({
+        q_tf1: "open w1 s0",
+        q_short1: "open w1 s0",
+      });
+      const [m] = await tdb
+        .select()
+        .from(mistakes)
+        .where(eq(mistakes.questionId, "q_tf1"));
+      expect(m).toMatchObject({
+        lessonId,
+        lastAttemptId: id,
+        updatedAt: at(1000),
+      });
+    });
+
+    it("resolves after two correct answers in a row and reopens on a wrong one", async () => {
+      const lessonId = await addLesson();
+      const wrongMcq = ["B", [true, false, true, false], "0.63"];
+      await take(lessonId, wrongMcq, 0);
+      await take(lessonId, right.answers, 10_000);
+      expect(await bank()).toEqual({ q_mcq1: "open w1 s1" });
+      const second = await take(lessonId, right.answers, 20_000);
+      expect(await bank()).toEqual({ q_mcq1: "resolved w1 s2" });
+      const [m] = await tdb.select().from(mistakes);
+      expect(m?.lastAttemptId).toBe(second);
+      // Resolved stays resolved on further correct answers...
+      await take(lessonId, right.answers, 30_000);
+      expect(await bank()).toEqual({ q_mcq1: "resolved w1 s2" });
+      // ...and reopens with a fresh streak when missed again.
+      await take(lessonId, wrongMcq, 40_000);
+      expect(await bank()).toEqual({ q_mcq1: "open w2 s0" });
+    });
+
+    it("writes nothing for a perfect first test, and nothing twice on retries", async () => {
+      const { id } = await started();
+      await submitAttempt(student.id, id, right, at(1000));
+      expect(await bank()).toEqual({});
+      const other = await started();
+      const wrong = { ...right, answers: ["B", null, null] };
+      await Promise.all([
+        submitAttempt(student.id, other.id, wrong, at(2000)),
+        submitAttempt(student.id, other.id, wrong, at(2000)),
+      ]);
+      expect(await bank()).toEqual({
+        q_mcq1: "open w1 s0",
+        q_tf1: "open w1 s0",
+        q_short1: "open w1 s0",
+      });
     });
   });
 });

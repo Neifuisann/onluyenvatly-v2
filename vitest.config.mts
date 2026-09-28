@@ -44,6 +44,12 @@ export default defineConfig({
           branches: 95,
           statements: 95,
         },
+        "src/features/review/domain/**": {
+          lines: 95,
+          functions: 95,
+          branches: 95,
+          statements: 95,
+        },
         "src/features/rating/domain/**": {
           lines: 95,
           functions: 95,

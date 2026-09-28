@@ -8,6 +8,8 @@ import { toCents } from "@/features/grading/domain/points";
 import { getLessonWithAnswers } from "@/features/lessons/queries";
 import { LessonConfigSchema } from "@/features/lessons/schema";
 import { rateAttempt } from "@/features/rating/service";
+import { mistakeChanges } from "@/features/review/domain/mistakes";
+import { recordMistakes } from "@/features/review/service";
 import type { ErrorCode } from "@/lib/messages";
 import { rateLimit } from "@/lib/rate-limit";
 import { err, ok, type Result } from "@/lib/result";
@@ -166,7 +168,8 @@ export type SubmitOutcome = {
 };
 
 /**
- * Submit, grade and rate (ADR-004, 02 §4.1) in one transaction. The row lock plus
+ * Submit, grade, rate and update the mistakes bank (ADR-004, 02 §4.1) in
+ * one transaction. The row lock plus
  * the status check make double clicks, retries and parallel submits return
  * the same graded result.
  */
@@ -193,8 +196,8 @@ export async function submitAttempt(
   if (!pre || pre.userId !== userId) return err("NOT_FOUND");
   // Single-lesson tests; review attempts (items with their own `v`) arrive in S7-06.
   if (!pre.lessonId || !pre.lessonVersionId) return err("INTERNAL");
-  const { lessonId } = pre;
-  const questions = await getLessonWithAnswers(lessonId, pre.lessonVersionId);
+  const { lessonId, lessonVersionId } = pre;
+  const questions = await getLessonWithAnswers(lessonId, lessonVersionId);
   if (!questions) return err("INTERNAL");
   const byId = new Map(questions.map((q) => [q.id, q]));
   const config = LessonConfigSchema.safeParse(pre.config);
@@ -279,6 +282,17 @@ export async function submitAttempt(
         timeLimitSec,
         now,
       });
+    await recordMistakes(tx, {
+      userId,
+      lessonId,
+      lessonVersionId,
+      attemptId,
+      ...mistakeChanges(
+        a.items,
+        result.marks.map((m) => m.outcome),
+      ),
+      now,
+    });
     return ok({
       attemptId,
       score: result.score,

@@ -242,6 +242,7 @@ Decisions made while building (recorded in 04/05/07): items carry their points (
 | ID | Status | Evidence / remaining acceptance |
 |---|---|---|
 | S4-01 | ✅ Done | `features/rating/domain` (100 % lines, gated at 95 %): all 20 real v1 history rows reproduced exactly with the v1 time bonus; v2 table tests, tier boundaries, replay-after-delete = fresh computation. Applied in the submit transaction (row-locked `ratings`, one `rating_events` row per attempt, skipped when `countsForRating` is off). Migration `0004` adds `rating_events.time_bonus` so replays are exact |
+| S4-02 | ✅ Done | `features/review/domain/mistakes` (pure rules, gated at 95 %) + one upsert and one UPDATE in the submit transaction. Wrong, partial and blank items open or reopen a mistake; two correct in a row resolve it. Integration: open/resolve/reopen across retakes, perfect test writes nothing, parallel submits count once |
 
 ---
 
