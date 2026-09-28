@@ -36,7 +36,10 @@ jobs:
           node-version-file: .nvmrc
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      # Environment secret: the direct (session) connection string, not the pooler.
+      # Direct/session connection strings, never a transaction pooler (:6543):
+      # staging = NEON_DATABASE_URL (Neon, non-pooled host); production =
+      # DATABASE_URL_DIRECT (Supabase session pooler :5432, since the
+      # db.<ref>.supabase.co host is IPv6-only and runners have no IPv6).
       - run: pnpm db:migrate
         env:
-          DATABASE_URL_DIRECT: ${{ secrets.DATABASE_URL_DIRECT }}
+          DATABASE_URL_DIRECT: ${{ (github.event.inputs.target || 'staging') == 'production' && secrets.DATABASE_URL_DIRECT || secrets.NEON_DATABASE_URL }}

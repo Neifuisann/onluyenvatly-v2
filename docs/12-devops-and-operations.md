@@ -23,6 +23,16 @@
 
 Env vars are managed in the Vercel dashboard per environment and pulled locally with `vercel env pull`. `.env.example` lists every variable with a description and no values.
 
+Connection strings (set 2026-09-28):
+
+| Where | Name | Value |
+|---|---|---|
+| Vercel · Production | `DATABASE_URL` | Supabase **transaction pooler** `…pooler.supabase.com:6543` |
+| Vercel · Preview | `DATABASE_URL` | Neon **pooled** host (`-pooler` in the hostname), the same value as the `NEON_DATABASE_URL_POOLED` secret |
+| GitHub Actions | `NEON_DATABASE_URL` | Neon direct (non-pooled) host: staging migrations |
+| GitHub Actions | `NEON_DATABASE_URL_POOLED` | Neon pooled host (reference copy) |
+| GitHub Actions | `DATABASE_URL_DIRECT` | Supabase **session pooler** `postgres.<ref>@…pooler.supabase.com:5432`: production migrations and backups. Not `db.<ref>.supabase.co`, which is IPv6-only and unreachable from GitHub runners |
+
 ## 3. CI/CD
 - **Trunk-based.** `main` = production. Short-lived feature branches → PR → CI green + preview checked → squash-merge → Vercel auto-deploys production.
 - Commit messages: Conventional Commits (`feat:`, `fix:`, `chore:`) so the changelog is generated.
