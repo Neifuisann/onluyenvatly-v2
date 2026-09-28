@@ -305,3 +305,48 @@ export const settingsCopy = {
     invalid: "Cài đặt không hợp lệ.",
   },
 } as const;
+
+/** Saving and publishing lesson content (S5-04). */
+export const publishCopy = {
+  saveDraft: "Lưu nháp",
+  saving: "Đang lưu…",
+  saved: "Đã lưu bản nháp.",
+  savedWithErrors: (n: number) =>
+    `Đã lưu bản nháp. Còn ${n} lỗi cần sửa trước khi xuất bản.`,
+  unchanged: "Nội dung giống bản đã xuất bản, không cần lưu nháp.",
+  publish: "Xuất bản",
+  publishing: "Đang xuất bản…",
+  published: "Đã xuất bản. Học sinh thấy nội dung mới ngay.",
+  publishTitle: "Xuất bản bài tập?",
+  publishBody:
+    "Học sinh sẽ thấy nội dung mới ngay. Bài đang làm dở vẫn được chấm theo nội dung cũ.",
+  publishFirstBody: "Bài sẽ hiện trong danh sách bài tập của học sinh.",
+  publishSettingsDirty:
+    "Cài đặt có thay đổi chưa lưu; bài sẽ xuất bản với cài đặt đã lưu.",
+  publishConfirm: "Xuất bản",
+  unpublish: "Ngừng xuất bản",
+  unpublishing: "Đang ngừng xuất bản…",
+  unpublished:
+    "Đã ngừng xuất bản. Học sinh không còn thấy bài; bài đang làm dở vẫn nộp được.",
+  discardDraft: "Bỏ bản nháp",
+  discardTitle: "Bỏ bản nháp?",
+  discardBody:
+    "Nội dung nháp sẽ bị xóa và trình soạn thảo quay về bản đang xuất bản.",
+  discardConfirm: "Bỏ bản nháp",
+  discarded: "Đã bỏ bản nháp.",
+  cancel: "Hủy",
+  close: "Đóng",
+  shortcut: "Ctrl+S để lưu nháp",
+  hasErrors: (n: number) =>
+    `Nội dung còn ${n} lỗi. Sửa hết lỗi (xem mục “Kiểm tra”) rồi xuất bản.`,
+  empty: "Bài chưa có câu hỏi nào.",
+  invalid: "Nội dung bài không hợp lệ.",
+  poolSize: (want: number, have: number) =>
+    `Bộ câu hỏi ngẫu nhiên lấy ${want} câu nhưng bài chỉ có ${have} câu. Sửa trong “Cài đặt”.`,
+  poolByType: (type: "mcq" | "tf" | "short", want: number, have: number) =>
+    `Bộ câu hỏi ngẫu nhiên lấy ${want} câu ${questionTypeLabels[type].toLowerCase()} nhưng bài chỉ có ${have}. Sửa trong “Cài đặt”.`,
+  archived: "Bài đang lưu trữ. Khôi phục bài trước khi xuất bản.",
+  nothingToPublish: "Bài chưa có nội dung để xuất bản.",
+  notPublished: "Bài chưa được xuất bản.",
+  noDraft: "Bài không có bản nháp.",
+} as const;

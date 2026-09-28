@@ -19,6 +19,7 @@ import { rateAttempt } from "@/features/rating/service";
 import { mistakeChanges } from "@/features/review/domain/mistakes";
 import { recordMistakes } from "@/features/review/service";
 import type { ErrorCode } from "@/lib/messages";
+import { FOREIGN_KEY_VIOLATION, pgErrorCode } from "@/lib/pg-error";
 import { rateLimit } from "@/lib/rate-limit";
 import { err, ok, type Result } from "@/lib/result";
 import { buildItems, questionsForItems } from "./domain/build-items";
@@ -68,7 +69,22 @@ export async function startAttempt(
     now,
   );
   if (!limit.ok) return err("RATE_LIMITED");
+  const ctx = { ip, now, seed };
+  try {
+    return await startOnce(user, lessonId, ctx);
+  } catch (error) {
+    // A publish deleted the version between our read and the insert (S5-04
+    // retires unused versions): start again on the new one.
+    if (pgErrorCode(error) !== FOREIGN_KEY_VIOLATION) throw error;
+    return startOnce(user, lessonId, ctx);
+  }
+}
 
+async function startOnce(
+  user: AttemptActor,
+  lessonId: number,
+  { ip, now, seed }: Required<StartContext>,
+): Promise<Result<{ attemptId: string; resumed: boolean }>> {
   const [lesson] = await db
     .select({
       status: lessons.status,

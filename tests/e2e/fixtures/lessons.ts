@@ -214,4 +214,19 @@ export const e2eLessons: E2eLesson[] = [
     status: "published",
     questions: runnerQuestions.slice(0, 2),
   },
+  // S5-04 journey 7, one per Playwright project (the spec republishes it).
+  ...(["d", "m"] as const).map(
+    (p): E2eLesson => ({
+      legacyId: `e2e-publish-${p}`,
+      title: `E2E – Xuất bản (${p})`,
+      grade: 12,
+      chapter: "Dao động cơ",
+      tags: ["e2e-publish"],
+      sortOrder: -190,
+      // Unrated, so the leaderboard specs never see these students.
+      config: { ...DEFAULT_LESSON_CONFIG, countsForRating: false },
+      status: "published",
+      questions: runnerQuestions.slice(0, 2),
+    }),
+  ),
 ];

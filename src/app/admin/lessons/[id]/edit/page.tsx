@@ -44,6 +44,7 @@ export default async function EditLessonPage({
         previous,
         config: config.success ? config.data : DEFAULT_LESSON_CONFIG,
         hasDraft: lesson.hasDraft,
+        hasPublished: lesson.hasPublished,
       }}
     />
   );

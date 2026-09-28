@@ -29,6 +29,7 @@ import {
 } from "../../messages";
 import type { LessonConfig, Question } from "../../schema";
 import { ContentTab } from "./content-tab";
+import { PublishBar } from "./publish-bar";
 import { SettingsTab } from "./settings-tab";
 
 export type EditorLesson = {
@@ -40,6 +41,7 @@ export type EditorLesson = {
   previous: Question[];
   config: LessonConfig;
   hasDraft: boolean;
+  hasPublished: boolean;
 };
 
 const statusClass = {
@@ -55,7 +57,8 @@ type Tab = (typeof TABS)[number];
  * `/admin/lessons/[id]/edit` (07 §5.6). Holds the text and the settings
  * being edited. The text is parsed on a deferred copy so typing stays smooth
  * on long lessons; the settings are validated on every change against the
- * live content, so the stats bar follows them. Content saving is S5-04.
+ * live content, so the stats bar follows them. Saving and publishing the
+ * text: `PublishBar` (S5-04).
  */
 export function LessonEditor({ lesson }: { lesson: EditorLesson }) {
   const [tab, setTab] = useState<Tab>("content");
@@ -130,7 +133,10 @@ export function LessonEditor({ lesson }: { lesson: EditorLesson }) {
   };
 
   const settingsDirty = JSON.stringify(form) !== JSON.stringify(savedForm);
-  const dirty = text !== lesson.sourceText || settingsDirty;
+  const textDirty = text !== lesson.sourceText;
+  const dirty = textDirty || settingsDirty;
+  // From the deferred parse; the server checks the text again on publish.
+  const errors = parsed.issues.filter((i) => i.severity === "error").length;
 
   // Unsaved work: let the browser ask before leaving.
   useEffect(() => {
@@ -183,6 +189,16 @@ export function LessonEditor({ lesson }: { lesson: EditorLesson }) {
             {lesson.hasDraft ? t.draftSource : t.publishedSource}
           </p>
         )}
+        <PublishBar
+          lessonId={lesson.id}
+          status={lesson.status}
+          text={text}
+          textDirty={textDirty}
+          settingsDirty={settingsDirty}
+          hasDraft={lesson.hasDraft}
+          hasPublished={lesson.hasPublished}
+          errors={errors}
+        />
       </header>
 
       <div
