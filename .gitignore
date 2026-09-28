@@ -48,3 +48,6 @@ next-env.d.ts
 
 # local v1 exports (may contain personal data before anonymization)
 /tmp/
+
+# local PGlite database (pnpm db:local)
+/.pglite/

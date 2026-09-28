@@ -1,4 +1,8 @@
+import { existsSync } from "node:fs";
 import { defineConfig } from "drizzle-kit";
+
+// Local dev reads .env.local; CI passes env vars directly.
+if (existsSync(".env.local")) process.loadEnvFile(".env.local");
 
 // `pnpm db:generate` needs no database. `pnpm db:migrate` uses the direct
 // (session) URL, never the transaction pooler.
