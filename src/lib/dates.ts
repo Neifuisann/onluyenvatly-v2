@@ -33,3 +33,15 @@ export function formatClock(totalSeconds: number): string {
   const ss = String(s % 60).padStart(2, "0");
   return h > 0 ? `${h}:${mm}:${ss}` : `${mm}:${ss}`;
 }
+
+const dayKey = new Intl.DateTimeFormat("en-CA", {
+  timeZone: "Asia/Ho_Chi_Minh",
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+});
+
+/** `YYYY-MM-DD` of the day in Vietnam time (streaks, per-day stats). */
+export function vnDateKey(date: Date): string {
+  return dayKey.format(date);
+}

@@ -101,7 +101,7 @@ sequenceDiagram
   N->>D: SELECT ... FOR UPDATE attempt
   N->>N: grade(answers, lessonWithAnswers) — pure function
   N->>D: tx: UPDATE attempt (score, per-question marks, status='submitted')\n+ UPDATE ratings + INSERT rating_events + UPSERT mistakes
-  N->>N: revalidateTag(leaderboard) (lazy: 60 s TTL is enough)
+  Note over N: no revalidateTag: the leaderboard's 60 s lifetime is enough
   N-->>B: redirect /attempts/{id}/result
 ```
 

@@ -116,7 +116,7 @@ v1 results store copies of the questions, not references. For each result questi
 - For 20 random students: the rating equals v1; the number of attempts equals v1; the latest attempt score equals v1.
 - For every lesson: the question count equals v1; the Zod parse passes; the answer-stripped view contains no `answer`.
 - 5 random v1 password hashes verify against known test accounts (use accounts the teacher controls).
-- Leaderboard top 20 is identical to v1.
+- Leaderboard top 20 is identical to v1 (same students and ratings in the same order; within a tie, v1 had no fixed order, so compare tied rows as a set).
 
 ## 8. Rollback
 Within 14 days: move the domain alias back to v1 and turn off v1 read-only mode. Attempts made in v2 after cutover would be lost to v1. Export them with `scripts/export-v2-attempts.ts` if needed. This is acceptable because rollback is only for severe failures in the first days.

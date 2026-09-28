@@ -1,0 +1,145 @@
+import AxeBuilder from "@axe-core/playwright";
+import { type Browser, expect, type Page, test } from "@playwright/test";
+import { E2E_PASSWORD, type E2eStudentKey, e2eStudent } from "./fixtures/users";
+import type { StorageState } from "./runner-helpers";
+
+/**
+ * S4-05 leaderboard on the seeded ratings (fixtures/users `e2eRatings`):
+ * "Học Sinh Một" 2100 (−12 this week, grade 12), "Học Sinh Hai" 1650 (+150,
+ * grade 11); pending/rejected accounts have higher ratings but are never
+ * listed. Runner students may add rows of their own while this runs.
+ */
+async function loginState(
+  browser: Browser,
+  key: E2eStudentKey,
+): Promise<StorageState> {
+  const context = await browser.newContext();
+  const page = await context.newPage();
+  await page.setExtraHTTPHeaders({
+    "x-forwarded-for": `10.46.${Math.floor(Math.random() * 250)}.1`,
+  });
+  await page.goto("/login?next=/leaderboard");
+  await page.getByLabel("Số điện thoại").fill(e2eStudent(key).phone);
+  await page.getByLabel("Mật khẩu", { exact: true }).fill(E2E_PASSWORD);
+  await page.getByRole("button", { name: "Đăng nhập", exact: true }).click();
+  await page.waitForURL((url) => url.pathname === "/leaderboard");
+  const state = await context.storageState();
+  await context.close();
+  return state;
+}
+
+// One login per project, in one worker: the per-account login limit is
+// 5/min and auth.spec logs "active" in too.
+test.describe.configure({ mode: "default" });
+let topStudent: StorageState;
+test.beforeAll(async ({ browser }) => {
+  topStudent = await loginState(browser, "active");
+});
+test.use({
+  // biome-ignore lint/correctness/noEmptyPattern: Playwright requires destructured fixture dependencies.
+  storageState: async ({}, use) => {
+    await use(topStudent);
+  },
+});
+
+const board = (page: Page) =>
+  page.getByRole("list", { name: "Bảng xếp hạng" }).getByRole("listitem");
+const myRow = (page: Page) =>
+  board(page).filter({ has: page.getByText("Bạn", { exact: true }) });
+
+test("ranks active students, marks my row, filters by grade and week", async ({
+  page,
+}) => {
+  await page.goto("/leaderboard");
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Xếp hạng");
+
+  // Top of the board, with my rating and 7-day change.
+  const first = board(page).first();
+  await expect(first).toContainText("Học Sinh Một");
+  await expect(first).toContainText("Hạng 1");
+  await expect(first).toContainText("2 100");
+  await expect(first).toContainText("7 ngày: giảm 12");
+  await expect(myRow(page)).toHaveCount(1);
+  await expect(myRow(page)).toHaveCSS("position", "sticky");
+  await expect(page.getByRole("list", { name: "Bảng xếp hạng" })).toContainText(
+    "Học Sinh Hai",
+  );
+  for (const hidden of ["Học Sinh Chờ", "Học Sinh Từ Chối"])
+    await expect(page.getByText(hidden)).toHaveCount(0);
+
+  // Another grade: I'm not on it, and there's no "not ranked" nudge.
+  await page.getByRole("link", { name: "Lớp 11", exact: true }).click();
+  await expect(page).toHaveURL(/\/leaderboard\?grade=11$/);
+  await expect(board(page)).toHaveCount(1);
+  await expect(board(page).first()).toContainText("Học Sinh Hai");
+  await expect(myRow(page)).toHaveCount(0);
+  await expect(page.getByText(/Bạn chưa/)).toHaveCount(0);
+
+  // Most improved this week, grade 11.
+  await page.getByRole("link", { name: "7 ngày qua", exact: true }).click();
+  await expect(page).toHaveURL(/\/leaderboard\?grade=11&period=week$/);
+  await expect(page.getByRole("link", { name: "7 ngày qua" })).toHaveAttribute(
+    "aria-current",
+    "page",
+  );
+  await expect(board(page).first()).toContainText("7 ngày: tăng 150");
+
+  // All grades this week: my row shows my own change.
+  await page.getByRole("link", { name: "Tất cả", exact: true }).click();
+  await expect(page).toHaveURL(/\/leaderboard\?period=week$/);
+  await expect(myRow(page)).toContainText("7 ngày: giảm 12");
+});
+
+test("an unrated student is nudged to take a test", async ({ browser }) => {
+  const context = await browser.newContext({
+    storageState: await loginState(browser, "active3"),
+  });
+  const page = await context.newPage();
+  await page.goto("/leaderboard");
+  await expect(
+    page.getByText("Bạn chưa có rating", { exact: false }),
+  ).toBeVisible();
+  await expect(myRow(page)).toHaveCount(0);
+  await page.goto("/leaderboard?period=week");
+  await expect(
+    page.getByText("Bạn chưa làm bài tính rating nào trong 7 ngày qua."),
+  ).toBeVisible();
+  // Garbage params fall back to the defaults.
+  await page.goto("/leaderboard?grade=9&period=year");
+  await expect(page.getByRole("link", { name: "Tổng" })).toHaveAttribute(
+    "aria-current",
+    "page",
+  );
+  await context.close();
+});
+
+test("leaderboard fits the viewport and passes axe in light and dark", async ({
+  page,
+}, testInfo) => {
+  const errors: string[] = [];
+  page.on("pageerror", (error) => errors.push(error.message));
+  for (const theme of ["light", "dark"] as const) {
+    // Reduced motion zeroes transitions, so axe never samples mid-fade.
+    await page.emulateMedia({ colorScheme: theme, reducedMotion: "reduce" });
+    for (const path of ["/leaderboard", "/leaderboard?period=week"]) {
+      await page.goto(path);
+      await expect(myRow(page)).toBeVisible();
+      const issues = (
+        await new AxeBuilder({ page }).analyze()
+      ).violations.filter(
+        (v) => v.impact === "serious" || v.impact === "critical",
+      );
+      expect(issues).toEqual([]);
+      expect(
+        await page.evaluate(
+          () => document.documentElement.scrollWidth <= innerWidth,
+        ),
+      ).toBe(true);
+    }
+    await page.screenshot({
+      path: testInfo.outputPath(`leaderboard-${theme}.png`),
+      scale: "css",
+    });
+  }
+  expect(errors).toEqual([]);
+});

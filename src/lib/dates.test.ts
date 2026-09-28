@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { formatClock, formatDateTime, formatScore } from "./dates";
+import { formatClock, formatDateTime, formatScore, vnDateKey } from "./dates";
 
 describe("formatDateTime", () => {
   it("shows Vietnam time as dd/mm/yyyy hh:mm", () => {
@@ -27,5 +27,12 @@ describe("formatClock", () => {
     expect(formatClock(59.9)).toBe("00:59");
     expect(formatClock(3725)).toBe("1:02:05");
     expect(formatClock(-3)).toBe("00:00");
+  });
+});
+
+describe("vnDateKey", () => {
+  it("uses the Vietnam calendar day (UTC+7)", () => {
+    expect(vnDateKey(new Date("2026-10-01T16:59:59Z"))).toBe("2026-10-01");
+    expect(vnDateKey(new Date("2026-10-01T17:00:00Z"))).toBe("2026-10-02");
   });
 });
