@@ -13,6 +13,9 @@ Lessons use images for question figures, options and covers. v1 uploads through 
 - Use `<img loading="lazy" decoding="async" width height>`. **Don't** use `next/image` optimization for lesson media, to save the 5K/month quota. Use `next/image` only for a handful of static marketing assets (bundled, optimized at build).
 - The 22 handout JPGs and other static marketing images go in the repo's `public/`, converted to WebP (the ~11 MB of JPGs should come down to about 3 MB).
 
+## As built (S5-05)
+`features/media`: the browser (`upload-image.ts`) decodes with `createImageBitmap` (EXIF orientation applied), scales to fit 1280 px and encodes WebP 0.8; where the browser can't encode WebP it falls back to JPEG 0.85 on white. `createUploadUrl` signs one object path with the service key and records it in `media`; the browser `PUT`s the bytes to the signed URL. The bucket must exist and be public-read. A photo-like PNG of over 5 MB becomes a WebP of about 28 KB in the E2E test. Without `SUPABASE_URL`/`SUPABASE_SERVICE_ROLE_KEY` uploads are refused with a message; without `NEXT_PUBLIC_MEDIA_BASE_URL` images show as their path.
+
 ## Consequences
 - Upload doesn't cost function time or bandwidth.
 - Egress estimate: 300 students × 30 test pages/month × ~300 KB of images ≈ 2.7 GB/month worst case with no browser cache. With immutable caching the realistic figure is < 1 GB. It's watched by the quota check (see 12).

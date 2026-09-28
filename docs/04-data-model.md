@@ -106,6 +106,8 @@ Search: `WHERE search_text ILIKE '%' || lower(immutable_unaccent($q)) || '%'` us
 
 **Versioning policy (keeps the DB small):** saving a draft overwrites the draft version in place. Publishing makes the draft current. A new version number is created only when the previous current version already has attempts. Versions with no attempts that aren't current or draft are pruned by the daily cron.
 
+As built (S5-04, `features/lessons/content-service.ts`): a lesson has at most one draft row. The first save of a draft inserts it as `max(version) + 1`; later saves overwrite it. Publishing points `current_version_id` at the draft and clears `draft_version_id`; the version it replaces is then locked and deleted in the same transaction **unless an attempt references it**, and the new version takes over its number. So students' attempts always keep the exact content they started on (`attempts.lesson_version_id` is `NO ACTION`), and a lesson without attempts never grows past one published row plus one draft. The row lock waits for any attempt insert already pointing at the old version; an insert that arrives after the delete fails its foreign-key check and `startAttempt` retries once on the new version. "Bỏ bản nháp" deletes the draft row (drafts never have attempts). A draft is saved even with parse errors (its `questions` keep only the questions that are valid on their own, so ids stay stable); publishing re-parses the text on the server and refuses errors, an empty lesson, or a pool the questions can't fill.
+
 ### `attempts`
 | Column | Type | Notes |
 |---|---|---|
@@ -184,6 +186,8 @@ RETURNING count;
 
 ### `media`
 `id` uuid, `path` text unique, `bytes` int, `width`, `height` (null when unknown, e.g. migrated v1 files), `uploaded_by`, `created_at`. Used for the storage quota check and orphan cleanup.
+
+As built (S5-05): `createUploadUrl` writes the row when it signs the upload, with the size the browser reported, so the quota check (`sum(bytes)` + the new file ≤ 900 MB) counts uploads in flight. Paths are `yyyy/mm/<uuid>.webp` (`.jpg` from browsers that can't encode WebP). A row whose object never arrived is an orphan for the daily cron (S9-05) to remove. `lessons.cover_path` only accepts a path that has a `media` row.
 
 ### `audit_log`
 `id` bigint, `actor_id` uuid, `action` text (`student.approve`, `lesson.publish`, `attempt.delete`…), `target_type`, `target_id`, `data` jsonb, `created_at`. Kept for 180 days.
