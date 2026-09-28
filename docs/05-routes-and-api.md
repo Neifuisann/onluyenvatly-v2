@@ -35,7 +35,7 @@ Conventions:
 
 **S2 catalog implementation:** `/lessons` supports `q`, `grade`, `chapter`, `tag`, `sort=order|newest|popular|title`, and `page`. Each “Xem thêm” step retains the preceding cards (24 per step, at most 20 steps). Invalid params fall back per field; search ignores accents and treats `%`/`_` literally. Filters preserve browser history and reset pagination. Only published lessons are listed. Shared catalog/facet queries use tag `lessons` with an hours cache lifetime. Progress/status filters await the S3 attempts table.
 
-**S2 overview implementation:** `/lessons/[id]` selects metadata and explicit rule fields only, cached under `lesson:{id}` for hours. It never selects `lesson_versions`, source text, questions, or the full config. Students receive a not-found view for drafts/archived lessons; admins can open those overviews directly. Attempt history and start/continue arrive with S3-01/S3-03; the overview currently says that taking a lesson will open soon.
+**S2 overview implementation:** `/lessons/[id]` selects metadata and explicit rule fields only, cached under `lesson:{id}` for hours. It never selects `lesson_versions`, source text, questions, or the full config. Students receive a not-found view for drafts/archived lessons; admins can open those overviews directly. Since S3-03 a per-user panel streams in under the cached metadata (`getMyLessonAttempts`, uncached): "Tiếp tục làm bài" for the attempt in progress, otherwise the `startAttempt` form (hidden when `maxAttempts` is used up; admins are unlimited), and my finished attempts linking to their results.
 
 ### Admin (layout: `requireAdmin()`)
 
@@ -83,7 +83,7 @@ S2-07 implements the lesson redirect only. The authenticated lookup validates th
 ### `features/attempts/actions.ts`
 | Action | Input | Notes |
 |---|---|---|
-| `startAttempt` | `{ lessonId }` | Returns the existing in-progress attempt if any; checks `maxAttempts`; builds items (pool, shuffle); rate limit 10/min |
+| `startAttempt` | `{ lessonId }` (form) | Returns the existing in-progress attempt if any; checks `maxAttempts` (not for admins, who may also try unpublished lessons that have a version); builds items (pool, shuffle, points) from a random 32-bit seed; rate limit 10/min. Parallel starts converge through the unique in-progress index (`INSERT … ON CONFLICT DO NOTHING`, then re-read). Redirects to `/attempts/[id]` |
 | `saveProgress`* | `{ attemptId, answers, flagged, guardEvents }` | Owner + in_progress + before deadline+grace. Last-write-wins, small payload |
 | `submitAttempt`* | `{ attemptId, answers, clientSubmitId }` | Row lock, grade, rating, mistakes, one tx. Idempotent |
 
