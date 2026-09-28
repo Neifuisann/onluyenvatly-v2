@@ -1,6 +1,6 @@
 # ADR-006: Images in Supabase Storage (public bucket), resized in the browser before upload
 
-- **Status:** Proposed
+- **Status:** Accepted (owner, 2026-09-28)
 - **Date:** 2026-09-28
 
 ## Context
