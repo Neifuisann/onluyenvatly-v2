@@ -45,9 +45,14 @@ export function useAutosave(attemptId: string, onClosed: () => void) {
   }, [onClosed]);
   const url = `/api/attempts/${attemptId}/save`;
 
-  const body = useCallback(() => {
-    const { answers, flagged } = api.getState();
-    return JSON.stringify({ answers, flagged });
+  /** The request body and how many guard events it carries. */
+  const snapshot = useCallback(() => {
+    const { answers, flagged, guard } = api.getState();
+    const guardEvents = [...guard];
+    return {
+      data: JSON.stringify({ answers, flagged, guardEvents }),
+      guardSent: guardEvents.length,
+    };
   }, [api]);
 
   const sync = useCallback(async (): Promise<void> => {
@@ -57,11 +62,12 @@ export function useAutosave(attemptId: string, onClosed: () => void) {
     clearTimeout(q.retry);
     setStatus("saving");
     let retry = false;
+    const { data, guardSent } = snapshot();
     try {
       const res = await fetch(url, {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: body(),
+        body: data,
         keepalive: true,
         cache: "no-store",
       });
@@ -69,6 +75,7 @@ export function useAutosave(attemptId: string, onClosed: () => void) {
       if (res.ok && json?.ok) {
         q.savedRev = sent;
         q.failures = 0;
+        if (guardSent > 0) api.getState().ackGuard(guardSent);
         if (q.rev === sent) {
           const { answers, flagged } = api.getState();
           writeLocal(attemptId, { answers, flagged, dirty: false });
@@ -94,12 +101,12 @@ export function useAutosave(attemptId: string, onClosed: () => void) {
       q.failures += 1;
       q.retry = setTimeout(() => void sync(), retryDelayMs(q.failures));
     }
-  }, [api, attemptId, body, q, url]);
+  }, [api, attemptId, snapshot, q, url]);
 
   /** Last-chance flush while the page goes away; the response is never read. */
   const beacon = useCallback(() => {
     if (q.stopped || q.rev === q.savedRev) return;
-    const data = body();
+    const { data } = snapshot();
     // text/plain keeps the beacon a "simple" request; the server reads any type.
     const sent = navigator.sendBeacon?.(
       url,
@@ -112,7 +119,7 @@ export function useAutosave(attemptId: string, onClosed: () => void) {
         keepalive: true,
         headers: { "content-type": "application/json" },
       }).catch(() => {});
-  }, [body, q, url]);
+  }, [snapshot, q, url]);
 
   useEffect(() => {
     // Unsynced answers from before a reload or a lost connection win.
@@ -126,6 +133,8 @@ export function useAutosave(attemptId: string, onClosed: () => void) {
       setStatus("local");
     }
     const unsubscribe = api.subscribe((next, prev) => {
+      // A new guard event needs a save too; acknowledging one doesn't.
+      if (next.guard.length > prev.guard.length) q.rev += 1;
       if (next.answers === prev.answers && next.flagged === prev.flagged)
         return;
       q.rev += 1;

@@ -16,6 +16,7 @@ import {
   type Question,
 } from "@/features/lessons/schema";
 import { resetDb, type TestDb } from "@/test/db";
+import { MAX_GUARD_EVENTS } from "./domain/guard";
 import {
   ATTEMPT_LIMITS,
   DEADLINE_GRACE_MS,
@@ -656,5 +657,70 @@ describe("submitAttempt", () => {
         q_short1: "open w1 s0",
       });
     });
+  });
+});
+
+describe("exam guard events (S4-04)", () => {
+  const blank = { answers: [null, null, null], flagged: [] };
+  const at = (ms: number) => new Date(NOW.getTime() + ms);
+  async function started() {
+    const lessonId = await addLesson({ examGuard: true });
+    const r = await startAttempt(student, lessonId, ctx);
+    if (!r.ok) throw new Error("start failed");
+    return r.data.attemptId;
+  }
+  const events = async (id: string) =>
+    (await tdb.select().from(attempts).where(eq(attempts.id, id)))[0]
+      ?.guardEvents;
+
+  it("appends on save and submit; an empty or forged batch erases nothing", async () => {
+    const id = await started();
+    await saveProgress(
+      student.id,
+      id,
+      { ...blank, guardEvents: [{ t: 5, k: "hidden" }] },
+      at(6000),
+    );
+    await saveProgress(student.id, id, blank, at(7000));
+    await saveProgress(
+      student.id,
+      id,
+      { ...blank, guardEvents: [{ t: 9, k: "copy" }] },
+      at(9000),
+    );
+    await submitAttempt(
+      student.id,
+      id,
+      {
+        ...blank,
+        guardEvents: [{ t: 12, k: "blur" }],
+        clientSubmitId: crypto.randomUUID(),
+      },
+      at(12_000),
+    );
+    expect(await events(id)).toEqual([
+      { t: 5, k: "hidden" },
+      { t: 9, k: "copy" },
+      { t: 12, k: "blur" },
+    ]);
+  });
+
+  it(`keeps the first ${MAX_GUARD_EVENTS} events`, async () => {
+    const id = await started();
+    const batch = (from: number) =>
+      Array.from({ length: 50 }, (_, i) => ({
+        t: from + i,
+        k: "blur" as const,
+      }));
+    for (let i = 0; i < 5; i++)
+      await saveProgress(
+        student.id,
+        id,
+        { ...blank, guardEvents: batch(i * 100) },
+        at(1000 * (i + 1)),
+      );
+    const stored = await events(id);
+    expect(stored).toHaveLength(MAX_GUARD_EVENTS);
+    expect(stored?.at(-1)).toEqual({ t: 349, k: "blur" });
   });
 });

@@ -1,6 +1,13 @@
 import { expect, test } from "@playwright/test";
 import { ANSWER_MARKER } from "./fixtures/lessons";
-import { loginOnce, openTest, type StorageState } from "./runner-helpers";
+import { E2E_PASSWORD, e2eAdmin } from "./fixtures/users";
+import {
+  loginOnce,
+  openTest,
+  press,
+  type StorageState,
+  visible,
+} from "./runner-helpers";
 
 /**
  * S4-03 reveal policies on lessons of their own (so this file can run next
@@ -67,3 +74,46 @@ for (const { key, message } of [
     }
   });
 }
+
+test("exam guard: notice, blocked copy, events for the teacher only", async ({
+  page,
+  browser,
+}) => {
+  await openTest(page, "e2e-guard");
+  await expect(page.getByText(/Bài có giám sát/)).toBeVisible();
+  // A blocked copy is cancelled; a blur counts as leaving the page.
+  const copied = await page.evaluate(() =>
+    document.dispatchEvent(
+      new Event("copy", { bubbles: true, cancelable: true }),
+    ),
+  );
+  expect(copied).toBe(false);
+  await page.evaluate(() => window.dispatchEvent(new Event("blur")));
+  await press(page, /^B\. 5 cm/);
+  await visible(page, "Nộp bài").click();
+  await page
+    .getByRole("dialog", { name: "Nộp bài?" })
+    .getByRole("button", { name: "Nộp bài", exact: true })
+    .click();
+  await expect(page).toHaveURL(/\/result$/);
+  const resultUrl = page.url();
+  // Students never see the events.
+  await expect(page.getByText(/Sự kiện giám sát/)).toHaveCount(0);
+
+  const admin = await browser.newContext();
+  const adminPage = await admin.newPage();
+  await adminPage.goto("/login");
+  await adminPage.getByLabel("Số điện thoại").fill(e2eAdmin.username);
+  await adminPage.getByLabel("Mật khẩu", { exact: true }).fill(E2E_PASSWORD);
+  await adminPage
+    .getByRole("button", { name: "Đăng nhập", exact: true })
+    .click();
+  await expect(adminPage).toHaveURL(/\/admin$/);
+  await adminPage.goto(resultUrl);
+  // At least our two; a real focus change in the browser may add more.
+  await adminPage.getByText(/^Sự kiện giám sát \([2-9]\d*\)$/).click();
+  const log = adminPage.locator("pre");
+  await expect(log).toContainText('"k": "copy"');
+  await expect(log).toContainText('"k": "blur"');
+  await admin.close();
+});

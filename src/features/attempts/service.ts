@@ -1,8 +1,18 @@
 import "server-only";
 import { randomInt } from "node:crypto";
-import { and, count, eq, gte, isNull, ne, or, sql } from "drizzle-orm";
+import {
+  and,
+  count,
+  eq,
+  gte,
+  isNull,
+  ne,
+  or,
+  type SQL,
+  sql,
+} from "drizzle-orm";
 import { db } from "@/db/client";
-import { attempts, lessons } from "@/db/schema";
+import { attempts, type GuardEvent, lessons } from "@/db/schema";
 import { grade } from "@/features/grading/domain/grade";
 import { toCents } from "@/features/grading/domain/points";
 import { getLessonWithAnswers } from "@/features/lessons/queries";
@@ -19,6 +29,7 @@ import {
   isPastGrace,
   timeTakenSec,
 } from "./domain/deadline";
+import { MAX_GUARD_EVENTS } from "./domain/guard";
 import { createRng } from "./domain/random";
 import type { SaveProgressInput, SubmitAttemptInput } from "./schemas";
 
@@ -140,6 +151,7 @@ export async function saveProgress(
     .set({
       answers: input.answers,
       flagged: cleanFlags(input.flagged, input.answers.length),
+      ...appendGuard(input.guardEvents),
       lastSavedAt: now,
     })
     .where(
@@ -263,6 +275,7 @@ export async function submitAttempt(
         submittedAt: now,
         timeTakenSec: taken,
         clientSubmitId: input.clientSubmitId,
+        ...appendGuard(input.guardEvents),
       })
       .where(eq(attempts.id, attemptId));
     // Denormalized for "Nhiều lượt làm"; the catalog picks it up when its
@@ -302,6 +315,30 @@ export async function submitAttempt(
       late,
     });
   });
+}
+
+/**
+ * Appends new exam-guard events, keeping the first `MAX_GUARD_EVENTS`.
+ * Append-only: a forged save can't erase what was recorded. A beacon that
+ * arrived but wasn't confirmed may repeat a few events; teachers read them
+ * as a timeline, so that is harmless.
+ */
+function appendGuard(events: readonly GuardEvent[] | undefined): {
+  guardEvents?: SQL;
+} {
+  if (!events?.length) return {};
+  return {
+    guardEvents: sql`(
+      select coalesce(jsonb_agg(e order by n), '[]'::jsonb)
+      from (
+        select e, n
+        from jsonb_array_elements(${attempts.guardEvents} || ${JSON.stringify(events)}::jsonb)
+          with ordinality as x(e, n)
+        order by n
+        limit ${MAX_GUARD_EVENTS}
+      ) kept
+    )`,
+  };
 }
 
 /** Unique item indexes inside the test, ascending. */

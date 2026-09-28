@@ -49,6 +49,8 @@ export const runnerCopy = {
   shortHint: "Dùng dấu phẩy hoặc dấu chấm cho phần thập phân.",
   shortReadAs: (value: string) => `Hệ thống ghi nhận: ${value}`,
   shortPlaceholder: "Nhập đáp số",
+  guardNotice:
+    "Bài có giám sát: hệ thống ghi lại khi bạn rời khỏi trang làm bài, và không cho sao chép đề.",
   keyboardHint:
     "Phím tắt: 1–4 chọn đáp án, ←/→ chuyển câu, F đánh dấu, Enter câu sau.",
 } as const;
@@ -85,6 +87,9 @@ export const resultCopy = {
   keepGoing: "Cố lên, ôn lại rồi làm tiếp nhé!",
   revealLater: (when: string) => `Đáp án sẽ hiển thị sau ${when}.`,
   revealNever: "Giáo viên không công bố đáp án của bài này.",
+  guardEvents: (n: number) => `Sự kiện giám sát (${n})`,
+  guardHelp:
+    "t = số giây từ lúc bắt đầu; blur: rời cửa sổ, hidden: ẩn tab/chuyển ứng dụng, fs-exit: thoát toàn màn hình, copy: thử sao chép.",
 } as const;
 
 /** Per-question review on the result page (07 §4 `ReviewItem`). */

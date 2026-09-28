@@ -118,7 +118,7 @@ Search: `WHERE search_text ILIKE '%' || lower(immutable_unaccent($q)) || '%'` us
 | items | jsonb | Ordered `[{q:"q_ab12", v:57, o:[2,0,3,1], p:0.25}]`: question id, version id (omitted when equal to `lesson_version_id`), mcq option order, and the points fixed at start (so a config edit mid-attempt can't change the marks) |
 | answers | jsonb | Array aligned with `items`: `"B"` \| `[true,false,null,true]` \| `"1,5"` \| `null` |
 | flagged | smallint[] | Item indexes flagged for review |
-| guard_events | jsonb | `[{t: 132, k: "blur"}]`, seconds since start + kind. Capped at 200 |
+| guard_events | jsonb | `[{t: 132, k: "blur"}]`, seconds since start (server clock) + kind: `blur`, `hidden`, `fs-exit`, `copy`. Append-only through save/submit (≤ 50 new per request), capped at the first 200 |
 | earned | numeric(5,2)[] | Array aligned with `items`, set on submit |
 | score | numeric(7,2) null | Sum of `earned` (7 digits: 200 questions × 100 points fits) |
 | max_score | numeric(7,2) | |

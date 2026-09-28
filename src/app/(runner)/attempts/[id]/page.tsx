@@ -56,6 +56,8 @@ export default async function AttemptPage({
       saved={{ answers: attempt.answers, flagged: attempt.flagged }}
       deadlineAt={attempt.deadlineAt?.toISOString() ?? null}
       serverNow={new Date().toISOString()}
+      startedAt={attempt.startedAt.toISOString()}
+      examGuard={lesson.examGuard}
     />
   );
 }

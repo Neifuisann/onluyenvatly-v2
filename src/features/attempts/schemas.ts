@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { LessonIdSchema } from "@/features/lessons/domain/lesson-params";
 import { MAX_QUESTIONS } from "@/features/lessons/schema";
+import { GUARD_KINDS, MAX_GUARD_BATCH } from "./domain/guard";
 
 /** Attempt ids are UUIDs; reject anything else before it reaches SQL. */
 export const AttemptIdSchema = z.uuid();
@@ -30,17 +31,37 @@ const flagged = z
   )
   .max(MAX_QUESTIONS);
 
-/** `POST /api/attempts/[id]/save`: the whole (small) state, last write wins. */
-export const SaveProgressSchema = z.strictObject({ answers, flagged });
-export type SaveProgressInput = z.infer<typeof SaveProgressSchema>;
+/** Exam-guard events not yet sent; the server appends them (S4-04). */
+const guardEvents = z
+  .array(
+    z.strictObject({
+      // Seconds since start; a day is far beyond any test.
+      t: z.number().int().min(0).max(86_400),
+      k: z.enum(GUARD_KINDS),
+    }),
+  )
+  .max(MAX_GUARD_BATCH)
+  .default([]);
+
+/**
+ * `POST /api/attempts/[id]/save`: the whole (small) answer state, last write
+ * wins, plus new guard events, which only ever append.
+ */
+export const SaveProgressSchema = z.strictObject({
+  answers,
+  flagged,
+  guardEvents,
+});
+export type SaveProgressInput = z.input<typeof SaveProgressSchema>;
 
 /** `POST /api/attempts/[id]/submit`. The key makes retries idempotent. */
 export const SubmitAttemptSchema = z.strictObject({
   answers,
   flagged,
+  guardEvents,
   clientSubmitId: z.uuid(),
 });
-export type SubmitAttemptInput = z.infer<typeof SubmitAttemptSchema>;
+export type SubmitAttemptInput = z.input<typeof SubmitAttemptSchema>;
 
 /** Request bodies are tiny (≈ 1 KB for 40 questions); refuse anything big. */
 export const MAX_BODY_BYTES = 16_384;

@@ -85,6 +85,20 @@ export default async function AttemptResultPage({
             : resultCopy.revealNever}
         </p>
       )}
+      {user.role === "admin" && (
+        // S4-04: raw for now; S6-04 turns this into a timeline.
+        <details className="rounded-lg border bg-surface p-4 text-sm">
+          <summary className="cursor-pointer font-medium">
+            {resultCopy.guardEvents(attempt.guardEvents.length)}
+          </summary>
+          <p className="mt-2 text-muted-foreground text-xs">
+            {resultCopy.guardHelp}
+          </p>
+          <pre className="mt-2 overflow-x-auto rounded-md bg-muted p-3 font-mono text-xs">
+            {JSON.stringify(attempt.guardEvents, null, 1)}
+          </pre>
+        </details>
+      )}
     </article>
   );
 }

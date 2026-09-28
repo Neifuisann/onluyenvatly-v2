@@ -41,6 +41,7 @@ export const getAttempt = cache(async (id: string) => {
       items: attempts.items,
       answers: attempts.answers,
       flagged: attempts.flagged,
+      guardEvents: attempts.guardEvents,
       earned: attempts.earned,
       score: attempts.score,
       maxScore: attempts.maxScore,

@@ -157,6 +157,17 @@ export const e2eLessons: E2eLesson[] = [
     questions: runnerQuestions.slice(0, 2),
   },
   {
+    legacyId: "e2e-guard",
+    title: "E2E – Có giám sát",
+    grade: 12,
+    chapter: "Dao động cơ",
+    tags: ["e2e-runner"],
+    sortOrder: -196,
+    config: { ...DEFAULT_LESSON_CONFIG, examGuard: true },
+    status: "published",
+    questions: runnerQuestions.slice(0, 2),
+  },
+  {
     legacyId: "e2e-reveal-later",
     title: "E2E – Đáp án sau giờ làm",
     grade: 12,
