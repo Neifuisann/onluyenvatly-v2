@@ -37,6 +37,8 @@ Conventions:
 
 **S2 overview implementation:** `/lessons/[id]` selects metadata and explicit rule fields only, cached under `lesson:{id}` for hours. It never selects `lesson_versions`, source text, questions, or the full config. Students receive a not-found view for drafts/archived lessons; admins can open those overviews directly. Since S3-03 a per-user panel streams in under the cached metadata (`getMyLessonAttempts`, uncached): "Tiếp tục làm bài" for the attempt in progress, otherwise the `startAttempt` form (hidden when `maxAttempts` is used up; admins are unlimited), and my finished attempts linking to their results.
 
+**S4 leaderboard implementation:** `/leaderboard` takes `grade=10|11|12` and `period=all|week` (invalid values fall back to the defaults). `all` ranks active students with a `ratings` row by rating; `week` ranks those with a rated attempt in the last 7 days (rolling, like v1) by the sum of their changes. Equal values share a rank (1, 2, 2, 4). One cached query (`leaderboard` tag, revalidate 60 s, up to 1,000 rows) serves every student; the page shows the top 100 and finds the viewer's own row in the same data, pinned as a sticky row. Phone and date of birth are never selected.
+
 ### Admin (layout: `requireAdmin()`)
 
 | Path | Content |

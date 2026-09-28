@@ -70,3 +70,18 @@ export function e2eStudent(key: E2eStudentKey) {
   if (!s) throw new Error(`No e2e student ${key}`);
   return s;
 }
+
+/**
+ * Leaderboard fixtures (S4-05), reset on every seed: a rating plus one
+ * rating change a day ago. Runner students start unrated and earn theirs in
+ * the runner specs, so `active` sits well above anything they can reach.
+ */
+export const e2eRatings: Partial<
+  Record<E2eStudentKey, { rating: number; weekDelta: number }>
+> = {
+  active: { rating: 2100, weekDelta: -12 },
+  active2: { rating: 1650, weekDelta: 150 },
+  // Not active accounts: never listed, whatever their rating.
+  pending: { rating: 2400, weekDelta: 300 },
+  rejected: { rating: 2500, weekDelta: 300 },
+};

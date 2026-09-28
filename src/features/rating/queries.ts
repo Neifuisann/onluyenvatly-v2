@@ -1,7 +1,15 @@
 import "server-only";
-import { eq } from "drizzle-orm";
+import { and, asc, desc, eq, isNotNull, sql } from "drizzle-orm";
+import { cacheLife, cacheTag } from "next/cache";
 import { db } from "@/db/client";
-import { ratingEvents } from "@/db/schema";
+import { ratingEvents, ratings, users } from "@/db/schema";
+import { tags } from "@/lib/cache-tags";
+import {
+  type LeaderboardFilters,
+  MAX_ROWS,
+  type RankedEntry,
+  withRanks,
+} from "./domain/leaderboard";
 
 /**
  * The rating change one attempt produced, or null (not rated). Per-user,
@@ -23,3 +31,58 @@ export async function getAttemptRatingEvent(attemptId: string) {
 export type AttemptRatingEvent = NonNullable<
   Awaited<ReturnType<typeof getAttemptRatingEvent>>
 >;
+
+/**
+ * The ranked leaderboard (05 §4), shared by every student: tag `leaderboard`,
+ * regenerated at most once a minute, so a burst of submits never recomputes
+ * it (08 §2). Active students with a rating only; never the phone or DOB
+ * (06 §5). User ids stay on the server: the page uses them to find "me".
+ */
+export async function getLeaderboard(
+  f: LeaderboardFilters,
+): Promise<RankedEntry[]> {
+  "use cache";
+  cacheTag(tags.leaderboard);
+  cacheLife({ stale: 30, revalidate: 60, expire: 300 });
+  // Rolling 7 days like v1's "week" filter; served by `rating_events_created_idx`.
+  const week = db
+    .select({
+      userId: ratingEvents.userId,
+      delta: sql<number>`sum(${ratingEvents.delta})::int`.as("week_delta"),
+    })
+    .from(ratingEvents)
+    .where(sql`${ratingEvents.createdAt} >= now() - interval '7 days'`)
+    .groupBy(ratingEvents.userId)
+    .as("week");
+  const weekDelta = sql<number>`coalesce(${week.delta}, 0)`;
+  const byWeek = f.period === "week";
+  const rows = await db
+    .select({
+      userId: ratings.userId,
+      fullName: users.fullName,
+      className: users.className,
+      rating: ratings.rating,
+      weekDelta,
+    })
+    .from(ratings)
+    .innerJoin(users, eq(users.id, ratings.userId))
+    .leftJoin(week, eq(week.userId, ratings.userId))
+    .where(
+      and(
+        eq(users.role, "student"),
+        eq(users.status, "active"),
+        f.grade ? eq(users.grade, f.grade) : undefined,
+        // "Most improved" lists only students who did a rated test this week.
+        byWeek ? isNotNull(week.userId) : undefined,
+      ),
+    )
+    .orderBy(
+      ...(byWeek ? [desc(weekDelta)] : []),
+      desc(ratings.rating),
+      // Ties share a rank (withRanks); this only fixes the order within one.
+      sql`lower(immutable_unaccent(${users.fullName}))`,
+      asc(ratings.userId),
+    )
+    .limit(MAX_ROWS);
+  return withRanks(rows, f.period);
+}
