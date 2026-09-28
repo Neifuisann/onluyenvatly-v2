@@ -44,7 +44,7 @@ erDiagram
 | last_login_at | timestamptz null | |
 | created_at, updated_at | timestamptz | |
 
-Indexes: `(status) WHERE status='pending'`, `(role)`, trigram on `unaccent(full_name)` for admin search.
+Indexes: `(status) WHERE status='pending'`, `(role)`, trigram on `unaccent(full_name)` for admin search (added in S2-01 together with the `unaccent`/`pg_trgm` extensions). Check constraints: `phone` or `username` is set; `grade` is 10–12.
 
 ### `sessions`
 | Column | Type | Notes |
@@ -162,7 +162,7 @@ Index `(user_id, status, updated_at DESC)`.
 `question_hash` text PK, `lesson_id`, `question_id`, `source` enum (`ai`,`teacher`), `model` text, `content_md` text, `votes_up`, `votes_down` int, `created_at`, `updated_at`.
 
 ### `rate_limits`
-`key` text PK (e.g. `login:ip:1.2.3.4`), `window_start` timestamptz, `count` int.
+`key` text PK (e.g. `login:ip:1.2.3.4@10m`; the window is part of the key so one logical key can carry several limits), `window_start` timestamptz, `count` int. Identifiers such as phone numbers are hashed before they go into a key. Windows are fixed and UTC-aligned (`1m`, `10m`, `1h`, `1d`), computed in `src/lib/rate-limit.ts`.
 Implemented as one atomic upsert:
 ```sql
 INSERT INTO rate_limits(key, window_start, count) VALUES ($1, date_trunc('minute', now()), 1)

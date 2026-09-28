@@ -5,7 +5,7 @@
 | Layer | Tool | Scope | Runs |
 |---|---|---|---|
 | Unit | **Vitest** | Pure domain logic: parser, serializer, grading, points distribution, pool selection, shuffling, rating, number normalization, `toPublicQuestion`, rate-limit window math, phone normalization | Every push (CI), < 20 s |
-| Integration | Vitest + real Postgres (Docker `postgres:16` service in GitHub Actions, or `supabase start` locally) | Queries and service functions: `startAttempt`, `submit` transaction, rating update + replay, mistakes upsert, auth/session lifecycle, migrations apply cleanly | Every push |
+| Integration | Vitest + **PGlite** (in-process Postgres 17 with the real migrations applied, `src/test/db.ts`); no Docker needed locally or in CI | Queries and service functions: `startAttempt`, `submit` transaction, rating update + replay, mistakes upsert, auth/session lifecycle, migrations apply cleanly | Every push |
 | Component | Vitest + Testing Library (jsdom) | Runner state machine (answer, flag, navigate, offline queue), editor validation panel | Every push |
 | E2E | **Playwright** (Chromium + WebKit mobile viewport) | Critical journeys against `next build && next start` + seeded DB | Every PR |
 | Security | Playwright + custom checks; OWASP ZAP baseline (Docker) | Authz matrix, answer leakage, headers | PR (authz) / before release (ZAP) |
@@ -44,6 +44,8 @@
 8. **Authz matrix** (`authz.spec.ts`): each role × each protected route and action → expected 200/302/403.
 9. **Device policy on:** login on device A, login on B → `DEVICE_MISMATCH`; admin resets → B works.
 10. **Leaderboard** updates within 60 s of a submit.
+
+**Running E2E locally without Docker:** `pnpm db:local` starts a PGlite server on `:54329` (set `DATABASE_URL` to it and `DATABASE_POOL_MAX=1` in `.env.local`), then `pnpm db:migrate && pnpm seed --profile e2e && pnpm build && pnpm e2e --workers=1`. PGlite multiplexes one session, so concurrent queries can get garbled: keep one worker and restart `db:local` if you see `ECONNRESET`. CI uses a real `postgres:16` service with full parallelism.
 
 Test data: `scripts/seed.ts --profile e2e` creates 1 admin, 5 students (active, pending, rejected), and 3 lessons covering all question types and configs. Each spec resets its tables through a `/api/test/reset` handler that is compiled only when `E2E=1` and **excluded from production builds** (the build fails if `E2E` is set on a `VERCEL_ENV=production` build).
 

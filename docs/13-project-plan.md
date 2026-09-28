@@ -122,6 +122,19 @@ S0-06 account checklist (put secrets only in Vercel/GitHub, never in the repo):
 
 **Demo:** register → see "chờ duyệt"; admin (seeded) logs in → empty admin shell.
 
+**Status (2026-09-28):** code complete on branch `feat/S1-foundation-auth` (one commit per task). Unit + PGlite integration tests and the Playwright auth journey pass locally.
+
+| ID | Status | Notes |
+|---|---|---|
+| S1-01 | ✅ Done | OKLCH tokens (07 §3.1) + class-based dark mode, no-flash theme script, `ThemeToggle`; `pnpm check:contrast` in CI (all pairs ≥ AA) |
+| S1-02 | ✅ Done | `AppShell` (sidebar ≥ 1024 px, bottom tabs / admin nav strip on phones, skip link, `aria-current`), `PublicHeader`, UI primitives, `/dev/ui` (404 in production) |
+| S1-03 | 🟡 Local only | Schema + migrations `0000_init`, `0001_settings_row`, RLS on every table, `migrate.yml`. Applied to PGlite locally; **Neon/Supabase apply waits for S0-06** (accounts + `DATABASE_URL_DIRECT` secret per environment) |
+| S1-04 | ✅ Done | `features/auth/core` ≈ 98 % lines/branches (CI gate: 95 %); session lifecycle integration-tested |
+| S1-05 | ✅ Done | Actions + `rateLimit()`; 06 §4 limits enforced in integration tests |
+| S1-06 | ✅ Done | Login/register/pending pages, `proxy.ts`, `?next=` validation; E2E `auth.spec.ts` (journey 1 minus approval) |
+| S1-07 | ✅ Done | `pnpm seed` (dev: settings + admin, password printed once) and `--profile e2e` (local DBs only) |
+| S1-08 | 🟡 Preview check | Headers + CSP in `next.config.ts` (no nonce, see 06 §4). securityheaders.com grade needs the preview URL (S0-06) |
+
 ---
 
 ### Sprint 2: Lessons, parser & catalog
@@ -325,5 +338,5 @@ Pilot data note: the final migration upserts only rows with `legacy_id`. Attempt
 | Sprint | Dates | Planned d | Done d | Demo notes | Retro: keep / change |
 |---|---|---|---|---|---|
 | S0 | 2026-09-28 → | 4.0 | 1.5 (S0-01, S0-07, S0-10, most of S0-08; scripts for S0-03/04/05) | | |
-| S1 | | 4.5 | | | |
+| S1 | 2026-09-28 → | 4.5 | 4.0 (all tasks coded; S1-03 remote apply and S1-08 grade wait for S0-06) | | |
 | … | | | | | |

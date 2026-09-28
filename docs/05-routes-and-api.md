@@ -13,7 +13,7 @@ Conventions:
 |---|---|---|
 | `/` | Static | Landing: value proposition, how it works, grade chapters, CTA register/login |
 | `/login` | Static shell + action | Single login form (phone or username + password) |
-| `/register` | Static shell + action | Registration form → "chờ duyệt" (pending approval) screen |
+| `/register` | Static shell + action | Registration form → `/register/pending` "chờ duyệt" (pending approval) screen |
 | `/ly-thuyet`, `/ly-thuyet/[grade]/[chapter]/[slug]` | Static (MDX) | Theory materials migrated from v1 `materials/` |
 | `/gallery` | Static | Handout gallery |
 | `/share/lessons/[id]` | ISR | Public lesson preview + OG image (`opengraph-image.tsx`) |
@@ -131,4 +131,4 @@ Grouped by feature. Each one is either **shared-cached** (C) or **per-request** 
 | `getSettings()` | C `settings` | everywhere |
 
 ## 5. Error codes (returned by actions, mapped to Vietnamese messages in `src/lib/messages.ts`)
-`UNAUTHENTICATED`, `FORBIDDEN`, `NOT_FOUND`, `VALIDATION`, `RATE_LIMITED`, `ACCOUNT_PENDING`, `ACCOUNT_REJECTED`, `DEVICE_MISMATCH`, `ATTEMPT_CLOSED`, `ATTEMPT_LIMIT`, `DEADLINE_PASSED`, `AI_UNAVAILABLE`, `AI_QUOTA`, `CONFLICT`, `INTERNAL`.
+`UNAUTHENTICATED`, `FORBIDDEN`, `NOT_FOUND`, `VALIDATION`, `RATE_LIMITED`, `INVALID_CREDENTIALS`, `ACCOUNT_PENDING`, `ACCOUNT_REJECTED`, `REGISTRATION_CLOSED`, `ATTEMPT_CLOSED`, `ATTEMPT_LIMIT`, `DEADLINE_PASSED`, `AI_UNAVAILABLE`, `AI_QUOTA`, `CONFLICT`, `INTERNAL`.
