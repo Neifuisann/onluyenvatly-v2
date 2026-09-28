@@ -17,8 +17,6 @@ env:
   DATABASE_URL: postgres://postgres:postgres@localhost:5432/postgres
   DATABASE_URL_DIRECT: postgres://postgres:postgres@localhost:5432/postgres
   SESSION_PEPPER: ci-only-pepper-not-a-secret-0123456789abcdef
-  # E2E's Storage stand-in (tests/e2e/fake-storage.ts); inlined at build.
-  NEXT_PUBLIC_MEDIA_BASE_URL: http://localhost:54330/storage/v1/object/public/media
 
 jobs:
   check:
@@ -38,6 +36,11 @@ jobs:
       - run: pnpm check:contrast
       - run: pnpm test:coverage
       - run: pnpm build
+        env:
+          # E2E's Storage stand-in (tests/e2e/fake-storage.ts). Inlined into the
+          # bundles and the CSP at build, so only this step needs it; unit
+          # tests run without a bucket URL.
+          NEXT_PUBLIC_MEDIA_BASE_URL: http://localhost:54330/storage/v1/object/public/media
       - uses: actions/upload-artifact@v4
         with:
           name: next-build
