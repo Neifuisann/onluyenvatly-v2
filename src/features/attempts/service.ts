@@ -1,12 +1,23 @@
 import "server-only";
 import { randomInt } from "node:crypto";
-import { and, count, eq, gte, isNull, ne, or, sql } from "drizzle-orm";
+import { and, eq, gte, isNull, or, type SQL, sql } from "drizzle-orm";
 import { db } from "@/db/client";
-import { attempts, lessons } from "@/db/schema";
+import {
+  attemptOverrides,
+  attempts,
+  type GuardEvent,
+  lessons,
+} from "@/db/schema";
 import { grade } from "@/features/grading/domain/grade";
 import { toCents } from "@/features/grading/domain/points";
 import { getLessonWithAnswers } from "@/features/lessons/queries";
-import { LessonConfigSchema } from "@/features/lessons/schema";
+import {
+  type LessonConfig,
+  LessonConfigSchema,
+} from "@/features/lessons/schema";
+import { rateAttempt } from "@/features/rating/service";
+import { mistakeChanges } from "@/features/review/domain/mistakes";
+import { recordMistakes } from "@/features/review/service";
 import type { ErrorCode } from "@/lib/messages";
 import { rateLimit } from "@/lib/rate-limit";
 import { err, ok, type Result } from "@/lib/result";
@@ -16,7 +27,14 @@ import {
   isPastGrace,
   timeTakenSec,
 } from "./domain/deadline";
+import { MAX_GUARD_EVENTS } from "./domain/guard";
 import { createRng } from "./domain/random";
+import {
+  attemptDeadline,
+  canStart,
+  revealAt,
+  type StartCounts,
+} from "./domain/schedule";
 import type { SaveProgressInput, SubmitAttemptInput } from "./schemas";
 
 /** 06 §4. Tune here only; the integration tests read these values. */
@@ -72,20 +90,15 @@ export async function startAttempt(
 
   const config = LessonConfigSchema.safeParse(lesson.config);
   if (!config.success) return err("INTERNAL");
-  const { maxAttempts, timeLimitSec } = config.data;
 
-  if (maxAttempts !== null && user.role !== "admin") {
-    const [used] = await db
-      .select({ n: count() })
-      .from(attempts)
-      .where(
-        and(
-          eq(attempts.userId, user.id),
-          eq(attempts.lessonId, lessonId),
-          ne(attempts.status, "in_progress"),
-        ),
-      );
-    if ((used?.n ?? 0) >= maxAttempts) return err("ATTEMPT_LIMIT");
+  if (user.role !== "admin") {
+    const check = canStart(
+      config.data,
+      await startCounts(user.id, lessonId, config.data),
+      now,
+      false,
+    );
+    if (!check.ok) return err(check.code);
   }
 
   const questions = await getLessonWithAnswers(lessonId, lesson.versionId);
@@ -105,9 +118,7 @@ export async function startAttempt(
       answers: items.map(() => null),
       maxScore: items.reduce((s, i) => s + toCents(i.p), 0) / 100,
       startedAt: now,
-      deadlineAt: timeLimitSec
-        ? new Date(now.getTime() + timeLimitSec * 1000)
-        : null,
+      deadlineAt: attemptDeadline(config.data, now),
       ip,
     })
     // Lost a race with a parallel start: the other one wins.
@@ -137,6 +148,7 @@ export async function saveProgress(
     .set({
       answers: input.answers,
       flagged: cleanFlags(input.flagged, input.answers.length),
+      ...appendGuard(input.guardEvents),
       lastSavedAt: now,
     })
     .where(
@@ -165,7 +177,8 @@ export type SubmitOutcome = {
 };
 
 /**
- * Submit and grade (ADR-004, 02 §4.1) in one transaction. The row lock plus
+ * Submit, grade, rate and update the mistakes bank (ADR-004, 02 §4.1) in
+ * one transaction. The row lock plus
  * the status check make double clicks, retries and parallel submits return
  * the same graded result.
  */
@@ -192,12 +205,16 @@ export async function submitAttempt(
   if (!pre || pre.userId !== userId) return err("NOT_FOUND");
   // Single-lesson tests; review attempts (items with their own `v`) arrive in S7-06.
   if (!pre.lessonId || !pre.lessonVersionId) return err("INTERNAL");
-  const { lessonId } = pre;
-  const questions = await getLessonWithAnswers(lessonId, pre.lessonVersionId);
+  const { lessonId, lessonVersionId } = pre;
+  const questions = await getLessonWithAnswers(lessonId, lessonVersionId);
   if (!questions) return err("INTERNAL");
   const byId = new Map(questions.map((q) => [q.id, q]));
   const config = LessonConfigSchema.safeParse(pre.config);
-  const tfScoring = config.success ? config.data.tfScoring : "thpt2025";
+  const {
+    tfScoring = "thpt2025",
+    countsForRating = true,
+    timeLimitSec = null,
+  } = config.success ? config.data : {};
 
   return db.transaction(async (tx) => {
     const [a] = await tx
@@ -241,6 +258,7 @@ export async function submitAttempt(
       answers,
       tfScoring,
     );
+    const taken = timeTakenSec(a.startedAt, a.deadlineAt, now);
     await tx
       .update(attempts)
       .set({
@@ -252,8 +270,9 @@ export async function submitAttempt(
         maxScore: result.maxScore,
         score10: result.score10,
         submittedAt: now,
-        timeTakenSec: timeTakenSec(a.startedAt, a.deadlineAt, now),
+        timeTakenSec: taken,
         clientSubmitId: input.clientSubmitId,
+        ...appendGuard(input.guardEvents),
       })
       .where(eq(attempts.id, attemptId));
     // Denormalized for "Nhiều lượt làm"; the catalog picks it up when its
@@ -262,6 +281,28 @@ export async function submitAttempt(
       .update(lessons)
       .set({ attemptCount: sql`${lessons.attemptCount} + 1` })
       .where(eq(lessons.id, lessonId));
+    if (countsForRating)
+      await rateAttempt(tx, {
+        userId,
+        attemptId,
+        lessonId,
+        score: result.score,
+        maxScore: result.maxScore,
+        timeTakenSec: taken,
+        timeLimitSec,
+        now,
+      });
+    await recordMistakes(tx, {
+      userId,
+      lessonId,
+      lessonVersionId,
+      attemptId,
+      ...mistakeChanges(
+        a.items,
+        result.marks.map((m) => m.outcome),
+      ),
+      now,
+    });
     return ok({
       attemptId,
       score: result.score,
@@ -271,6 +312,30 @@ export async function submitAttempt(
       late,
     });
   });
+}
+
+/**
+ * Appends new exam-guard events, keeping the first `MAX_GUARD_EVENTS`.
+ * Append-only: a forged save can't erase what was recorded. A beacon that
+ * arrived but wasn't confirmed may repeat a few events; teachers read them
+ * as a timeline, so that is harmless.
+ */
+function appendGuard(events: readonly GuardEvent[] | undefined): {
+  guardEvents?: SQL;
+} {
+  if (!events?.length) return {};
+  return {
+    guardEvents: sql`(
+      select coalesce(jsonb_agg(e order by n), '[]'::jsonb)
+      from (
+        select e, n
+        from jsonb_array_elements(${attempts.guardEvents} || ${JSON.stringify(events)}::jsonb)
+          with ordinality as x(e, n)
+        order by n
+        limit ${MAX_GUARD_EVENTS}
+      ) kept
+    )`,
+  };
 }
 
 /** Unique item indexes inside the test, ascending. */
@@ -299,6 +364,39 @@ async function whyNotWritable(
   if (row.deadlineAt && row.deadlineAt < graceCutoff) return "DEADLINE_PASSED";
   if (Number(row.count) !== input.answers.length) return "VALIDATION";
   return "CONFLICT";
+}
+
+/**
+ * What `canStart` needs, in one query, and only when the lesson has a limit
+ * or has closed: finished attempts, attempts since the close, extra tries.
+ */
+async function startCounts(
+  userId: string,
+  lessonId: number,
+  config: LessonConfig,
+): Promise<StartCounts> {
+  const close = revealAt(config);
+  if (config.maxAttempts === null && !close)
+    return { used: 0, usedSinceClose: 0, extra: 0 };
+  const [row] = await db
+    .select({
+      used: sql<number>`count(*) filter (where ${attempts.status} <> 'in_progress')`,
+      usedSinceClose: close
+        ? sql<number>`count(*) filter (where ${attempts.startedAt} >= ${close.toISOString()}::timestamptz)`
+        : sql<number>`0`,
+      extra: sql<number>`coalesce((
+        select ${attemptOverrides.extraAttempts} from ${attemptOverrides}
+        where ${attemptOverrides.userId} = ${userId}
+          and ${attemptOverrides.lessonId} = ${lessonId}
+      ), 0)`,
+    })
+    .from(attempts)
+    .where(and(eq(attempts.userId, userId), eq(attempts.lessonId, lessonId)));
+  return {
+    used: Number(row?.used ?? 0),
+    usedSinceClose: Number(row?.usedSinceClose ?? 0),
+    extra: Number(row?.extra ?? 0),
+  };
 }
 
 async function findOpenAttempt(userId: string, lessonId: number) {

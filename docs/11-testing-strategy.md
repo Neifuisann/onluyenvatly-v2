@@ -25,8 +25,8 @@
 - Points `per-type-total`: 3 questions sharing 1.00 point → `[0.34, 0.33, 0.33]`, sum exactly 1.00.
 - Score10 rounding to 2 decimals.
 
-`src/features/rating/rating.test.ts`:
-- v1 formula reproduces known v1 `rating_history` rows (take 20 real rows from the v1 export as fixtures).
+`src/features/rating/domain/rating.test.ts` (gated at ≥ 95 %):
+- v1 formula reproduces known v1 `rating_history` rows (the 20 anonymized rows in `tests/fixtures/v1/rating-history.json`, all exact: gains, losses and the > 5 min zeros). The v1 time bonus exists only for this check.
 - v2 formula (ADR-004) table tests; tiers at the boundaries 1199/1200, 1999/2000.
 - Replay after deleting an attempt equals a fresh computation.
 
@@ -37,7 +37,7 @@
 
 `lessons.spec.ts` covers the S2 catalog/overview in desktop Chromium and a 360 px Android viewport: accent-insensitive search, filters, cumulative pagination, back/reload and search focus, legacy 308 redirects, invalid/missing/unpublished lookups, student HTML/RSC answer-leak checks, light/dark screenshots, and zero serious/critical axe violations. `pnpm seed --profile e2e` now also upserts 27 published synthetic lessons plus a draft and archived lesson, with version content containing a private explanation marker for leak detection. The seed remains local/CI-only. The Next.js streamed shell requires JavaScript; a GET form alone does not provide a no-JavaScript page.
 
-`runner.spec.ts` (S3) takes the seeded `e2e-runner` lesson (all three types, no shuffle, 2 points) and `e2e-timer` (1-minute limit) as dedicated students `runner`/`runner2`, one per Playwright project, so parallel projects never share an attempt. It covers the runner UI (answers, flag, navigator sheet/panel, list view, keyboard, submit dialog), axe and 360 px overflow in light and dark (with reduced motion so axe never samples mid-transition), journey 4's leak check on every runner response, journey 2 (reload restore, offline → online sync, cross-origin save refused, submit → server score 6,25), journey 5 (two parallel submits → one graded result) and journey 3 (the real 60 s timer auto-submits, then a save gets 409). Journey 5's "one rating event" check joins with S4-01.
+`runner.spec.ts` (S3) takes the seeded `e2e-runner` lesson (all three types, no shuffle, 2 points) and `e2e-timer` (1-minute limit) as dedicated students `runner`/`runner2`, one per Playwright project, so parallel projects never share an attempt. It covers the runner UI (answers, flag, navigator sheet/panel, list view, keyboard, submit dialog), axe and 360 px overflow in light and dark (with reduced motion so axe never samples mid-transition), journey 4's leak check on every runner response, journey 2 (reload restore, offline → online sync, cross-origin save refused, submit → server score 6,25), journey 5 (two parallel submits → one graded result) and journey 3 (the real 60 s timer auto-submits, then a save gets 409). Journey 5's "one rating event" check is an integration test in `attempts/service.test.ts` (S4-01), next to two different tests submitted at once by one student (both rated, in order).
 
 1. **Register → pending → admin approves → login → dashboard.**
 2. **Take a test end to end:** start, answer all 3 types, flag, reload mid-test (answers restored), go offline, answer, come back online (sync), submit → result shows the correct score for known answers.
@@ -50,7 +50,7 @@
 9. **Device policy on:** login on device A, login on B → `DEVICE_MISMATCH`; admin resets → B works.
 10. **Leaderboard** updates within 60 s of a submit.
 
-**Running E2E locally without Docker:** `pnpm db:local` starts a PGlite server on `:54329` (set `DATABASE_URL` to it and `DATABASE_POOL_MAX=1` in `.env.local`), then `pnpm db:migrate && pnpm seed --profile e2e && pnpm build && pnpm e2e --workers=1`. PGlite multiplexes one session, so concurrent queries can get garbled: keep one worker and restart `db:local` if you see `ECONNRESET`. CI uses a real `postgres:16` service with full parallelism.
+**Running E2E locally without Docker:** `pnpm db:local` starts a PGlite server on `:54329` (set `DATABASE_URL` to it and `DATABASE_POOL_MAX=1` in `.env.local`), then `pnpm db:migrate && pnpm seed --profile e2e && pnpm build && pnpm e2e --workers=1`. PGlite multiplexes every client connection onto one session and only keeps a connection's messages together inside a transaction, so two connections running queries at once swap unnamed statements (errors like `invalid input syntax for type uuid` or `The "string" argument must be of type string`, or silently wrong rows, which the runner shows as a 404). `src/db/client.ts` keeps one pool per process, so `DATABASE_POOL_MAX=1` means one connection; keep one worker, don't point a second app process at the same `db:local`, and restart it if you see `ECONNRESET`. Locally Playwright reuses whatever already listens on `:3000`, so stop an old `next start` after rebuilding. CI uses a real `postgres:16` service with full parallelism.
 
 Test data: `scripts/seed.ts --profile e2e` creates 1 admin, 5 students (active, pending, rejected), and 3 lessons covering all question types and configs. Each spec resets its tables through a `/api/test/reset` handler that is compiled only when `E2E=1` and **excluded from production builds** (the build fails if `E2E` is set on a `VERCEL_ENV=production` build).
 

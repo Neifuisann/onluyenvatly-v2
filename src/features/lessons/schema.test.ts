@@ -126,10 +126,34 @@ describe("LessonConfigSchema", () => {
     ["zero max attempts", { maxAttempts: 0 }],
     ["an unknown reveal policy", { revealAnswers: "later" }],
     ["unknown keys", { shuffleAnswers: true }],
+    ["a start time without an offset", { startsAt: "2026-10-20T07:00:00" }],
+    [
+      "after_deadline without a start time",
+      { revealAnswers: "after_deadline", timeLimitSec: 600 },
+    ],
+    [
+      "after_deadline without a time limit",
+      {
+        revealAnswers: "after_deadline",
+        startsAt: "2026-10-20T07:00:00+07:00",
+      },
+    ],
   ])("rejects %s", (_, patch) => {
     expect(
       LessonConfigSchema.safeParse({ ...DEFAULT_LESSON_CONFIG, ...patch })
         .success,
     ).toBe(false);
+  });
+
+  it("accepts a scheduled after_deadline test and defaults startsAt", () => {
+    const scheduled = {
+      ...DEFAULT_LESSON_CONFIG,
+      revealAnswers: "after_deadline",
+      startsAt: "2026-10-20T07:00:00+07:00",
+      timeLimitSec: 2700,
+    };
+    expect(LessonConfigSchema.safeParse(scheduled).success).toBe(true);
+    const { startsAt: _, ...old } = DEFAULT_LESSON_CONFIG;
+    expect(LessonConfigSchema.parse(old).startsAt).toBeNull();
   });
 });

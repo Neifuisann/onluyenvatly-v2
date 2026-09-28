@@ -1,13 +1,23 @@
 import { eq } from "drizzle-orm";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { db } from "@/db/client";
-import { attempts, lessons, lessonVersions, users } from "@/db/schema";
+import {
+  attemptOverrides,
+  attempts,
+  lessons,
+  lessonVersions,
+  mistakes,
+  ratingEvents,
+  ratings,
+  users,
+} from "@/db/schema";
 import {
   DEFAULT_LESSON_CONFIG,
   type LessonConfig,
   type Question,
 } from "@/features/lessons/schema";
 import { resetDb, type TestDb } from "@/test/db";
+import { MAX_GUARD_EVENTS } from "./domain/guard";
 import {
   ATTEMPT_LIMITS,
   DEADLINE_GRACE_MS,
@@ -484,5 +494,318 @@ describe("submitAttempt", () => {
       ),
     ).toMatchObject({ code: "VALIDATION" });
     expect((await row(id))?.status).toBe("in_progress");
+  });
+
+  describe("rating (S4-01)", () => {
+    const events = () => tdb.select().from(ratingEvents);
+    const rating = async () =>
+      (
+        await tdb.select().from(ratings).where(eq(ratings.userId, student.id))
+      )[0];
+
+    it("rates the first test from 1500 and records the event", async () => {
+      const { id, lessonId } = await started();
+      await submitAttempt(student.id, id, right, at(1000));
+      expect(await rating()).toMatchObject({
+        rating: 1548,
+        peak: 1548,
+        ratedAttempts: 1,
+      });
+      expect(await events()).toEqual([
+        expect.objectContaining({
+          userId: student.id,
+          attemptId: id,
+          lessonId,
+          before: 1500,
+          delta: 48,
+          after: 1548,
+          performance: 1,
+          timeBonus: 1,
+          formula: "v2",
+          createdAt: at(1000),
+        }),
+      ]);
+    });
+
+    it("rates zero-ish scores and slow late submits (v2 time bonus)", async () => {
+      const { id } = await started({ timeLimitSec: 60 });
+      await saveProgress(
+        student.id,
+        id,
+        { answers: ["A", null, null], flagged: [] },
+        at(30_000),
+      );
+      await submitAttempt(student.id, id, right, at(10 * 60_000));
+      // perf 0.25/1.75 = 0.143, bonus 0.5: 48·(0.143 − 0.5)·0.5·1.5 = −12.85.
+      expect(await events()).toMatchObject([
+        { performance: 0.143, timeBonus: 0.5, delta: -13, after: 1487 },
+      ]);
+      expect((await rating())?.peak).toBe(1500);
+    });
+
+    it("writes one event for parallel submits of one attempt", async () => {
+      const { id } = await started();
+      await Promise.all([
+        submitAttempt(student.id, id, right, at(1000)),
+        submitAttempt(student.id, id, right, at(1000)),
+      ]);
+      expect(await events()).toHaveLength(1);
+      expect((await rating())?.ratedAttempts).toBe(1);
+    });
+
+    it("counts two different tests submitted at once, one after the other", async () => {
+      const a = await started();
+      const b = await started();
+      await Promise.all([
+        submitAttempt(student.id, a.id, right, at(1000)),
+        submitAttempt(student.id, b.id, right, at(1000)),
+      ]);
+      const list = await events();
+      expect(list).toHaveLength(2);
+      // The second one waits for the first one's row lock: 1548 + 41.
+      expect(list.map((e) => e.before).sort()).toEqual([1500, 1548]);
+      expect(await rating()).toMatchObject({ rating: 1589, ratedAttempts: 2 });
+    });
+
+    it("skips lessons that don't count for rating", async () => {
+      const { id } = await started({ countsForRating: false });
+      await submitAttempt(student.id, id, right, at(1000));
+      expect(await events()).toHaveLength(0);
+      expect(await rating()).toBeUndefined();
+    });
+  });
+
+  describe("mistakes (S4-02)", () => {
+    const bank = async () =>
+      Object.fromEntries(
+        (
+          await tdb
+            .select()
+            .from(mistakes)
+            .where(eq(mistakes.userId, student.id))
+        ).map((m) => [
+          m.questionId,
+          `${m.status} w${m.wrongCount} s${m.correctStreak}`,
+        ]),
+      );
+    // Retake the same lesson: each start is a new attempt after a submit.
+    async function take(lessonId: number, answers: unknown[], ms: number) {
+      const r = await startAttempt(student, lessonId, { ...ctx, now: at(ms) });
+      if (!r.ok) throw new Error("start failed");
+      await submitAttempt(
+        student.id,
+        r.data.attemptId,
+        { ...right, answers: answers as typeof right.answers },
+        at(ms + 1000),
+      );
+      return r.data.attemptId;
+    }
+
+    it("opens wrong, partial and blank questions, not correct ones", async () => {
+      const { id, lessonId } = await started();
+      await submitAttempt(
+        student.id,
+        id,
+        { ...right, answers: ["A", [true, false, true, true], null] },
+        at(1000),
+      );
+      expect(await bank()).toEqual({
+        q_tf1: "open w1 s0",
+        q_short1: "open w1 s0",
+      });
+      const [m] = await tdb
+        .select()
+        .from(mistakes)
+        .where(eq(mistakes.questionId, "q_tf1"));
+      expect(m).toMatchObject({
+        lessonId,
+        lastAttemptId: id,
+        updatedAt: at(1000),
+      });
+    });
+
+    it("resolves after two correct answers in a row and reopens on a wrong one", async () => {
+      const lessonId = await addLesson();
+      const wrongMcq = ["B", [true, false, true, false], "0.63"];
+      await take(lessonId, wrongMcq, 0);
+      await take(lessonId, right.answers, 10_000);
+      expect(await bank()).toEqual({ q_mcq1: "open w1 s1" });
+      const second = await take(lessonId, right.answers, 20_000);
+      expect(await bank()).toEqual({ q_mcq1: "resolved w1 s2" });
+      const [m] = await tdb.select().from(mistakes);
+      expect(m?.lastAttemptId).toBe(second);
+      // Resolved stays resolved on further correct answers...
+      await take(lessonId, right.answers, 30_000);
+      expect(await bank()).toEqual({ q_mcq1: "resolved w1 s2" });
+      // ...and reopens with a fresh streak when missed again.
+      await take(lessonId, wrongMcq, 40_000);
+      expect(await bank()).toEqual({ q_mcq1: "open w2 s0" });
+    });
+
+    it("writes nothing for a perfect first test, and nothing twice on retries", async () => {
+      const { id } = await started();
+      await submitAttempt(student.id, id, right, at(1000));
+      expect(await bank()).toEqual({});
+      const other = await started();
+      const wrong = { ...right, answers: ["B", null, null] };
+      await Promise.all([
+        submitAttempt(student.id, other.id, wrong, at(2000)),
+        submitAttempt(student.id, other.id, wrong, at(2000)),
+      ]);
+      expect(await bank()).toEqual({
+        q_mcq1: "open w1 s0",
+        q_tf1: "open w1 s0",
+        q_short1: "open w1 s0",
+      });
+    });
+  });
+});
+
+describe("exam guard events (S4-04)", () => {
+  const blank = { answers: [null, null, null], flagged: [] };
+  const at = (ms: number) => new Date(NOW.getTime() + ms);
+  async function started() {
+    const lessonId = await addLesson({ examGuard: true });
+    const r = await startAttempt(student, lessonId, ctx);
+    if (!r.ok) throw new Error("start failed");
+    return r.data.attemptId;
+  }
+  const events = async (id: string) =>
+    (await tdb.select().from(attempts).where(eq(attempts.id, id)))[0]
+      ?.guardEvents;
+
+  it("appends on save and submit; an empty or forged batch erases nothing", async () => {
+    const id = await started();
+    await saveProgress(
+      student.id,
+      id,
+      { ...blank, guardEvents: [{ t: 5, k: "hidden" }] },
+      at(6000),
+    );
+    await saveProgress(student.id, id, blank, at(7000));
+    await saveProgress(
+      student.id,
+      id,
+      { ...blank, guardEvents: [{ t: 9, k: "copy" }] },
+      at(9000),
+    );
+    await submitAttempt(
+      student.id,
+      id,
+      {
+        ...blank,
+        guardEvents: [{ t: 12, k: "blur" }],
+        clientSubmitId: crypto.randomUUID(),
+      },
+      at(12_000),
+    );
+    expect(await events(id)).toEqual([
+      { t: 5, k: "hidden" },
+      { t: 9, k: "copy" },
+      { t: 12, k: "blur" },
+    ]);
+  });
+
+  it(`keeps the first ${MAX_GUARD_EVENTS} events`, async () => {
+    const id = await started();
+    const batch = (from: number) =>
+      Array.from({ length: 50 }, (_, i) => ({
+        t: from + i,
+        k: "blur" as const,
+      }));
+    for (let i = 0; i < 5; i++)
+      await saveProgress(
+        student.id,
+        id,
+        { ...blank, guardEvents: batch(i * 100) },
+        at(1000 * (i + 1)),
+      );
+    const stored = await events(id);
+    expect(stored).toHaveLength(MAX_GUARD_EVENTS);
+    expect(stored?.at(-1)).toEqual({ t: 349, k: "blur" });
+  });
+});
+
+describe("scheduled lessons (startsAt, after_deadline)", () => {
+  const min = (m: number) => new Date(NOW.getTime() + m * 60_000);
+  // Starts at NOW, 45 minutes, answers at NOW + 45 min + 30 s.
+  const exam = {
+    startsAt: NOW.toISOString(),
+    timeLimitSec: 45 * 60,
+    revealAnswers: "after_deadline" as const,
+    maxAttempts: 1,
+  };
+  const start = (
+    lessonId: number,
+    now: Date,
+    who: typeof student | typeof admin = student,
+  ) => startAttempt(who, lessonId, { ...ctx, now });
+
+  it("refuses starts before startsAt, except for admins", async () => {
+    const id = await addLesson({ ...exam, revealAnswers: "after_submit" });
+    expect(await start(id, min(-1))).toMatchObject({ code: "NOT_OPEN_YET" });
+    expect(await start(id, min(-1), admin)).toMatchObject({ ok: true });
+    expect(await start(id, min(0))).toMatchObject({ ok: true });
+  });
+
+  it("ends every attempt at startsAt + limit inside the window", async () => {
+    const id = await addLesson(exam);
+    const r = await start(id, min(30));
+    if (!r.ok) throw new Error("start failed");
+    const [row] = await tdb
+      .select()
+      .from(attempts)
+      .where(eq(attempts.id, r.data.attemptId));
+    expect(row?.deadlineAt).toEqual(min(45));
+  });
+
+  it("closes once answers are out; extra tries reopen it", async () => {
+    const id = await addLesson(exam);
+    const closed = new Date(min(45).getTime() + DEADLINE_GRACE_MS);
+    expect(await start(id, closed)).toMatchObject({ code: "LESSON_CLOSED" });
+
+    await tdb
+      .insert(attemptOverrides)
+      .values({ userId: student.id, lessonId: id, extraAttempts: 1 });
+    const r = await start(id, min(60));
+    if (!r.ok) throw new Error("override start failed");
+    const [row] = await tdb
+      .select()
+      .from(attempts)
+      .where(eq(attempts.id, r.data.attemptId));
+    // After the close an extra try gets its own full time.
+    expect(row?.deadlineAt).toEqual(min(105));
+    await submitAttempt(
+      student.id,
+      r.data.attemptId,
+      {
+        answers: [null, null, null],
+        flagged: [],
+        clientSubmitId: crypto.randomUUID(),
+      },
+      min(70),
+    );
+    expect(await start(id, min(80))).toMatchObject({ code: "ATTEMPT_LIMIT" });
+  });
+
+  it("adds extra tries to maxAttempts while open", async () => {
+    const id = await addLesson({ ...exam, revealAnswers: "after_submit" });
+    const first = await start(id, min(1));
+    if (!first.ok) throw new Error("start failed");
+    await submitAttempt(
+      student.id,
+      first.data.attemptId,
+      {
+        answers: [null, null, null],
+        flagged: [],
+        clientSubmitId: crypto.randomUUID(),
+      },
+      min(2),
+    );
+    expect(await start(id, min(3))).toMatchObject({ code: "ATTEMPT_LIMIT" });
+    await tdb
+      .insert(attemptOverrides)
+      .values({ userId: student.id, lessonId: id, extraAttempts: 1 });
+    expect(await start(id, min(4))).toMatchObject({ ok: true });
   });
 });

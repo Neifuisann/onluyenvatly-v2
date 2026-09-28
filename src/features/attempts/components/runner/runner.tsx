@@ -33,6 +33,7 @@ import { SubmitDialog } from "./submit-dialog";
 import { TestTimer } from "./test-timer";
 import type { RunnerQuestion } from "./types";
 import { useAutosave } from "./use-autosave";
+import { useExamGuard } from "./use-exam-guard";
 import { useSubmit } from "./use-submit";
 
 export type RunnerProps = {
@@ -46,6 +47,10 @@ export type RunnerProps = {
   deadlineAt: string | null;
   /** The server clock when the page was rendered, to correct phone clocks. */
   serverNow: string;
+  /** ISO start time; exam-guard events count seconds from it. */
+  startedAt: string;
+  /** The lesson's exam guard (S4-04). */
+  examGuard: boolean;
 };
 
 type View = "single" | "list";
@@ -74,9 +79,13 @@ function RunnerScreen({
   questions,
   deadlineAt,
   serverNow,
+  startedAt,
+  examGuard,
 }: RunnerProps) {
   const api = useRunnerApi();
   const router = useRouter();
+  // Before autosave, so a "hidden" event is recorded before the hide-time save.
+  useExamGuard(examGuard, startedAt, serverNow);
   // Closed elsewhere (another tab submitted, the deadline passed): the page
   // itself redirects to the result once refreshed.
   const save = useAutosave(attemptId, () => router.refresh());
@@ -240,6 +249,11 @@ function RunnerScreen({
           </div>
           <SaveIndicator status={save.status} />
         </div>
+        {examGuard && (
+          <p className="mx-auto max-w-5xl px-4 pb-2 text-muted-foreground text-xs">
+            {t.guardNotice}
+          </p>
+        )}
         {(save.status === "offline" || save.status === "signed-out") && (
           <div className="border-t bg-surface">
             <Alert

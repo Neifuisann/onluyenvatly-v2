@@ -70,7 +70,7 @@ Implemented as helpers in `src/features/auth/guards.ts`: `requireUser()`, `requi
 | Submitting after the time limit | `deadline_at + 30 s` checked on the server; late submissions graded from the last save |
 | Restarting to get easier pool questions | One `in_progress` attempt per lesson (unique index); `maxAttempts`; each start is logged |
 | Sharing answers between students | Per-attempt question and option shuffle (seeded); pool selection; stats page can spot identical answer patterns (P2) |
-| Switching tabs to search | Exam guard records blur/visibility/fullscreen-exit events with timestamps. Shown to the admin, never auto-penalized |
+| Switching tabs to search | Exam guard (lesson `examGuard`) records blur/visibility/fullscreen-exit events and blocked copy/cut/context-menu attempts with timestamps; the runner tells the student it is on. Events append only (a forged save can't erase them), shown to the admin on the result page (JSON until S6-04), never auto-penalized. A blocked-by-JS guard is advisory: a student can disable it, which is why nothing is scored from it |
 | Copying questions | In test mode only: disable selection/copy/context menu. This is a deterrent, not a guarantee, and it's not applied anywhere else |
 | Account sharing | Device policy + single session (optional) |
 

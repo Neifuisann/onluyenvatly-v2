@@ -118,7 +118,7 @@ Search: `WHERE search_text ILIKE '%' || lower(immutable_unaccent($q)) || '%'` us
 | items | jsonb | Ordered `[{q:"q_ab12", v:57, o:[2,0,3,1], p:0.25}]`: question id, version id (omitted when equal to `lesson_version_id`), mcq option order, and the points fixed at start (so a config edit mid-attempt can't change the marks) |
 | answers | jsonb | Array aligned with `items`: `"B"` \| `[true,false,null,true]` \| `"1,5"` \| `null` |
 | flagged | smallint[] | Item indexes flagged for review |
-| guard_events | jsonb | `[{t: 132, k: "blur"}]`, seconds since start + kind. Capped at 200 |
+| guard_events | jsonb | `[{t: 132, k: "blur"}]`, seconds since start (server clock) + kind: `blur`, `hidden`, `fs-exit`, `copy`. Append-only through save/submit (≤ 50 new per request), capped at the first 200 |
 | earned | numeric(5,2)[] | Array aligned with `items`, set on submit |
 | score | numeric(7,2) null | Sum of `earned` (7 digits: 200 questions × 100 points fits) |
 | max_score | numeric(7,2) | |
@@ -143,7 +143,12 @@ Indexes:
 `user_id` uuid PK FK, `rating` int default 1500, `peak` int, `rated_attempts` int, `updated_at`. Index `(rating DESC)`.
 
 ### `rating_events`
-`id` bigint identity, `user_id`, `attempt_id` unique, `lesson_id`, `before` int, `delta` int, `after` int, `performance` numeric(4,3), `formula` text (`'v2'`, or `'v1-legacy'` for migrated rows), `created_at`. Index `(user_id, created_at DESC)`, `(created_at)` for "most improved this week".
+`id` bigint identity, `user_id`, `attempt_id` unique, `lesson_id`, `before` int, `delta` int, `after` int, `performance` numeric(4,3), `time_bonus` numeric(4,3) (null for migrated rows), `formula` text (`'v2'`, or `'v1-legacy'` for migrated rows), `created_at`. Index `(user_id, created_at DESC)`, `(created_at)` for "most improved this week".
+
+v2 computes the delta from `performance` and `time_bonus` rounded to 3 decimals, exactly as stored, so replaying a student's events (delete attempt, 05) reproduces every delta. `ratings` rows are created at 1500 on the first rated submit and locked `FOR UPDATE` in the submit transaction, so two tests submitted at once both count, one after the other.
+
+### `attempt_overrides`
+`(user_id, lesson_id)` PK, `extra_attempts` smallint (1–100), `granted_by` uuid null, `created_at`. Extra tries a teacher grants one student on one lesson (see scheduled tests above). Read only when a lesson has a limit or has closed; granted from the student admin pages (S6-02).
 
 ### `mistakes`
 | Column | Type | Notes |
@@ -159,6 +164,8 @@ Indexes:
 | updated_at | timestamptz | |
 
 Index `(user_id, status, updated_at DESC)`.
+
+Rules (`features/review/domain/mistakes.ts`, applied in the submit transaction): any item short of full marks (wrong, partially right tf, or blank) upserts the row: `wrong_count + 1`, streak 0, `open` (a resolved mistake reopens). A correct answer adds 1 to the streak of an **open** mistake and resolves it at 2; correct answers never create rows. At most one multi-row upsert and one UPDATE per submit.
 
 ### `question_explanations`
 `question_hash` text PK, `lesson_id`, `question_id`, `source` enum (`ai`,`teacher`), `model` text, `content_md` text, `votes_up`, `votes_down` int, `created_at`, `updated_at`.
@@ -226,13 +233,16 @@ type LessonConfig = {
   pool: { enabled: boolean; size?: number; byType?: Partial<Record<'mcq'|'tf'|'short', number>> };
   points: { mode: 'per-question' } | { mode: 'per-type-total'; mcq?: number; tf?: number; short?: number };
   maxAttempts: number | null;
+  startsAt: string | null;              // ISO with offset; nobody starts before it (admins excepted)
   revealAnswers: 'after_submit' | 'after_deadline' | 'never';
   countsForRating: boolean;
   examGuard: boolean;                   // copy-block + blur tracking during the test
   tfScoring: 'thpt2025' | 'proportional';
 };
 ```
-Defaults match v1 behaviour: THPT scoring for tf, `revealAnswers: 'after_submit'`, `countsForRating: true`.
+Defaults match v1 behaviour: THPT scoring for tf, `revealAnswers: 'after_submit'`, `countsForRating: true`, `startsAt: null`.
+
+**Scheduled tests** (owner decision 2026-09-28, `attempts/domain/schedule.ts`): `after_deadline` requires `startsAt` and `timeLimitSec` (the schema refuses it otherwise). It is one shared exam window: an attempt started before the reveal ends at `startsAt + timeLimitSec` at the latest, answers open at `startsAt + timeLimitSec + 30 s`, and from then on the lesson is closed to new attempts. Only a student with extra tries in `attempt_overrides` may start it after that (each extra try is one attempt, with its own full time), and extra tries also raise that student's `maxAttempts`.
 
 ### 3.3 Editor text format (kept from v1, documented so the parser can be tested)
 ```

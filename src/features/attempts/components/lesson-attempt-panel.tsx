@@ -1,10 +1,11 @@
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, CalendarClock } from "lucide-react";
 import Link from "next/link";
 import { buttonVariants } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatDateTime, formatScore } from "@/lib/dates";
+import { canStart, revealAt, type Schedule } from "../domain/schedule";
 import { startCopy as t } from "../messages";
-import { getMyLessonAttempts } from "../queries";
+import { getMyExtraAttempts, getMyLessonAttempts } from "../queries";
 import { StartAttemptButton } from "./start-attempt-button";
 
 /**
@@ -14,29 +15,66 @@ import { StartAttemptButton } from "./start-attempt-button";
 export async function LessonAttemptPanel({
   userId,
   lessonId,
-  maxAttempts,
+  schedule,
   unlimited,
 }: {
   userId: string;
   lessonId: number;
-  maxAttempts: number | null;
+  schedule: Schedule & { maxAttempts: number | null };
   /** Admins are not limited (06 §2). */
   unlimited: boolean;
 }) {
-  const mine = await getMyLessonAttempts(userId, lessonId);
+  const now = new Date();
+  const close = revealAt(schedule);
+  // Extra tries only matter with a limit or once the lesson has closed.
+  const needsExtra =
+    !unlimited &&
+    (schedule.maxAttempts !== null || (close !== null && now >= close));
+  const [mine, extra] = await Promise.all([
+    getMyLessonAttempts(userId, lessonId),
+    needsExtra ? getMyExtraAttempts(userId, lessonId) : 0,
+  ]);
   const open = mine.find((a) => a.status === "in_progress");
   const closed = mine.filter((a) => a.status !== "in_progress");
-  const limit = unlimited ? null : maxAttempts;
-  const left = limit === null || closed.length < limit;
+  const check = canStart(
+    schedule,
+    {
+      used: closed.length,
+      usedSinceClose: close
+        ? mine.filter((a) => a.startedAt >= close).length
+        : 0,
+      extra,
+    },
+    now,
+    unlimited,
+  );
+  const limit =
+    unlimited || schedule.maxAttempts === null
+      ? null
+      : schedule.maxAttempts + extra;
 
   return (
     <section className="space-y-4 rounded-lg border bg-surface p-5 shadow-card">
       <h2 className="font-semibold text-lg">{t.heading}</h2>
+      {schedule.startsAt && (
+        <ul className="space-y-1 text-sm">
+          <li className="flex items-center gap-2">
+            <CalendarClock aria-hidden className="size-4 shrink-0" />
+            {t.startsAt(formatDateTime(new Date(schedule.startsAt)))}
+          </li>
+          {close && (
+            <li className="text-muted-foreground">
+              {t.answersAt(formatDateTime(close))}
+            </li>
+          )}
+        </ul>
+      )}
       {limit !== null && (
         <p className="text-muted-foreground text-sm">
           {t.used(Math.min(closed.length, limit), limit)}
         </p>
       )}
+      {extra > 0 && <p className="text-sm">{t.extra(extra)}</p>}
       {open ? (
         <div className="grid gap-3">
           <p className="text-sm">{t.inProgress}</p>
@@ -51,10 +89,16 @@ export async function LessonAttemptPanel({
             <ArrowRight aria-hidden />
           </Link>
         </div>
-      ) : left ? (
+      ) : check.ok ? (
         <StartAttemptButton lessonId={lessonId} />
       ) : (
-        <p className="font-medium text-sm">{t.noneLeft}</p>
+        <p className="font-medium text-sm">
+          {check.code === "NOT_OPEN_YET"
+            ? t.notOpen(formatDateTime(check.at))
+            : check.code === "LESSON_CLOSED"
+              ? t.closed
+              : t.noneLeft}
+        </p>
       )}
       <div className="space-y-2 border-t pt-4">
         <h3 className="font-medium text-sm">{t.history}</h3>

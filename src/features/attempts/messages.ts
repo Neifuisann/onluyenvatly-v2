@@ -49,8 +49,14 @@ export const runnerCopy = {
   shortHint: "Dùng dấu phẩy hoặc dấu chấm cho phần thập phân.",
   shortReadAs: (value: string) => `Hệ thống ghi nhận: ${value}`,
   shortPlaceholder: "Nhập đáp số",
+  guardNotice:
+    "Bài có giám sát: hệ thống ghi lại khi bạn rời khỏi trang làm bài, và không cho sao chép đề.",
   keyboardHint:
     "Phím tắt: 1–4 chọn đáp án, ←/→ chuyển câu, F đánh dấu, Enter câu sau.",
+  errorTitle: "Không tải được bài làm",
+  errorBody:
+    "Hệ thống đang gặp sự cố. Bài làm vẫn được lưu trên máy, hãy thử lại sau giây lát.",
+  retry: "Thử lại",
 } as const;
 
 /** `SaveIndicator` and the offline banner (07 §4, §5.2). */
@@ -68,7 +74,7 @@ export const saveCopy = {
   signIn: "Đăng nhập lại",
 } as const;
 
-/** `/attempts/[id]/result` (07 §5.4; full review arrives in S4-03). */
+/** `/attempts/[id]/result` (07 §5.4). */
 export const resultCopy = {
   title: "Kết quả bài làm",
   outOf: "/ 10",
@@ -77,11 +83,45 @@ export const resultCopy = {
   points: (score: string, max: string) => `${score}/${max} điểm`,
   time: (clock: string) => `Thời gian làm bài ${clock}`,
   submittedAt: (when: string) => `Nộp lúc ${when}`,
-  reviewSoon: "Phần xem lại từng câu và đáp án sẽ có trong bản cập nhật tới.",
   backToLesson: "Về trang bài tập",
+  retake: "Làm lại",
+  review: "Xem lại bài",
   toCatalog: "Danh sách bài tập",
   good: "Làm tốt lắm!",
   keepGoing: "Cố lên, ôn lại rồi làm tiếp nhé!",
+  revealLater: (when: string) => `Đáp án sẽ hiển thị sau ${when}.`,
+  revealNever: "Giáo viên không công bố đáp án của bài này.",
+  guardEvents: (n: number) => `Sự kiện giám sát (${n})`,
+  guardHelp:
+    "t = số giây từ lúc bắt đầu; blur: rời cửa sổ, hidden: ẩn tab/chuyển ứng dụng, fs-exit: thoát toàn màn hình, copy: thử sao chép.",
+} as const;
+
+/** Per-question review on the result page (07 §4 `ReviewItem`). */
+export const reviewCopy = {
+  heading: "Xem lại từng câu",
+  filterLabel: "Lọc câu hỏi",
+  all: (n: number) => `Tất cả ${n}`,
+  wrong: (n: number) => `Sai ${n}`,
+  right: (n: number) => `Đúng ${n}`,
+  emptyWrong: "Không có câu sai nào. Làm tốt lắm!",
+  emptyRight: "Chưa có câu nào đúng hoàn toàn. Xem lại các câu bên dưới nhé.",
+  outcome: {
+    correct: "Đúng",
+    partial: "Đúng một phần",
+    wrong: "Sai",
+    blank: "Chưa làm",
+  },
+  itemHeading: (i: number, type: string) => `Câu ${i} · ${type}`,
+  marks: (earned: string, max: string) => `${earned}/${max}đ`,
+  yourChoice: "Bạn chọn",
+  correctAnswer: "Đáp án",
+  noAnswer: "Bạn chưa trả lời",
+  youAnswered: "Bạn trả lời",
+  statement: "Mệnh đề",
+  you: "Bạn chọn",
+  key: "Đáp án",
+  none: "–",
+  explanation: "Giải thích của giáo viên",
 } as const;
 
 /** `TestTimer` (07 §4) and auto-submit. */
@@ -116,6 +156,11 @@ export const startCopy = {
   inProgress: "Bạn đang làm dở bài này.",
   used: (used: number, max: number) => `Đã dùng ${used}/${max} lượt làm bài.`,
   noneLeft: "Bạn đã dùng hết lượt làm bài này.",
+  startsAt: (when: string) => `Giờ bắt đầu: ${when}`,
+  answersAt: (when: string) => `Công bố đáp án và đóng bài: ${when}`,
+  notOpen: (when: string) => `Bài chưa mở. Bạn có thể bắt đầu từ ${when}.`,
+  closed: "Bài đã đóng vì đáp án đã được công bố.",
+  extra: (n: number) => `Giáo viên cho bạn thêm ${n} lượt làm bài.`,
   history: "Các lần làm của bạn",
   historyEmpty: "Bạn chưa làm bài này lần nào.",
   score: (score: string) => `${score} điểm`,

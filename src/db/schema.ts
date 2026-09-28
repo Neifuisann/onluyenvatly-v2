@@ -396,6 +396,12 @@ export const ratingEvents = pgTable(
       scale: 3,
       mode: "number",
     }),
+    /** v2 inputs are stored so a replay reproduces the delta; null for v1. */
+    timeBonus: numeric("time_bonus", {
+      precision: 4,
+      scale: 3,
+      mode: "number",
+    }),
     /** `v2`, or `v1-legacy` for migrated rows. */
     formula: text("formula").notNull(),
     createdAt: timestamptz("created_at").notNull().defaultNow(),
@@ -403,6 +409,35 @@ export const ratingEvents = pgTable(
   (t) => [
     index("rating_events_user_created_idx").on(t.userId, t.createdAt.desc()),
     index("rating_events_created_idx").on(t.createdAt),
+  ],
+).enableRLS();
+
+/**
+ * Extra tries a teacher grants one student on one lesson (S4-03 follow-up):
+ * they reopen a scheduled lesson after its answers are out and add to
+ * `maxAttempts`. Granted from the student admin pages (S6-02).
+ */
+export const attemptOverrides = pgTable(
+  "attempt_overrides",
+  {
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    lessonId: bigint("lesson_id", { mode: "number" })
+      .notNull()
+      .references(() => lessons.id, { onDelete: "cascade" }),
+    extraAttempts: smallint("extra_attempts").notNull(),
+    grantedBy: uuid("granted_by").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    createdAt: timestamptz("created_at").notNull().defaultNow(),
+  },
+  (t) => [
+    primaryKey({ columns: [t.userId, t.lessonId] }),
+    check(
+      "attempt_overrides_extra_check",
+      sql`${t.extraAttempts} between 1 and 100`,
+    ),
   ],
 ).enableRLS();
 
@@ -455,3 +490,4 @@ export type NewAttempt = typeof attempts.$inferInsert;
 export type Rating = typeof ratings.$inferSelect;
 export type RatingEvent = typeof ratingEvents.$inferSelect;
 export type Mistake = typeof mistakes.$inferSelect;
+export type AttemptOverride = typeof attemptOverrides.$inferSelect;

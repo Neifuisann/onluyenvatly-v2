@@ -45,7 +45,7 @@ export function useSubmit(
     setSubmitting(true);
     setError(null);
     for (let failures = 0; alive.current; ) {
-      const { answers, flagged } = api.getState();
+      const { answers, flagged, guard } = api.getState();
       try {
         const res = await fetch(`/api/attempts/${attemptId}/submit`, {
           method: "POST",
@@ -53,6 +53,7 @@ export function useSubmit(
           body: JSON.stringify({
             answers,
             flagged,
+            guardEvents: guard,
             clientSubmitId: key.current,
           }),
           keepalive: true,
