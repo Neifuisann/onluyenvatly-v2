@@ -237,6 +237,12 @@ Decisions made while building (recorded in 04/05/07): items carry their points (
 
 **Demo:** full student loop: dashboard → test → result → leaderboard.
 
+**Implementation status:** in progress on `feat/S4-results-rating` (stacked on the S3 PR), one commit per task.
+
+| ID | Status | Evidence / remaining acceptance |
+|---|---|---|
+| S4-01 | ✅ Done | `features/rating/domain` (100 % lines, gated at 95 %): all 20 real v1 history rows reproduced exactly with the v1 time bonus; v2 table tests, tier boundaries, replay-after-delete = fresh computation. Applied in the submit transaction (row-locked `ratings`, one `rating_events` row per attempt, skipped when `countsForRating` is off). Migration `0004` adds `rating_events.time_bonus` so replays are exact |
+
 ---
 
 ### Sprint 5: Admin I, content authoring

@@ -143,7 +143,9 @@ Indexes:
 `user_id` uuid PK FK, `rating` int default 1500, `peak` int, `rated_attempts` int, `updated_at`. Index `(rating DESC)`.
 
 ### `rating_events`
-`id` bigint identity, `user_id`, `attempt_id` unique, `lesson_id`, `before` int, `delta` int, `after` int, `performance` numeric(4,3), `formula` text (`'v2'`, or `'v1-legacy'` for migrated rows), `created_at`. Index `(user_id, created_at DESC)`, `(created_at)` for "most improved this week".
+`id` bigint identity, `user_id`, `attempt_id` unique, `lesson_id`, `before` int, `delta` int, `after` int, `performance` numeric(4,3), `time_bonus` numeric(4,3) (null for migrated rows), `formula` text (`'v2'`, or `'v1-legacy'` for migrated rows), `created_at`. Index `(user_id, created_at DESC)`, `(created_at)` for "most improved this week".
+
+v2 computes the delta from `performance` and `time_bonus` rounded to 3 decimals, exactly as stored, so replaying a student's events (delete attempt, 05) reproduces every delta. `ratings` rows are created at 1500 on the first rated submit and locked `FOR UPDATE` in the submit transaction, so two tests submitted at once both count, one after the other.
 
 ### `mistakes`
 | Column | Type | Notes |

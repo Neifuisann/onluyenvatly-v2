@@ -396,6 +396,12 @@ export const ratingEvents = pgTable(
       scale: 3,
       mode: "number",
     }),
+    /** v2 inputs are stored so a replay reproduces the delta; null for v1. */
+    timeBonus: numeric("time_bonus", {
+      precision: 4,
+      scale: 3,
+      mode: "number",
+    }),
     /** `v2`, or `v1-legacy` for migrated rows. */
     formula: text("formula").notNull(),
     createdAt: timestamptz("created_at").notNull().defaultNow(),

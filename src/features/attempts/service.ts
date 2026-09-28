@@ -7,6 +7,7 @@ import { grade } from "@/features/grading/domain/grade";
 import { toCents } from "@/features/grading/domain/points";
 import { getLessonWithAnswers } from "@/features/lessons/queries";
 import { LessonConfigSchema } from "@/features/lessons/schema";
+import { rateAttempt } from "@/features/rating/service";
 import type { ErrorCode } from "@/lib/messages";
 import { rateLimit } from "@/lib/rate-limit";
 import { err, ok, type Result } from "@/lib/result";
@@ -165,7 +166,7 @@ export type SubmitOutcome = {
 };
 
 /**
- * Submit and grade (ADR-004, 02 §4.1) in one transaction. The row lock plus
+ * Submit, grade and rate (ADR-004, 02 §4.1) in one transaction. The row lock plus
  * the status check make double clicks, retries and parallel submits return
  * the same graded result.
  */
@@ -197,7 +198,11 @@ export async function submitAttempt(
   if (!questions) return err("INTERNAL");
   const byId = new Map(questions.map((q) => [q.id, q]));
   const config = LessonConfigSchema.safeParse(pre.config);
-  const tfScoring = config.success ? config.data.tfScoring : "thpt2025";
+  const {
+    tfScoring = "thpt2025",
+    countsForRating = true,
+    timeLimitSec = null,
+  } = config.success ? config.data : {};
 
   return db.transaction(async (tx) => {
     const [a] = await tx
@@ -241,6 +246,7 @@ export async function submitAttempt(
       answers,
       tfScoring,
     );
+    const taken = timeTakenSec(a.startedAt, a.deadlineAt, now);
     await tx
       .update(attempts)
       .set({
@@ -252,7 +258,7 @@ export async function submitAttempt(
         maxScore: result.maxScore,
         score10: result.score10,
         submittedAt: now,
-        timeTakenSec: timeTakenSec(a.startedAt, a.deadlineAt, now),
+        timeTakenSec: taken,
         clientSubmitId: input.clientSubmitId,
       })
       .where(eq(attempts.id, attemptId));
@@ -262,6 +268,17 @@ export async function submitAttempt(
       .update(lessons)
       .set({ attemptCount: sql`${lessons.attemptCount} + 1` })
       .where(eq(lessons.id, lessonId));
+    if (countsForRating)
+      await rateAttempt(tx, {
+        userId,
+        attemptId,
+        lessonId,
+        score: result.score,
+        maxScore: result.maxScore,
+        timeTakenSec: taken,
+        timeLimitSec,
+        now,
+      });
     return ok({
       attemptId,
       score: result.score,

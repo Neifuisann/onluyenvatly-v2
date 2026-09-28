@@ -1,7 +1,14 @@
 import { eq } from "drizzle-orm";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { db } from "@/db/client";
-import { attempts, lessons, lessonVersions, users } from "@/db/schema";
+import {
+  attempts,
+  lessons,
+  lessonVersions,
+  ratingEvents,
+  ratings,
+  users,
+} from "@/db/schema";
 import {
   DEFAULT_LESSON_CONFIG,
   type LessonConfig,
@@ -484,5 +491,84 @@ describe("submitAttempt", () => {
       ),
     ).toMatchObject({ code: "VALIDATION" });
     expect((await row(id))?.status).toBe("in_progress");
+  });
+
+  describe("rating (S4-01)", () => {
+    const events = () => tdb.select().from(ratingEvents);
+    const rating = async () =>
+      (
+        await tdb.select().from(ratings).where(eq(ratings.userId, student.id))
+      )[0];
+
+    it("rates the first test from 1500 and records the event", async () => {
+      const { id, lessonId } = await started();
+      await submitAttempt(student.id, id, right, at(1000));
+      expect(await rating()).toMatchObject({
+        rating: 1548,
+        peak: 1548,
+        ratedAttempts: 1,
+      });
+      expect(await events()).toEqual([
+        expect.objectContaining({
+          userId: student.id,
+          attemptId: id,
+          lessonId,
+          before: 1500,
+          delta: 48,
+          after: 1548,
+          performance: 1,
+          timeBonus: 1,
+          formula: "v2",
+          createdAt: at(1000),
+        }),
+      ]);
+    });
+
+    it("rates zero-ish scores and slow late submits (v2 time bonus)", async () => {
+      const { id } = await started({ timeLimitSec: 60 });
+      await saveProgress(
+        student.id,
+        id,
+        { answers: ["A", null, null], flagged: [] },
+        at(30_000),
+      );
+      await submitAttempt(student.id, id, right, at(10 * 60_000));
+      // perf 0.25/1.75 = 0.143, bonus 0.5: 48·(0.143 − 0.5)·0.5·1.5 = −12.85.
+      expect(await events()).toMatchObject([
+        { performance: 0.143, timeBonus: 0.5, delta: -13, after: 1487 },
+      ]);
+      expect((await rating())?.peak).toBe(1500);
+    });
+
+    it("writes one event for parallel submits of one attempt", async () => {
+      const { id } = await started();
+      await Promise.all([
+        submitAttempt(student.id, id, right, at(1000)),
+        submitAttempt(student.id, id, right, at(1000)),
+      ]);
+      expect(await events()).toHaveLength(1);
+      expect((await rating())?.ratedAttempts).toBe(1);
+    });
+
+    it("counts two different tests submitted at once, one after the other", async () => {
+      const a = await started();
+      const b = await started();
+      await Promise.all([
+        submitAttempt(student.id, a.id, right, at(1000)),
+        submitAttempt(student.id, b.id, right, at(1000)),
+      ]);
+      const list = await events();
+      expect(list).toHaveLength(2);
+      // The second one waits for the first one's row lock: 1548 + 41.
+      expect(list.map((e) => e.before).sort()).toEqual([1500, 1548]);
+      expect(await rating()).toMatchObject({ rating: 1589, ratedAttempts: 2 });
+    });
+
+    it("skips lessons that don't count for rating", async () => {
+      const { id } = await started({ countsForRating: false });
+      await submitAttempt(student.id, id, right, at(1000));
+      expect(await events()).toHaveLength(0);
+      expect(await rating()).toBeUndefined();
+    });
   });
 });

@@ -1,0 +1,1 @@
+ALTER TABLE "rating_events" ADD COLUMN "time_bonus" numeric(4, 3);
