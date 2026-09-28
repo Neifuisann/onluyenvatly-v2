@@ -294,6 +294,12 @@ Decisions made while building (recorded in 04/05/07): items carry their points (
 
 **Demo:** the teacher approves new students, reviews a lesson's hardest question, and exports results.
 
+**Implementation status (2026-09-29):** S6-01 implemented on `feat/S6-admin-people-insight`. Lint, types, unit/integration tests and the S6 E2E specs pass locally against PGlite. Owner decisions 01 §7 shape S6: no device binding (no "reset device" action, no device policy setting) and no rating-formula toggle.
+
+| ID | Status | Evidence / remaining acceptance |
+|---|---|---|
+| S6-01 | ✅ Implemented, E2E verified | `/admin/students`: the pending queue (oldest first, checkbox per row, select all, bulk Duyệt / Từ chối with a confirm, one audit row per student) and the "Tất cả" tab (accent-insensitive name words or phone prefix served by `users_full_name_trgm_idx`, status and grade chips, cumulative 50 per page, `prefetch={false}`); `/admin/students/[id]` with profile, rating and tier, sessions (short device name, IP), latest 50 attempts. Nav badge from a shared-cached `getPendingCount` (tag `pendingStudents`, invalidated by register, approve, reject and delete); the count is in the link's `aria-label` (no `sr-only` text, which escaped the scrolling phone nav strip and overflowed the page at 360 px). Integration tests (PGlite) cover approve/reject skips, audit rows, search, paging and detail; **E2E journey 1 in full** (`admin-students.spec`, both projects) |
+
 ---
 
 ### Sprint 7: AI & learning features

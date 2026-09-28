@@ -7,6 +7,7 @@
  */
 import { randomUUID } from "node:crypto";
 import { createServer } from "node:http";
+import { pathToFileURL } from "node:url";
 
 export const FAKE_STORAGE_PORT = Number(process.env.FAKE_STORAGE_PORT ?? 54330);
 export const FAKE_STORAGE_URL = `http://localhost:${FAKE_STORAGE_PORT}`;
@@ -88,4 +89,6 @@ function main() {
   }).listen(FAKE_STORAGE_PORT, "localhost");
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) main();
+// `pathToFileURL`, not `file://${argv[1]}`: that never matches a Windows path.
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href)
+  main();

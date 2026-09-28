@@ -20,6 +20,7 @@ export const E2E_SPEC_ADMINS = [
   "editor",
   "publish",
   "media",
+  "students",
 ] as const;
 export type E2eSpecAdmin = (typeof E2E_SPEC_ADMINS)[number];
 export const e2eSpecAdminUsername = (spec: E2eSpecAdmin, project: string) =>
@@ -95,6 +96,81 @@ export const e2eStudents = [
     status: "active",
     grade: 12,
   },
+  // S6 student admin spec, one set per Playwright project. The seed resets
+  // their status, password and sessions, so the spec can run again.
+  {
+    key: "queueA",
+    phone: "0900000012",
+    fullName: "Học Sinh Hàng Đợi A",
+    status: "pending",
+    grade: 12,
+  },
+  {
+    key: "queueA2",
+    phone: "0900000013",
+    fullName: "Học Sinh Hàng Đợi A Hai",
+    status: "pending",
+    grade: 12,
+  },
+  {
+    key: "queueB",
+    phone: "0900000014",
+    fullName: "Học Sinh Hàng Đợi B",
+    status: "pending",
+    grade: 11,
+  },
+  {
+    key: "queueB2",
+    phone: "0900000015",
+    fullName: "Học Sinh Hàng Đợi B Hai",
+    status: "pending",
+    grade: 11,
+  },
+  {
+    key: "manage",
+    phone: "0900000016",
+    fullName: "Học Sinh Quản Lý",
+    status: "active",
+    grade: 12,
+  },
+  {
+    key: "manage2",
+    phone: "0900000017",
+    fullName: "Học Sinh Quản Lý Hai",
+    status: "active",
+    grade: 12,
+  },
+  // Disabled, enabled and logged out by the spec (its own students: five
+  // logins a minute per account is the limit).
+  {
+    key: "access",
+    phone: "0900000020",
+    fullName: "Học Sinh Truy Cập",
+    status: "active",
+    grade: 12,
+  },
+  {
+    key: "access2",
+    phone: "0900000021",
+    fullName: "Học Sinh Truy Cập Hai",
+    status: "active",
+    grade: 12,
+  },
+  // Deleted by the spec; the seed inserts them again.
+  {
+    key: "remove",
+    phone: "0900000018",
+    fullName: "Học Sinh Sẽ Xóa",
+    status: "active",
+    grade: 10,
+  },
+  {
+    key: "remove2",
+    phone: "0900000019",
+    fullName: "Học Sinh Sẽ Xóa Hai",
+    status: "active",
+    grade: 10,
+  },
   {
     key: "pending",
     phone: "0900000004",
@@ -112,6 +188,17 @@ export const e2eStudents = [
 ] as const;
 
 export type E2eStudentKey = (typeof e2eStudents)[number]["key"];
+
+/** Each Playwright project takes its own copy of a per-project student. */
+export function projectStudentKey(
+  base: "queueA" | "queueB" | "manage" | "access" | "remove",
+  project: string,
+): E2eStudentKey {
+  return project === "mobile" ? (`${base}2` as E2eStudentKey) : base;
+}
+
+/** Name prefix of the students the student spec registers; the seed removes them. */
+export const REGISTERED_NAME_PREFIX = "Học Sinh Đăng Ký";
 
 export function e2eStudent(key: E2eStudentKey) {
   const s = e2eStudents.find((x) => x.key === key);

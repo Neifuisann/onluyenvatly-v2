@@ -113,6 +113,7 @@ export const shellCopy = {
     settings: "Cài đặt",
     audit: "Nhật ký",
   },
+  navBadge: (n: number) => ` (${n} mục cần xử lý)`,
   toStudentView: "Xem trang học sinh",
   toAdmin: "Trang quản trị",
 } as const;

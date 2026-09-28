@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { formatClock, formatDateTime, formatScore, vnDateKey } from "./dates";
+import {
+  formatClock,
+  formatDateOnly,
+  formatDateTime,
+  formatScore,
+  vnDateKey,
+} from "./dates";
 
 describe("formatDateTime", () => {
   it("shows Vietnam time as dd/mm/yyyy hh:mm", () => {
@@ -34,5 +40,12 @@ describe("vnDateKey", () => {
   it("uses the Vietnam calendar day (UTC+7)", () => {
     expect(vnDateKey(new Date("2026-10-01T16:59:59Z"))).toBe("2026-10-01");
     expect(vnDateKey(new Date("2026-10-01T17:00:00Z"))).toBe("2026-10-02");
+  });
+});
+
+describe("formatDateOnly", () => {
+  it("turns a date column into dd/mm/yyyy", () => {
+    expect(formatDateOnly("2008-01-05")).toBe("05/01/2008");
+    expect(formatDateOnly("not a date")).toBe("not a date");
   });
 });

@@ -9,4 +9,6 @@ export const tags = {
   lessonPublic: (id: number) => `lesson:${id}:public`,
   lessonAnswers: (id: number) => `lesson:${id}:answers`,
   leaderboard: "leaderboard",
+  /** Admin nav badge: students waiting for approval. */
+  pendingStudents: "pendingStudents",
 } as const;

@@ -119,6 +119,10 @@ As built (S5-05): `createUploadUrl({ contentType, bytes, width, height })` lives
 ### `features/students/admin-actions.ts`
 `approve(ids[])`, `reject(ids[])`, `resetPassword(id)` → returns a temp password once, `resetDevice(id)`, `revokeSessions(id)`, `setStatus(id, status)`, `deleteStudent(id)` (cascades; audit), `createAdmin(...)`.
 
+As built (S6-01): `approve({ ids })` and `reject({ ids })` run `requireAdmin()`, Zod (`domain/input.ts`: 1–200 distinct ids, each `z.uuid()`), then one transaction in `admin-service.ts` that moves only `role = student` rows `pending → active` (sets `approved_at/by`) / `pending → rejected`; the rest are skipped and counted (`{ done, skipped }`). One audit row per student (`student.approve`, `student.reject`; ids only, never a name or phone). They invalidate `pendingStudents` (the nav badge) and `refresh()` the uncached admin pages.
+
+Pages: `/admin/students?view=pending|all&q=&status=&grade=&page=` (default `pending`: the queue, oldest first, up to 200, a checkbox per row, "Chọn tất cả", bulk Duyệt / Từ chối with a confirm; `all`: accent-insensitive name words or a phone prefix, status and grade chips, cumulative "Xem thêm" by 50, `prefetch={false}` on rows) and `/admin/students/[id]` (profile with phone and birth date, rating, sessions with a short device name and IP, latest 50 attempts linking to `/attempts/[id]/result`). Both read per request without caching (`admin-queries.ts`); only the pending count behind the nav badge is shared-cached (`getPendingCount`, tag `pendingStudents`, invalidated by `register`, `approve` and `reject`).
+
 ### `features/attempts/admin-actions.ts`
 `deleteAttempt(id)`: deletes the attempt and its rating event, then recomputes that student's rating by replaying rating events in order (cheap: tens to hundreds of rows).
 

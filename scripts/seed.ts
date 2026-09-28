@@ -12,7 +12,7 @@
  */
 import { randomBytes } from "node:crypto";
 import { parseArgs } from "node:util";
-import { and, eq, inArray, ne } from "drizzle-orm";
+import { and, eq, inArray, like, ne, or } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
 import * as schema from "../src/db/schema.ts";
@@ -30,6 +30,7 @@ import {
   e2eRatings,
   e2eSpecAdminUsernames,
   e2eStudents,
+  REGISTERED_NAME_PREFIX,
 } from "../tests/e2e/fixtures/users.ts";
 
 const { values } = parseArgs({
@@ -130,6 +131,19 @@ async function main() {
   for (const username of e2eSpecAdminUsernames)
     await upsertAdmin(username, e2eAdmin.fullName, E2E_PASSWORD);
   const passwordHash = await hashPassword(E2E_PASSWORD);
+  // Students the register specs signed up in earlier runs (they would pile
+  // up in the admin pending queue).
+  await db
+    .delete(users)
+    .where(
+      and(
+        eq(users.role, "student"),
+        or(
+          like(users.fullName, `${REGISTERED_NAME_PREFIX} %`),
+          eq(users.fullName, "Nguyễn Văn Kiểm Thử"),
+        ),
+      ),
+    );
   for (const s of e2eStudents) {
     const [student] = await db
       .insert(users)
@@ -145,10 +159,22 @@ async function main() {
       })
       .onConflictDoUpdate({
         target: users.phone,
-        set: { status: s.status, passwordHash, updatedAt: new Date() },
+        set: {
+          status: s.status,
+          passwordHash,
+          mustChangePassword: false,
+          updatedAt: new Date(),
+        },
       })
       .returning({ id: users.id });
     if (!student) throw new Error("Student seed failed");
+    // Nobody starts logged in or with extra tries (S6 student admin spec).
+    await db
+      .delete(schema.sessions)
+      .where(eq(schema.sessions.userId, student.id));
+    await db
+      .delete(schema.attemptOverrides)
+      .where(eq(schema.attemptOverrides.userId, student.id));
     // Every run starts from the fixture ratings (S4-05 leaderboard).
     await db
       .delete(schema.ratingEvents)

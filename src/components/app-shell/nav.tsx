@@ -57,13 +57,43 @@ export const NAV: Record<ShellVariant, NavItem[]> = {
   ],
 };
 
+/** Counts shown next to nav items, keyed by `href` (only zero-free ones). */
+export type NavBadges = Readonly<Record<string, number>>;
+
+/**
+ * Visual only: the link's `aria-label` (`itemLabel`) carries the count. No
+ * `sr-only` text here, which is absolutely positioned and would escape the
+ * clipping of the scrolling admin strip on phones.
+ */
+function Badge({ count }: { count: number | undefined }) {
+  if (!count) return null;
+  return (
+    <span
+      aria-hidden
+      className="ml-auto inline-flex min-w-5 items-center justify-center rounded-full bg-primary px-1.5 py-0.5 font-semibold text-[0.6875rem] text-primary-foreground leading-none"
+    >
+      {count > 99 ? "99+" : count}
+    </span>
+  );
+}
+
+function itemLabel(item: NavItem, count: number | undefined) {
+  return count ? `${item.label}${shellCopy.navBadge(count)}` : undefined;
+}
+
 function isActive(pathname: string, item: NavItem) {
   if (item.exact) return pathname === item.href;
   return pathname === item.href || pathname.startsWith(`${item.href}/`);
 }
 
 /** Vertical list for the desktop sidebar. */
-export function SidebarNav({ variant }: { variant: ShellVariant }) {
+export function SidebarNav({
+  variant,
+  badges,
+}: {
+  variant: ShellVariant;
+  badges?: NavBadges | undefined;
+}) {
   const pathname = usePathname();
   return (
     <ul className="flex flex-col gap-1">
@@ -73,6 +103,7 @@ export function SidebarNav({ variant }: { variant: ShellVariant }) {
           <li key={item.href}>
             <Link
               href={item.href}
+              aria-label={itemLabel(item, badges?.[item.href])}
               aria-current={active ? "page" : undefined}
               className={cn(
                 "flex min-h-11 items-center gap-3 rounded-md px-3 font-medium text-sm transition-colors",
@@ -83,6 +114,7 @@ export function SidebarNav({ variant }: { variant: ShellVariant }) {
             >
               <item.icon aria-hidden className="size-5" strokeWidth={1.75} />
               {item.label}
+              <Badge count={badges?.[item.href]} />
             </Link>
           </li>
         );
@@ -92,7 +124,13 @@ export function SidebarNav({ variant }: { variant: ShellVariant }) {
 }
 
 /** Mobile: 5 bottom tabs for students (thumb zone), a scrolling strip for admins. */
-export function MobileNav({ variant }: { variant: ShellVariant }) {
+export function MobileNav({
+  variant,
+  badges,
+}: {
+  variant: ShellVariant;
+  badges?: NavBadges | undefined;
+}) {
   const pathname = usePathname();
   if (variant === "admin") {
     return (
@@ -103,6 +141,7 @@ export function MobileNav({ variant }: { variant: ShellVariant }) {
             <li key={item.href} className="shrink-0">
               <Link
                 href={item.href}
+                aria-label={itemLabel(item, badges?.[item.href])}
                 aria-current={active ? "page" : undefined}
                 className={cn(
                   "flex min-h-11 items-center gap-2 rounded-full px-3 text-sm",
@@ -113,6 +152,7 @@ export function MobileNav({ variant }: { variant: ShellVariant }) {
               >
                 <item.icon aria-hidden className="size-4" strokeWidth={1.75} />
                 {item.label}
+                <Badge count={badges?.[item.href]} />
               </Link>
             </li>
           );
@@ -128,6 +168,7 @@ export function MobileNav({ variant }: { variant: ShellVariant }) {
           <li key={item.href}>
             <Link
               href={item.href}
+              aria-label={itemLabel(item, badges?.[item.href])}
               aria-current={active ? "page" : undefined}
               className={cn(
                 "flex min-h-14 flex-col items-center justify-center gap-0.5 text-[0.6875rem] transition-colors",
