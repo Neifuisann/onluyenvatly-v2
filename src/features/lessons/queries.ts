@@ -10,7 +10,7 @@ import {
   toPublicQuestion,
 } from "./domain/public-question";
 import type { TypeCounts } from "./domain/summary";
-import type { Question } from "./schema";
+import type { LessonConfig, Question } from "./schema";
 
 /** What a lesson card needs, and nothing else (no questions, no config). */
 export type CatalogItem = {
@@ -128,6 +128,9 @@ export async function getLessonOverview(
       maxAttempts: sql<number | null>`(${lessons.config}->>'maxAttempts')::int`,
       examGuard: sql<boolean>`coalesce((${lessons.config}->>'examGuard')::boolean, false)`,
       countsForRating: sql<boolean>`coalesce((${lessons.config}->>'countsForRating')::boolean, false)`,
+      revealAnswers: sql<
+        LessonConfig["revealAnswers"]
+      >`coalesce(${lessons.config}->>'revealAnswers', 'after_submit')`,
     })
     .from(lessons)
     .where(

@@ -26,7 +26,7 @@ Conventions:
 | `/lessons` | Catalog with filters (`?q=&grade=&chapter=&tag=&sort=&status=`), URL-driven so it's shareable and back-button friendly |
 | `/lessons/[id]` | Lesson overview + my attempts + "Bắt đầu" / "Tiếp tục" |
 | `/attempts/[id]` | Test runner (owner only, `in_progress`) |
-| `/attempts/[id]/result` | Result & review (owner or admin) |
+| `/attempts/[id]/result` | Result & review (owner or admin): `ScoreHero` from the stored marks + the attempt's `rating_events` row (one unique-index lookup); the per-question review reads the cached answers-included version only when `revealAnswers` allows (07 §5.4) |
 | `/review` | Mistakes bank + "Tạo bài ôn tập" (personalized practice) |
 | `/leaderboard` | Rating leaderboard (`?grade=&period=all|week`) |
 | `/profile` | My stats, rating chart, history |

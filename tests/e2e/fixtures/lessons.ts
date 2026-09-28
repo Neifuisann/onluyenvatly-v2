@@ -144,4 +144,31 @@ export const e2eLessons: E2eLesson[] = [
     status: "published",
     questions: runnerQuestions.slice(0, 2),
   },
+  // S4-03 reveal policies: the result page must not carry the answer key.
+  {
+    legacyId: "e2e-reveal-never",
+    title: "E2E – Không công bố đáp án",
+    grade: 12,
+    chapter: "Dao động cơ",
+    tags: ["e2e-runner"],
+    sortOrder: -198,
+    config: { ...DEFAULT_LESSON_CONFIG, revealAnswers: "never" },
+    status: "published",
+    questions: runnerQuestions.slice(0, 2),
+  },
+  {
+    legacyId: "e2e-reveal-later",
+    title: "E2E – Đáp án sau giờ làm",
+    grade: 12,
+    chapter: "Dao động cơ",
+    tags: ["e2e-runner"],
+    sortOrder: -197,
+    config: {
+      ...DEFAULT_LESSON_CONFIG,
+      revealAnswers: "after_deadline",
+      timeLimitSec: 3600,
+    },
+    status: "published",
+    questions: runnerQuestions.slice(0, 2),
+  },
 ];

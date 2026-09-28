@@ -243,6 +243,7 @@ Decisions made while building (recorded in 04/05/07): items carry their points (
 |---|---|---|
 | S4-01 | ✅ Done | `features/rating/domain` (100 % lines, gated at 95 %): all 20 real v1 history rows reproduced exactly with the v1 time bonus; v2 table tests, tier boundaries, replay-after-delete = fresh computation. Applied in the submit transaction (row-locked `ratings`, one `rating_events` row per attempt, skipped when `countsForRating` is off). Migration `0004` adds `rating_events.time_bonus` so replays are exact |
 | S4-02 | ✅ Done | `features/review/domain/mistakes` (pure rules, gated at 95 %) + one upsert and one UPDATE in the submit transaction. Wrong, partial and blank items open or reopen a mistake; two correct in a row resolve it. Integration: open/resolve/reopen across retakes, perfect test writes nothing, parallel submits count once |
+| S4-03 | ✅ Implemented | `ScoreHero` (count-up, rating before → after with ▲/▼ and `TierBadge`), "Xem lại bài" / "Làm lại", `ReviewList` filters (Tất cả / Sai / Đúng) over server-rendered `ReviewItem`s (mcq options with your choice and the key, Đ/S table, short answer, teacher explanation). Reveal policy in `attempts/domain/review.ts` (unit-tested): nothing answer-related is read or rendered until allowed. E2E: review + filters + axe light/dark in journey 2; `result.spec` checks `never` / `after_deadline` pages carry no answer key |
 
 ---
 

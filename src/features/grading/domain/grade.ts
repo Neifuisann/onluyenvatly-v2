@@ -37,7 +37,7 @@ export function originalOption(
   return item.o ? (item.o[shown] ?? null) : shown;
 }
 
-function isBlank(answer: unknown): boolean {
+export function isBlank(answer: unknown): boolean {
   if (answer === null || answer === undefined) return true;
   if (typeof answer === "string") return answer.trim() === "";
   if (Array.isArray(answer)) return answer.every((a) => a === null);

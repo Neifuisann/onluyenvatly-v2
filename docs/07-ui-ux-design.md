@@ -175,6 +175,8 @@ Behaviour:
 ```
 If `revealAnswers = after_deadline`, show the score now and "Đáp án sẽ hiển thị sau hh:mm dd/mm".
 
+As built (S4-03, `attempts/domain/review.ts`): answers, explanations and per-question right/wrong marks are shown together or not at all, because marks alone would give mcq answers away for a retake. Until then the page shows the score, the correct count, the rating change and a message; the answer key is not even read. `after_deadline` means the attempt's own window (`deadline_at` + 30 s grace), so an early finisher can't pass answers to classmates still inside theirs; without a time limit it behaves as `after_submit`. There is no lesson-wide close date yet. Admins always see the review. The "Sai" filter counts everything short of full marks (wrong, partial tf, blank). The score counts up once after hydration (the server HTML has the final value; no motion with reduced motion).
+
 ### 5.5 Catalog
 Search is sticky at the top, followed by grade chips `Tất cả · 10 · 11 · 12` and a "Bộ lọc" button (chapter, tag, status: Chưa làm / Đã làm, sort). Cards are in 1 column on mobile, 2 on tablet, 3 on desktop. The list is paginated with "Xem thêm", not infinite scroll, because that's cheaper and better for the back button.
 

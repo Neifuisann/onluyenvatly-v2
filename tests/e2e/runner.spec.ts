@@ -220,6 +220,43 @@ test("journey 2 end + 5: the server grades; a double submit gives one result", a
   await expect(score).toContainText("2/4 câu đúng");
   await expect(score).toContainText("1,25/2 điểm");
   await attachShot(page, testInfo, "result");
+
+  // S4-03: rating change, then the review (revealAnswers: after_submit).
+  await expect(score).toContainText(/Rating [d ]+ → [d ]+/);
+  const review = page.getByRole("region", { name: "Xem lại từng câu" });
+  await expect(review.getByRole("article")).toHaveCount(4);
+  await expect(
+    review.getByRole("article", { name: "Câu 1 · Trắc nghiệm" }),
+  ).toContainText("Sai");
+  await expect(
+    review.getByRole("article", { name: "Câu 3 · Đúng/Sai" }),
+  ).toContainText("Đúng một phần");
+  await expect(review.getByText(ANSWER_MARKER).first()).toBeVisible();
+  await review.getByRole("button", { name: "Sai 2" }).click();
+  await expect(review.getByRole("article")).toHaveCount(2);
+  await review.getByRole("button", { name: "Đúng 2" }).click();
+  await expect(review.getByRole("article")).toHaveCount(2);
+  await expect(
+    review.getByRole("article", { name: "Câu 2 · Trắc nghiệm" }),
+  ).toBeVisible();
+  await review.getByRole("button", { name: "Tất cả 4" }).click();
+  for (const theme of ["light", "dark"] as const) {
+    await page.emulateMedia({ colorScheme: theme, reducedMotion: "reduce" });
+    await page.reload();
+    await expect(review.getByRole("article")).toHaveCount(4);
+    const issues = (await new AxeBuilder({ page }).analyze()).violations.filter(
+      (v) => v.impact === "serious" || v.impact === "critical",
+    );
+    expect(issues).toEqual([]);
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= innerWidth,
+      ),
+    ).toBe(true);
+    await attachShot(page, testInfo, `result-review-${theme}`);
+  }
+  await page.emulateMedia({ colorScheme: "light", reducedMotion: null });
+
   // The runner of a submitted attempt leads to its result.
   await page.goto(runnerUrl);
   await expect(page).toHaveURL(/\/result$/);

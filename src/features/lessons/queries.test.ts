@@ -185,6 +185,7 @@ describe("lesson overview and legacy lookup", () => {
       maxAttempts: 3,
       examGuard: true,
       countsForRating: true,
+      revealAnswers: "after_submit",
     });
     expect(JSON.stringify(overview)).not.toContain("NEVER_EXPOSE_CONFIG");
   });
