@@ -53,6 +53,10 @@ export const runnerCopy = {
     "Bài có giám sát: hệ thống ghi lại khi bạn rời khỏi trang làm bài, và không cho sao chép đề.",
   keyboardHint:
     "Phím tắt: 1–4 chọn đáp án, ←/→ chuyển câu, F đánh dấu, Enter câu sau.",
+  errorTitle: "Không tải được bài làm",
+  errorBody:
+    "Hệ thống đang gặp sự cố. Bài làm vẫn được lưu trên máy, hãy thử lại sau giây lát.",
+  retry: "Thử lại",
 } as const;
 
 /** `SaveIndicator` and the offline banner (07 §4, §5.2). */

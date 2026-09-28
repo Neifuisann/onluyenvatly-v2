@@ -19,12 +19,16 @@ function createClient() {
   });
 }
 
-// Reuse the pool across hot reloads in dev.
+// One pool per process, not per module instance: the build puts this module
+// in several chunks (pages, route handlers), each with its own copy, and hot
+// reloads re-run it in dev. Without the global, `max` counts per copy, and
+// local PGlite (DATABASE_POOL_MAX=1) garbles queries from two connections
+// (docs/11 §3).
 const globalForDb = globalThis as unknown as {
   pgClient?: ReturnType<typeof createClient>;
 };
 const client = globalForDb.pgClient ?? createClient();
-if (env.NODE_ENV !== "production") globalForDb.pgClient = client;
+globalForDb.pgClient = client;
 
 export const db = drizzle({ client, schema });
 export type Db = typeof db;
