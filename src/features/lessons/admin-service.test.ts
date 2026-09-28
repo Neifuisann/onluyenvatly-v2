@@ -500,9 +500,9 @@ describe("setLessonCover", () => {
 
   it("refuses files that were never uploaded and unknown lessons", async () => {
     const id = await addLesson("Bài", 0);
-    expect(await setLessonCover(admin, id, "2026/10/none.webp")).toMatchObject(
-      { code: "VALIDATION" },
-    );
+    expect(await setLessonCover(admin, id, "2026/10/none.webp")).toMatchObject({
+      code: "VALIDATION",
+    });
     expect(await setLessonCover(admin, 999, null)).toMatchObject({
       code: "NOT_FOUND",
     });
