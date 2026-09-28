@@ -4,24 +4,14 @@ import { cacheLife, cacheTag } from "next/cache";
 import { db } from "@/db/client";
 import { settings } from "@/db/schema";
 import { tags } from "@/lib/cache-tags";
+import { type AppSettings, DEFAULT_SETTINGS } from "./domain/settings";
 
-export type AppSettings = {
-  registrationOpen: boolean;
-  singleSession: boolean;
-  aiEnabled: boolean;
-  aiDailyBudget: number;
-  announcement: string | null;
-};
+export type { AppSettings } from "./domain/settings";
 
-const DEFAULTS: AppSettings = {
-  registrationOpen: true,
-  singleSession: true,
-  aiEnabled: true,
-  aiDailyBudget: 200,
-  announcement: null,
-};
-
-/** Global settings row, shared-cached (tag `settings`, 05 §4). */
+/**
+ * Global settings row, shared-cached (tag `settings`, 05 §4). `updateSettings`
+ * invalidates the tag, so login and register read the new policy next time.
+ */
 export async function getSettings(): Promise<AppSettings> {
   "use cache";
   cacheTag(tags.settings);
@@ -36,5 +26,5 @@ export async function getSettings(): Promise<AppSettings> {
     })
     .from(settings)
     .where(eq(settings.id, 1));
-  return row ?? DEFAULTS;
+  return row ?? DEFAULT_SETTINGS;
 }

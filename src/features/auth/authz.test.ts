@@ -10,7 +10,7 @@ import type { SessionUser } from "./session";
  * 06 §2 / 11 §3 (journey 8): every admin server action refuses anyone who
  * isn't an admin, before it reads its input or writes anything. The actions
  * are found on disk (the `admin-actions.ts` of every feature, plus the media
- * actions, which are admin only), so a new admin action is covered the day it
+ * and settings actions, which are admin only), so a new admin action is covered the day it
  * is exported. Student- and visitor-facing actions (`auth`, `attempts`) are
  * not in this list on purpose.
  */
@@ -49,6 +49,9 @@ const moduleFiles = [
       : [],
   ),
   "media/actions",
+  // Admin only today; the student settings actions (05 §2) will get their
+  // own file.
+  "settings/actions",
 ];
 
 async function load() {
@@ -86,13 +89,14 @@ beforeEach(async () => {
 });
 
 describe("admin actions require an admin", () => {
-  it("finds the actions of lessons, students and media", async () => {
+  it("finds the actions of lessons, students, media and settings", async () => {
     const names = (await load()).map(([name]) => name);
     expect(moduleFiles).toEqual(
       expect.arrayContaining([
         "lessons/admin-actions",
         "students/admin-actions",
         "media/actions",
+        "settings/actions",
       ]),
     );
     expect(names).toEqual(
@@ -103,6 +107,7 @@ describe("admin actions require an admin", () => {
         "students/admin-actions.deleteStudent",
         "students/admin-actions.createAdmin",
         "media/actions.createUploadUrl",
+        "settings/actions.updateSettings",
       ]),
     );
   });
@@ -173,6 +178,12 @@ describe("admin actions require an admin", () => {
     expect(await approve?.({ ids: "nope" })).toMatchObject({
       ok: false,
       code: "VALIDATION",
+    });
+    const update = actions.get("settings/actions.updateSettings");
+    expect(await update?.({ aiDailyBudget: 9999 })).toMatchObject({
+      ok: false,
+      code: "VALIDATION",
+      fieldErrors: { aiDailyBudget: expect.any(String) },
     });
   });
 });

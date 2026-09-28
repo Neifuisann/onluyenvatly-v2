@@ -64,8 +64,10 @@ Index `(user_id)`, `(expires_at)`. The daily cron deletes expired rows.
 | single_session | boolean | true |
 | ai_enabled | boolean | true |
 | ai_daily_budget | int | 200 |
-| announcement | text null | Banner on the dashboard |
+| announcement | text null | Banner at the top of every student page (plain text, ≤ 300 characters) |
 | updated_at, updated_by | | |
+
+Edited on `/admin/settings` (S6-03, `updateSettings`): only the keys whose value changes are written, with `updated_by`, and audited as `settings.update` `{ changed: [keys] }` (never the values). There is no `device_policy` (no device binding) and no rating-formula column (v2 only): owner decisions 01 §7.
 
 ### `lessons`
 | Column | Type | Notes |
@@ -190,7 +192,7 @@ RETURNING count;
 As built (S5-05): `createUploadUrl` writes the row when it signs the upload, with the size the browser reported, so the quota check (`sum(bytes)` + the new file ≤ 900 MB) counts uploads in flight. Paths are `yyyy/mm/<uuid>.webp` (`.jpg` from browsers that can't encode WebP). A row whose object never arrived is an orphan for the daily cron (S9-05) to remove. `lessons.cover_path` only accepts a path that has a `media` row.
 
 ### `audit_log`
-`id` bigint, `actor_id` uuid, `action` text (`student.approve`, `lesson.publish`, `attempt.delete`…), `target_type`, `target_id`, `data` jsonb, `created_at`. Kept for 180 days. Student actions (S6): `student.approve`, `student.reject`, `student.reset_password`, `student.revoke_sessions`, `student.disable`, `student.enable`, `student.delete` (`{ attempts, lessons }`), `student.grant_attempts`, `student.revoke_attempts`, `admin.create`; `data` carries ids and counts only, never a name, phone or password.
+`id` bigint, `actor_id` uuid, `action` text (`student.approve`, `lesson.publish`, `attempt.delete`…), `target_type`, `target_id`, `data` jsonb, `created_at`. Kept for 180 days. Student actions (S6): `student.approve`, `student.reject`, `student.reset_password`, `student.revoke_sessions`, `student.disable`, `student.enable`, `student.delete` (`{ attempts, lessons }`), `student.grant_attempts`, `student.revoke_attempts`, `admin.create`; settings (S6-03): `settings.update` (`{ changed }`, the keys only); `data` carries ids and counts only, never a name, phone or password.
 
 ## 3. JSON contracts (Zod schemas in `src/features/lessons/schema.ts`)
 

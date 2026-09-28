@@ -21,6 +21,7 @@ export const E2E_SPEC_ADMINS = [
   "publish",
   "media",
   "students",
+  "settings",
 ] as const;
 export type E2eSpecAdmin = (typeof E2E_SPEC_ADMINS)[number];
 export const e2eSpecAdminUsername = (spec: E2eSpecAdmin, project: string) =>
@@ -196,6 +197,12 @@ export function projectStudentKey(
 ): E2eStudentKey {
   return project === "mobile" ? (`${base}2` as E2eStudentKey) : base;
 }
+
+/**
+ * Username prefix of the admins `admin-settings.spec` creates (one per run and
+ * project); the seed removes them.
+ */
+export const CREATED_ADMIN_PREFIX = "e2e-new-";
 
 /** Name prefix of the students the student spec registers; the seed removes them. */
 export const REGISTERED_NAME_PREFIX = "Học Sinh Đăng Ký";

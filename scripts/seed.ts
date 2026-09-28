@@ -25,6 +25,7 @@ import { summarizeLesson } from "../src/features/lessons/domain/summary.ts";
 import { LessonConfigSchema } from "../src/features/lessons/schema.ts";
 import { e2eLessons, e2eQuestions } from "../tests/e2e/fixtures/lessons.ts";
 import {
+  CREATED_ADMIN_PREFIX,
   E2E_PASSWORD,
   e2eAdmin,
   e2eRatings,
@@ -130,6 +131,15 @@ async function main() {
   await upsertAdmin(e2eAdmin.username, e2eAdmin.fullName, E2E_PASSWORD);
   for (const username of e2eSpecAdminUsernames)
     await upsertAdmin(username, e2eAdmin.fullName, E2E_PASSWORD);
+  // Admins the settings spec created in earlier runs (S6-03).
+  await db
+    .delete(users)
+    .where(
+      and(
+        eq(users.role, "admin"),
+        like(users.username, `${CREATED_ADMIN_PREFIX}%`),
+      ),
+    );
   const passwordHash = await hashPassword(E2E_PASSWORD);
   // Students the register specs signed up in earlier runs (they would pile
   // up in the admin pending queue).

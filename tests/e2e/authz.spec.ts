@@ -17,6 +17,7 @@ const ADMIN_PAGES = [
   "/admin/lessons/1/edit",
   "/admin/students",
   `/admin/students/${UUID}`,
+  "/admin/settings",
 ];
 const STUDENT_PAGES = ["/dashboard", "/lessons", "/leaderboard", "/profile"];
 
