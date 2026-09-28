@@ -1,7 +1,17 @@
 import { eq, sql } from "drizzle-orm";
 import { beforeAll, describe, expect, it } from "vitest";
 import { createTestDb, type TestDb } from "@/test/db";
-import { lessons, lessonVersions, settings, users } from "./schema";
+import {
+  attempts,
+  lessons,
+  lessonVersions,
+  mistakes,
+  type NewAttempt,
+  ratingEvents,
+  ratings,
+  settings,
+  users,
+} from "./schema";
 
 let db: TestDb;
 beforeAll(async () => {
@@ -136,6 +146,136 @@ describe("lessons (S2-01)", () => {
     await expect(
       db.insert(lessons).values({ title: "X", grade: 9, config: {} }),
     ).rejects.toThrow();
+  });
+});
+
+describe("attempts, ratings, mistakes (S3-01)", () => {
+  let userId: string;
+  let lessonId: number;
+  let versionId: number;
+  const attempt = (patch: Partial<NewAttempt> = {}): NewAttempt => ({
+    userId,
+    lessonId,
+    lessonVersionId: versionId,
+    items: [{ q: "q_a", o: [1, 0], p: 1 }],
+    answers: [null],
+    maxScore: 1,
+    ...patch,
+  });
+
+  beforeAll(async () => {
+    const [user] = await db
+      .insert(users)
+      .values({ fullName: "HS", phone: "0911111111", passwordHash: "x" })
+      .returning({ id: users.id });
+    const [lesson] = await db
+      .insert(lessons)
+      .values({ title: "Có bài làm", config: {} })
+      .returning({ id: lessons.id });
+    userId = user?.id ?? "";
+    lessonId = lesson?.id ?? 0;
+    const [version] = await db
+      .insert(lessonVersions)
+      .values({ lessonId, version: 1, sourceText: "", questions: [] })
+      .returning({ id: lessonVersions.id });
+    versionId = version?.id ?? 0;
+  });
+
+  it("allows one in-progress attempt per student and lesson, any number of closed ones", async () => {
+    await db.insert(attempts).values(attempt());
+    await expect(db.insert(attempts).values(attempt())).rejects.toThrow();
+    await db
+      .update(attempts)
+      .set({ status: "submitted" })
+      .where(eq(attempts.userId, userId));
+    await db.insert(attempts).values(attempt());
+    await db.insert(attempts).values(attempt({ status: "submitted" }));
+    // Personalized practice has no lesson (items carry their versions), so it never collides.
+    const review = attempt({
+      lessonId: null,
+      lessonVersionId: null,
+      mode: "review",
+    });
+    await db.insert(attempts).values([review, review]);
+  });
+
+  it("keeps answers aligned with items", async () => {
+    await expect(
+      db
+        .insert(attempts)
+        .values(attempt({ status: "submitted", answers: [null, null] })),
+    ).rejects.toThrow();
+  });
+
+  it("round-trips items, answers and numeric marks as numbers", async () => {
+    const [row] = await db
+      .insert(attempts)
+      .values(
+        attempt({
+          status: "submitted",
+          answers: [[true, null, false, true]],
+          flagged: [0],
+          earned: [0.25],
+          score: 0.25,
+          maxScore: 1,
+          score10: 2.5,
+        }),
+      )
+      .returning();
+    expect(row).toMatchObject({
+      mode: "test",
+      items: [{ q: "q_a", o: [1, 0], p: 1 }],
+      answers: [[true, null, false, true]],
+      flagged: [0],
+      guardEvents: [],
+      earned: [0.25],
+      score: 0.25,
+      maxScore: 1,
+      score10: 2.5,
+    });
+  });
+
+  it("links ratings, events and mistakes, and cascades when the lesson goes", async () => {
+    const [a] = await db
+      .insert(attempts)
+      .values(attempt({ status: "submitted" }))
+      .returning({ id: attempts.id });
+    await db.insert(ratings).values({ userId });
+    await db.insert(ratingEvents).values({
+      userId,
+      attemptId: a?.id ?? null,
+      lessonId,
+      before: 1500,
+      delta: 12,
+      after: 1512,
+      performance: 0.8,
+      formula: "v2",
+    });
+    await db.insert(mistakes).values({
+      userId,
+      lessonId,
+      questionId: "q_a",
+      lessonVersionId: versionId,
+      wrongCount: 1,
+      lastAttemptId: a?.id ?? null,
+    });
+    await expect(
+      db.insert(mistakes).values({
+        userId,
+        lessonId,
+        questionId: "q_a",
+        lessonVersionId: versionId,
+      }),
+    ).rejects.toThrow();
+
+    await db.delete(lessons).where(eq(lessons.id, lessonId));
+    expect(
+      await db.select().from(attempts).where(eq(attempts.lessonId, lessonId)),
+    ).toHaveLength(0);
+    expect(await db.select().from(mistakes)).toHaveLength(0);
+    // Events outlive their lesson only through the attempt, which is gone.
+    expect(await db.select().from(ratingEvents)).toHaveLength(0);
+    expect(await db.select().from(ratings)).toHaveLength(1);
   });
 });
 

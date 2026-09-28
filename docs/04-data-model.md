@@ -112,16 +112,16 @@ Search: `WHERE search_text ILIKE '%' || lower(immutable_unaccent($q)) || '%'` us
 | legacy_result_id | text unique null | |
 | user_id | uuid FK → users ON DELETE CASCADE | |
 | lesson_id | bigint FK null | null for personalized practice |
-| lesson_version_id | bigint FK null | Version for single-lesson attempts |
+| lesson_version_id | bigint FK null | Version for single-lesson attempts (null for `review`, whose items carry `v`). `NO ACTION`, so a version in use can't be deleted except together with its lesson |
 | mode | enum `attempt_mode` (`test`,`practice`,`review`) | `review` = personalized practice from mistakes |
 | status | enum `attempt_status` (`in_progress`,`submitted`,`expired`) | |
-| items | jsonb | Ordered `[{q:"q_ab12", v:57, o:[2,0,3,1]}]`: question id, version id (omitted when equal to `lesson_version_id`), option order |
+| items | jsonb | Ordered `[{q:"q_ab12", v:57, o:[2,0,3,1], p:0.25}]`: question id, version id (omitted when equal to `lesson_version_id`), mcq option order, and the points fixed at start (so a config edit mid-attempt can't change the marks) |
 | answers | jsonb | Array aligned with `items`: `"B"` \| `[true,false,null,true]` \| `"1,5"` \| `null` |
 | flagged | smallint[] | Item indexes flagged for review |
 | guard_events | jsonb | `[{t: 132, k: "blur"}]`, seconds since start + kind. Capped at 200 |
 | earned | numeric(5,2)[] | Array aligned with `items`, set on submit |
-| score | numeric(6,2) null | Sum of `earned` |
-| max_score | numeric(6,2) | |
+| score | numeric(7,2) null | Sum of `earned` (7 digits: 200 questions × 100 points fits) |
+| max_score | numeric(7,2) | |
 | score10 | numeric(4,2) null | Normalized to 10 for display and stats |
 | started_at | timestamptz | |
 | deadline_at | timestamptz null | null = no limit |
@@ -130,6 +130,8 @@ Search: `WHERE search_text ILIKE '%' || lower(immutable_unaccent($q)) || '%'` us
 | last_saved_at | timestamptz null | |
 | client_submit_id | uuid null | Idempotency |
 | ip | inet null | |
+
+Check: `jsonb_array_length(answers) = jsonb_array_length(items)`. Drizzle maps the numeric columns to JS numbers (`mode: "number"`).
 
 Indexes:
 - `UNIQUE (user_id, lesson_id) WHERE status = 'in_progress'`: one open attempt per lesson.
