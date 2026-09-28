@@ -1,27 +1,158 @@
 @import "tailwindcss";
 
-/* Placeholder tokens. The full design system (07 §3) lands in S1-01. */
+/*
+ * Design tokens (07 §3). Light on :root, dark on .dark (set before first paint
+ * by the theme script in layout.tsx). Colors are OKLCH. `pnpm check:contrast`
+ * verifies every text/background pair listed in scripts/check-contrast.ts.
+ * No raw colors outside this file.
+ */
+
+@custom-variant dark (&:where(.dark, .dark *));
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: oklch(0.985 0.003 250);
+  --foreground: oklch(0.22 0.02 255);
+  --surface: oklch(1 0 0);
+  --surface-foreground: var(--foreground);
+  --muted: oklch(0.955 0.006 255);
+  --muted-foreground: oklch(0.5 0.02 255);
+  --border: oklch(0.91 0.008 255);
+  --input: oklch(0.63 0.015 255);
+  --ring: oklch(0.5 0.19 262);
+
+  --primary: oklch(0.5 0.19 262);
+  --primary-foreground: oklch(0.99 0 0);
+  --primary-soft: oklch(0.95 0.03 262);
+  --accent: oklch(0.8 0.16 75);
+  --accent-foreground: oklch(0.25 0.05 75);
+  --success: oklch(0.6 0.15 150);
+  --success-foreground: oklch(0.2 0.05 150);
+  --success-text: oklch(0.45 0.12 150);
+  --danger: oklch(0.58 0.2 27);
+  --danger-foreground: oklch(0.99 0 0);
+  --danger-text: oklch(0.5 0.19 27);
+  --warning: oklch(0.75 0.15 75);
+  --warning-foreground: oklch(0.25 0.05 75);
+
+  /* Tier colors: badges only (07 §3.1). */
+  --tier-bronze: #b0703c;
+  --tier-silver: #8a94a6;
+  --tier-gold: #d4a017;
+  --tier-platinum: #2ba7b8;
+  --tier-diamond: #5b7cfa;
+  --tier-master: #e0457b;
+
+  --radius: 10px;
+  --shadow-card:
+    0 1px 2px oklch(0.22 0.02 255 / 0.06), 0 1px 3px oklch(0.22 0.02 255 / 0.08);
+  --shadow-popover: 0 8px 24px oklch(0.22 0.02 255 / 0.14);
+
+  color-scheme: light;
+}
+
+.dark {
+  --background: oklch(0.17 0.01 255);
+  --foreground: oklch(0.95 0.005 255);
+  --surface: oklch(0.21 0.012 255);
+  --muted: oklch(0.25 0.012 255);
+  --muted-foreground: oklch(0.72 0.015 255);
+  --border: oklch(0.3 0.012 255);
+  --input: oklch(0.56 0.015 255);
+  --ring: oklch(0.68 0.16 262);
+
+  --primary: oklch(0.68 0.16 262);
+  --primary-foreground: oklch(0.15 0.02 262);
+  --primary-soft: oklch(0.27 0.05 262);
+  --accent: oklch(0.8 0.15 75);
+  --accent-foreground: oklch(0.2 0.04 75);
+  --success: oklch(0.72 0.15 150);
+  --success-foreground: oklch(0.17 0.04 150);
+  --success-text: oklch(0.75 0.15 150);
+  --danger: oklch(0.7 0.18 27);
+  --danger-foreground: oklch(0.15 0.03 27);
+  --danger-text: oklch(0.74 0.16 27);
+  --warning: oklch(0.8 0.15 75);
+  --warning-foreground: oklch(0.2 0.04 75);
+
+  --shadow-card: 0 1px 2px oklch(0 0 0 / 0.4);
+  --shadow-popover: 0 8px 24px oklch(0 0 0 / 0.5);
+
+  color-scheme: dark;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-be-vietnam-pro);
-  --font-mono: var(--font-jetbrains-mono);
+  --color-surface: var(--surface);
+  --color-surface-foreground: var(--surface-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary-soft: var(--primary-soft);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-success-text: var(--success-text);
+  --color-danger: var(--danger);
+  --color-danger-foreground: var(--danger-foreground);
+  --color-danger-text: var(--danger-text);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-tier-bronze: var(--tier-bronze);
+  --color-tier-silver: var(--tier-silver);
+  --color-tier-gold: var(--tier-gold);
+  --color-tier-platinum: var(--tier-platinum);
+  --color-tier-diamond: var(--tier-diamond);
+  --color-tier-master: var(--tier-master);
+
+  --font-sans: var(--font-be-vietnam-pro), system-ui, sans-serif;
+  --font-mono: var(--font-jetbrains-mono), ui-monospace, monospace;
+
+  /* 07 §3.2 type scale */
+  --text-caption: 0.8125rem;
+  --text-stem: 1.125rem;
+  --text-stem--line-height: 1.7;
+
+  --radius-sm: 6px;
+  --radius-md: var(--radius);
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+
+  --shadow-card: var(--shadow-card);
+  --shadow-popover: var(--shadow-popover);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+@layer base {
+  *,
+  ::before,
+  ::after {
+    border-color: var(--border);
   }
-}
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: var(--font-sans), system-ui, sans-serif;
+  body {
+    background: var(--background);
+    color: var(--foreground);
+    font-family: var(--font-sans);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    ::before,
+    ::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
 }

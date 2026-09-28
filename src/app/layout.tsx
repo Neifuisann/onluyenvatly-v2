@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Be_Vietnam_Pro, JetBrains_Mono } from "next/font/google";
+import { themeScript } from "@/lib/theme";
 import "./globals.css";
 
 const sans = Be_Vietnam_Pro({
@@ -27,8 +28,18 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="vi"
+      data-theme-pref="system"
+      // The theme script changes class/data attributes before hydration.
+      suppressHydrationWarning
       className={`${sans.variable} ${mono.variable} h-full antialiased`}
     >
+      <head>
+        {/* Static constant (no user input): sets the theme before first paint. */}
+        <script
+          // biome-ignore lint/security/noDangerouslySetInnerHtml: constant boot script, see lib/theme.ts
+          dangerouslySetInnerHTML={{ __html: themeScript }}
+        />
+      </head>
       <body className="flex min-h-full flex-col">{children}</body>
     </html>
   );
