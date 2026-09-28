@@ -89,6 +89,7 @@ Index `(user_id)`, `(expires_at)`. The daily cron deletes expired rows.
 | search_text | text generated | `lesson_search_text(title, description, tags)` = `lower(immutable_unaccent(concat_ws(' ', title, description, array_to_string(tags, ' '))))`. Both helpers are `IMMUTABLE` SQL functions created in migration `0002_lessons` (with a pinned `search_path` so they work whether the extensions live in `public` or Supabase's `extensions` schema) |
 | created_by | uuid FK | |
 | created_at, updated_at, published_at | timestamptz | |
+| deleted_at | timestamptz null | Soft delete (S5-01, migration `0006`): deleting a lesson that has attempts archives it and sets this, so it leaves the admin list but its attempts keep their review. Lessons without attempts are deleted for real (versions cascade) |
 
 Indexes: `(status, sort_order)`, GIN `tags`, GIN trigram on `search_text`. Extensions `unaccent` + `pg_trgm` (also loaded by PGlite in tests and `pnpm db:local`).
 Search: `WHERE search_text ILIKE '%' || lower(immutable_unaccent($q)) || '%'` using the trigram index, so it's accent-insensitive: "dao dong" matches "Dao động".

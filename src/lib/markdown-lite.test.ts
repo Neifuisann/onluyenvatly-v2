@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { parseInline, parseMarkdownLite, splitMath } from "./markdown-lite";
+import {
+  mathSegments,
+  parseInline,
+  parseMarkdownLite,
+  splitMath,
+} from "./markdown-lite";
 
 describe("splitMath", () => {
   it("finds all four v1 delimiters", () => {
@@ -102,5 +107,16 @@ describe("parseMarkdownLite", () => {
 
   it("returns nothing for blank text", () => {
     expect(parseMarkdownLite(" \n \n")).toEqual([]);
+  });
+});
+
+describe("mathSegments", () => {
+  it("finds formulas at any depth, in order", () => {
+    expect(mathSegments("**Có $a$** và $$b$$\n\n*$c$*")).toEqual([
+      { tex: "a", display: false },
+      { tex: "b", display: true },
+      { tex: "c", display: false },
+    ]);
+    expect(mathSegments("không có công thức")).toEqual([]);
   });
 });

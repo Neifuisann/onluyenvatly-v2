@@ -28,6 +28,7 @@ import {
   E2E_PASSWORD,
   e2eAdmin,
   e2eRatings,
+  e2eSpecAdminUsernames,
   e2eStudents,
 } from "../tests/e2e/fixtures/users.ts";
 
@@ -126,6 +127,8 @@ async function main() {
 
   // e2e: fixed test accounts, passwords reset on every run.
   await upsertAdmin(e2eAdmin.username, e2eAdmin.fullName, E2E_PASSWORD);
+  for (const username of e2eSpecAdminUsernames)
+    await upsertAdmin(username, e2eAdmin.fullName, E2E_PASSWORD);
   const passwordHash = await hashPassword(E2E_PASSWORD);
   for (const s of e2eStudents) {
     const [student] = await db
@@ -224,7 +227,9 @@ async function main() {
   await db
     .update(settings)
     .set({ registrationOpen: true, singleSession: false, announcement: null });
-  console.log(`e2e profile: 1 admin, ${e2eStudents.length} students.`);
+  console.log(
+    `e2e profile: ${1 + e2eSpecAdminUsernames.length} admins, ${e2eStudents.length} students.`,
+  );
 }
 
 main()

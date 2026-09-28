@@ -126,3 +126,18 @@ export function parseMarkdownLite(src: string): Paragraph[] {
       ),
     );
 }
+
+export type MathSegment = { tex: string; display: boolean };
+
+/** Every formula in `text`, in order (the editor preview renders them in one batch). */
+export function mathSegments(text: string): MathSegment[] {
+  const out: MathSegment[] = [];
+  const walk = (nodes: Inline[]) => {
+    for (const n of nodes) {
+      if (n.t === "math") out.push({ tex: n.tex, display: n.display });
+      else if (n.t === "strong" || n.t === "em") walk(n.c);
+    }
+  };
+  for (const p of parseMarkdownLite(text)) walk(p);
+  return out;
+}

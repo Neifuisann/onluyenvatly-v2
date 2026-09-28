@@ -10,6 +10,19 @@ export const e2eAdmin = {
   fullName: "Giáo viên E2E",
 } as const;
 
+/**
+ * One admin per admin spec and Playwright project: logging in revokes the
+ * account's other sessions (single-session policy), so parallel specs must
+ * never share an admin.
+ */
+export const E2E_SPEC_ADMINS = ["lessons", "editor"] as const;
+export type E2eSpecAdmin = (typeof E2E_SPEC_ADMINS)[number];
+export const e2eSpecAdminUsername = (spec: E2eSpecAdmin, project: string) =>
+  `e2e-${spec}-${project === "mobile" ? "m" : "d"}`;
+export const e2eSpecAdminUsernames = E2E_SPEC_ADMINS.flatMap((spec) =>
+  ["chromium", "mobile"].map((p) => e2eSpecAdminUsername(spec, p)),
+);
+
 export const e2eStudents = [
   {
     key: "active",
