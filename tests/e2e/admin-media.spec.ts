@@ -23,8 +23,20 @@ test.use({
 });
 
 type Upload = { path: string; contentType: string; bytes: number };
-const uploads = async (page: Page): Promise<Upload[]> =>
-  (await page.request.get(`${FAKE_STORAGE_URL}/__uploads`)).json();
+
+/**
+ * The stand-in's record of one object. Tests find their own upload by path:
+ * specs and projects run in parallel against the same stand-in.
+ */
+async function uploaded(page: Page, path: string): Promise<Upload | undefined> {
+  const all: Upload[] = await (
+    await page.request.get(`${FAKE_STORAGE_URL}/__uploads`)
+  ).json();
+  return all.find((u) => u.path === path);
+}
+
+const SIGNED_PUT =
+  /\/storage\/v1\/object\/upload\/sign\/media\/([^?]+)\?token=/;
 
 async function openDraftEditor(page: Page) {
   await page.goto("/admin/lessons?q=ban+nhap+kin");
@@ -99,7 +111,6 @@ test("a pasted 5 MB PNG becomes a small WebP in Storage and a media line", async
   await page.locator(".cm-content").click();
   await page.keyboard.press("ControlOrMeta+End");
   await page.keyboard.insertText("\n\nCâu 9: Hình bên là\n");
-  const before = (await uploads(page)).length;
 
   const size = await pasteBigPng(page);
   expect(size).toBeGreaterThan(5_000_000);
@@ -107,18 +118,17 @@ test("a pasted 5 MB PNG becomes a small WebP in Storage and a media line", async
     page.getByRole("status").filter({ hasText: "Đã chèn ảnh." }),
   ).toBeVisible({ timeout: 20_000 });
 
-  const all = await uploads(page);
-  expect(all).toHaveLength(before + 1);
-  const upload = all.at(-1) as Upload;
-  expect(upload.contentType).toBe("image/webp");
-  expect(upload.bytes).toBeLessThan(200_000);
-  expect(upload.path).toMatch(/^\d{4}\/\d{2}\/[0-9a-f-]{36}\.webp$/);
-  // The bytes went straight to Storage, never through the app.
+  // The bytes went straight to Storage in one PUT, never through the app.
   const put = requests.filter((r) => r.startsWith("PUT "));
   expect(put).toHaveLength(1);
   expect(put[0]).toContain(
     `${FAKE_STORAGE_URL}/storage/v1/object/upload/sign/`,
   );
+  const path = decodeURIComponent(SIGNED_PUT.exec(put[0] ?? "")?.[1] ?? "");
+  expect(path).toMatch(/^\d{4}\/\d{2}\/[0-9a-f-]{36}\.webp$/);
+  const upload = (await uploaded(page, path)) as Upload;
+  expect(upload.contentType).toBe("image/webp");
+  expect(upload.bytes).toBeLessThan(200_000);
 
   await expect(page.locator(".cm-content")).toContainText(
     `![](media:${upload.path} =1280x985)`,
@@ -138,6 +148,9 @@ test("cover: upload, show, remove", async ({ page }, info) => {
   await openDraftEditor(page);
   await page.getByRole("tab", { name: "Cài đặt" }).click();
   const cover = page.getByRole("region", { name: "Ảnh bìa" });
+  // A retry after an interrupted run finds the cover still set: clear it.
+  const leftover = cover.getByRole("button", { name: "Bỏ ảnh bìa" });
+  if (await leftover.isVisible()) await leftover.click();
   await expect(cover).toContainText("Chưa có ảnh bìa.");
 
   const png = await page.evaluate(async () => {
@@ -159,10 +172,11 @@ test("cover: upload, show, remove", async ({ page }, info) => {
     buffer: Buffer.from(png),
   });
   await expect(cover.getByRole("status")).toContainText("Đã lưu ảnh bìa.");
-  await expect(
-    cover.getByRole("img", { name: "Ảnh bìa hiện tại" }),
-  ).toBeVisible();
-  const upload = (await uploads(page)).at(-1) as Upload;
+  const img = cover.getByRole("img", { name: "Ảnh bìa hiện tại" });
+  await expect(img).toBeVisible();
+  const src = (await img.getAttribute("src")) ?? "";
+  const path = src.split("/object/public/media/")[1] ?? "";
+  const upload = (await uploaded(page, decodeURIComponent(path))) as Upload;
   expect(upload.contentType).toBe("image/webp");
 
   // It survives a reload (saved at once, like the settings).
