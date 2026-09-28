@@ -182,7 +182,7 @@ S0-06 account checklist (put secrets only in Vercel/GitHub, never in the repo):
 | S2-02 | Implemented | Strict question/config schemas; public-question property tests strip answers, tolerance and explanations |
 | S2-03 | Implemented, real fixtures pass | Parser/serializer, stable ids, error positions, 1,000-case round trip; the 10 real v1 lessons round-trip losslessly. Stems may be image-only (schema, parser, id matching by image path), as 4 v1 questions are |
 | S2-04 | Implemented | Server-rendered Markdown-lite/KaTeX, fixture rendering tests; production client-chunk scan finds no KaTeX JS. Real fixtures found `$\frac{PV}{T} = $` (space before the closing `$`, accepted by v1's KaTeX auto-render); now rendered |
-| S2-05 | Real-data dry run green; remote rehearsal pending | Dry run of all v1 data into local PGlite (rolled back): 292/292 students, 169 lessons (+ `quiz_game` placeholder skipped), **5,145/5,145 questions, 0 errors**. Text-less tf groups (4) get a default lead-in (warning); extra stem images are kept inline instead of dropped. Apply to Neon/v2 and the media copy await S0-06 |
+| S2-05 | ✅ Rehearsed on Neon (media copy pending) | 2026-09-28 run into Neon staging: 292/292 students, 169 lessons (+ `quiz_game` placeholder skipped), **5,145/5,145 questions, 0 errors**, 4 warnings (text-less tf groups given a default lead-in); about 2.5 min, one transaction. The image copy needs the v2 Supabase storage key (`SUPABASE_SERVICE_ROLE_KEY`, S5-05) |
 | S2-06 | Implemented, local browser verified | Cached catalog/facets, search/filter/sort, URL history, 24-card cumulative pagination and all states; preview Lighthouse LCP < 1.8 s remains pending |
 | S2-07 | Implemented within S2 dependencies | Cached safe overview and authenticated legacy 308 lookup; unpublished lessons hidden from students. Attempt history, progress filters and start/continue depend on S3-01/S3-03 |
 
@@ -374,5 +374,5 @@ Pilot data note: the final migration upserts only rows with `legacy_id`. Attempt
 |---|---|---|---|---|---|
 | S0 | 2026-09-28 → | 4.0 | 3.25 (S0-01–05, S0-07, S0-10, most of S0-08) | v1 inventory and anonymized real fixtures | Keep: run against real data early, since it found 4 migration/rendering bugs the synthetic fixtures missed. Open: S0-06 (Preview env vars, AI/R2/Sentry/UptimeRobot), S0-09 |
 | S1 | 2026-09-28 → | 4.5 | 4.0 (all tasks coded; S1-03 remote apply and S1-08 grade wait for S0-06) | | |
-| S2 | 2026-09-28 → | 4.5 | All seven tasks implemented; external acceptance gates above remain | Synthetic catalog and legacy-link demo; mobile/desktop light/dark browser checks | Keep domain/property tests and explicit answer-safe projections; run coverage separately from the production build to avoid local PGlite startup contention |
+| S2 | 2026-09-28 → | 4.5 | All seven tasks implemented; S2-05 rehearsed on Neon with real v1 data; LCP check and image copy remain | Synthetic catalog and legacy-link demo; mobile/desktop light/dark browser checks | Keep domain/property tests and explicit answer-safe projections; run coverage separately from the production build to avoid local PGlite startup contention |
 | … | | | | | |
