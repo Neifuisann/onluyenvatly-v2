@@ -33,9 +33,11 @@ Conventions:
 | `/profile/[userId]` | Public-ish profile (name, tier, rating chart). Only fields allowed by privacy settings |
 | `/settings` | Profile, password, avatar, devices/sessions, export data, delete request |
 
-### Admin (layout: `requireAdmin()`)
-
 **S2 catalog implementation:** `/lessons` supports `q`, `grade`, `chapter`, `tag`, `sort=order|newest|popular|title`, and `page`. Each “Xem thêm” step retains the preceding cards (24 per step, at most 20 steps). Invalid params fall back per field; search ignores accents and treats `%`/`_` literally. Filters preserve browser history and reset pagination. Only published lessons are listed. Shared catalog/facet queries use tag `lessons` with an hours cache lifetime. Progress/status filters await the S3 attempts table.
+
+**S2 overview implementation:** `/lessons/[id]` selects metadata and explicit rule fields only, cached under `lesson:{id}` for hours. It never selects `lesson_versions`, source text, questions, or the full config. Students receive a not-found view for drafts/archived lessons; admins can open those overviews directly. Attempt history and start/continue arrive with S3-01/S3-03; the overview currently says that taking a lesson will open soon.
+
+### Admin (layout: `requireAdmin()`)
 
 | Path | Content |
 |---|---|
@@ -64,6 +66,8 @@ Conventions:
 | `/study-materials` | `/ly-thuyet` |
 | `/review-mistakes`, `/practice` | `/review` |
 | `/history` | `/admin/results` |
+
+S2-07 implements the lesson redirect only. The authenticated lookup validates the legacy key, uses the unique `legacy_id` index, caches under `lessons`, and returns a 308 with `Cache-Control: private, no-store`. Missing or student-inaccessible lessons return 404. Signed-out visitors log in before the lookup; the `next` URL preserves their bookmark.
 
 ## 2. Server Actions
 

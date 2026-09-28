@@ -3,7 +3,12 @@ import { db } from "@/db/client";
 import { lessons } from "@/db/schema";
 import type { TestDb } from "@/test/db";
 import { DEFAULT_FILTERS, PAGE_SIZE } from "./domain/catalog";
-import { getCatalog, getCatalogFacets } from "./queries";
+import {
+  getCatalog,
+  getCatalogFacets,
+  getLessonIdByLegacyId,
+  getLessonOverview,
+} from "./queries";
 
 vi.mock("@/db/client", async () => (await import("@/test/db")).mockDbModule());
 // `"use cache"` is a no-op outside Next; stub the tag helpers.
@@ -19,6 +24,8 @@ beforeAll(async () => {
   await tdb.insert(lessons).values([
     {
       title: "Đề ôn GK1 – Dao động cơ",
+      legacyId: "1720000000000",
+      description: "Ôn tập $T = 2\\pi/\\omega$.",
       grade: 12,
       chapter: "Dao động cơ",
       tags: ["giữa kì"],
@@ -27,7 +34,13 @@ beforeAll(async () => {
       questionCount: 28,
       typeCounts: { mcq: 18, tf: 4, short: 6 },
       attemptCount: 5,
-      config: { timeLimitSec: 3000 },
+      config: {
+        timeLimitSec: 3000,
+        maxAttempts: 3,
+        examGuard: true,
+        countsForRating: true,
+        answer: "NEVER_EXPOSE_CONFIG",
+      },
       publishedAt: new Date("2026-01-01"),
     },
     {
@@ -49,8 +62,20 @@ beforeAll(async () => {
       sortOrder: 3,
       config: {},
     },
-    { title: "Nháp dao động", grade: 12, status: "draft", config: {} },
-    { title: "Lưu trữ", status: "archived", chapter: "Cũ", config: {} },
+    {
+      legacyId: "draft",
+      title: "Nháp dao động",
+      grade: 12,
+      status: "draft",
+      config: {},
+    },
+    {
+      legacyId: "archived",
+      title: "Lưu trữ",
+      status: "archived",
+      chapter: "Cũ",
+      config: {},
+    },
     ...Array.from({ length: PAGE_SIZE + 2 }, (_, i) => ({
       title: `Bài luyện ${i}`,
       grade: 10,
@@ -145,5 +170,40 @@ describe("getCatalogFacets", () => {
       chapters: ["Dao động cơ", "Điện trường", "Sóng cơ"],
       tags: ["giữa kì", "Lớp 12"],
     });
+  });
+});
+
+describe("lesson overview and legacy lookup", () => {
+  it("returns an explicit safe projection, excluding arbitrary config and version fields", async () => {
+    const id = await getLessonIdByLegacyId("1720000000000");
+    expect(id).not.toBeNull();
+    const overview = await getLessonOverview(id as number);
+    expect(overview).toEqual({
+      ...(await getCatalog(f({ q: "dao dong" }))).items[0],
+      description: "Ôn tập $T = 2\\pi/\\omega$.",
+      status: "published",
+      maxAttempts: 3,
+      examGuard: true,
+      countsForRating: true,
+    });
+    expect(JSON.stringify(overview)).not.toContain("NEVER_EXPOSE_CONFIG");
+  });
+
+  it.each([
+    "draft",
+    "archived",
+  ])("hides %s metadata unless the caller authorizes admin access", async (key) => {
+    expect(await getLessonIdByLegacyId(key)).toBeNull();
+    const id = await getLessonIdByLegacyId(key, true);
+    expect(id).not.toBeNull();
+    expect(await getLessonOverview(id as number)).toBeNull();
+    expect(await getLessonOverview(id as number, true)).toMatchObject({
+      status: key,
+    });
+  });
+
+  it("returns null for missing ids and treats SQL-like legacy keys literally", async () => {
+    expect(await getLessonOverview(999999)).toBeNull();
+    expect(await getLessonIdByLegacyId("' OR 1=1 --")).toBeNull();
   });
 });

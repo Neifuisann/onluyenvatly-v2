@@ -28,6 +28,25 @@ export const parseIssueMessages = {
   INVALID: (detail: string) => `Câu hỏi không hợp lệ: ${detail}`,
 } as const;
 
+export const overviewCopy = {
+  title: "Thông tin bài tập",
+  back: "Về danh sách bài tập",
+  structure: "Cấu trúc đề",
+  rules: "Trước khi làm bài",
+  duration: "Thời gian",
+  attempts: "Số lượt làm tối đa",
+  unlimited: "Không giới hạn",
+  rating: "Tính điểm xếp hạng",
+  practice: "Không tính điểm xếp hạng",
+  guard: "Chế độ thi: ghi nhận khi rời khỏi bài làm.",
+  availableSoon: "Tính năng làm bài sẽ sớm được mở.",
+  unpublished: "Bài tập chưa xuất bản",
+  notFoundTitle: "Không tìm thấy bài tập",
+  notFoundBody:
+    "Bài tập không tồn tại hoặc chưa được xuất bản. Bạn chọn bài khác nhé.",
+  errorTitle: "Không tải được thông tin bài tập",
+} as const;
+
 /** Duration for cards and the overview: "50 phút", "1 giờ 30 phút". */
 export function formatDuration(seconds: number): string {
   const minutes = Math.round(seconds / 60);

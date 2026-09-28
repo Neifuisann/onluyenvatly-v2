@@ -21,9 +21,9 @@ import type { CatalogFacets } from "../queries";
 const GRADES = [null, 10, 11, 12] as const;
 
 /**
- * Sticky search + grade chips + "Bộ lọc" panel (07 §5.5). A plain GET form,
- * so it works without JS; with JS, `next/form` navigates client-side and the
- * search submits itself after a short pause.
+ * Sticky search + grade chips + "Bộ lọc" panel (07 §5.5). `next/form`
+ * navigates to GET URLs and search submits after a short pause. The app's
+ * streamed shell requires JavaScript to reveal its content.
  */
 export function FilterBar({
   filters,
@@ -35,6 +35,24 @@ export function FilterBar({
   const formRef = useRef<HTMLFormElement>(null);
   const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
   useEffect(() => () => clearTimeout(timer.current), []);
+  // Sync back/forward navigation without remounting the focused search input.
+  useEffect(() => {
+    clearTimeout(timer.current);
+    const values = {
+      q: filters.q ?? "",
+      chapter: filters.chapter ?? "",
+      tag: filters.tag ?? "",
+      sort: filters.sort === "order" ? "" : filters.sort,
+    };
+    for (const [name, value] of Object.entries(values)) {
+      const field = formRef.current?.elements.namedItem(name);
+      if (
+        field instanceof HTMLInputElement ||
+        field instanceof HTMLSelectElement
+      )
+        field.value = value;
+    }
+  }, [filters.q, filters.chapter, filters.tag, filters.sort]);
 
   const submit = (delay = 0) => {
     clearTimeout(timer.current);
@@ -108,7 +126,7 @@ export function FilterBar({
             })}
           </ul>
 
-          <details className="group w-full" open={extraFilters > 0}>
+          <details className="group w-full">
             <summary
               className={cn(
                 buttonVariants({ variant: "ghost", size: "sm" }),
@@ -168,12 +186,6 @@ export function FilterBar({
                 </Select>
               </div>
               <div className="flex items-center gap-3 sm:col-span-3">
-                {/* Without JS the selects need a submit button. */}
-                <noscript>
-                  <Button type="submit" size="sm">
-                    {t.apply}
-                  </Button>
-                </noscript>
                 {hasFilters(filters) && (
                   <Link
                     href={catalogHref(DEFAULT_FILTERS)}

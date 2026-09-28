@@ -106,3 +106,56 @@ export async function getCatalogFacets(): Promise<CatalogFacets> {
     tags: tagRows.map((t) => t.tag).sort(vi),
   };
 }
+
+/** Overview projection: never read version content, source text or full config. */
+export async function getLessonOverview(
+  id: number,
+  includeUnpublished = false,
+) {
+  "use cache";
+  cacheTag(tags.lesson(id));
+  cacheLife("hours");
+  const [lesson] = await db
+    .select({
+      ...cardColumns,
+      description: lessons.description,
+      status: lessons.status,
+      maxAttempts: sql<number | null>`(${lessons.config}->>'maxAttempts')::int`,
+      examGuard: sql<boolean>`coalesce((${lessons.config}->>'examGuard')::boolean, false)`,
+      countsForRating: sql<boolean>`coalesce((${lessons.config}->>'countsForRating')::boolean, false)`,
+    })
+    .from(lessons)
+    .where(
+      and(
+        eq(lessons.id, id),
+        includeUnpublished ? undefined : eq(lessons.status, "published"),
+      ),
+    )
+    .limit(1);
+  return lesson ?? null;
+}
+
+export type LessonOverview = NonNullable<
+  Awaited<ReturnType<typeof getLessonOverview>>
+>;
+
+/** Both hits and misses invalidate when lessons are published or imported. */
+export async function getLessonIdByLegacyId(
+  legacyId: string,
+  includeUnpublished = false,
+) {
+  "use cache";
+  cacheTag(tags.lessons);
+  cacheLife("hours");
+  const [lesson] = await db
+    .select({ id: lessons.id })
+    .from(lessons)
+    .where(
+      and(
+        eq(lessons.legacyId, legacyId),
+        includeUnpublished ? undefined : eq(lessons.status, "published"),
+      ),
+    )
+    .limit(1);
+  return lesson?.id ?? null;
+}

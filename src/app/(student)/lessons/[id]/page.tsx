@@ -1,0 +1,20 @@
+import type { Metadata } from "next";
+import { notFound } from "next/navigation";
+import { requireStudent } from "@/features/auth/guards";
+import { LessonOverviewContent } from "@/features/lessons/components/lesson-overview";
+import { LessonIdSchema } from "@/features/lessons/domain/lesson-params";
+import { overviewCopy } from "@/features/lessons/messages";
+import { getLessonOverview } from "@/features/lessons/queries";
+
+export const metadata: Metadata = { title: overviewCopy.title };
+
+export default async function LessonPage({
+  params,
+}: PageProps<"/lessons/[id]">) {
+  const user = await requireStudent();
+  const parsed = LessonIdSchema.safeParse((await params).id);
+  if (!parsed.success) notFound();
+  const lesson = await getLessonOverview(parsed.data, user.role === "admin");
+  if (!lesson) notFound();
+  return <LessonOverviewContent lesson={lesson} />;
+}

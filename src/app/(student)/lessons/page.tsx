@@ -36,7 +36,7 @@ export default async function LessonsPage({
         <h1 className="font-semibold text-2xl">{t.title}</h1>
         <p className="text-muted-foreground">{t.lead}</p>
       </header>
-      <FilterBar key={catalogHref(filters)} filters={filters} facets={facets} />
+      <FilterBar filters={filters} facets={facets} />
       <output className="text-muted-foreground text-sm">
         {t.showing(catalog.items.length, catalog.total)}
       </output>

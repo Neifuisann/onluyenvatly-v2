@@ -19,4 +19,4 @@ v1 has several in-process caches (`cacheService`, `aiCacheService`, `lessonCache
 ## Consequences
 - The catalog, lesson pages and leaderboard cost ~0 DB queries on cache hits.
 - Developers must use the helpers in `features/*/queries.ts`, not ad-hoc `db.select()` in pages. This is enforced in review (see 14).
-- The exact caching API changed between Next 14, 15 and 16. Pin the Next version and follow its docs. A small wrapper `cached(fn, { tags, life })` in `src/lib/cache.ts` isolates us from API churn.
+- The exact caching API changed between Next 14, 15 and 16. Pin the Next version and follow its docs. As built in S1/S2, query functions use explicit `"use cache"` directives and cache helpers rather than the proposed runtime `cached(fn, ...)` wrapper; the cache boundary is compiler-managed. Pages still depend only on feature query functions.
