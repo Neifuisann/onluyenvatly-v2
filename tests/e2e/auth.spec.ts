@@ -115,7 +115,9 @@ test("a student logs in, lands on ?next=, and logs out", async ({ page }) => {
   await expect(page).toHaveURL(/\/dashboard$/);
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("Chào Một");
   await expect(
-    page.getByRole("link", { name: "Bài tập" }).filter({ visible: true }),
+    page
+      .getByRole("link", { name: "Bài tập", exact: true })
+      .filter({ visible: true }),
   ).toBeVisible();
 
   // Students can't open admin pages.

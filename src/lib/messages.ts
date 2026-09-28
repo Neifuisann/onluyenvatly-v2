@@ -116,8 +116,6 @@ export const shellCopy = {
 
 /** Walking-skeleton pages (replaced in S4-06 and S6-06). */
 export const placeholderCopy = {
-  dashboardEmptyTitle: "Chưa có bài tập nào",
-  dashboardEmptyBody: "Giáo viên sẽ sớm đăng bài tập. Bạn quay lại sau nhé.",
   adminEmptyTitle: "Chưa có dữ liệu",
   adminEmptyBody: "Số liệu về học sinh và bài làm sẽ hiển thị ở đây.",
   homeTitle: "Ôn Luyện Vật Lý",

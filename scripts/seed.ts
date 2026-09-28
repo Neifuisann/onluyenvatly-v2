@@ -27,6 +27,7 @@ import { e2eLessons, e2eQuestions } from "../tests/e2e/fixtures/lessons.ts";
 import {
   E2E_PASSWORD,
   e2eAdmin,
+  e2eRatings,
   e2eSpecAdminUsernames,
   e2eStudents,
 } from "../tests/e2e/fixtures/users.ts";
@@ -130,7 +131,7 @@ async function main() {
     await upsertAdmin(username, e2eAdmin.fullName, E2E_PASSWORD);
   const passwordHash = await hashPassword(E2E_PASSWORD);
   for (const s of e2eStudents) {
-    await db
+    const [student] = await db
       .insert(users)
       .values({
         role: "student",
@@ -145,7 +146,43 @@ async function main() {
       .onConflictDoUpdate({
         target: users.phone,
         set: { status: s.status, passwordHash, updatedAt: new Date() },
+      })
+      .returning({ id: users.id });
+    if (!student) throw new Error("Student seed failed");
+    // Every run starts from the fixture ratings (S4-05 leaderboard).
+    await db
+      .delete(schema.ratingEvents)
+      .where(eq(schema.ratingEvents.userId, student.id));
+    await db
+      .delete(schema.ratings)
+      .where(eq(schema.ratings.userId, student.id));
+    const fixture = e2eRatings[s.key];
+    if (fixture) {
+      const { rating, weekDelta, earlier } = fixture;
+      const day = 24 * 60 * 60 * 1000;
+      const event = (after: number, delta: number, daysAgo: number) => ({
+        userId: student.id,
+        before: after - delta,
+        delta,
+        after,
+        formula: "v2",
+        createdAt: new Date(Date.now() - daysAgo * day),
       });
+      await db.insert(schema.ratings).values({
+        userId: student.id,
+        rating,
+        peak: rating,
+        ratedAttempts: earlier === undefined ? 1 : 2,
+      });
+      await db
+        .insert(schema.ratingEvents)
+        .values([
+          ...(earlier === undefined
+            ? []
+            : [event(rating - weekDelta, earlier, 10)]),
+          event(rating, weekDelta, 1),
+        ]);
+    }
   }
   // Fresh rate-limit counters so reruns within a minute stay under the limits.
   for (const { questions = e2eQuestions, ...lesson } of e2eLessons) {
