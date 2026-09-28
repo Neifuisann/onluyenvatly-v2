@@ -1,0 +1,42 @@
+name: Migrate
+
+# 12 §3: staging is migrated automatically when migrations land on main;
+# production only by a manual run with the `production` environment approval,
+# BEFORE merging code that depends on the new schema.
+on:
+  push:
+    branches: [main]
+    paths: ["src/db/migrations/**"]
+  workflow_dispatch:
+    inputs:
+      target:
+        description: Database to migrate
+        type: choice
+        options: [staging, production]
+        default: staging
+
+concurrency:
+  group: migrate-${{ github.event.inputs.target || 'staging' }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  migrate:
+    name: drizzle-kit migrate (${{ github.event.inputs.target || 'staging' }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: ${{ github.event.inputs.target || 'staging' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      # Environment secret: the direct (session) connection string, not the pooler.
+      - run: pnpm db:migrate
+        env:
+          DATABASE_URL_DIRECT: ${{ secrets.DATABASE_URL_DIRECT }}

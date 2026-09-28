@@ -181,6 +181,7 @@ All env vars are validated at boot by `src/lib/env.ts` (Zod). The build fails if
 | Var | Scope | Notes |
 |---|---|---|
 | `DATABASE_URL` | server | Supavisor transaction pooler URL (`:6543`) |
+| `DATABASE_POOL_MAX` | server | Connections per instance, default 5. `1` for local PGlite (`pnpm db:local`) |
 | `DATABASE_URL_DIRECT` | CI/scripts only | Direct/session URL for migrations and backups |
 | `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` | server | Storage signed URLs only |
 | `NEXT_PUBLIC_MEDIA_BASE_URL` | public | Public bucket base URL |

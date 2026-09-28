@@ -12,6 +12,12 @@ concurrency:
 permissions:
   contents: read
 
+# Test-only values. The build never connects; E2E uses the Postgres service.
+env:
+  DATABASE_URL: postgres://postgres:postgres@localhost:5432/postgres
+  DATABASE_URL_DIRECT: postgres://postgres:postgres@localhost:5432/postgres
+  SESSION_PEPPER: ci-only-pepper-not-a-secret-0123456789abcdef
+
 jobs:
   check:
     name: Lint, types, unit, build
@@ -27,6 +33,7 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm lint:ci
       - run: pnpm typecheck
+      - run: pnpm check:contrast
       - run: pnpm test:coverage
       - run: pnpm build
       - uses: actions/upload-artifact@v4
@@ -41,6 +48,15 @@ jobs:
     needs: check
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd pg_isready --health-interval 5s
+          --health-timeout 5s --health-retries 10
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -53,6 +69,8 @@ jobs:
         with:
           name: next-build
           path: .next
+      - run: pnpm db:migrate
+      - run: pnpm seed --profile e2e
       - run: pnpm exec playwright install --with-deps chromium
       - run: pnpm e2e
       - if: failure()

@@ -1,0 +1,156 @@
+/**
+ * S1-07: seed a database. Idempotent (upserts), safe to re-run.
+ *
+ *   pnpm seed                 # dev: settings row + first admin
+ *   pnpm seed --profile e2e   # test accounts from tests/e2e/fixtures/users.ts
+ *
+ * Dev admin: SEED_ADMIN_USERNAME (default "admin") / SEED_ADMIN_PASSWORD. If
+ * the password is empty a random one is generated and printed once. Existing
+ * admins keep their password unless SEED_ADMIN_PASSWORD is set.
+ *
+ * Runs with Node's type stripping, so it imports src files by relative path.
+ */
+import { randomBytes } from "node:crypto";
+import { parseArgs } from "node:util";
+import { drizzle } from "drizzle-orm/postgres-js";
+import postgres from "postgres";
+import * as schema from "../src/db/schema.ts";
+import {
+  hashPassword,
+  passwordIssue,
+} from "../src/features/auth/core/password.ts";
+import {
+  E2E_PASSWORD,
+  e2eAdmin,
+  e2eStudents,
+} from "../tests/e2e/fixtures/users.ts";
+
+const { values } = parseArgs({
+  options: { profile: { type: "string", default: "dev" } },
+});
+const profile = values.profile;
+if (profile !== "dev" && profile !== "e2e") {
+  console.error(`Unknown profile "${profile}". Use dev or e2e.`);
+  process.exit(1);
+}
+
+const url = process.env.DATABASE_URL_DIRECT ?? process.env.DATABASE_URL;
+if (!url) {
+  console.error("Set DATABASE_URL (or DATABASE_URL_DIRECT).");
+  process.exit(1);
+}
+const host = new URL(url).hostname;
+const isLocal = ["localhost", "127.0.0.1", "::1", "postgres"].includes(host);
+if (profile === "e2e" && !isLocal) {
+  console.error(
+    `Refusing to write test accounts to a non-local database (${host}).`,
+  );
+  process.exit(1);
+}
+if (process.env.VERCEL_ENV === "production") {
+  console.error("Refusing to seed with VERCEL_ENV=production.");
+  process.exit(1);
+}
+
+const client = postgres(url, { max: 1, prepare: false, onnotice: () => {} });
+const db = drizzle({ client, schema });
+const { users, settings } = schema;
+
+async function upsertAdmin(
+  username: string,
+  fullName: string,
+  password: string | null,
+) {
+  const passwordHash = password ? await hashPassword(password) : null;
+  const [row] = await db
+    .insert(users)
+    .values({
+      role: "admin",
+      status: "active",
+      username,
+      fullName,
+      passwordHash:
+        passwordHash ??
+        (await hashPassword(randomBytes(24).toString("base64url"))),
+      approvedAt: new Date(),
+    })
+    .onConflictDoUpdate({
+      target: users.username,
+      set: {
+        role: "admin",
+        status: "active",
+        ...(passwordHash && { passwordHash, mustChangePassword: false }),
+        updatedAt: new Date(),
+      },
+    })
+    .returning({
+      id: users.id,
+      createdAt: users.createdAt,
+      updatedAt: users.updatedAt,
+    });
+  return row;
+}
+
+async function main() {
+  await db.insert(settings).values({ id: 1 }).onConflictDoNothing();
+
+  if (profile === "dev") {
+    const username = (process.env.SEED_ADMIN_USERNAME || "admin").toLowerCase();
+    let password = process.env.SEED_ADMIN_PASSWORD || null;
+    const existing = await db.query.users.findFirst({
+      columns: { id: true },
+      where: (u, { eq }) => eq(u.username, username),
+    });
+    let generated = false;
+    if (!password && !existing) {
+      password = randomBytes(9).toString("base64url");
+      generated = true;
+    }
+    if (password) {
+      const issue = passwordIssue(password);
+      if (issue) throw new Error(`SEED_ADMIN_PASSWORD rejected: ${issue}`);
+    }
+    await upsertAdmin(username, "Quản trị viên", password);
+    console.log(`Admin "${username}" ready.`);
+    if (generated)
+      console.log(`Generated password (shown once, store it now): ${password}`);
+    else if (!password) console.log("Existing password kept.");
+    return;
+  }
+
+  // e2e: fixed test accounts, passwords reset on every run.
+  await upsertAdmin(e2eAdmin.username, e2eAdmin.fullName, E2E_PASSWORD);
+  const passwordHash = await hashPassword(E2E_PASSWORD);
+  for (const s of e2eStudents) {
+    await db
+      .insert(users)
+      .values({
+        role: "student",
+        status: s.status,
+        phone: s.phone,
+        fullName: s.fullName,
+        grade: s.grade,
+        className: `${s.grade}A1`,
+        dateOfBirth: "2008-01-01",
+        passwordHash,
+      })
+      .onConflictDoUpdate({
+        target: users.phone,
+        set: { status: s.status, passwordHash, updatedAt: new Date() },
+      });
+  }
+  // Fresh rate-limit counters so reruns within a minute stay under the limits.
+  await db.delete(schema.rateLimits);
+  // Tests assume the defaults.
+  await db
+    .update(settings)
+    .set({ registrationOpen: true, singleSession: false, announcement: null });
+  console.log(`e2e profile: 1 admin, ${e2eStudents.length} students.`);
+}
+
+main()
+  .catch((error: unknown) => {
+    console.error(error instanceof Error ? error.message : error);
+    process.exitCode = 1;
+  })
+  .finally(() => client.end());

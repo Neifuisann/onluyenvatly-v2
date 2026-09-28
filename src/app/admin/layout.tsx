@@ -1,0 +1,21 @@
+import { Suspense } from "react";
+import { AppShell, AppShellSkeleton } from "@/components/app-shell/app-shell";
+import { requireAdmin } from "@/features/auth/guards";
+
+/** Every admin page is behind `requireAdmin()` (06 §2). */
+export default function AdminLayout({ children }: LayoutProps<"/admin">) {
+  return (
+    <Suspense fallback={<AppShellSkeleton />}>
+      <AdminShell>{children}</AdminShell>
+    </Suspense>
+  );
+}
+
+async function AdminShell({ children }: { children: React.ReactNode }) {
+  const user = await requireAdmin();
+  return (
+    <AppShell user={user} variant="admin">
+      {children}
+    </AppShell>
+  );
+}

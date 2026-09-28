@@ -16,11 +16,19 @@
     "test:coverage": "vitest run --coverage",
     "e2e": "playwright test",
     "v1:inventory": "node --env-file-if-exists=.env.local scripts/v1-inventory.ts",
-    "v1:fixtures": "node --env-file-if-exists=.env.local scripts/export-v1-fixtures.ts"
+    "v1:fixtures": "node --env-file-if-exists=.env.local scripts/export-v1-fixtures.ts",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate",
+    "db:studio": "drizzle-kit studio",
+    "check:contrast": "node scripts/check-contrast.ts",
+    "db:local": "pglite-server --db=.pglite --port=54329 --max-connections=50",
+    "seed": "node --env-file-if-exists=.env.local scripts/seed.ts"
   },
   "dependencies": {
+    "bcryptjs": "^3.0.3",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "drizzle-orm": "^0.45.3",
     "lucide-react": "^1.48.0",
     "next": "16.3.6",
     "postgres": "^3.4.9",
@@ -32,12 +40,15 @@
   },
   "devDependencies": {
     "@biomejs/biome": "2.4.2",
+    "@electric-sql/pglite": "^0.5.8",
+    "@electric-sql/pglite-socket": "^0.2.11",
     "@playwright/test": "^1.63.0",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^22.20.4",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "@vitest/coverage-v8": "^5.0.2",
+    "drizzle-kit": "^0.31.11",
     "tailwindcss": "^4",
     "typescript": "^5",
     "vitest": "^5.0.2"
