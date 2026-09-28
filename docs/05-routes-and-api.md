@@ -34,6 +34,9 @@ Conventions:
 | `/settings` | Profile, password, avatar, devices/sessions, export data, delete request |
 
 ### Admin (layout: `requireAdmin()`)
+
+**S2 catalog implementation:** `/lessons` supports `q`, `grade`, `chapter`, `tag`, `sort=order|newest|popular|title`, and `page`. Each “Xem thêm” step retains the preceding cards (24 per step, at most 20 steps). Invalid params fall back per field; search ignores accents and treats `%`/`_` literally. Filters preserve browser history and reset pagination. Only published lessons are listed. Shared catalog/facet queries use tag `lessons` with an hours cache lifetime. Progress/status filters await the S3 attempts table.
+
 | Path | Content |
 |---|---|
 | `/admin` | Dashboard |
