@@ -194,6 +194,8 @@ Search is sticky at the top, followed by grade chips `Tất cả · 10 · 11 · 
 ```
 The validation panel links each error to its line in the editor. Pasting an image uploads it and inserts `![](media:…)` at the cursor.
 
+As built (S5-02, `features/lessons/components/editor/`): CodeMirror 6 is loaded with `next/dynamic` (`ssr: false`) and highlights the text with the parser's own line grammar (`classifyLine`): headers, option/statement letters (a `*`-marked one in the success color), `Answer:`, points, `Giải thích:`, `$…$`. Tab is left to the browser so keyboard users can leave the editor. The text is parsed on every change through `useDeferredValue`, with the last saved questions as `previous` so ids stay stable. The right pane has the validation panel ("Dòng 12, cột 1: …", each a button that puts the cursor there), a sticky stats bar ("Tổng: 28 câu · 18/4/6 · 10đ", plus "Mỗi lượt làm: …" when the pool is on; `domain/editor-stats.ts`) and the preview cards with the answer key and explanation. The preview renders Markdown-lite with the same code as `MathText` (`render-nodes.tsx`); formulas come from `renderTexBatch` in batches and are cached for the session, showing their source until they arrive. A unit test renders every text of the 10 real v1 lessons both ways and requires identical HTML. Below 1024 px a "Soạn thảo / Xem trước" switch shows one pane at a time. Leaving with unsaved changes asks first (`beforeunload`). Saving is S5-04.
+
 ## 6. Content & tone (Vietnamese UI copy)
 - Talk to the student with "bạn". Keep it short and positive: "Làm tốt lắm!", "Còn 6 câu cần ôn lại."
 - Error messages say what happened and what to do: "Mất kết nối. Bài làm đã được lưu trên máy, hệ thống sẽ tự gửi lại."

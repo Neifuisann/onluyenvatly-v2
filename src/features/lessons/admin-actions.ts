@@ -1,10 +1,14 @@
 "use server";
 
 import { refresh, updateTag } from "next/cache";
+import { redirect } from "next/navigation";
+import { z } from "zod";
+import { renderTex } from "@/components/math-text/render";
 import { requireAdmin } from "@/features/auth/guards";
 import { tags } from "@/lib/cache-tags";
-import { err, type Result } from "@/lib/result";
+import { err, ok, type Result } from "@/lib/result";
 import {
+  createLesson as createLessonService,
   deleteLesson as deleteLessonService,
   duplicateLesson as duplicateLessonService,
   reorderLessons,
@@ -90,4 +94,29 @@ export async function deleteLesson(
     refresh();
   }
   return result;
+}
+
+/** Form action on the list: a new empty draft, opened in the editor. */
+export async function createLesson(): Promise<void> {
+  const user = await requireAdmin();
+  const { id } = await createLessonService(user);
+  // Drafts are invisible to students: no shared tag changes.
+  redirect(`/admin/lessons/${id}/edit`);
+}
+
+const TexBatchSchema = z
+  .array(z.strictObject({ tex: z.string().max(5_000), display: z.boolean() }))
+  .max(300);
+
+/**
+ * KaTeX HTML for the editor's live preview (S5-02). KaTeX stays on the
+ * server (06 §4); the editor asks only for formulas it hasn't seen yet.
+ */
+export async function renderTexBatch(
+  input: unknown,
+): Promise<Result<string[]>> {
+  await requireAdmin();
+  const parsed = TexBatchSchema.safeParse(input);
+  if (!parsed.success) return err("VALIDATION");
+  return ok(parsed.data.map(({ tex, display }) => renderTex(tex, display)));
 }

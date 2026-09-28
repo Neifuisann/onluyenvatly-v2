@@ -9,8 +9,9 @@ import {
   users,
 } from "@/db/schema";
 import { resetDb, type TestDb } from "@/test/db";
-import { getAdminLessons } from "./admin-queries";
+import { getAdminLessons, getLessonForEditing } from "./admin-queries";
 import {
+  createLesson,
   deleteLesson,
   duplicateLesson,
   reorderLessons,
@@ -318,5 +319,65 @@ describe("deleteLesson", () => {
       ok: false,
       code: "NOT_FOUND",
     });
+  });
+});
+
+describe("createLesson", () => {
+  it("adds an empty draft at the end with an audit entry", async () => {
+    const a = await addLesson("A", 5);
+    const { id } = await createLesson(admin);
+    expect(await order()).toEqual([a, id]);
+    const [row] = await tdb.select().from(lessons).where(eq(lessons.id, id));
+    expect(row).toMatchObject({
+      title: "Bài tập mới",
+      status: "draft",
+      sortOrder: 6,
+      config: DEFAULT_LESSON_CONFIG,
+      currentVersionId: null,
+      draftVersionId: null,
+      createdBy: admin.id,
+    });
+    expect((await audit()).map((r) => r.action)).toEqual(["lesson.create"]);
+  });
+});
+
+describe("getLessonForEditing", () => {
+  it("opens the draft when there is one, else the published version", async () => {
+    const a = await addLesson("A", 0, { withVersion: true });
+    expect(await getLessonForEditing(a)).toMatchObject({
+      title: "A",
+      sourceText: "Câu 1: …",
+      questions,
+      hasDraft: false,
+      hasPublished: true,
+    });
+    const [draft] = await tdb
+      .insert(lessonVersions)
+      .values({ lessonId: a, version: 2, sourceText: "nháp", questions: [] })
+      .returning({ id: lessonVersions.id });
+    await tdb
+      .update(lessons)
+      .set({ draftVersionId: draft?.id ?? null })
+      .where(eq(lessons.id, a));
+    expect(await getLessonForEditing(a)).toMatchObject({
+      sourceText: "nháp",
+      questions: [],
+      hasDraft: true,
+    });
+  });
+
+  it("gives an empty text for a new lesson and null for a deleted one", async () => {
+    const { id } = await createLesson(admin);
+    expect(await getLessonForEditing(id)).toMatchObject({
+      sourceText: "",
+      questions: [],
+      hasDraft: false,
+      hasPublished: false,
+    });
+    await tdb
+      .update(lessons)
+      .set({ deletedAt: new Date() })
+      .where(eq(lessons.id, id));
+    expect(await getLessonForEditing(id)).toBeNull();
   });
 });

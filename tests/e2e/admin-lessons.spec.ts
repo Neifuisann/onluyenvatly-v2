@@ -1,6 +1,6 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, type Page, test } from "@playwright/test";
-import { E2E_PASSWORD, e2eAdmin } from "./fixtures/users";
+import { loginAdminOnce } from "./admin-helpers";
 import type { StorageState } from "./runner-helpers";
 
 /**
@@ -10,19 +10,8 @@ import type { StorageState } from "./runner-helpers";
  */
 
 let storageState: StorageState;
-test.beforeAll(async ({ browser }) => {
-  const context = await browser.newContext();
-  const page = await context.newPage();
-  await page.setExtraHTTPHeaders({
-    "x-forwarded-for": `10.46.${Math.floor(Math.random() * 250)}.1`,
-  });
-  await page.goto("/login?next=/admin/lessons");
-  await page.getByLabel("Số điện thoại").fill(e2eAdmin.username);
-  await page.getByLabel("Mật khẩu", { exact: true }).fill(E2E_PASSWORD);
-  await page.getByRole("button", { name: "Đăng nhập", exact: true }).click();
-  await page.waitForURL((url) => url.pathname === "/admin/lessons");
-  storageState = await context.storageState();
-  await context.close();
+test.beforeAll(async ({ browser }, info) => {
+  storageState = await loginAdminOnce(browser, info, "lessons");
 });
 test.use({
   // biome-ignore lint/correctness/noEmptyPattern: Playwright requires destructured fixture dependencies.
@@ -152,4 +141,22 @@ test("duplicate, reorder (keys and drag), archive, restore and delete", async ({
   await expect(copyRow).toHaveCount(0);
   await page.reload();
   expect(await titles(page)).not.toContain(COPY);
+
+  // "Tạo bài mới" opens the editor on a new empty draft, last in the list.
+  await page.getByRole("button", { name: "Tạo bài mới" }).click();
+  await expect(page).toHaveURL(/\/admin\/lessons\/\d+\/edit$/);
+  const id = page.url().match(/lessons\/(\d+)\/edit/)?.[1];
+  await expect(
+    page.getByRole("heading", { name: "Bài tập mới" }),
+  ).toBeVisible();
+  await expect(page.getByText("Chưa có câu hỏi")).toBeVisible();
+  await page.goto("/admin/lessons");
+  const created = page.locator("main tbody tr").last();
+  await expect(created.getByRole("link")).toHaveAttribute(
+    "href",
+    `/admin/lessons/${id}/edit`,
+  );
+  await created.getByRole("button", { name: "Xóa: Bài tập mới" }).click();
+  await dialog.getByRole("button", { name: "Xóa bài" }).click();
+  await expect(status).toHaveText("Đã xóa bài.");
 });

@@ -1,7 +1,7 @@
 import "server-only";
 import { and, asc, eq, isNull, sql } from "drizzle-orm";
 import { db } from "@/db/client";
-import { lessons } from "@/db/schema";
+import { lessons, lessonVersions } from "@/db/schema";
 import type { AdminListFilters } from "./domain/admin-list";
 import { searchTerms } from "./domain/catalog";
 
@@ -50,4 +50,62 @@ export async function getAdminLessons(
       ),
     )
     .orderBy(asc(lessons.sortOrder), asc(lessons.id));
+}
+
+export type LessonForEditing = {
+  id: number;
+  title: string;
+  description: string | null;
+  grade: number | null;
+  chapter: string | null;
+  tags: string[];
+  status: "draft" | "published" | "archived";
+  /** Raw jsonb; the editor validates it with `LessonConfigSchema`. */
+  config: unknown;
+  /** The draft's text, else the published one's, else empty. */
+  sourceText: string;
+  /** Their questions, so re-parsing keeps question ids stable (04 §3.1). */
+  questions: unknown;
+  hasDraft: boolean;
+  hasPublished: boolean;
+};
+
+/**
+ * Everything the editor opens with (S5-02). Includes answers: admin only,
+ * never reachable from student pages.
+ */
+export async function getLessonForEditing(
+  id: number,
+): Promise<LessonForEditing | null> {
+  const [row] = await db
+    .select({
+      id: lessons.id,
+      title: lessons.title,
+      description: lessons.description,
+      grade: lessons.grade,
+      chapter: lessons.chapter,
+      tags: lessons.tags,
+      status: lessons.status,
+      config: lessons.config,
+      sourceText: lessonVersions.sourceText,
+      questions: lessonVersions.questions,
+      hasDraft: sql<boolean>`${lessons.draftVersionId} is not null`,
+      hasPublished: sql<boolean>`${lessons.currentVersionId} is not null`,
+    })
+    .from(lessons)
+    .leftJoin(
+      lessonVersions,
+      eq(
+        lessonVersions.id,
+        sql`coalesce(${lessons.draftVersionId}, ${lessons.currentVersionId})`,
+      ),
+    )
+    .where(and(eq(lessons.id, id), isNull(lessons.deletedAt)))
+    .limit(1);
+  if (!row) return null;
+  return {
+    ...row,
+    sourceText: row.sourceText ?? "",
+    questions: row.questions ?? [],
+  };
 }

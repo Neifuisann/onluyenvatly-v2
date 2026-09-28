@@ -7,7 +7,11 @@ import { err, ok, type Result } from "@/lib/result";
 import { copyTitle, isReorderOf } from "./domain/admin-list";
 import { summarizeLesson } from "./domain/summary";
 import { adminLessonsCopy } from "./messages";
-import { LessonConfigSchema, QuestionsSchema } from "./schema";
+import {
+  DEFAULT_LESSON_CONFIG,
+  LessonConfigSchema,
+  QuestionsSchema,
+} from "./schema";
 
 /**
  * Lesson list mutations for `/admin/lessons` (S5-01, 05 §2
@@ -235,5 +239,32 @@ export async function deleteLesson(
       data: { soft },
     });
     return ok({ id, soft });
+  });
+}
+
+/** A new, empty draft at the end of the list; the editor takes it from there. */
+export async function createLesson(actor: Actor): Promise<{ id: number }> {
+  return db.transaction(async (tx) => {
+    const [last] = await tx
+      .select({ max: sql<number | null>`max(${lessons.sortOrder})` })
+      .from(lessons);
+    const [row] = await tx
+      .insert(lessons)
+      .values({
+        title: adminLessonsCopy.newTitle,
+        status: "draft",
+        config: DEFAULT_LESSON_CONFIG,
+        sortOrder: (last?.max ?? -1) + 1,
+        createdBy: actor.id,
+      })
+      .returning({ id: lessons.id });
+    if (!row) throw new Error("lesson insert returned no row");
+    await writeAudit(tx, {
+      actorId: actor.id,
+      action: "lesson.create",
+      targetType: "lesson",
+      targetId: row.id,
+    });
+    return { id: row.id };
   });
 }

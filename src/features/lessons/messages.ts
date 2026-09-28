@@ -163,4 +163,58 @@ export const adminLessonsCopy = {
   clear: "Xóa bộ lọc",
   errorTitle: "Không tải được danh sách bài tập",
   loading: "Đang tải danh sách bài tập",
+  create: "Tạo bài mới",
+  newTitle: "Bài tập mới",
+  edit: "Sửa",
+} as const;
+
+/** `/admin/lessons/[id]/edit` (S5-02, 07 §5.6). */
+export const editorCopy = {
+  back: "Danh sách bài",
+  tabsLabel: "Phần soạn bài",
+  tabs: { content: "Nội dung", settings: "Cài đặt" },
+  editorLabel: "Nội dung bài (định dạng văn bản)",
+  editorLoading: "Đang tải trình soạn thảo…",
+  paneLabel: "Chế độ xem",
+  paneEdit: "Soạn thảo",
+  panePreview: "Xem trước",
+  previewTitle: "Xem trước",
+  issuesTitle: "Kiểm tra",
+  noIssues: "Không có lỗi.",
+  issueCount: (errors: number, warnings: number) =>
+    [errors && `${errors} lỗi`, warnings && `${warnings} cảnh báo`]
+      .filter(Boolean)
+      .join(", "),
+  issueAt: (line: number, col: number) => `Dòng ${line}, cột ${col}`,
+  error: "Lỗi",
+  warning: "Cảnh báo",
+  goToQuestion: (n: number) => `Tới dòng của câu ${n} trong trình soạn thảo`,
+  questionHeading: (n: number, type: string, points: string) =>
+    `Câu ${n} · ${type} · ${points}đ`,
+  questionHasIssue: "có lỗi",
+  correct: "Đáp án đúng",
+  true: "Đúng",
+  false: "Sai",
+  shortAnswer: "Đáp án",
+  tolerance: (t: string) => `sai số ± ${t}`,
+  explanation: "Giải thích",
+  emptyTitle: "Chưa có câu hỏi",
+  emptyBody:
+    "Dán nội dung bài theo định dạng “Câu 1: …” vào trình soạn thảo, phần xem trước sẽ hiện ở đây.",
+  stats: (
+    total: number,
+    mcq: number,
+    tf: number,
+    short: number,
+    points: string,
+  ) => `Tổng: ${total} câu · ${mcq}/${tf}/${short} · ${points}đ`,
+  statsTypes: "Trắc nghiệm / Đúng-Sai / Trả lời ngắn",
+  perAttempt: (total: number, points: string | null) =>
+    `Mỗi lượt làm: ${total} câu${points === null ? "" : ` · ${points}đ`}`,
+  unsaved: "Chưa lưu",
+  draftSource: "Đang sửa bản nháp",
+  publishedSource: "Đang sửa từ bản đã xuất bản",
+  notFoundTitle: "Không tìm thấy bài tập",
+  notFoundBody: "Bài đã bị xóa hoặc đường dẫn không đúng.",
+  loading: "Đang tải trình soạn bài",
 } as const;

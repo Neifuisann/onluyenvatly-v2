@@ -225,7 +225,7 @@ export function LessonTable({
                 <td className="px-3 py-2">
                   <div className="flex flex-wrap items-center gap-2">
                     <Link
-                      href={`/lessons/${row.id}`}
+                      href={`/admin/lessons/${row.id}/edit`}
                       prefetch={false}
                       className="font-medium hover:underline"
                     >

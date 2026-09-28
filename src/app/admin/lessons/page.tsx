@@ -1,9 +1,10 @@
-import { BookOpen, SearchX } from "lucide-react";
+import { BookOpen, Plus, SearchX } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { EmptyState } from "@/components/empty-state";
-import { buttonVariants } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { requireAdmin } from "@/features/auth/guards";
+import { createLesson } from "@/features/lessons/admin-actions";
 import { getAdminLessons } from "@/features/lessons/admin-queries";
 import { AdminListFilterBar } from "@/features/lessons/components/admin/admin-list-filters";
 import { LessonTable } from "@/features/lessons/components/admin/lesson-table";
@@ -25,9 +26,17 @@ export default async function AdminLessonsPage({
   const filtered = !canReorder(filters);
   return (
     <div className="mx-auto flex max-w-6xl flex-col gap-6">
-      <header className="space-y-2">
-        <h1 className="font-semibold text-2xl">{t.title}</h1>
-        <p className="text-muted-foreground">{t.lead}</p>
+      <header className="flex flex-wrap items-end justify-between gap-3">
+        <div className="space-y-2">
+          <h1 className="font-semibold text-2xl">{t.title}</h1>
+          <p className="text-muted-foreground">{t.lead}</p>
+        </div>
+        <form action={createLesson}>
+          <Button type="submit">
+            <Plus aria-hidden />
+            {t.create}
+          </Button>
+        </form>
       </header>
       <AdminListFilterBar filters={filters} />
       {rows.length ? (
