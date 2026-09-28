@@ -132,6 +132,10 @@ Pages: `/admin/students?view=pending|all&q=&status=&grade=&page=` (default `pend
 ### `features/attempts/admin-actions.ts`
 `deleteAttempt(id)`: deletes the attempt and its rating event, then recomputes that student's rating by replaying rating events in order (cheap: tens to hundreds of rows).
 
+As built (S6-04): `requireAdmin()`, the id (`z.uuid()`), then one transaction in `attempts/admin-service.ts`: lock the attempt, then the student's `ratings` row; delete the attempt (its `rating_events` row cascades); replay the remaining events (04 `rating_events`), rewriting only the events whose `before/delta/after` change and the `ratings` row (deleted when no event is left); `lessons.attempt_count − 1` for a submitted attempt (never below 0); audit `attempt.delete` `{ userId, lessonId, status, rated }`. Any status can be deleted (an in-progress or expired attempt has no rating event, so the rating is untouched). Mistakes stay as they are. Returns `{ userId, lessonId, status, rated }` and invalidates `leaderboard` when a rating changed and `lesson:{id}:stats` (`tags.lessonStats`, S6-05) for a submitted attempt; no `refresh()`, the client goes to `/admin/results`. Acceptance (`attempts/admin-service.test.ts`): three rated attempts, delete the middle → rating, peak, count and every remaining event equal a second student who took only the other two; also the first, the last, an in-progress and a not-rated attempt.
+
+Pages (S6-04): `/admin/results?lesson=&q=&from=&to=&page=` (`attempts/admin-queries.ts`, per request, uncached): students' submitted attempts (admins' own tries are left out), newest first, cumulative "Xem thêm" by 50 (at most 20 steps; one extra row says "more", no `count(*)`). Filters in the URL, parsed by the pure `parseResultsParams` (invalid → no filter): a lesson select (every lesson, deleted ones marked), accent-insensitive student-name words (the `users_full_name_trgm_idx` expression), and a date range in Vietnam days (`from` 00:00 +07 inclusive to the day after `to`, swapped if reversed). Each row: the student (link to `/admin/students/[id]`), class and grade, lesson (or "Ôn tập cá nhân"), score /10, time taken, submitted at (Vietnam time), a guard-event count badge and "Xem bài" (`/attempts/[id]/result`); `prefetch={false}` on every row link. `/attempts/[id]/result` shows admins the exam-guard timeline (mm:ss since the start, Vietnamese label, icon, "no events" state; `guardTimeline` in `attempts/domain/guard.ts`) instead of the raw JSON, and "Xóa bài làm" behind a confirm dialog.
+
 ### `features/settings/actions.ts`
 `updateSettings(partial)` (admin), `updateMyProfile`, `uploadAvatar` (signed URL), `requestDeletion`, `exportMyData` (returns JSON download).
 
@@ -146,7 +150,7 @@ As built (S6-03): `updateSettings(partial)` runs `requireAdmin()`, then `Setting
 | `GET /api/cron/daily` | Expire stale attempts, prune sessions/rate_limits/versions, keep Supabase awake, compute quota snapshot | `Authorization: Bearer ${CRON_SECRET}` |
 | `GET /api/health` | `select 1` + version | Public, no cache |
 | `GET /lessons/by-legacy/[legacyId]` etc. | Legacy lookups → 308 | Public |
-| `GET /admin/results/export` | CSV stream | Admin |
+| `GET /admin/results/export` | CSV of `/admin/results` with the same query (`lesson`, `q`, `from`, `to`), newest first, at most 10,000 rows (`X-Export-Truncated: true` when there were more). As built (S6-04): the session is checked first and answers JSON, never a redirect (401 `UNAUTHENTICATED` signed out, which `proxy.ts` lets through for this path; 403 `FORBIDDEN` for a student or an admin who must change the password). The body is built by the pure `resultsCsv`/`toCsv` (`attempts/domain/csv.ts`): UTF-8 BOM, RFC 4180 (comma, CRLF, quotes doubled), formula-injection guard, `.` decimals. Columns: Họ tên, Lớp, Khối, Bài, Điểm (/10), Điểm, Tối đa, Thời gian (giây), Nộp lúc (Vietnam time), Cảnh báo (guard events); never the phone or date of birth. `Content-Disposition: attachment; filename="ket-qua-YYYY-MM-DD.csv"` (Vietnam date), `Cache-Control: private, no-store`. The "Xuất CSV" link on the page carries the current filters | Admin (session cookie) |
 
 ## 4. Query functions (reads)
 Grouped by feature. Each one is either **shared-cached** (C) or **per-request** (R).
@@ -162,7 +166,8 @@ Grouped by feature. Each one is either **shared-cached** (C) or **per-request** 
 | `getLeaderboard({ grade, period })` | C `leaderboard`, 60 s | leaderboard, dashboard rank |
 | `getMyStats(userId)` | R | profile, dashboard (split into `getDashboardStats` + `getContinueAttempt` in S4-06) |
 | `getMistakes(userId, filters)` | R | review |
-| `getLessonStats(lessonId)` | C `lesson:{id}:stats`, 5 min | admin stats |
+| `getLessonStats(lessonId)` | C `lesson:{id}:stats` (`tags.lessonStats`, added in S6-04 and invalidated by `deleteAttempt`), 5 min | admin stats |
+| `getResults(filters)`, `getResultsForExport(filters)` | R | `/admin/results`, CSV export (S6-04) |
 | `getSettings()` | C `settings` | everywhere |
 
 ## 5. Error codes (returned by actions, mapped to Vietnamese messages in `src/lib/messages.ts`)

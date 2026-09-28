@@ -18,7 +18,11 @@ const ADMIN_PAGES = [
   "/admin/students",
   `/admin/students/${UUID}`,
   "/admin/settings",
+  "/admin/results",
+  "/admin/results?lesson=1&q=an&from=2026-01-01",
 ];
+/** A download: answers JSON, never a redirect (S6-04). */
+const EXPORT = "/admin/results/export?q=an";
 const STUDENT_PAGES = ["/dashboard", "/lessons", "/leaderboard", "/profile"];
 
 test.beforeEach(async ({ page }) => {
@@ -37,6 +41,16 @@ test.describe("a visitor", () => {
       );
     });
   }
+
+  test("gets 401 JSON from the results export", async ({ request }) => {
+    const res = await request.get(EXPORT, { maxRedirects: 0 });
+    expect(res.status()).toBe(401);
+    expect(res.headers()["content-type"]).toContain("application/json");
+    expect(await res.json()).toMatchObject({
+      ok: false,
+      code: "UNAUTHENTICATED",
+    });
+  });
 });
 
 test.describe("a student", () => {
@@ -72,6 +86,13 @@ test.describe("a student", () => {
       );
     });
   }
+
+  test("gets 403 JSON from the results export", async ({ page }) => {
+    const res = await page.request.get(EXPORT, { maxRedirects: 0 });
+    expect(res.status()).toBe(403);
+    expect(res.headers()["cache-control"]).toContain("no-store");
+    expect(await res.json()).toMatchObject({ ok: false, code: "FORBIDDEN" });
+  });
 
   test("opens the student pages", async ({ page }) => {
     for (const path of STUDENT_PAGES) {

@@ -22,6 +22,7 @@ export const E2E_SPEC_ADMINS = [
   "media",
   "students",
   "settings",
+  "results",
 ] as const;
 export type E2eSpecAdmin = (typeof E2E_SPEC_ADMINS)[number];
 export const e2eSpecAdminUsername = (spec: E2eSpecAdmin, project: string) =>
@@ -172,6 +173,23 @@ export const e2eStudents = [
     status: "active",
     grade: 10,
   },
+  // S6-04 results spec, one per Playwright project: the seed gives each the
+  // submitted attempts of fixtures/results.ts (grade 10, so the leaderboard
+  // spec's grade 11 board is unchanged).
+  {
+    key: "results",
+    phone: "0900000022",
+    fullName: "Trần Kết Quả",
+    status: "active",
+    grade: 10,
+  },
+  {
+    key: "results2",
+    phone: "0900000023",
+    fullName: "Lê Kết Quả",
+    status: "active",
+    grade: 10,
+  },
   {
     key: "pending",
     phone: "0900000004",
@@ -192,7 +210,7 @@ export type E2eStudentKey = (typeof e2eStudents)[number]["key"];
 
 /** Each Playwright project takes its own copy of a per-project student. */
 export function projectStudentKey(
-  base: "queueA" | "queueB" | "manage" | "access" | "remove",
+  base: "queueA" | "queueB" | "manage" | "access" | "remove" | "results",
   project: string,
 ): E2eStudentKey {
   return project === "mobile" ? (`${base}2` as E2eStudentKey) : base;

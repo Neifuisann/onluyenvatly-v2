@@ -128,6 +128,49 @@ export function replayRatings(
   return { state, steps };
 }
 
+/** A stored `rating_events` row, as the delete-attempt replay reads it. */
+export type StoredRatingEvent = ReplayEvent & {
+  id: number;
+  before: number;
+  after: number;
+};
+
+export type RewrittenEvent = {
+  id: number;
+  before: number;
+  delta: number;
+  after: number;
+};
+
+/**
+ * Deleting a rated attempt (S6-04): replays the student's other events, in
+ * order, from where their history started (the first event's `before`: 1500
+ * for v2 students, the v1 starting point for migrated history). Returns the
+ * new rating state (null when no event remains) and only the events whose
+ * `before/delta/after` change.
+ */
+export function replayWithout(
+  events: readonly StoredRatingEvent[],
+  removedId: number,
+): { state: RatingState | null; changed: RewrittenEvent[] } {
+  const start = events[0]?.before ?? START_RATING;
+  const remaining = events.filter((e) => e.id !== removedId);
+  if (remaining.length === 0) return { state: null, changed: [] };
+  const { state, steps } = replayRatings(remaining, {
+    rating: start,
+    peak: start,
+    rated: 0,
+  });
+  // One step per remaining event, in the same order.
+  const changed = steps.flatMap((s, i): RewrittenEvent[] => {
+    const e = remaining[i] as StoredRatingEvent;
+    return s.before === e.before && s.delta === e.delta && s.after === e.after
+      ? []
+      : [{ id: e.id, before: s.before, delta: s.delta, after: s.after }];
+  });
+  return { state, changed };
+}
+
 export const TIERS = [
   { id: "master", min: 2000 },
   { id: "diamond", min: 1800 },

@@ -23,7 +23,14 @@ import {
 import { serializeLesson } from "../src/features/lessons/domain/serializer.ts";
 import { summarizeLesson } from "../src/features/lessons/domain/summary.ts";
 import { LessonConfigSchema } from "../src/features/lessons/schema.ts";
+import {
+  applyRating,
+  INITIAL_RATING,
+  performance,
+  timeBonusV2,
+} from "../src/features/rating/domain/rating.ts";
 import { e2eLessons, e2eQuestions } from "../tests/e2e/fixtures/lessons.ts";
+import { e2eResultAttempts } from "../tests/e2e/fixtures/results.ts";
 import {
   CREATED_ADMIN_PREFIX,
   E2E_PASSWORD,
@@ -261,6 +268,7 @@ async function main() {
   await db.delete(schema.rateLimits);
   // Every run starts without attempts (in-progress ones would be resumed).
   await db.delete(schema.attempts);
+  await seedResults();
   // Versions a publish spec added (S5-04); the fixture is version 1.
   await db
     .delete(schema.lessonVersions)
@@ -277,6 +285,88 @@ async function main() {
   console.log(
     `e2e profile: ${1 + e2eSpecAdminUsernames.length} admins, ${e2eStudents.length} students.`,
   );
+}
+
+/**
+ * S6-04 results spec: each results student gets the submitted attempts of
+ * fixtures/results.ts (oldest first, the first with exam-guard events), rated
+ * with the real v2 formula, so deleting one replays a real history.
+ */
+async function seedResults() {
+  const versions = await db
+    .select({
+      legacyId: schema.lessons.legacyId,
+      lessonId: schema.lessons.id,
+      versionId: schema.lessonVersions.id,
+    })
+    .from(schema.lessons)
+    .innerJoin(
+      schema.lessonVersions,
+      and(
+        eq(schema.lessonVersions.lessonId, schema.lessons.id),
+        eq(schema.lessonVersions.version, 1),
+      ),
+    )
+    .where(inArray(schema.lessons.legacyId, ["e2e-runner", "e2e-timer"]));
+  const hour = 60 * 60 * 1000;
+  for (const key of ["results", "results2"] as const) {
+    const phone = e2eStudents.find((s) => s.key === key)?.phone ?? "";
+    const student = await db.query.users.findFirst({
+      columns: { id: true },
+      where: (u, { eq }) => eq(u.phone, phone),
+    });
+    if (!student) throw new Error(`No ${key} student`);
+    let state = INITIAL_RATING;
+    for (const a of e2eResultAttempts) {
+      const lesson = versions.find((v) => v.legacyId === a.lesson);
+      if (!lesson) throw new Error(`No ${a.lesson} lesson`);
+      const submittedAt = new Date(Date.now() - a.hoursAgo * hour);
+      const maxScore = a.items.reduce((s, i) => s + i.p, 0);
+      const score = a.earned.reduce((s, e) => s + e, 0);
+      const [attempt] = await db
+        .insert(schema.attempts)
+        .values({
+          userId: student.id,
+          lessonId: lesson.lessonId,
+          lessonVersionId: lesson.versionId,
+          status: "submitted",
+          items: a.items,
+          answers: a.answers,
+          guardEvents: a.guardEvents,
+          earned: a.earned,
+          score,
+          maxScore,
+          score10: Math.round((score / maxScore) * 1000) / 100,
+          startedAt: new Date(submittedAt.getTime() - a.timeTakenSec * 1000),
+          submittedAt,
+          timeTakenSec: a.timeTakenSec,
+        })
+        .returning({ id: schema.attempts.id });
+      if (!attempt) throw new Error("Attempt seed failed");
+      const perf = performance(score, maxScore);
+      const bonus = timeBonusV2(a.timeTakenSec, a.timeLimitSec);
+      const step = applyRating(state, perf, bonus);
+      state = step.state;
+      await db.insert(schema.ratingEvents).values({
+        userId: student.id,
+        attemptId: attempt.id,
+        lessonId: lesson.lessonId,
+        before: step.before,
+        delta: step.delta,
+        after: step.after,
+        performance: perf,
+        timeBonus: bonus,
+        formula: "v2",
+        createdAt: submittedAt,
+      });
+    }
+    await db.insert(schema.ratings).values({
+      userId: student.id,
+      rating: state.rating,
+      peak: state.peak,
+      ratedAttempts: state.rated,
+    });
+  }
 }
 
 main()

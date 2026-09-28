@@ -2,6 +2,8 @@ import { Info } from "lucide-react";
 import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
 import { ChoiceItem } from "@/features/attempts/components/result/choice-item";
+import { DeleteAttempt } from "@/features/attempts/components/result/delete-attempt";
+import { GuardTimeline } from "@/features/attempts/components/result/guard-timeline";
 import { ReviewItem } from "@/features/attempts/components/result/review-item";
 import { ReviewList } from "@/features/attempts/components/result/review-list";
 import { ScoreHero } from "@/features/attempts/components/result/score-hero";
@@ -28,6 +30,7 @@ export const metadata: Metadata = {
 /**
  * `/attempts/[id]/result`: owner or admin (05 §1). The answer key is read
  * and rendered only when the lesson's `revealAnswers` allows it (ADR-004).
+ * Admins also get the exam-guard timeline and "Xóa bài làm" (S6-04).
  */
 export default async function AttemptResultPage({
   params,
@@ -119,18 +122,10 @@ export default async function AttemptResultPage({
         </section>
       )}
       {user.role === "admin" && (
-        // S4-04: raw for now; S6-04 turns this into a timeline.
-        <details className="rounded-lg border bg-surface p-4 text-sm">
-          <summary className="cursor-pointer font-medium">
-            {resultCopy.guardEvents(attempt.guardEvents.length)}
-          </summary>
-          <p className="mt-2 text-muted-foreground text-xs">
-            {resultCopy.guardHelp}
-          </p>
-          <pre className="mt-2 overflow-x-auto rounded-md bg-muted p-3 font-mono text-xs">
-            {JSON.stringify(attempt.guardEvents, null, 1)}
-          </pre>
-        </details>
+        <>
+          <GuardTimeline events={attempt.guardEvents} />
+          <DeleteAttempt attemptId={attempt.id} />
+        </>
       )}
     </article>
   );

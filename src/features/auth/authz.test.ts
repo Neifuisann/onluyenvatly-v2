@@ -10,9 +10,9 @@ import type { SessionUser } from "./session";
  * 06 §2 / 11 §3 (journey 8): every admin server action refuses anyone who
  * isn't an admin, before it reads its input or writes anything. The actions
  * are found on disk (the `admin-actions.ts` of every feature, plus the media
- * and settings actions, which are admin only), so a new admin action is covered the day it
- * is exported. Student- and visitor-facing actions (`auth`, `attempts`) are
- * not in this list on purpose.
+ * and settings actions, which are admin only), so a new admin action is
+ * covered the day it is exported. Student- and visitor-facing actions
+ * (`auth/actions`, `attempts/actions`) are not in this list on purpose.
  */
 
 vi.mock("@/db/client", async () => (await import("@/test/db")).mockDbModule());
@@ -89,10 +89,11 @@ beforeEach(async () => {
 });
 
 describe("admin actions require an admin", () => {
-  it("finds the actions of lessons, students, media and settings", async () => {
+  it("finds the actions of attempts, lessons, students, media and settings", async () => {
     const names = (await load()).map(([name]) => name);
     expect(moduleFiles).toEqual(
       expect.arrayContaining([
+        "attempts/admin-actions",
         "lessons/admin-actions",
         "students/admin-actions",
         "media/actions",
@@ -106,6 +107,7 @@ describe("admin actions require an admin", () => {
         "students/admin-actions.resetPassword",
         "students/admin-actions.deleteStudent",
         "students/admin-actions.createAdmin",
+        "attempts/admin-actions.deleteAttempt",
         "media/actions.createUploadUrl",
         "settings/actions.updateSettings",
       ]),

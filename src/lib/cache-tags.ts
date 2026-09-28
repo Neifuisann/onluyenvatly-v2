@@ -8,6 +8,8 @@ export const tags = {
   lesson: (id: number) => `lesson:${id}`,
   lessonPublic: (id: number) => `lesson:${id}:public`,
   lessonAnswers: (id: number) => `lesson:${id}:answers`,
+  /** Admin lesson statistics (S6-05); deleting an attempt invalidates it (S6-04). */
+  lessonStats: (id: number) => `lesson:${id}:stats`,
   leaderboard: "leaderboard",
   /** Admin nav badge: students waiting for approval. */
   pendingStudents: "pendingStudents",
