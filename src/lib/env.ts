@@ -14,11 +14,11 @@ const serverSchema = z.object({
   VERCEL_ENV: z.enum(["development", "preview", "production"]).optional(),
   VERCEL_GIT_COMMIT_SHA: z.string().optional(),
 
-  DATABASE_URL: z.url().optional(), // required from S1-03
+  DATABASE_URL: z.url(),
   DATABASE_URL_DIRECT: z.url().optional(), // CI/scripts only
   SUPABASE_URL: z.url().optional(), // required from S5-05
   SUPABASE_SERVICE_ROLE_KEY: z.string().min(1).optional(), // required from S5-05
-  SESSION_PEPPER: z.string().min(32).optional(), // required from S1-04
+  SESSION_PEPPER: z.string().min(32),
   GEMINI_API_KEY: z.string().min(1).optional(), // required from S7-01
   GEMINI_MODEL_TEXT: z.string().min(1).optional(),
   GEMINI_MODEL_IMPORT: z.string().min(1).optional(),
