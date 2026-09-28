@@ -17,7 +17,59 @@ export const e2eQuestions: Question[] = [
   },
 ];
 
-export const e2eLessons: NewLesson[] = [
+/**
+ * S3 runner journeys (11 §3, journeys 2–5): every question type, teacher
+ * order and no shuffles, so the specs know which buttons are correct.
+ * Max score 2: 0.25 + 0.25 + 1 + 0.5.
+ */
+export const runnerQuestions: Question[] = [
+  {
+    id: "q_run_mcq1",
+    type: "mcq",
+    stem: "Một vật dao động điều hòa với phương trình $x = 5\\cos(2\\pi t)$ cm. Biên độ là",
+    options: [
+      { text: "2 cm" },
+      { text: "5 cm" },
+      { text: "10 cm" },
+      { text: "$2\\pi$ cm" },
+    ],
+    answer: 1,
+    points: 0.25,
+    explanation: ANSWER_MARKER,
+  },
+  {
+    id: "q_run_mcq2",
+    type: "mcq",
+    stem: "Đơn vị của tần số là",
+    options: [{ text: "s" }, { text: "Hz" }, { text: "m" }, { text: "N" }],
+    answer: 1,
+    points: 0.25,
+  },
+  {
+    id: "q_run_tf1",
+    type: "tf",
+    stem: "Xét các phát biểu sau về con lắc lò xo:",
+    statements: [
+      { text: "Chu kì phụ thuộc vào khối lượng vật.", answer: true },
+      { text: "Chu kì phụ thuộc vào biên độ.", answer: false },
+      { text: "Cơ năng tỉ lệ với bình phương biên độ.", answer: true },
+      { text: "Tần số tăng khi tăng khối lượng.", answer: false },
+    ],
+    explanation: ANSWER_MARKER,
+  },
+  {
+    id: "q_run_short1",
+    type: "short",
+    stem: "Tính chu kì (s) của con lắc có $k = 100$ N/m, $m = 1$ kg.",
+    answer: "0.63",
+    points: 0.5,
+    explanation: ANSWER_MARKER,
+  },
+];
+
+export type E2eLesson = NewLesson & { questions?: Question[] };
+
+export const e2eLessons: E2eLesson[] = [
   {
     legacyId: "1720000000000",
     title: "E2E – Dao động điều hòa",
@@ -46,7 +98,7 @@ export const e2eLessons: NewLesson[] = [
   },
   ...Array.from(
     { length: 25 },
-    (_, i): NewLesson => ({
+    (_, i): E2eLesson => ({
       legacyId: `e2e-catalog-${i}`,
       title: `E2E – Bài luyện ${String(i + 1).padStart(2, "0")}`,
       grade: 10,
@@ -68,5 +120,28 @@ export const e2eLessons: NewLesson[] = [
     title: "E2E – Đã lưu trữ",
     config: DEFAULT_LESSON_CONFIG,
     status: "archived",
+  },
+  // Own tag, so the catalog specs' counts for `tag=e2e` don't change.
+  {
+    legacyId: "e2e-runner",
+    title: "E2E – Làm bài đủ dạng",
+    grade: 12,
+    chapter: "Dao động cơ",
+    tags: ["e2e-runner"],
+    sortOrder: -200,
+    config: DEFAULT_LESSON_CONFIG,
+    status: "published",
+    questions: runnerQuestions,
+  },
+  {
+    legacyId: "e2e-timer",
+    title: "E2E – Hẹn giờ 1 phút",
+    grade: 12,
+    chapter: "Dao động cơ",
+    tags: ["e2e-runner"],
+    sortOrder: -199,
+    config: { ...DEFAULT_LESSON_CONFIG, timeLimitSec: 60 },
+    status: "published",
+    questions: runnerQuestions.slice(0, 2),
   },
 ];

@@ -37,6 +37,8 @@
 
 `lessons.spec.ts` covers the S2 catalog/overview in desktop Chromium and a 360 px Android viewport: accent-insensitive search, filters, cumulative pagination, back/reload and search focus, legacy 308 redirects, invalid/missing/unpublished lookups, student HTML/RSC answer-leak checks, light/dark screenshots, and zero serious/critical axe violations. `pnpm seed --profile e2e` now also upserts 27 published synthetic lessons plus a draft and archived lesson, with version content containing a private explanation marker for leak detection. The seed remains local/CI-only. The Next.js streamed shell requires JavaScript; a GET form alone does not provide a no-JavaScript page.
 
+`runner.spec.ts` (S3) takes the seeded `e2e-runner` lesson (all three types, no shuffle, 2 points) and `e2e-timer` (1-minute limit) as dedicated students `runner`/`runner2`, one per Playwright project, so parallel projects never share an attempt. It covers the runner UI (answers, flag, navigator sheet/panel, list view, keyboard, submit dialog), axe and 360 px overflow in light and dark (with reduced motion so axe never samples mid-transition), and journey 4's leak check on every runner response.
+
 1. **Register → pending → admin approves → login → dashboard.**
 2. **Take a test end to end:** start, answer all 3 types, flag, reload mid-test (answers restored), go offline, answer, come back online (sync), submit → result shows the correct score for known answers.
 3. **Timer:** lesson with a 1-minute limit → auto-submit happens → server rejects a late save.

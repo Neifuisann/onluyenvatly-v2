@@ -141,6 +141,8 @@ Behaviour:
 - Exam-guard mode: a small shield icon "Chế độ thi" in the header, a toast on return from a tab switch ("Đã ghi nhận rời khỏi bài thi"), selection and copy disabled only inside the runner.
 - The keyboard works on desktop: `1–4` choose, `←/→` move, `F` flag, `Enter` next.
 
+**As built (S3-04):** `/attempts/[id]` lives in its own `(runner)` route group, so no app shell competes with the runner's sticky header and bottom bar. Question text is rendered on the server (`MathText`) and passed to the client runner as React nodes; only answer-free content in display order reaches the browser. State lives in a per-attempt Zustand store over pure transitions (`features/attempts/domain/runner-state.ts`). Phones open one question per screen, desktops (≥ 1024 px) the list; the choice is remembered in `localStorage` (`runner:view`). MCQ options and Đ/S buttons are toggle buttons (`aria-pressed`), so a second tap clears a choice; a chosen Đ or S uses the neutral primary "selected" style, never green/red, which would read as graded. The navigator and `SubmitDialog` are native `<dialog>`s (bottom sheet on phones). Shortcuts also accept `1–6`/`A–E` for options; they're ignored while typing in an input or when a dialog is open.
+
 ### 5.3 True/false question
 ```
 │ Câu 22 · Đúng/Sai · 1đ       │

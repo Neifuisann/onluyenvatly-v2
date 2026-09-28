@@ -1,5 +1,6 @@
 import "server-only";
 import { and, desc, eq } from "drizzle-orm";
+import { cache } from "react";
 import { db } from "@/db/client";
 import { attempts } from "@/db/schema";
 
@@ -23,6 +24,39 @@ export async function getMyLessonAttempts(userId: string, lessonId: number) {
     .orderBy(desc(attempts.startedAt))
     .limit(50);
 }
+
+/**
+ * One attempt for its runner or result page. Callers check ownership
+ * (`userId`) before showing anything. Deduped per request.
+ */
+export const getAttempt = cache(async (id: string) => {
+  const [row] = await db
+    .select({
+      id: attempts.id,
+      userId: attempts.userId,
+      lessonId: attempts.lessonId,
+      lessonVersionId: attempts.lessonVersionId,
+      mode: attempts.mode,
+      status: attempts.status,
+      items: attempts.items,
+      answers: attempts.answers,
+      flagged: attempts.flagged,
+      earned: attempts.earned,
+      score: attempts.score,
+      maxScore: attempts.maxScore,
+      score10: attempts.score10,
+      startedAt: attempts.startedAt,
+      deadlineAt: attempts.deadlineAt,
+      submittedAt: attempts.submittedAt,
+      timeTakenSec: attempts.timeTakenSec,
+    })
+    .from(attempts)
+    .where(eq(attempts.id, id))
+    .limit(1);
+  return row ?? null;
+});
+
+export type AttemptView = NonNullable<Awaited<ReturnType<typeof getAttempt>>>;
 
 export type MyLessonAttempt = Awaited<
   ReturnType<typeof getMyLessonAttempts>

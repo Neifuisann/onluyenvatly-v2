@@ -5,6 +5,10 @@ import { db } from "@/db/client";
 import { lessons, lessonVersions } from "@/db/schema";
 import { tags } from "@/lib/cache-tags";
 import { type CatalogFilters, PAGE_SIZE, searchTerms } from "./domain/catalog";
+import {
+  type PublicQuestion,
+  toPublicQuestion,
+} from "./domain/public-question";
 import type { TypeCounts } from "./domain/summary";
 import type { Question } from "./schema";
 
@@ -164,6 +168,32 @@ export async function getLessonWithAnswers(
     .limit(1);
   // Validated with `QuestionsSchema` when written (editor, migration).
   return row ? (row.questions as Question[]) : null;
+}
+
+/**
+ * The answer-free taking view of a version (05 §4), in teacher order with
+ * options unshuffled; the runner applies each attempt's option order.
+ */
+export async function getLessonForTaking(
+  lessonId: number,
+  versionId: number,
+): Promise<PublicQuestion[] | null> {
+  "use cache";
+  cacheTag(tags.lessonPublic(lessonId));
+  cacheLife("hours");
+  const [row] = await db
+    .select({ questions: lessonVersions.questions })
+    .from(lessonVersions)
+    .where(
+      and(
+        eq(lessonVersions.id, versionId),
+        eq(lessonVersions.lessonId, lessonId),
+      ),
+    )
+    .limit(1);
+  return row
+    ? (row.questions as Question[]).map((q) => toPublicQuestion(q))
+    : null;
 }
 
 /** Both hits and misses invalidate when lessons are published or imported. */

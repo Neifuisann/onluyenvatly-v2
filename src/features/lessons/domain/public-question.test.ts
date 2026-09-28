@@ -6,6 +6,7 @@ import {
   identityOrder,
   isPermutation,
   toPublicQuestion,
+  withOptionOrder,
 } from "./public-question";
 
 const SECRET_KEYS = new Set(["answer", "tolerance", "explanation", "correct"]);
@@ -130,6 +131,29 @@ describe("toPublicQuestion", () => {
     expect(() => toPublicQuestion(q, [0, 0])).toThrow();
     expect(() => toPublicQuestion(q, [0])).toThrow();
     expect(() => toPublicQuestion(q, [1, 2])).toThrow();
+  });
+});
+
+describe("withOptionOrder", () => {
+  it("matches toPublicQuestion with the same order (property)", () => {
+    fc.assert(
+      fc.property(withOrder, ({ q, order }) => {
+        expect(withOptionOrder(toPublicQuestion(q), order)).toEqual(
+          toPublicQuestion(q, order),
+        );
+      }),
+    );
+  });
+
+  it("rejects an order that is not a permutation", () => {
+    const pub = toPublicQuestion({
+      id: "q_5",
+      type: "mcq",
+      stem: "S",
+      options: [{ text: "a" }, { text: "b" }],
+      answer: 0,
+    });
+    expect(() => withOptionOrder(pub, [1, 1])).toThrow();
   });
 });
 
