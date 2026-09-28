@@ -61,11 +61,24 @@ export const RegisterSchema = z
       .max(20, fieldMessages.className)
       .optional()
       .transform((c) => (c ? c.toUpperCase() : null)),
-    password: z.string().min(1, fieldMessages.required),
+    // Field-level rules run even when other fields are invalid, so the
+    // student sees every problem at once.
+    password: z
+      .string()
+      .min(1, fieldMessages.required)
+      .superRefine((password, ctx) => {
+        const issue = passwordIssue(password);
+        if (issue)
+          ctx.addIssue({
+            code: "custom",
+            message: passwordIssueMessages[issue],
+          });
+      }),
   })
+  // Needs the normalized phone, so it only runs once all fields are valid.
   .superRefine((data, ctx) => {
     const issue = passwordIssue(data.password, data.phone);
-    if (issue)
+    if (issue === "CONTAINS_PHONE")
       ctx.addIssue({
         code: "custom",
         path: ["password"],

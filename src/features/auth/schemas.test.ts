@@ -60,3 +60,19 @@ describe("LoginSchema", () => {
       ]);
   });
 });
+
+describe("RegisterSchema error reporting", () => {
+  it("reports password problems even when the phone is invalid", () => {
+    const result = RegisterSchema.safeParse({
+      ...valid,
+      phone: "12345",
+      password: "12345678",
+    });
+    expect(result.success).toBe(false);
+    if (!result.success)
+      expect(Object.keys(fieldErrorsOf(result.error)).sort()).toEqual([
+        "password",
+        "phone",
+      ]);
+  });
+});
