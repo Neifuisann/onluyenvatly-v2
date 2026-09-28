@@ -22,7 +22,8 @@
     "db:studio": "drizzle-kit studio",
     "check:contrast": "node scripts/check-contrast.ts",
     "db:local": "pglite-server --db=.pglite --port=54329 --max-connections=50 --extensions=pg_trgm,unaccent",
-    "seed": "node --env-file-if-exists=.env.local scripts/seed.ts"
+    "seed": "node --env-file-if-exists=.env.local scripts/seed.ts",
+    "migrate:legacy": "node --env-file-if-exists=.env.local scripts/migrate-legacy.ts"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",
