@@ -3,15 +3,21 @@ import { randomInt } from "node:crypto";
 import { and, count, eq, gte, isNull, ne, or, sql } from "drizzle-orm";
 import { db } from "@/db/client";
 import { attempts, lessons } from "@/db/schema";
+import { grade } from "@/features/grading/domain/grade";
 import { toCents } from "@/features/grading/domain/points";
 import { getLessonWithAnswers } from "@/features/lessons/queries";
 import { LessonConfigSchema } from "@/features/lessons/schema";
 import type { ErrorCode } from "@/lib/messages";
 import { rateLimit } from "@/lib/rate-limit";
 import { err, ok, type Result } from "@/lib/result";
-import { buildItems } from "./domain/build-items";
+import { buildItems, questionsForItems } from "./domain/build-items";
+import {
+  DEADLINE_GRACE_MS,
+  isPastGrace,
+  timeTakenSec,
+} from "./domain/deadline";
 import { createRng } from "./domain/random";
-import type { SaveProgressInput } from "./schemas";
+import type { SaveProgressInput, SubmitAttemptInput } from "./schemas";
 
 /** 06 §4. Tune here only; the integration tests read these values. */
 export const ATTEMPT_LIMITS = {
@@ -113,8 +119,7 @@ export async function startAttempt(
   return winner ? ok({ attemptId: winner, resumed: true }) : err("CONFLICT");
 }
 
-/** 02 §4.1: the server accepts saves and submits until deadline + 30 s. */
-export const DEADLINE_GRACE_MS = 30_000;
+export { DEADLINE_GRACE_MS };
 
 /**
  * Autosave (05 §3): one guarded UPDATE on the hot path. Only when that
@@ -146,6 +151,126 @@ export async function saveProgress(
     .returning({ id: attempts.id });
   if (saved) return ok({ savedAt: now.toISOString() });
   return err(await whyNotWritable(userId, attemptId, input, graceCutoff));
+}
+
+export type SubmitOutcome = {
+  attemptId: string;
+  score: number;
+  maxScore: number;
+  score10: number;
+  /** A retry or a parallel submit found the attempt already graded. */
+  alreadySubmitted: boolean;
+  /** Arrived after deadline + grace: graded with the last saved answers. */
+  late: boolean;
+};
+
+/**
+ * Submit and grade (ADR-004, 02 §4.1) in one transaction. The row lock plus
+ * the status check make double clicks, retries and parallel submits return
+ * the same graded result.
+ */
+export async function submitAttempt(
+  userId: string,
+  attemptId: string,
+  input: SubmitAttemptInput,
+  now = new Date(),
+): Promise<Result<SubmitOutcome>> {
+  // Read outside the transaction: the lesson content comes from the shared
+  // cache, so a burst of submits reads it once, and no pooled connection is
+  // held while it loads.
+  const [pre] = await db
+    .select({
+      userId: attempts.userId,
+      lessonId: attempts.lessonId,
+      lessonVersionId: attempts.lessonVersionId,
+      config: lessons.config,
+    })
+    .from(attempts)
+    .leftJoin(lessons, eq(lessons.id, attempts.lessonId))
+    .where(eq(attempts.id, attemptId))
+    .limit(1);
+  if (!pre || pre.userId !== userId) return err("NOT_FOUND");
+  // Single-lesson tests; review attempts (items with their own `v`) arrive in S7-06.
+  if (!pre.lessonId || !pre.lessonVersionId) return err("INTERNAL");
+  const { lessonId } = pre;
+  const questions = await getLessonWithAnswers(lessonId, pre.lessonVersionId);
+  if (!questions) return err("INTERNAL");
+  const byId = new Map(questions.map((q) => [q.id, q]));
+  const config = LessonConfigSchema.safeParse(pre.config);
+  const tfScoring = config.success ? config.data.tfScoring : "thpt2025";
+
+  return db.transaction(async (tx) => {
+    const [a] = await tx
+      .select({
+        status: attempts.status,
+        items: attempts.items,
+        answers: attempts.answers,
+        flagged: attempts.flagged,
+        score: attempts.score,
+        maxScore: attempts.maxScore,
+        score10: attempts.score10,
+        startedAt: attempts.startedAt,
+        deadlineAt: attempts.deadlineAt,
+      })
+      .from(attempts)
+      .where(eq(attempts.id, attemptId))
+      .for("update")
+      .limit(1);
+    if (!a) return err("NOT_FOUND");
+    if (a.status !== "in_progress")
+      return ok({
+        attemptId,
+        score: a.score ?? 0,
+        maxScore: a.maxScore,
+        score10: a.score10 ?? 0,
+        alreadySubmitted: true,
+        late: false,
+      });
+
+    const late = isPastGrace(a.deadlineAt, now);
+    if (!late && input.answers.length !== a.items.length)
+      return err("VALIDATION");
+
+    const answers = late ? a.answers : input.answers;
+    const flagged = late
+      ? a.flagged
+      : cleanFlags(input.flagged, a.items.length);
+    const result = grade(
+      questionsForItems(a.items, byId),
+      a.items,
+      answers,
+      tfScoring,
+    );
+    await tx
+      .update(attempts)
+      .set({
+        status: "submitted",
+        answers,
+        flagged,
+        earned: result.earned,
+        score: result.score,
+        maxScore: result.maxScore,
+        score10: result.score10,
+        submittedAt: now,
+        timeTakenSec: timeTakenSec(a.startedAt, a.deadlineAt, now),
+        clientSubmitId: input.clientSubmitId,
+      })
+      .where(eq(attempts.id, attemptId));
+    // Denormalized for "Nhiều lượt làm"; the catalog picks it up when its
+    // cache refreshes (no per-submit invalidation, 08).
+    await tx
+      .update(lessons)
+      .set({ attemptCount: sql`${lessons.attemptCount} + 1` })
+      .where(eq(lessons.id, lessonId));
+    return ok({
+      attemptId,
+      score: result.score,
+      maxScore: result.maxScore,
+      score10: result.score10,
+      alreadySubmitted: false,
+      late,
+    });
+  });
 }
 
 /** Unique item indexes inside the test, ascending. */

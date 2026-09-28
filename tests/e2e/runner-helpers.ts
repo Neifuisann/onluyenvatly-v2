@@ -75,3 +75,10 @@ export const visible = (page: Page, name: string | RegExp) =>
   page.getByRole("button", { name, exact: typeof name === "string" }).filter({
     visible: true,
   });
+
+/** Screenshot attached to the report (reviews, docs/reviews). */
+export async function attachShot(page: Page, info: TestInfo, name: string) {
+  const path = info.outputPath(`${name}.png`);
+  await page.screenshot({ path, scale: "css" });
+  await info.attach(name, { path, contentType: "image/png" });
+}

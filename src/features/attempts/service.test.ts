@@ -13,6 +13,7 @@ import {
   DEADLINE_GRACE_MS,
   saveProgress,
   startAttempt,
+  submitAttempt,
 } from "./service";
 
 vi.mock("@/db/client", async () => (await import("@/test/db")).mockDbModule());
@@ -27,7 +28,7 @@ const sampleQuestions: Question[] = [
   {
     id: "q_mcq1",
     type: "mcq",
-    stem: "Đơn vị của chu kì?",
+    stem: "ÄÆ¡n vá»‹ cá»§a chu kÃ¬?",
     options: [{ text: "s" }, { text: "m" }, { text: "Hz" }, { text: "N" }],
     answer: 0,
     points: 0.25,
@@ -35,7 +36,7 @@ const sampleQuestions: Question[] = [
   {
     id: "q_tf1",
     type: "tf",
-    stem: "Con lắc lò xo",
+    stem: "Con láº¯c lÃ² xo",
     statements: [
       { text: "a", answer: true },
       { text: "b", answer: false },
@@ -78,7 +79,7 @@ async function addLesson(
   const [lesson] = await tdb
     .insert(lessons)
     .values({
-      title: "Bài",
+      title: "BÃ i",
       status,
       config: { ...DEFAULT_LESSON_CONFIG, ...config },
     })
@@ -220,7 +221,7 @@ describe("startAttempt", () => {
       (_, i): Question => ({
         id: `q_m${i}`,
         type: "mcq",
-        stem: `Câu ${i}`,
+        stem: `CÃ¢u ${i}`,
         options: [{ text: "a" }, { text: "b" }],
         answer: 0,
       }),
@@ -318,7 +319,7 @@ describe("saveProgress", () => {
     ).toMatchObject({ code: "DEADLINE_PASSED" });
   });
 
-  it("refuses closed attempts and misaligned answers", async () => {
+  it("refuses closed attempts and misaligned answers (save)", async () => {
     const id = await started();
     expect(
       await saveProgress(student.id, id, { ...input, answers: ["A"] }, NOW),
@@ -330,5 +331,158 @@ describe("saveProgress", () => {
     expect(await saveProgress(student.id, id, input, NOW)).toMatchObject({
       code: "ATTEMPT_CLOSED",
     });
+  });
+});
+
+describe("submitAttempt", () => {
+  // Correct: mcq "A" (s), tf all four, short "0.63" â†’ 0.25 + 1 + 0.5.
+  const right = {
+    answers: ["A", [true, false, true, false], "0,63"],
+    flagged: [1],
+    clientSubmitId: "11111111-1111-4111-8111-111111111111",
+  };
+  const at = (ms: number) => new Date(NOW.getTime() + ms);
+
+  async function started(config: Partial<LessonConfig> = {}) {
+    const lessonId = await addLesson(config);
+    const r = await startAttempt(student, lessonId, ctx);
+    if (!r.ok) throw new Error("start failed");
+    return { id: r.data.attemptId, lessonId };
+  }
+  const row = async (id: string) =>
+    (await tdb.select().from(attempts).where(eq(attempts.id, id)))[0];
+
+  it("grades on the server and stores marks, time and the idempotency key", async () => {
+    const { id, lessonId } = await started();
+    const wrongTf = {
+      ...right,
+      answers: ["B", [true, false, true, true], "1"],
+    };
+    const r = await submitAttempt(student.id, id, wrongTf, at(95_000));
+    expect(r).toEqual({
+      ok: true,
+      data: {
+        attemptId: id,
+        score: 0.5,
+        maxScore: 1.75,
+        score10: 2.86,
+        alreadySubmitted: false,
+        late: false,
+      },
+    });
+    expect(await row(id)).toMatchObject({
+      status: "submitted",
+      answers: wrongTf.answers,
+      flagged: [1],
+      earned: [0, 0.5, 0],
+      score: 0.5,
+      score10: 2.86,
+      submittedAt: at(95_000),
+      timeTakenSec: 95,
+      clientSubmitId: right.clientSubmitId,
+    });
+    const [lesson] = await tdb
+      .select({ n: lessons.attemptCount })
+      .from(lessons)
+      .where(eq(lessons.id, lessonId));
+    expect(lesson?.n).toBe(1);
+  });
+
+  it("is idempotent: retries and parallel submits give one graded result", async () => {
+    const { id, lessonId } = await started();
+    const other = { ...right, clientSubmitId: crypto.randomUUID() };
+    const [a, b] = await Promise.all([
+      submitAttempt(student.id, id, right, at(1000)),
+      submitAttempt(student.id, id, other, at(1000)),
+    ]);
+    expect(a.ok && b.ok).toBe(true);
+    if (!a.ok || !b.ok) return;
+    expect(a.data.score).toBe(1.75);
+    expect(b.data.score).toBe(1.75);
+    expect([a.data.alreadySubmitted, b.data.alreadySubmitted].sort()).toEqual([
+      false,
+      true,
+    ]);
+    // A later retry with different answers changes nothing.
+    const again = await submitAttempt(
+      student.id,
+      id,
+      { ...right, answers: [null, null, null] },
+      at(5000),
+    );
+    expect(again).toMatchObject({ ok: true, data: { score: 1.75 } });
+    const [lesson] = await tdb
+      .select({ n: lessons.attemptCount })
+      .from(lessons)
+      .where(eq(lessons.id, lessonId));
+    expect(lesson?.n).toBe(1);
+  });
+
+  it("uses the submitted answers within the grace period", async () => {
+    const { id } = await started({ timeLimitSec: 60 });
+    const r = await submitAttempt(
+      student.id,
+      id,
+      right,
+      at(60_000 + DEADLINE_GRACE_MS),
+    );
+    expect(r).toMatchObject({ ok: true, data: { score: 1.75, late: false } });
+    expect((await row(id))?.timeTakenSec).toBe(60);
+  });
+
+  it("grades a late submit with the last saved answers", async () => {
+    const { id } = await started({ timeLimitSec: 60 });
+    await saveProgress(
+      student.id,
+      id,
+      { answers: ["A", null, null], flagged: [] },
+      at(30_000),
+    );
+    const r = await submitAttempt(student.id, id, right, at(10 * 60_000));
+    expect(r).toMatchObject({
+      ok: true,
+      data: { score: 0.25, late: true },
+    });
+    expect(await row(id)).toMatchObject({
+      answers: ["A", null, null],
+      timeTakenSec: 60,
+    });
+    // And nothing saves after that.
+    expect(
+      await saveProgress(student.id, id, {
+        answers: ["B", null, null],
+        flagged: [],
+      }),
+    ).toMatchObject({ code: "ATTEMPT_CLOSED" });
+  });
+
+  it("maps shuffled options back before grading", async () => {
+    const { id } = await started({ shuffleOptions: true });
+    const order = (await row(id))?.items[0]?.o ?? [];
+    const letter = "ABCD"[order.indexOf(0)] as string;
+    const r = await submitAttempt(
+      student.id,
+      id,
+      { ...right, answers: [letter, null, null] },
+      at(1000),
+    );
+    expect(r).toMatchObject({ ok: true, data: { score: 0.25 } });
+  });
+
+  it("hides others' attempts and refuses misaligned answers", async () => {
+    const { id } = await started();
+    const other = await addUser("student", "0900000010");
+    expect(await submitAttempt(other, id, right, at(1000))).toMatchObject({
+      code: "NOT_FOUND",
+    });
+    expect(
+      await submitAttempt(
+        student.id,
+        id,
+        { ...right, answers: ["A"] },
+        at(1000),
+      ),
+    ).toMatchObject({ code: "VALIDATION" });
+    expect((await row(id))?.status).toBe("in_progress");
   });
 });

@@ -58,7 +58,7 @@ Rule: **do as little work per request as possible, and do it once for everyone w
 | `/lessons` catalog | Dynamic shell. The lesson list comes from **cached data** (`"use cache"`, tag `lessons`); per-student progress is a separate small query streamed in via `<Suspense>` | `lessons` | on any lesson publish/edit |
 | `/lessons/[id]` overview | Dynamic. Lesson meta cached (`lesson:{id}`), student's attempts uncached | `lesson:{id}` | on save |
 | `/attempts/[id]` test runner | Dynamic. Questions come from a cached, **answer-stripped** lesson snapshot + the attempt row | `lesson:{id}:public` | on save |
-| `/attempts/[id]/result` | Dynamic (owner only), finished attempts are immutable → cached per attempt | `attempt:{id}` | on delete |
+| `/attempts/[id]/result` | Dynamic (owner or admin), finished attempts are immutable → cached per attempt. S3 ships a score-only page reading the attempt per request (one PK lookup); the per-attempt cache arrives with the full review in S4-03 | `attempt:{id}` | on delete |
 | `/leaderboard` | Cached **60 s** (`cacheLife`), shared by all users | `leaderboard` | time-based + on attempt delete |
 | `/profile`, `/review`, `/dashboard` | Dynamic, per user | — | — |
 | `/admin/**` | Dynamic, no cache | — | — |

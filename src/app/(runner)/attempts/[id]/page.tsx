@@ -54,6 +54,8 @@ export default async function AttemptPage({
         return toRunnerQuestion(withOptionOrder(q, item.o), item.p);
       })}
       saved={{ answers: attempt.answers, flagged: attempt.flagged }}
+      deadlineAt={attempt.deadlineAt?.toISOString() ?? null}
+      serverNow={new Date().toISOString()}
     />
   );
 }

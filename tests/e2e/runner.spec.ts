@@ -2,6 +2,7 @@ import AxeBuilder from "@axe-core/playwright";
 import { expect, test } from "@playwright/test";
 import { ANSWER_MARKER } from "./fixtures/lessons";
 import {
+  attachShot,
   loginOnce,
   openTest,
   press,
@@ -79,12 +80,7 @@ test("runner: every question type, flag, navigator, list view and keys", async (
     "aria-pressed",
     "true",
   );
-  const shot = testInfo.outputPath("runner-tf-answered.png");
-  await page.screenshot({ path: shot, scale: "css" });
-  await testInfo.attach("runner-tf-answered", {
-    path: shot,
-    contentType: "image/png",
-  });
+  await attachShot(page, testInfo, "runner-tf-answered");
 
   // 4: short answer with a comma decimal.
   await visible(page, "Sau").click();
@@ -201,4 +197,80 @@ test("runner fits the phone, passes axe in light and dark", async ({
     }
   }
   expect(errors).toEqual([]);
+});
+
+test("journey 2 end + 5: the server grades; a double submit gives one result", async ({
+  page,
+}, testInfo) => {
+  const runnerUrl = await openTest(page, "e2e-runner");
+  await press(page, /^A\. 2 cm/); // wrong
+  await visible(page, "Sau").click();
+  await press(page, /^B\. Hz/); // 0.25
+  await visible(page, "Sau").click();
+  for (const name of ["a) Đúng", "b) Sai", "c) Sai", "d) Sai"])
+    await press(page, name); // 3 of 4 → 0.5 × 1
+  await visible(page, "Sau").click();
+  await page.getByLabel("Câu trả lời của bạn").fill("0,63"); // 0.5
+  await visible(page, "Nộp bài").click();
+  const dialog = page.getByRole("dialog", { name: "Nộp bài?" });
+  await dialog.getByRole("button", { name: "Nộp bài", exact: true }).click();
+  await expect(page).toHaveURL(/\/attempts\/[0-9a-f-]{36}\/result$/);
+  const score = page.getByRole("region", { name: "Điểm" });
+  await expect(score).toContainText("6,25");
+  await expect(score).toContainText("2/4 câu đúng");
+  await expect(score).toContainText("1,25/2 điểm");
+  await attachShot(page, testInfo, "result");
+  // The runner of a submitted attempt leads to its result.
+  await page.goto(runnerUrl);
+  await expect(page).toHaveURL(/\/result$/);
+
+  // Journey 5: two parallel submits → the same graded result.
+  const url = await openTest(page, "e2e-runner");
+  expect(url).not.toBe(runnerUrl);
+  const id = url.split("/").pop() as string;
+  const [a, b] = await page.evaluate(async (attemptId) => {
+    const post = () =>
+      fetch(`/api/attempts/${attemptId}/submit`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          answers: ["B", "B", [true, false, true, false], "0.63"],
+          flagged: [],
+          clientSubmitId: crypto.randomUUID(),
+        }),
+      }).then((r) => r.json());
+    return Promise.all([post(), post()]);
+  }, id);
+  expect(a.ok && b.ok).toBe(true);
+  expect(a.data.resultUrl).toBe(b.data.resultUrl);
+  expect([a.data.score, b.data.score]).toEqual([2, 2]);
+  expect([a.data.alreadySubmitted, b.data.alreadySubmitted].sort()).toEqual([
+    false,
+    true,
+  ]);
+  await page.goto(a.data.resultUrl);
+  await expect(page.getByRole("region", { name: "Điểm" })).toContainText("10");
+});
+
+test("journey 3: the timer auto-submits at 0 and later saves are refused", async ({
+  page,
+}, testInfo) => {
+  test.setTimeout(150_000);
+  const url = await openTest(page, "e2e-timer");
+  const timer = page.getByRole("timer");
+  await expect(timer).toHaveText(/0[01]:\d\d/);
+  await expect(timer).toHaveClass(/bg-danger/);
+  await press(page, /^B\. 5 cm/); // 0.25 of 0.5
+  await attachShot(page, testInfo, "timer");
+  await expect(page).toHaveURL(/\/result$/, { timeout: 90_000 });
+  await expect(page.getByRole("region", { name: "Điểm" })).toContainText(
+    "0,25/0,5 điểm",
+  );
+  const id = url.split("/").pop();
+  const late = await page.request.post(`/api/attempts/${id}/save`, {
+    headers: { origin: new URL(url).origin },
+    data: { answers: [null, null], flagged: [] },
+  });
+  expect(late.status()).toBe(409);
+  expect((await late.json()).code).toBe("ATTEMPT_CLOSED");
 });

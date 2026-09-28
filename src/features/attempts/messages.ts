@@ -68,6 +68,29 @@ export const saveCopy = {
   signIn: "Đăng nhập lại",
 } as const;
 
+/** `/attempts/[id]/result` (07 §5.4; full review arrives in S4-03). */
+export const resultCopy = {
+  title: "Kết quả bài làm",
+  outOf: "/ 10",
+  scoreLabel: "Điểm",
+  correct: (n: number, total: number) => `${n}/${total} câu đúng`,
+  points: (score: string, max: string) => `${score}/${max} điểm`,
+  time: (clock: string) => `Thời gian làm bài ${clock}`,
+  submittedAt: (when: string) => `Nộp lúc ${when}`,
+  reviewSoon: "Phần xem lại từng câu và đáp án sẽ có trong bản cập nhật tới.",
+  backToLesson: "Về trang bài tập",
+  toCatalog: "Danh sách bài tập",
+  good: "Làm tốt lắm!",
+  keepGoing: "Cố lên, ôn lại rồi làm tiếp nhé!",
+} as const;
+
+/** `TestTimer` (07 §4) and auto-submit. */
+export const timerCopy = {
+  label: "Thời gian còn lại",
+  left: (minutes: number) => `Còn ${minutes} phút làm bài.`,
+  timeUp: "Hết giờ. Hệ thống đang nộp bài của bạn…",
+} as const;
+
 /** `SubmitDialog` (07 §4). */
 export const submitCopy = {
   title: "Nộp bài?",
@@ -80,6 +103,8 @@ export const submitCopy = {
   keepGoing: "Làm tiếp",
   confirm: "Nộp bài",
   submitting: "Đang nộp bài…",
+  retrying: "Mất kết nối. Bài làm đã được lưu trên máy, đang thử nộp lại…",
+  failed: "Chưa nộp được bài. Bạn thử lại nhé.",
 } as const;
 
 /** The start/continue panel on a lesson overview. */

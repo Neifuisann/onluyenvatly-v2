@@ -206,6 +206,19 @@ Validation: lint, typecheck, all **320 unit/integration tests** and coverage gat
 **Demo:** the teacher takes a migrated test on a phone, reloads mid-way, submits, and sees the correct score.
 **Also this sprint:** hallway test of the runner with 2–3 students (07 §8).
 
+**Implementation status (2026-09-28):** code complete on `feat/S3-quiz-engine`, one commit per task. Lint, types, 442 unit/integration tests with coverage gates, the production build and all 42 Playwright tests (desktop Chromium + 360 px) pass locally against a PGlite database.
+
+| ID | Status | Evidence / remaining acceptance |
+|---|---|---|
+| S3-01 | ✅ Implemented, local DB verified | Migration `0003_attempts` (4 tables, 3 enums, RLS, the unique in-progress partial index); integration tests for the index, alignment check, numeric round trips and cascades. Neon/Supabase get it through `migrate.yml` on merge |
+| S3-02 | ✅ Done | Golden tests from 11 §2 + property tests; `grading/domain` and `attempts/domain` gated at 95 % (100 % lines, ≥ 96 % branches) |
+| S3-03 | ✅ Done | Integration test: two parallel starts → one attempt; also resume, `maxAttempts`, drafts, empty pools, corrupt config, rate limit |
+| S3-04 | ✅ Implemented, E2E verified | Runner at 360 px and desktop, light/dark, 0 serious/critical axe issues. Hallway test with students still to do (07 §8) |
+| S3-05 | ✅ Done | E2E: reload restores answers, offline → online syncs, cross-origin save → 403 |
+| S3-06 | ✅ Done | E2E journeys 2, 3 (real 60 s timer) and 5 pass. The result page shows the score only; per-question review is S4-03, rating/mistakes S4-01/02 |
+
+Decisions made while building (recorded in 04/05/07): items carry their points (`p`) so config edits can't change marks mid-attempt; short answers compare exactly (no rounding of extra digits); question shuffle groups mcq → tf → short as v1 did; a chosen Đ/S uses the neutral "selected" color; saves send the whole state (≤ 16 KB) rather than diffs; graded attempts are always `submitted` (late ones included), `expired` stays unused for now. Still open: the demo on a migrated lesson (needs the S2-05 data in the preview DB), the hallway test, and the preview-URL checks from §1.
+
 ---
 
 ### Sprint 4: Results, rating & leaderboard
@@ -375,4 +388,5 @@ Pilot data note: the final migration upserts only rows with `legacy_id`. Attempt
 | S0 | 2026-09-28 → | 4.0 | 3.25 (S0-01–05, S0-07, S0-10, most of S0-08) | v1 inventory and anonymized real fixtures | Keep: run against real data early, since it found 4 migration/rendering bugs the synthetic fixtures missed. Open: S0-06 (Preview env vars, AI/R2/Sentry/UptimeRobot), S0-09 |
 | S1 | 2026-09-28 → | 4.5 | 4.5 (all tasks done; S1-03 applied to Neon + Supabase, S1-08 grade A) | Production /api/health green | Keep: log error codes, never messages, so outages are diagnosable without leaking connection strings |
 | S2 | 2026-09-28 → | 4.5 | All seven tasks implemented; S2-05 rehearsed on Neon with real v1 data; LCP check and image copy remain | Synthetic catalog and legacy-link demo; mobile/desktop light/dark browser checks | Keep domain/property tests and explicit answer-safe projections; run coverage separately from the production build to avoid local PGlite startup contention |
+| S3 | 2026-09-28 → | 4.5 | 4.5 (all six tasks implemented and E2E-verified locally) | Synthetic all-types lesson: start, answer, reload, offline, submit, server score; 1-minute auto-submit | Keep: pure domain + one-guarded-UPDATE hot paths; E2E against a production build found real issues (desktop default view, theme switch mid-transition). Change: run the hallway test before S4 starts |
 | … | | | | | |

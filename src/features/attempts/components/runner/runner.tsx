@@ -30,8 +30,10 @@ import { QuestionNavigator } from "./question-navigator";
 import { SaveIndicator } from "./save-indicator";
 import { RunnerProvider, useRunner, useRunnerApi } from "./store";
 import { SubmitDialog } from "./submit-dialog";
+import { TestTimer } from "./test-timer";
 import type { RunnerQuestion } from "./types";
 import { useAutosave } from "./use-autosave";
+import { useSubmit } from "./use-submit";
 
 export type RunnerProps = {
   attemptId: string;
@@ -40,6 +42,10 @@ export type RunnerProps = {
   questions: RunnerQuestion[];
   /** Last answers saved on the server. */
   saved: { answers: RunnerAnswers; flagged: number[] };
+  /** ISO; null = no time limit. */
+  deadlineAt: string | null;
+  /** The server clock when the page was rendered, to correct phone clocks. */
+  serverNow: string;
 };
 
 type View = "single" | "list";
@@ -61,12 +67,20 @@ export function Runner(props: RunnerProps) {
   );
 }
 
-function RunnerScreen({ attemptId, lessonId, title, questions }: RunnerProps) {
+function RunnerScreen({
+  attemptId,
+  lessonId,
+  title,
+  questions,
+  deadlineAt,
+  serverNow,
+}: RunnerProps) {
   const api = useRunnerApi();
   const router = useRouter();
   // Closed elsewhere (another tab submitted, the deadline passed): the page
   // itself redirects to the result once refreshed.
   const save = useAutosave(attemptId, () => router.refresh());
+  const { submit, submitting, error } = useSubmit(attemptId, save);
   const current = useRunner((s) => s.current);
   const answers = useRunner((s) => s.answers);
   const flagged = useRunner((s) => s.flagged.includes(s.current));
@@ -181,6 +195,18 @@ function RunnerScreen({ attemptId, lessonId, title, questions }: RunnerProps) {
             {title}
           </p>
           <div className="ml-auto flex items-center gap-1">
+            {deadlineAt && (
+              <TestTimer
+                deadlineAt={deadlineAt}
+                serverNow={serverNow}
+                onExpire={() => {
+                  // Time is up: submit what is on screen, no questions asked.
+                  setNavOpen(false);
+                  setSubmitOpen(true);
+                  void submit();
+                }}
+              />
+            )}
             <Button
               type="button"
               variant="ghost"
@@ -388,8 +414,9 @@ function RunnerScreen({ attemptId, lessonId, title, questions }: RunnerProps) {
         open={submitOpen}
         onClose={() => setSubmitOpen(false)}
         onPick={pick}
-        onConfirm={() => {}}
-        submitting={false}
+        onConfirm={() => void submit()}
+        submitting={submitting}
+        error={error}
       />
     </div>
   );

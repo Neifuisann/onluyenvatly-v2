@@ -1,5 +1,6 @@
 "use client";
 
+import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { summarize } from "../../domain/runner-state";
@@ -13,12 +14,14 @@ export function SubmitDialog({
   onConfirm,
   onPick,
   submitting,
+  error,
 }: {
   open: boolean;
   onClose: () => void;
   onConfirm: () => void;
   onPick: (index: number) => void;
   submitting: boolean;
+  error: string | null;
 }) {
   const answers = useRunner((s) => s.answers);
   const flagged = useRunner((s) => s.flagged);
@@ -68,6 +71,7 @@ export function SubmitDialog({
       }
     >
       <div className="space-y-4">
+        {error && <Alert variant="danger">{error}</Alert>}
         <p>{t.summary(summary.answered, summary.total)}</p>
         {summary.unanswered.length === 0 && (
           <p className="text-muted-foreground text-sm">{t.allDone}</p>
