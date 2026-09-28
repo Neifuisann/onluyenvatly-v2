@@ -222,7 +222,7 @@ test("journey 2 end + 5: the server grades; a double submit gives one result", a
   await attachShot(page, testInfo, "result");
 
   // S4-03: rating change, then the review (revealAnswers: after_submit).
-  await expect(score).toContainText(/Rating [d ]+ → [d ]+/);
+  await expect(score).toContainText(/Rating [\d\s]+ → [\d\s]+/);
   const review = page.getByRole("region", { name: "Xem lại từng câu" });
   await expect(review.getByRole("article")).toHaveCount(4);
   await expect(
