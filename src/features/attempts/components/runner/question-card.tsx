@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { questionTypeNames, runnerCopy as t } from "../../messages";
 import { McqOptions } from "./mcq-options";
+import { PreviewKey } from "./preview";
 import { ShortAnswerInput } from "./short-answer-input";
 import { useRunner } from "./store";
 import { TrueFalseTable } from "./true-false-table";
@@ -66,6 +67,7 @@ export function QuestionCard({
         <TrueFalseTable index={index} statements={question.statements ?? []} />
       )}
       {question.type === "short" && <ShortAnswerInput index={index} />}
+      <PreviewKey index={index} />
     </section>
   );
 }

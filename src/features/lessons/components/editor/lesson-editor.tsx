@@ -29,17 +29,23 @@ import {
 } from "../../messages";
 import type { LessonConfig, Question } from "../../schema";
 import { ContentTab } from "./content-tab";
+import { CoverPicker } from "./cover-picker";
+import { questionTexts, TexProvider } from "./preview-math";
+import { PreviewTab } from "./preview-tab";
+import { PublishBar } from "./publish-bar";
 import { SettingsTab } from "./settings-tab";
 
 export type EditorLesson = {
   id: number;
   status: "draft" | "published" | "archived";
+  coverPath: string | null;
   meta: LessonMeta;
   sourceText: string;
   /** Last saved questions, so new parses keep their ids (04 §3.1). */
   previous: Question[];
   config: LessonConfig;
   hasDraft: boolean;
+  hasPublished: boolean;
 };
 
 const statusClass = {
@@ -48,14 +54,15 @@ const statusClass = {
   archived: "bg-warning/25 text-foreground",
 } as const;
 
-const TABS = ["content", "settings"] as const;
+const TABS = ["content", "settings", "preview"] as const;
 type Tab = (typeof TABS)[number];
 
 /**
  * `/admin/lessons/[id]/edit` (07 §5.6). Holds the text and the settings
  * being edited. The text is parsed on a deferred copy so typing stays smooth
  * on long lessons; the settings are validated on every change against the
- * live content, so the stats bar follows them. Content saving is S5-04.
+ * live content, so the stats bar follows them. Saving and publishing the
+ * text: `PublishBar` (S5-04).
  */
 export function LessonEditor({ lesson }: { lesson: EditorLesson }) {
   const [tab, setTab] = useState<Tab>("content");
@@ -71,6 +78,10 @@ export function LessonEditor({ lesson }: { lesson: EditorLesson }) {
       generateId: () => `q_new${++n}`,
     });
   }, [deferred, lesson.previous]);
+  const texts = useMemo(
+    () => questionTexts(parsed.questions),
+    [parsed.questions],
+  );
   const available = useMemo(
     () => countByType(parsed.questions),
     [parsed.questions],
@@ -130,7 +141,10 @@ export function LessonEditor({ lesson }: { lesson: EditorLesson }) {
   };
 
   const settingsDirty = JSON.stringify(form) !== JSON.stringify(savedForm);
-  const dirty = text !== lesson.sourceText || settingsDirty;
+  const textDirty = text !== lesson.sourceText;
+  const dirty = textDirty || settingsDirty;
+  // From the deferred parse; the server checks the text again on publish.
+  const errors = parsed.issues.filter((i) => i.severity === "error").length;
 
   // Unsaved work: let the browser ask before leaving.
   useEffect(() => {
@@ -183,6 +197,16 @@ export function LessonEditor({ lesson }: { lesson: EditorLesson }) {
             {lesson.hasDraft ? t.draftSource : t.publishedSource}
           </p>
         )}
+        <PublishBar
+          lessonId={lesson.id}
+          status={lesson.status}
+          text={text}
+          textDirty={textDirty}
+          settingsDirty={settingsDirty}
+          hasDraft={lesson.hasDraft}
+          hasPublished={lesson.hasPublished}
+          errors={errors}
+        />
       </header>
 
       <div
@@ -215,37 +239,56 @@ export function LessonEditor({ lesson }: { lesson: EditorLesson }) {
           </button>
         ))}
       </div>
-      {/* Both panels stay mounted so the editor keeps its undo history. */}
-      <div
-        role="tabpanel"
-        id="panel-content"
-        aria-labelledby="tab-content"
-        hidden={tab !== "content"}
-      >
-        <ContentTab
-          initialText={lesson.sourceText}
-          onTextChange={setText}
-          parsed={parsed}
-          config={statsConfig}
-        />
-      </div>
-      <div
-        role="tabpanel"
-        id="panel-settings"
-        aria-labelledby="tab-settings"
-        hidden={tab !== "settings"}
-      >
-        <SettingsTab
-          form={form}
-          onChange={onChange}
-          errorOf={errorOf}
-          onTouch={(field) => setTouched((s) => new Set([...s, field]))}
-          available={available}
-          onSave={save}
-          pending={pending}
-          message={message}
-        />
-      </div>
+      {/* Content and settings stay mounted so the editor keeps its undo history. */}
+      <TexProvider texts={texts}>
+        <div
+          role="tabpanel"
+          id="panel-content"
+          aria-labelledby="tab-content"
+          hidden={tab !== "content"}
+        >
+          <ContentTab
+            initialText={lesson.sourceText}
+            onTextChange={setText}
+            parsed={parsed}
+            config={statsConfig}
+          />
+        </div>
+        <div
+          role="tabpanel"
+          id="panel-settings"
+          aria-labelledby="tab-settings"
+          hidden={tab !== "settings"}
+        >
+          <SettingsTab
+            form={form}
+            onChange={onChange}
+            errorOf={errorOf}
+            onTouch={(field) => setTouched((s) => new Set([...s, field]))}
+            available={available}
+            onSave={save}
+            pending={pending}
+            message={message}
+          />
+          <CoverPicker lessonId={lesson.id} coverPath={lesson.coverPath} />
+        </div>
+        <div
+          role="tabpanel"
+          id="panel-preview"
+          aria-labelledby="tab-preview"
+          hidden={tab !== "preview"}
+        >
+          {/* Mounted only while open: each visit is a fresh try on the latest text. */}
+          {tab === "preview" && (
+            <PreviewTab
+              title={form.title || lesson.meta.title}
+              questions={parsed.questions}
+              config={settings.ok ? settings.config : lesson.config}
+              errors={errors}
+            />
+          )}
+        </div>
+      </TexProvider>
     </div>
   );
 }

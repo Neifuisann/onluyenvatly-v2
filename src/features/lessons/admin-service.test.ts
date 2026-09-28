@@ -6,6 +6,7 @@ import {
   auditLog,
   lessons,
   lessonVersions,
+  media,
   users,
 } from "@/db/schema";
 import { resetDb, type TestDb } from "@/test/db";
@@ -16,6 +17,7 @@ import {
   duplicateLesson,
   reorderLessons,
   setArchived,
+  setLessonCover,
   updateLessonSettings,
 } from "./admin-service";
 import { type SettingsForm, toSettingsForm } from "./domain/settings-form";
@@ -468,5 +470,41 @@ describe("updateLessonSettings", () => {
     expect(
       await updateLessonSettings(admin, id, formFor({ title: "Bài 2" })),
     ).toMatchObject({ ok: false, code: "NOT_FOUND" });
+  });
+});
+
+describe("setLessonCover", () => {
+  it("sets and removes an uploaded cover, with audit entries", async () => {
+    const id = await addLesson("Bài", 0);
+    await tdb.insert(media).values({ path: "2026/10/c.webp", bytes: 10 });
+    expect(await setLessonCover(admin, id, "2026/10/c.webp")).toEqual({
+      ok: true,
+      data: { id },
+    });
+    const [row] = await tdb
+      .select({ coverPath: lessons.coverPath })
+      .from(lessons)
+      .where(eq(lessons.id, id));
+    expect(row?.coverPath).toBe("2026/10/c.webp");
+    await setLessonCover(admin, id, null);
+    const [after] = await tdb
+      .select({ coverPath: lessons.coverPath })
+      .from(lessons)
+      .where(eq(lessons.id, id));
+    expect(after?.coverPath).toBeNull();
+    expect((await audit()).map((a) => a.action)).toEqual([
+      "lesson.cover",
+      "lesson.cover",
+    ]);
+  });
+
+  it("refuses files that were never uploaded and unknown lessons", async () => {
+    const id = await addLesson("Bài", 0);
+    expect(await setLessonCover(admin, id, "2026/10/none.webp")).toMatchObject({
+      code: "VALIDATION",
+    });
+    expect(await setLessonCover(admin, 999, null)).toMatchObject({
+      code: "NOT_FOUND",
+    });
   });
 });

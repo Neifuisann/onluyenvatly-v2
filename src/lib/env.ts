@@ -18,8 +18,10 @@ const serverSchema = z.object({
   // 5 in production (08). Local PGlite (`pnpm db:local`) needs 1.
   DATABASE_POOL_MAX: z.coerce.number().int().min(1).max(20).default(5),
   DATABASE_URL_DIRECT: z.url().optional(), // CI/scripts only
-  SUPABASE_URL: z.url().optional(), // required from S5-05
-  SUPABASE_SERVICE_ROLE_KEY: z.string().min(1).optional(), // required from S5-05
+  // Image uploads (S5-05). Optional so local dev and CI build without them;
+  // `createUploadUrl` answers STORAGE_UNAVAILABLE until both are set.
+  SUPABASE_URL: z.url().optional(),
+  SUPABASE_SERVICE_ROLE_KEY: z.string().min(1).optional(),
   SESSION_PEPPER: z.string().min(32),
   GEMINI_API_KEY: z.string().min(1).optional(), // required from S7-01
   GEMINI_MODEL_TEXT: z.string().min(1).optional(),
@@ -29,7 +31,8 @@ const serverSchema = z.object({
 });
 
 const clientSchema = z.object({
-  NEXT_PUBLIC_MEDIA_BASE_URL: z.url().optional(), // required from S5-05
+  // Public URL of the `media` bucket; images show as their path until set.
+  NEXT_PUBLIC_MEDIA_BASE_URL: z.url().optional(),
 });
 
 export type ServerEnv = z.infer<typeof serverSchema>;

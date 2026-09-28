@@ -23,6 +23,9 @@ export const errorMessages = {
   DEADLINE_PASSED: "Đã hết thời gian làm bài.",
   AI_UNAVAILABLE: "Tính năng AI đang tạm dừng. Vui lòng thử lại sau.",
   AI_QUOTA: "Hôm nay đã hết lượt dùng AI. Vui lòng thử lại vào ngày mai.",
+  STORAGE_UNAVAILABLE:
+    "Chưa tải được ảnh lên: kho ảnh chưa được cấu hình hoặc đang lỗi. Thử lại sau.",
+  STORAGE_FULL: "Kho ảnh đã gần đầy. Xóa bớt ảnh không dùng rồi thử lại.",
   INTERNAL: "Đã có lỗi xảy ra. Vui lòng thử lại.",
 } as const;
 

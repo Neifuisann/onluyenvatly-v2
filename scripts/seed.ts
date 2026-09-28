@@ -12,7 +12,7 @@
  */
 import { randomBytes } from "node:crypto";
 import { parseArgs } from "node:util";
-import { eq } from "drizzle-orm";
+import { and, eq, inArray, ne } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
 import * as schema from "../src/db/schema.ts";
@@ -185,6 +185,7 @@ async function main() {
     }
   }
   // Fresh rate-limit counters so reruns within a minute stay under the limits.
+  const seeded: number[] = [];
   for (const { questions = e2eQuestions, ...lesson } of e2eLessons) {
     await db.transaction(async (tx) => {
       const values = {
@@ -198,6 +199,7 @@ async function main() {
         .onConflictDoUpdate({ target: schema.lessons.legacyId, set: values })
         .returning({ id: schema.lessons.id });
       if (!row) throw new Error("Lesson seed failed");
+      seeded.push(row.id);
       const content = { questions, sourceText: serializeLesson(questions) };
       const [version] = await tx
         .insert(schema.lessonVersions)
@@ -223,6 +225,15 @@ async function main() {
   await db.delete(schema.rateLimits);
   // Every run starts without attempts (in-progress ones would be resumed).
   await db.delete(schema.attempts);
+  // Versions a publish spec added (S5-04); the fixture is version 1.
+  await db
+    .delete(schema.lessonVersions)
+    .where(
+      and(
+        inArray(schema.lessonVersions.lessonId, seeded),
+        ne(schema.lessonVersions.version, 1),
+      ),
+    );
   // Tests assume the defaults.
   await db
     .update(settings)

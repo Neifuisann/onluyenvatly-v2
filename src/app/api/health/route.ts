@@ -2,6 +2,7 @@ import { sql } from "drizzle-orm";
 import { connection } from "next/server";
 import { db } from "@/db/client";
 import { env } from "@/lib/env.server";
+import { pgErrorCode } from "@/lib/pg-error";
 
 // Pinged by UptimeRobot every 5 min (12 §5). The `select 1` also keeps the
 // Supabase project from pausing.
@@ -13,14 +14,8 @@ export async function GET() {
   } catch (error) {
     dbOk = false;
     // Code only (28P01 bad password, XX000 unknown pooler tenant, ENOTFOUND,
-    // CONNECT_TIMEOUT…): the message can echo connection details. Drizzle
-    // wraps driver errors in DrizzleQueryError, with the original as `cause`.
-    const cause = (error as { cause?: { code?: unknown } }).cause;
-    const code = cause?.code ?? (error as { code?: unknown }).code;
-    console.error(
-      "health: db check failed:",
-      typeof code === "string" ? code : "unknown",
-    );
+    // CONNECT_TIMEOUT…): the message can echo connection details.
+    console.error("health: db check failed:", pgErrorCode(error) ?? "unknown");
   }
   return Response.json(
     {

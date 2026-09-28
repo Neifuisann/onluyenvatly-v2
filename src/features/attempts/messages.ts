@@ -167,3 +167,28 @@ export const startCopy = {
   viewResult: "Xem kết quả",
   loading: "Đang tải lượt làm bài",
 } as const;
+
+/** The editor's "Xem trước" tab: the runner in preview mode (S5-06). */
+export const previewCopy = {
+  badge: "Xem trước · không lưu bài làm",
+  key: "Đáp án",
+  keyTf: (parts: string) => `Đáp án: ${parts}`,
+  tolerance: (t: string) => `sai số ± ${t}`,
+  explanation: "Giải thích",
+  outcome: {
+    correct: "Trả lời đúng",
+    partial: (earned: string, max: string) =>
+      `Đúng một phần (${earned}/${max}đ)`,
+    wrong: "Trả lời sai",
+    blank: "Chưa trả lời",
+  },
+  resultTitle: "Kết quả xem trước",
+  resultScore: (score: string, max: string) => `${score}/${max} điểm`,
+  resultScore10: (s: string) => `Thang 10: ${s}`,
+  resultCounts: (correct: number, total: number) =>
+    `${correct}/${total} câu đúng`,
+  resultNote: "Bài xem trước không được lưu và không tính điểm xếp hạng.",
+  restart: "Làm lại",
+  close: "Đóng",
+  timeLimit: (min: number) => `Thời gian làm bài: ${min} phút`,
+} as const;

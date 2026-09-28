@@ -33,6 +33,7 @@ export default async function EditLessonPage({
       lesson={{
         id: lesson.id,
         status: lesson.status,
+        coverPath: lesson.coverPath,
         meta: {
           title: lesson.title,
           description: lesson.description,
@@ -44,6 +45,7 @@ export default async function EditLessonPage({
         previous,
         config: config.success ? config.data : DEFAULT_LESSON_CONFIG,
         hasDraft: lesson.hasDraft,
+        hasPublished: lesson.hasPublished,
       }}
     />
   );

@@ -59,6 +59,7 @@ export type LessonForEditing = {
   grade: number | null;
   chapter: string | null;
   tags: string[];
+  coverPath: string | null;
   status: "draft" | "published" | "archived";
   /** Raw jsonb; the editor validates it with `LessonConfigSchema`. */
   config: unknown;
@@ -85,6 +86,7 @@ export async function getLessonForEditing(
       grade: lessons.grade,
       chapter: lessons.chapter,
       tags: lessons.tags,
+      coverPath: lessons.coverPath,
       status: lessons.status,
       config: lessons.config,
       sourceText: lessonVersions.sourceText,

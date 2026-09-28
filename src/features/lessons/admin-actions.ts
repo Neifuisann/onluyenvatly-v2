@@ -13,10 +13,21 @@ import {
   duplicateLesson as duplicateLessonService,
   reorderLessons,
   setArchived,
+  setLessonCover,
   updateLessonSettings,
 } from "./admin-service";
+import {
+  discardDraft as discardDraftService,
+  type PublishResult,
+  publishLesson,
+  type SaveDraftResult,
+  saveDraft as saveDraftService,
+  unpublishLesson,
+} from "./content-service";
 import { LessonIdSchema, ReorderSchema } from "./domain/admin-list";
+import { SourceTextSchema } from "./domain/content";
 import { SettingsFormSchema } from "./domain/settings-form";
+import { MediaPathSchema } from "./schema";
 
 /**
  * Admin lesson actions (05 §2). Every one: `requireAdmin()` first, Zod, the
@@ -142,6 +153,102 @@ export async function saveSettings(
   );
   if (result.ok) {
     // Cards (title, grade, time, counts) and the overview's rules.
+    invalidateLesson(parsed.data.id);
+    refresh();
+  }
+  return result;
+}
+
+const ContentSchema = z.strictObject({
+  id: LessonIdSchema,
+  sourceText: SourceTextSchema,
+});
+
+/**
+ * "Lưu nháp" (S5-04): the server re-parses the text itself. A draft is
+ * invisible to students, so no shared tag changes; the refresh gives the
+ * editor the saved text and question ids.
+ */
+export async function saveDraft(
+  input: unknown,
+): Promise<Result<SaveDraftResult>> {
+  const user = await requireAdmin();
+  const parsed = ContentSchema.safeParse(input);
+  if (!parsed.success) return err("VALIDATION");
+  const result = await saveDraftService(
+    user,
+    parsed.data.id,
+    parsed.data.sourceText,
+  );
+  if (result.ok) refresh();
+  return result;
+}
+
+const PublishSchema = z.strictObject({
+  id: LessonIdSchema,
+  sourceText: SourceTextSchema.optional(),
+});
+
+/** "Xuất bản": the draft (or the given text) becomes what students take. */
+export async function publish(input: unknown): Promise<Result<PublishResult>> {
+  const user = await requireAdmin();
+  const parsed = PublishSchema.safeParse(input);
+  if (!parsed.success) return err("VALIDATION");
+  const { id, sourceText } = parsed.data;
+  const result = await publishLesson(user, id, sourceText);
+  if (result.ok) {
+    // Cards and counts, the overview, and both content views: the replaced
+    // version may have been deleted.
+    invalidateLesson(id);
+    updateTag(tags.lessonPublic(id));
+    updateTag(tags.lessonAnswers(id));
+    refresh();
+  }
+  return result;
+}
+
+/** "Ngừng xuất bản": hidden from the catalog; attempts in progress can still submit. */
+export async function unpublish(
+  input: unknown,
+): Promise<Result<{ id: number }>> {
+  const user = await requireAdmin();
+  const id = LessonIdSchema.safeParse(input);
+  if (!id.success) return err("VALIDATION");
+  const result = await unpublishLesson(user, id.data);
+  if (result.ok) {
+    invalidateLesson(id.data);
+    refresh();
+  }
+  return result;
+}
+
+/** "Bỏ bản nháp": back to the published content. Nothing students see changes. */
+export async function discardDraft(
+  input: unknown,
+): Promise<Result<{ id: number }>> {
+  const user = await requireAdmin();
+  const id = LessonIdSchema.safeParse(input);
+  if (!id.success) return err("VALIDATION");
+  const result = await discardDraftService(user, id.data);
+  if (result.ok) refresh();
+  return result;
+}
+
+const CoverSchema = z.strictObject({
+  id: LessonIdSchema,
+  path: MediaPathSchema.nullable(),
+});
+
+/** Cover image (S5-05): live at once, like the settings. */
+export async function setCover(
+  input: unknown,
+): Promise<Result<{ id: number }>> {
+  const user = await requireAdmin();
+  const parsed = CoverSchema.safeParse(input);
+  if (!parsed.success) return err("VALIDATION");
+  const result = await setLessonCover(user, parsed.data.id, parsed.data.path);
+  if (result.ok) {
+    // Catalog cards show the cover.
     invalidateLesson(parsed.data.id);
     refresh();
   }

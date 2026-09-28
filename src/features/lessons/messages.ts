@@ -172,7 +172,7 @@ export const adminLessonsCopy = {
 export const editorCopy = {
   back: "Danh sách bài",
   tabsLabel: "Phần soạn bài",
-  tabs: { content: "Nội dung", settings: "Cài đặt" },
+  tabs: { content: "Nội dung", settings: "Cài đặt", preview: "Làm thử" },
   editorLabel: "Nội dung bài (định dạng văn bản)",
   editorLoading: "Đang tải trình soạn thảo…",
   paneLabel: "Chế độ xem",
@@ -212,6 +212,11 @@ export const editorCopy = {
   perAttempt: (total: number, points: string | null) =>
     `Mỗi lượt làm: ${total} câu${points === null ? "" : ` · ${points}đ`}`,
   unsaved: "Chưa lưu",
+  tryLead:
+    "Làm thử như học sinh trên nội dung đang soạn (kể cả chưa lưu): bộ câu hỏi, thứ tự và điểm theo cài đặt. Có hiện đáp án; không lưu bài làm.",
+  tryAgain: "Tạo lượt mới",
+  tryHasErrors: (n: number) =>
+    `Nội dung còn ${n} lỗi; các câu lỗi có thể hiển thị hoặc chấm chưa đúng.`,
   draftSource: "Đang sửa bản nháp",
   publishedSource: "Đang sửa từ bản đã xuất bản",
   notFoundTitle: "Không tìm thấy bài tập",
@@ -304,4 +309,49 @@ export const settingsCopy = {
       "Công bố đáp án sau giờ làm bài chung cần có thời gian làm bài.",
     invalid: "Cài đặt không hợp lệ.",
   },
+} as const;
+
+/** Saving and publishing lesson content (S5-04). */
+export const publishCopy = {
+  saveDraft: "Lưu nháp",
+  saving: "Đang lưu…",
+  saved: "Đã lưu bản nháp.",
+  savedWithErrors: (n: number) =>
+    `Đã lưu bản nháp. Còn ${n} lỗi cần sửa trước khi xuất bản.`,
+  unchanged: "Nội dung giống bản đã xuất bản, không cần lưu nháp.",
+  publish: "Xuất bản",
+  publishing: "Đang xuất bản…",
+  published: "Đã xuất bản. Học sinh thấy nội dung mới ngay.",
+  publishTitle: "Xuất bản bài tập?",
+  publishBody:
+    "Học sinh sẽ thấy nội dung mới ngay. Bài đang làm dở vẫn được chấm theo nội dung cũ.",
+  publishFirstBody: "Bài sẽ hiện trong danh sách bài tập của học sinh.",
+  publishSettingsDirty:
+    "Cài đặt có thay đổi chưa lưu; bài sẽ xuất bản với cài đặt đã lưu.",
+  publishConfirm: "Xuất bản",
+  unpublish: "Ngừng xuất bản",
+  unpublishing: "Đang ngừng xuất bản…",
+  unpublished:
+    "Đã ngừng xuất bản. Học sinh không còn thấy bài; bài đang làm dở vẫn nộp được.",
+  discardDraft: "Bỏ bản nháp",
+  discardTitle: "Bỏ bản nháp?",
+  discardBody:
+    "Nội dung nháp sẽ bị xóa và trình soạn thảo quay về bản đang xuất bản.",
+  discardConfirm: "Bỏ bản nháp",
+  discarded: "Đã bỏ bản nháp.",
+  cancel: "Hủy",
+  close: "Đóng",
+  shortcut: "Ctrl+S để lưu nháp",
+  hasErrors: (n: number) =>
+    `Nội dung còn ${n} lỗi. Sửa hết lỗi (xem mục “Kiểm tra”) rồi xuất bản.`,
+  empty: "Bài chưa có câu hỏi nào.",
+  invalid: "Nội dung bài không hợp lệ.",
+  poolSize: (want: number, have: number) =>
+    `Bộ câu hỏi ngẫu nhiên lấy ${want} câu nhưng bài chỉ có ${have} câu. Sửa trong “Cài đặt”.`,
+  poolByType: (type: "mcq" | "tf" | "short", want: number, have: number) =>
+    `Bộ câu hỏi ngẫu nhiên lấy ${want} câu ${questionTypeLabels[type].toLowerCase()} nhưng bài chỉ có ${have}. Sửa trong “Cài đặt”.`,
+  archived: "Bài đang lưu trữ. Khôi phục bài trước khi xuất bản.",
+  nothingToPublish: "Bài chưa có nội dung để xuất bản.",
+  notPublished: "Bài chưa được xuất bản.",
+  noDraft: "Bài không có bản nháp.",
 } as const;

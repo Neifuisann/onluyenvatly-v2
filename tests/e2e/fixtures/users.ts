@@ -15,7 +15,12 @@ export const e2eAdmin = {
  * account's other sessions (single-session policy), so parallel specs must
  * never share an admin.
  */
-export const E2E_SPEC_ADMINS = ["lessons", "editor"] as const;
+export const E2E_SPEC_ADMINS = [
+  "lessons",
+  "editor",
+  "publish",
+  "media",
+] as const;
 export type E2eSpecAdmin = (typeof E2E_SPEC_ADMINS)[number];
 export const e2eSpecAdminUsername = (spec: E2eSpecAdmin, project: string) =>
   `e2e-${spec}-${project === "mobile" ? "m" : "d"}`;
@@ -72,6 +77,21 @@ export const e2eStudents = [
     key: "profile2",
     phone: "0900000009",
     fullName: "Học Sinh Hồ Sơ Hai",
+    status: "active",
+    grade: 12,
+  },
+  // S5-04 publish journey, one per Playwright project.
+  {
+    key: "publish",
+    phone: "0900000010",
+    fullName: "Học Sinh Xuất Bản",
+    status: "active",
+    grade: 12,
+  },
+  {
+    key: "publish2",
+    phone: "0900000011",
+    fullName: "Học Sinh Xuất Bản Hai",
     status: "active",
     grade: 12,
   },
