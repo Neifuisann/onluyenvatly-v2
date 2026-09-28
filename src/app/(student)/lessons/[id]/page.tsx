@@ -1,5 +1,10 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import { Suspense } from "react";
+import {
+  LessonAttemptPanel,
+  LessonAttemptPanelSkeleton,
+} from "@/features/attempts/components/lesson-attempt-panel";
 import { requireStudent } from "@/features/auth/guards";
 import { LessonOverviewContent } from "@/features/lessons/components/lesson-overview";
 import { LessonIdSchema } from "@/features/lessons/domain/lesson-params";
@@ -16,5 +21,19 @@ export default async function LessonPage({
   if (!parsed.success) notFound();
   const lesson = await getLessonOverview(parsed.data, user.role === "admin");
   if (!lesson) notFound();
-  return <LessonOverviewContent lesson={lesson} />;
+  return (
+    <LessonOverviewContent
+      lesson={lesson}
+      attempts={
+        <Suspense fallback={<LessonAttemptPanelSkeleton />}>
+          <LessonAttemptPanel
+            userId={user.id}
+            lessonId={lesson.id}
+            maxAttempts={lesson.maxAttempts}
+            unlimited={user.role === "admin"}
+          />
+        </Suspense>
+      }
+    />
+  );
 }

@@ -19,12 +19,15 @@ import {
   inet,
   integer,
   jsonb,
+  numeric,
   pgEnum,
   pgTable,
+  primaryKey,
   smallint,
   text,
   timestamp,
   unique,
+  uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
 
@@ -264,6 +267,181 @@ export const media = pgTable("media", {
   createdAt: timestamptz("created_at").notNull().defaultNow(),
 }).enableRLS();
 
+export const attemptMode = pgEnum("attempt_mode", [
+  "test",
+  "practice",
+  "review",
+]);
+export const attemptStatus = pgEnum("attempt_status", [
+  "in_progress",
+  "submitted",
+  "expired",
+]);
+
+/**
+ * One question of an attempt, in display order: question id, lesson version
+ * (omitted when equal to the attempt's), mcq option order (original indexes in
+ * display order) and the points it is worth, fixed at start.
+ */
+export type AttemptItem = { q: string; v?: number; o?: number[]; p: number };
+/** mcq: displayed letter "A"–"F"; tf: one boolean or null per statement; short: text. */
+export type AttemptAnswer = string | (boolean | null)[] | null;
+/** Seconds since start + kind (S4-04). Capped at 200. */
+export type GuardEvent = { t: number; k: string };
+
+const score = (name: string, precision: number) =>
+  numeric(name, { precision, scale: 2, mode: "number" });
+
+export const attempts = pgTable(
+  "attempts",
+  {
+    /** Unguessable, used in URLs. */
+    id: uuid("id").primaryKey().defaultRandom(),
+    legacyResultId: text("legacy_result_id").unique(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    /** null for personalized practice (`review`). */
+    lessonId: bigint("lesson_id", { mode: "number" }).references(
+      () => lessons.id,
+      { onDelete: "cascade" },
+    ),
+    // NO ACTION (not RESTRICT): deleting a lesson cascades to both its
+    // versions and its attempts in one statement.
+    lessonVersionId: bigint("lesson_version_id", {
+      mode: "number",
+    }).references(() => lessonVersions.id),
+    mode: attemptMode("mode").notNull().default("test"),
+    status: attemptStatus("status").notNull().default("in_progress"),
+    items: jsonb("items").$type<AttemptItem[]>().notNull(),
+    /** Aligned with `items`. */
+    answers: jsonb("answers").$type<AttemptAnswer[]>().notNull(),
+    /** Item indexes flagged for review. */
+    flagged: smallint("flagged").array().notNull().default(sql`'{}'`),
+    guardEvents: jsonb("guard_events")
+      .$type<GuardEvent[]>()
+      .notNull()
+      .default([]),
+    /** Aligned with `items`, set on submit. */
+    earned: score("earned", 5).array(),
+    score: score("score", 7),
+    maxScore: score("max_score", 7).notNull(),
+    /** Normalized to 10 for display and stats. */
+    score10: score("score10", 4),
+    startedAt: timestamptz("started_at").notNull().defaultNow(),
+    /** null = no limit. The server allows a 30 s grace after it. */
+    deadlineAt: timestamptz("deadline_at"),
+    submittedAt: timestamptz("submitted_at"),
+    timeTakenSec: integer("time_taken_sec"),
+    lastSavedAt: timestamptz("last_saved_at"),
+    /** Idempotency key of the submit that closed the attempt. */
+    clientSubmitId: uuid("client_submit_id"),
+    ip: inet("ip"),
+  },
+  (t) => [
+    // One open attempt per (student, lesson); `review` attempts have no lesson.
+    uniqueIndex("attempts_one_in_progress_uq")
+      .on(t.userId, t.lessonId)
+      .where(sql`${t.status} = 'in_progress'`),
+    index("attempts_user_submitted_idx").on(t.userId, t.submittedAt.desc()),
+    index("attempts_lesson_submitted_idx")
+      .on(t.lessonId, t.submittedAt.desc())
+      .where(sql`${t.status} = 'submitted'`),
+    index("attempts_expiry_idx")
+      .on(t.status, t.deadlineAt)
+      .where(sql`${t.status} = 'in_progress'`),
+    check(
+      "attempts_answers_aligned",
+      sql`jsonb_array_length(${t.answers}) = jsonb_array_length(${t.items})`,
+    ),
+  ],
+).enableRLS();
+
+export const ratings = pgTable(
+  "ratings",
+  {
+    userId: uuid("user_id")
+      .primaryKey()
+      .references(() => users.id, { onDelete: "cascade" }),
+    rating: integer("rating").notNull().default(1500),
+    peak: integer("peak").notNull().default(1500),
+    ratedAttempts: integer("rated_attempts").notNull().default(0),
+    updatedAt: timestamptz("updated_at").notNull().defaultNow(),
+  },
+  (t) => [index("ratings_rating_idx").on(t.rating.desc())],
+).enableRLS();
+
+export const ratingEvents = pgTable(
+  "rating_events",
+  {
+    id: bigint("id", { mode: "number" })
+      .primaryKey()
+      .generatedAlwaysAsIdentity(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    /** null for migrated history that matched no result. */
+    attemptId: uuid("attempt_id")
+      .unique()
+      .references(() => attempts.id, { onDelete: "cascade" }),
+    lessonId: bigint("lesson_id", { mode: "number" }).references(
+      () => lessons.id,
+      { onDelete: "set null" },
+    ),
+    before: integer("before").notNull(),
+    delta: integer("delta").notNull(),
+    after: integer("after").notNull(),
+    performance: numeric("performance", {
+      precision: 4,
+      scale: 3,
+      mode: "number",
+    }),
+    /** `v2`, or `v1-legacy` for migrated rows. */
+    formula: text("formula").notNull(),
+    createdAt: timestamptz("created_at").notNull().defaultNow(),
+  },
+  (t) => [
+    index("rating_events_user_created_idx").on(t.userId, t.createdAt.desc()),
+    index("rating_events_created_idx").on(t.createdAt),
+  ],
+).enableRLS();
+
+export const mistakeStatus = pgEnum("mistake_status", ["open", "resolved"]);
+
+export const mistakes = pgTable(
+  "mistakes",
+  {
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    lessonId: bigint("lesson_id", { mode: "number" })
+      .notNull()
+      .references(() => lessons.id, { onDelete: "cascade" }),
+    /** Stable id inside the lesson. */
+    questionId: text("question_id").notNull(),
+    /** Latest version where it was seen. */
+    lessonVersionId: bigint("lesson_version_id", { mode: "number" })
+      .notNull()
+      .references(() => lessonVersions.id),
+    wrongCount: smallint("wrong_count").notNull().default(0),
+    /** Reset on a wrong answer; resolved at 2. */
+    correctStreak: smallint("correct_streak").notNull().default(0),
+    status: mistakeStatus("status").notNull().default("open"),
+    lastAttemptId: uuid("last_attempt_id").references(() => attempts.id, {
+      onDelete: "set null",
+    }),
+    updatedAt: timestamptz("updated_at").notNull().defaultNow(),
+  },
+  (t) => [
+    primaryKey({ columns: [t.userId, t.lessonId, t.questionId] }),
+    index("mistakes_user_status_idx").on(
+      t.userId,
+      t.status,
+      t.updatedAt.desc(),
+    ),
+  ],
+).enableRLS();
+
 export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
 export type Session = typeof sessions.$inferSelect;
@@ -272,3 +450,8 @@ export type Lesson = typeof lessons.$inferSelect;
 export type NewLesson = typeof lessons.$inferInsert;
 export type LessonVersion = typeof lessonVersions.$inferSelect;
 export type Media = typeof media.$inferSelect;
+export type Attempt = typeof attempts.$inferSelect;
+export type NewAttempt = typeof attempts.$inferInsert;
+export type Rating = typeof ratings.$inferSelect;
+export type RatingEvent = typeof ratingEvents.$inferSelect;
+export type Mistake = typeof mistakes.$inferSelect;

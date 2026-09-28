@@ -17,7 +17,7 @@
 **Coverage targets:** `features/grading`, `features/rating`, `features/lessons/parser` ≥ **95 %** lines; overall domain modules ≥ 80 %. UI is not coverage-gated.
 
 ## 2. Golden tests for business rules (ported from v1 behaviour)
-`src/features/grading/grade.test.ts` must include:
+`src/features/grading/domain/grade.test.ts` (with `points.test.ts`, `short-answer.test.ts`, and `src/features/attempts/domain/build-items.test.ts` for pool selection and the seeded shuffle; both folders are gated at ≥ 95 % lines and branches) must include:
 - TF 4 statements: 4/3/2/1/0 correct → 1 / 0.5 / 0.25 / 0.1 / 0 × points; unanswered statement counts as wrong.
 - TF with 3 statements → proportional.
 - MCQ with shuffled options: displayed letter mapped back through `o[]`.
@@ -36,6 +36,8 @@
 ## 3. E2E journeys (Playwright)
 
 `lessons.spec.ts` covers the S2 catalog/overview in desktop Chromium and a 360 px Android viewport: accent-insensitive search, filters, cumulative pagination, back/reload and search focus, legacy 308 redirects, invalid/missing/unpublished lookups, student HTML/RSC answer-leak checks, light/dark screenshots, and zero serious/critical axe violations. `pnpm seed --profile e2e` now also upserts 27 published synthetic lessons plus a draft and archived lesson, with version content containing a private explanation marker for leak detection. The seed remains local/CI-only. The Next.js streamed shell requires JavaScript; a GET form alone does not provide a no-JavaScript page.
+
+`runner.spec.ts` (S3) takes the seeded `e2e-runner` lesson (all three types, no shuffle, 2 points) and `e2e-timer` (1-minute limit) as dedicated students `runner`/`runner2`, one per Playwright project, so parallel projects never share an attempt. It covers the runner UI (answers, flag, navigator sheet/panel, list view, keyboard, submit dialog), axe and 360 px overflow in light and dark (with reduced motion so axe never samples mid-transition), journey 4's leak check on every runner response, journey 2 (reload restore, offline → online sync, cross-origin save refused, submit → server score 6,25), journey 5 (two parallel submits → one graded result) and journey 3 (the real 60 s timer auto-submits, then a save gets 409). Journey 5's "one rating event" check joins with S4-01.
 
 1. **Register → pending → admin approves → login → dashboard.**
 2. **Take a test end to end:** start, answer all 3 types, flag, reload mid-test (answers restored), go offline, answer, come back online (sync), submit → result shows the correct score for known answers.

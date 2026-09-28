@@ -79,7 +79,7 @@ Assumptions:
 2. Autosave is dirty-checked and throttled (30 s), with a flush on `pagehide`.
 3. No polling anywhere. No realtime. Timers are client-side against the server `deadline_at`.
 4. Shared data goes through tagged caching (ADR-005). Admin mutations invalidate precisely.
-5. Payload hygiene: the runner gets question content once (RSC) and the save endpoint accepts only `{answers, flagged, guardEvents}` diffs up to 8 KB.
+5. Payload hygiene: the runner gets question content once (RSC) and the save endpoint accepts only `{answers, flagged}` (≈ 1 KB for 40 questions; hard cap 16 KB). S3-05 sends the whole state rather than diffs: it is small, and last-write-wins stays trivially correct.
 6. AI calls always go through the DB cache and the global daily budget (ADR-007).
 7. Upload bytes never pass through functions (ADR-006).
 8. Bots: `robots.txt` disallows everything except the landing, materials and share pages. `/admin` and `/attempts` send `noindex`.

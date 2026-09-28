@@ -1,5 +1,6 @@
 import { ArrowLeft, ShieldCheck } from "lucide-react";
 import Link from "next/link";
+import type { ReactNode } from "react";
 import { MathText } from "@/components/math-text/math-text";
 import {
   catalogCopy,
@@ -9,7 +10,14 @@ import {
 } from "../messages";
 import type { LessonOverview } from "../queries";
 
-export function LessonOverviewContent({ lesson }: { lesson: LessonOverview }) {
+export function LessonOverviewContent({
+  lesson,
+  attempts,
+}: {
+  lesson: LessonOverview;
+  /** The per-user start/continue panel, streamed by the page. */
+  attempts?: ReactNode;
+}) {
   return (
     <article className="mx-auto flex max-w-3xl flex-col gap-6">
       <Link
@@ -90,9 +98,7 @@ export function LessonOverviewContent({ lesson }: { lesson: LessonOverview }) {
           </p>
         )}
       </section>
-      <p className="rounded-lg border border-dashed p-4 text-center text-muted-foreground text-sm">
-        {t.availableSoon}
-      </p>
+      {attempts}
     </article>
   );
 }

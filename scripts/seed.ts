@@ -21,6 +21,8 @@ import {
   passwordIssue,
 } from "../src/features/auth/core/password.ts";
 import { serializeLesson } from "../src/features/lessons/domain/serializer.ts";
+import { summarizeLesson } from "../src/features/lessons/domain/summary.ts";
+import { LessonConfigSchema } from "../src/features/lessons/schema.ts";
 import { e2eLessons, e2eQuestions } from "../tests/e2e/fixtures/lessons.ts";
 import {
   E2E_PASSWORD,
@@ -143,12 +145,11 @@ async function main() {
       });
   }
   // Fresh rate-limit counters so reruns within a minute stay under the limits.
-  for (const lesson of e2eLessons) {
+  for (const { questions = e2eQuestions, ...lesson } of e2eLessons) {
     await db.transaction(async (tx) => {
       const values = {
         ...lesson,
-        questionCount: 1,
-        typeCounts: { mcq: 1 },
+        ...summarizeLesson(questions, LessonConfigSchema.parse(lesson.config)),
         publishedAt: new Date("2026-01-01"),
       };
       const [row] = await tx
@@ -157,10 +158,7 @@ async function main() {
         .onConflictDoUpdate({ target: schema.lessons.legacyId, set: values })
         .returning({ id: schema.lessons.id });
       if (!row) throw new Error("Lesson seed failed");
-      const content = {
-        questions: e2eQuestions,
-        sourceText: serializeLesson(e2eQuestions),
-      };
+      const content = { questions, sourceText: serializeLesson(questions) };
       const [version] = await tx
         .insert(schema.lessonVersions)
         .values({ lessonId: row.id, version: 1, ...content })
@@ -183,6 +181,8 @@ async function main() {
     });
   }
   await db.delete(schema.rateLimits);
+  // Every run starts without attempts (in-progress ones would be resumed).
+  await db.delete(schema.attempts);
   // Tests assume the defaults.
   await db
     .update(settings)

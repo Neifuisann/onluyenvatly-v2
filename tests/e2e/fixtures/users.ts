@@ -32,6 +32,21 @@ export const e2eStudents = [
     status: "active",
     grade: 10,
   },
+  // One per Playwright project, so parallel runner specs never share an attempt.
+  {
+    key: "runner",
+    phone: "0900000006",
+    fullName: "Học Sinh Làm Bài",
+    status: "active",
+    grade: 12,
+  },
+  {
+    key: "runner2",
+    phone: "0900000007",
+    fullName: "Học Sinh Làm Bài Hai",
+    status: "active",
+    grade: 12,
+  },
   {
     key: "pending",
     phone: "0900000004",

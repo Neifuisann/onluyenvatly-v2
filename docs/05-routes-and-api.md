@@ -35,7 +35,7 @@ Conventions:
 
 **S2 catalog implementation:** `/lessons` supports `q`, `grade`, `chapter`, `tag`, `sort=order|newest|popular|title`, and `page`. Each “Xem thêm” step retains the preceding cards (24 per step, at most 20 steps). Invalid params fall back per field; search ignores accents and treats `%`/`_` literally. Filters preserve browser history and reset pagination. Only published lessons are listed. Shared catalog/facet queries use tag `lessons` with an hours cache lifetime. Progress/status filters await the S3 attempts table.
 
-**S2 overview implementation:** `/lessons/[id]` selects metadata and explicit rule fields only, cached under `lesson:{id}` for hours. It never selects `lesson_versions`, source text, questions, or the full config. Students receive a not-found view for drafts/archived lessons; admins can open those overviews directly. Attempt history and start/continue arrive with S3-01/S3-03; the overview currently says that taking a lesson will open soon.
+**S2 overview implementation:** `/lessons/[id]` selects metadata and explicit rule fields only, cached under `lesson:{id}` for hours. It never selects `lesson_versions`, source text, questions, or the full config. Students receive a not-found view for drafts/archived lessons; admins can open those overviews directly. Since S3-03 a per-user panel streams in under the cached metadata (`getMyLessonAttempts`, uncached): "Tiếp tục làm bài" for the attempt in progress, otherwise the `startAttempt` form (hidden when `maxAttempts` is used up; admins are unlimited), and my finished attempts linking to their results.
 
 ### Admin (layout: `requireAdmin()`)
 
@@ -83,7 +83,7 @@ S2-07 implements the lesson redirect only. The authenticated lookup validates th
 ### `features/attempts/actions.ts`
 | Action | Input | Notes |
 |---|---|---|
-| `startAttempt` | `{ lessonId }` | Returns the existing in-progress attempt if any; checks `maxAttempts`; builds items (pool, shuffle); rate limit 10/min |
+| `startAttempt` | `{ lessonId }` (form) | Returns the existing in-progress attempt if any; checks `maxAttempts` (not for admins, who may also try unpublished lessons that have a version); builds items (pool, shuffle, points) from a random 32-bit seed; rate limit 10/min. Parallel starts converge through the unique in-progress index (`INSERT … ON CONFLICT DO NOTHING`, then re-read). Redirects to `/attempts/[id]` |
 | `saveProgress`* | `{ attemptId, answers, flagged, guardEvents }` | Owner + in_progress + before deadline+grace. Last-write-wins, small payload |
 | `submitAttempt`* | `{ attemptId, answers, clientSubmitId }` | Row lock, grade, rating, mistakes, one tx. Idempotent |
 
@@ -112,8 +112,8 @@ S2-07 implements the lesson redirect only. The authenticated lookup validates th
 ## 3. Route Handlers
 | Method & path | Purpose | Auth |
 |---|---|---|
-| `POST /api/attempts/[id]/save` | Autosave (fetch with `keepalive`, or `sendBeacon` on `pagehide`) | Session cookie + owner check + same-origin |
-| `POST /api/attempts/[id]/submit` | Submit and grade; returns `{ resultUrl }`. Idempotent via `clientSubmitId` | Session cookie + owner check + same-origin |
+| `POST /api/attempts/[id]/save` | Autosave (fetch with `keepalive`, or `sendBeacon` on `pagehide`). Body `{ answers, flagged }` (the whole state, ≤ 16 KB, any content type since beacons post `text/plain`). One guarded `UPDATE … WHERE id AND user_id AND status='in_progress' AND deadline_at + 30 s ≥ now AND jsonb_array_length(items) = n`; only a miss runs a second read to say why. Returns `Result` JSON: 200 `{ savedAt }`, 401, 403 (origin), 404 (missing or not yours), 409 `ATTEMPT_CLOSED`/`DEADLINE_PASSED`, 400 `VALIDATION`. No rate limit: the client syncs at most every 30 s and the write is one small UPDATE | Session cookie + owner check + same-origin (`lib/same-origin.ts`: `Origin`, else `Sec-Fetch-Site`) |
+| `POST /api/attempts/[id]/submit` | Submit and grade; returns `{ resultUrl, score, maxScore, score10, alreadySubmitted, late }`. Body `{ answers, flagged, clientSubmitId }`. One pre-read (attempt ⋈ lesson config) and the cached `getLessonWithAnswers` run outside the transaction; then `SELECT … FOR UPDATE`, re-check `status`, grade with the pure `grade()`, store `answers/earned/score/score10/submitted_at/time_taken_sec/client_submit_id`, and bump `lessons.attempt_count`. An already-submitted attempt returns its stored result (`alreadySubmitted: true`), so retries and parallel submits are idempotent. After `deadline_at` + 30 s the request is still accepted but graded with the last saved answers (`late: true`); `time_taken_sec` is capped at the limit. Rating and mistakes join this transaction in S4-01/S4-02 | Session cookie + owner check + same-origin |
 | `POST /api/ai/import` | Streams Gemini output (text/plain chunks) for PDF/DOCX/image import. `maxDuration = 300` | Admin |
 | `GET /api/cron/daily` | Expire stale attempts, prune sessions/rate_limits/versions, keep Supabase awake, compute quota snapshot | `Authorization: Bearer ${CRON_SECRET}` |
 | `GET /api/health` | `select 1` + version | Public, no cache |

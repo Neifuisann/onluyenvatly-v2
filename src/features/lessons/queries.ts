@@ -2,10 +2,15 @@ import "server-only";
 import { and, asc, count, desc, eq, type SQL, sql } from "drizzle-orm";
 import { cacheLife, cacheTag } from "next/cache";
 import { db } from "@/db/client";
-import { lessons } from "@/db/schema";
+import { lessons, lessonVersions } from "@/db/schema";
 import { tags } from "@/lib/cache-tags";
 import { type CatalogFilters, PAGE_SIZE, searchTerms } from "./domain/catalog";
+import {
+  type PublicQuestion,
+  toPublicQuestion,
+} from "./domain/public-question";
 import type { TypeCounts } from "./domain/summary";
+import type { Question } from "./schema";
 
 /** What a lesson card needs, and nothing else (no questions, no config). */
 export type CatalogItem = {
@@ -138,6 +143,58 @@ export async function getLessonOverview(
 export type LessonOverview = NonNullable<
   Awaited<ReturnType<typeof getLessonOverview>>
 >;
+
+/**
+ * A version's questions WITH ANSWERS (05 §4). Server-only: grading and item
+ * building. Never pass the result to a client component; the runner gets
+ * `toPublicQuestion` output only.
+ */
+export async function getLessonWithAnswers(
+  lessonId: number,
+  versionId: number,
+): Promise<Question[] | null> {
+  "use cache";
+  cacheTag(tags.lessonAnswers(lessonId));
+  cacheLife("hours");
+  const [row] = await db
+    .select({ questions: lessonVersions.questions })
+    .from(lessonVersions)
+    .where(
+      and(
+        eq(lessonVersions.id, versionId),
+        eq(lessonVersions.lessonId, lessonId),
+      ),
+    )
+    .limit(1);
+  // Validated with `QuestionsSchema` when written (editor, migration).
+  return row ? (row.questions as Question[]) : null;
+}
+
+/**
+ * The answer-free taking view of a version (05 §4), in teacher order with
+ * options unshuffled; the runner applies each attempt's option order.
+ */
+export async function getLessonForTaking(
+  lessonId: number,
+  versionId: number,
+): Promise<PublicQuestion[] | null> {
+  "use cache";
+  cacheTag(tags.lessonPublic(lessonId));
+  cacheLife("hours");
+  const [row] = await db
+    .select({ questions: lessonVersions.questions })
+    .from(lessonVersions)
+    .where(
+      and(
+        eq(lessonVersions.id, versionId),
+        eq(lessonVersions.lessonId, lessonId),
+      ),
+    )
+    .limit(1);
+  return row
+    ? (row.questions as Question[]).map((q) => toPublicQuestion(q))
+    : null;
+}
 
 /** Both hits and misses invalidate when lessons are published or imported. */
 export async function getLessonIdByLegacyId(

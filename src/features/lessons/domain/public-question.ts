@@ -54,6 +54,22 @@ export function isPermutation(order: readonly number[], n: number): boolean {
 }
 
 /**
+ * Applies an attempt item's option order to an already-public question, so
+ * one cached answer-free copy of the lesson serves every shuffle.
+ */
+export function withOptionOrder(
+  q: PublicQuestion,
+  optionOrder?: readonly number[],
+): PublicQuestion {
+  if (q.type !== "mcq" || !optionOrder) return q;
+  if (!isPermutation(optionOrder, q.options.length))
+    throw new Error(`Invalid option order for question ${q.id}`);
+  const { options } = q;
+  // Every index exists: the order was checked to be a permutation.
+  return { ...q, options: optionOrder.flatMap((i) => options[i] ?? []) };
+}
+
+/**
  * @param optionOrder mcq only: original option indexes in display order, e.g.
  *   `[2, 0, 3, 1]` shows original option 2 as "A". Defaults to the stored order.
  */

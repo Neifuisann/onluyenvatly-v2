@@ -39,7 +39,6 @@ export const overviewCopy = {
   rating: "Tính điểm xếp hạng",
   practice: "Không tính điểm xếp hạng",
   guard: "Chế độ thi: ghi nhận khi rời khỏi bài làm.",
-  availableSoon: "Tính năng làm bài sẽ sớm được mở.",
   unpublished: "Bài tập chưa xuất bản",
   notFoundTitle: "Không tìm thấy bài tập",
   notFoundBody:
