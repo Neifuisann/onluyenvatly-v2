@@ -90,6 +90,8 @@ test("exam guard: notice, blocked copy, events for the teacher only", async ({
   expect(copied).toBe(false);
   await page.evaluate(() => window.dispatchEvent(new Event("blur")));
   await press(page, /^B\. 5 cm/);
+  // One question per screen: submit sits on the last one.
+  await visible(page, "Sau").click();
   await visible(page, "Nộp bài").click();
   await page
     .getByRole("dialog", { name: "Nộp bài?" })
