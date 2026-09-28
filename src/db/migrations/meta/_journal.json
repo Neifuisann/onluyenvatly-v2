@@ -36,6 +36,13 @@
       "when": 1790587910253,
       "tag": "0004_rating_time_bonus",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1790590903837,
+      "tag": "0005_attempt_overrides",
+      "breakpoints": true
     }
   ]
 }

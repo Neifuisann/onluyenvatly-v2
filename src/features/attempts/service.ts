@@ -1,22 +1,20 @@
 import "server-only";
 import { randomInt } from "node:crypto";
-import {
-  and,
-  count,
-  eq,
-  gte,
-  isNull,
-  ne,
-  or,
-  type SQL,
-  sql,
-} from "drizzle-orm";
+import { and, eq, gte, isNull, or, type SQL, sql } from "drizzle-orm";
 import { db } from "@/db/client";
-import { attempts, type GuardEvent, lessons } from "@/db/schema";
+import {
+  attemptOverrides,
+  attempts,
+  type GuardEvent,
+  lessons,
+} from "@/db/schema";
 import { grade } from "@/features/grading/domain/grade";
 import { toCents } from "@/features/grading/domain/points";
 import { getLessonWithAnswers } from "@/features/lessons/queries";
-import { LessonConfigSchema } from "@/features/lessons/schema";
+import {
+  type LessonConfig,
+  LessonConfigSchema,
+} from "@/features/lessons/schema";
 import { rateAttempt } from "@/features/rating/service";
 import { mistakeChanges } from "@/features/review/domain/mistakes";
 import { recordMistakes } from "@/features/review/service";
@@ -31,6 +29,12 @@ import {
 } from "./domain/deadline";
 import { MAX_GUARD_EVENTS } from "./domain/guard";
 import { createRng } from "./domain/random";
+import {
+  attemptDeadline,
+  canStart,
+  revealAt,
+  type StartCounts,
+} from "./domain/schedule";
 import type { SaveProgressInput, SubmitAttemptInput } from "./schemas";
 
 /** 06 §4. Tune here only; the integration tests read these values. */
@@ -86,20 +90,15 @@ export async function startAttempt(
 
   const config = LessonConfigSchema.safeParse(lesson.config);
   if (!config.success) return err("INTERNAL");
-  const { maxAttempts, timeLimitSec } = config.data;
 
-  if (maxAttempts !== null && user.role !== "admin") {
-    const [used] = await db
-      .select({ n: count() })
-      .from(attempts)
-      .where(
-        and(
-          eq(attempts.userId, user.id),
-          eq(attempts.lessonId, lessonId),
-          ne(attempts.status, "in_progress"),
-        ),
-      );
-    if ((used?.n ?? 0) >= maxAttempts) return err("ATTEMPT_LIMIT");
+  if (user.role !== "admin") {
+    const check = canStart(
+      config.data,
+      await startCounts(user.id, lessonId, config.data),
+      now,
+      false,
+    );
+    if (!check.ok) return err(check.code);
   }
 
   const questions = await getLessonWithAnswers(lessonId, lesson.versionId);
@@ -119,9 +118,7 @@ export async function startAttempt(
       answers: items.map(() => null),
       maxScore: items.reduce((s, i) => s + toCents(i.p), 0) / 100,
       startedAt: now,
-      deadlineAt: timeLimitSec
-        ? new Date(now.getTime() + timeLimitSec * 1000)
-        : null,
+      deadlineAt: attemptDeadline(config.data, now),
       ip,
     })
     // Lost a race with a parallel start: the other one wins.
@@ -367,6 +364,39 @@ async function whyNotWritable(
   if (row.deadlineAt && row.deadlineAt < graceCutoff) return "DEADLINE_PASSED";
   if (Number(row.count) !== input.answers.length) return "VALIDATION";
   return "CONFLICT";
+}
+
+/**
+ * What `canStart` needs, in one query, and only when the lesson has a limit
+ * or has closed: finished attempts, attempts since the close, extra tries.
+ */
+async function startCounts(
+  userId: string,
+  lessonId: number,
+  config: LessonConfig,
+): Promise<StartCounts> {
+  const close = revealAt(config);
+  if (config.maxAttempts === null && !close)
+    return { used: 0, usedSinceClose: 0, extra: 0 };
+  const [row] = await db
+    .select({
+      used: sql<number>`count(*) filter (where ${attempts.status} <> 'in_progress')`,
+      usedSinceClose: close
+        ? sql<number>`count(*) filter (where ${attempts.startedAt} >= ${close.toISOString()}::timestamptz)`
+        : sql<number>`0`,
+      extra: sql<number>`coalesce((
+        select ${attemptOverrides.extraAttempts} from ${attemptOverrides}
+        where ${attemptOverrides.userId} = ${userId}
+          and ${attemptOverrides.lessonId} = ${lessonId}
+      ), 0)`,
+    })
+    .from(attempts)
+    .where(and(eq(attempts.userId, userId), eq(attempts.lessonId, lessonId)));
+  return {
+    used: Number(row?.used ?? 0),
+    usedSinceClose: Number(row?.usedSinceClose ?? 0),
+    extra: Number(row?.extra ?? 0),
+  };
 }
 
 async function findOpenAttempt(userId: string, lessonId: number) {

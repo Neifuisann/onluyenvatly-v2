@@ -2,6 +2,7 @@ import { eq } from "drizzle-orm";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { db } from "@/db/client";
 import {
+  attemptOverrides,
   attempts,
   lessons,
   lessonVersions,
@@ -722,5 +723,89 @@ describe("exam guard events (S4-04)", () => {
     const stored = await events(id);
     expect(stored).toHaveLength(MAX_GUARD_EVENTS);
     expect(stored?.at(-1)).toEqual({ t: 349, k: "blur" });
+  });
+});
+
+describe("scheduled lessons (startsAt, after_deadline)", () => {
+  const min = (m: number) => new Date(NOW.getTime() + m * 60_000);
+  // Starts at NOW, 45 minutes, answers at NOW + 45 min + 30 s.
+  const exam = {
+    startsAt: NOW.toISOString(),
+    timeLimitSec: 45 * 60,
+    revealAnswers: "after_deadline" as const,
+    maxAttempts: 1,
+  };
+  const start = (
+    lessonId: number,
+    now: Date,
+    who: typeof student | typeof admin = student,
+  ) => startAttempt(who, lessonId, { ...ctx, now });
+
+  it("refuses starts before startsAt, except for admins", async () => {
+    const id = await addLesson({ ...exam, revealAnswers: "after_submit" });
+    expect(await start(id, min(-1))).toMatchObject({ code: "NOT_OPEN_YET" });
+    expect(await start(id, min(-1), admin)).toMatchObject({ ok: true });
+    expect(await start(id, min(0))).toMatchObject({ ok: true });
+  });
+
+  it("ends every attempt at startsAt + limit inside the window", async () => {
+    const id = await addLesson(exam);
+    const r = await start(id, min(30));
+    if (!r.ok) throw new Error("start failed");
+    const [row] = await tdb
+      .select()
+      .from(attempts)
+      .where(eq(attempts.id, r.data.attemptId));
+    expect(row?.deadlineAt).toEqual(min(45));
+  });
+
+  it("closes once answers are out; extra tries reopen it", async () => {
+    const id = await addLesson(exam);
+    const closed = new Date(min(45).getTime() + DEADLINE_GRACE_MS);
+    expect(await start(id, closed)).toMatchObject({ code: "LESSON_CLOSED" });
+
+    await tdb
+      .insert(attemptOverrides)
+      .values({ userId: student.id, lessonId: id, extraAttempts: 1 });
+    const r = await start(id, min(60));
+    if (!r.ok) throw new Error("override start failed");
+    const [row] = await tdb
+      .select()
+      .from(attempts)
+      .where(eq(attempts.id, r.data.attemptId));
+    // After the close an extra try gets its own full time.
+    expect(row?.deadlineAt).toEqual(min(105));
+    await submitAttempt(
+      student.id,
+      r.data.attemptId,
+      {
+        answers: [null, null, null],
+        flagged: [],
+        clientSubmitId: crypto.randomUUID(),
+      },
+      min(70),
+    );
+    expect(await start(id, min(80))).toMatchObject({ code: "ATTEMPT_LIMIT" });
+  });
+
+  it("adds extra tries to maxAttempts while open", async () => {
+    const id = await addLesson({ ...exam, revealAnswers: "after_submit" });
+    const first = await start(id, min(1));
+    if (!first.ok) throw new Error("start failed");
+    await submitAttempt(
+      student.id,
+      first.data.attemptId,
+      {
+        answers: [null, null, null],
+        flagged: [],
+        clientSubmitId: crypto.randomUUID(),
+      },
+      min(2),
+    );
+    expect(await start(id, min(3))).toMatchObject({ code: "ATTEMPT_LIMIT" });
+    await tdb
+      .insert(attemptOverrides)
+      .values({ userId: student.id, lessonId: id, extraAttempts: 1 });
+    expect(await start(id, min(4))).toMatchObject({ ok: true });
   });
 });

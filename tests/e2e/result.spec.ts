@@ -35,7 +35,9 @@ for (const { key, message } of [
     message: /Đáp án sẽ hiển thị sau \d\d\/\d\d\/\d{4} \d\d:\d\d\./,
   },
 ]) {
-  test(`${key}: score only, no answers in the page`, async ({ page }) => {
+  test(`${key}: score, questions and my choices only, no answers`, async ({
+    page,
+  }) => {
     const url = await openTest(page, key);
     const id = url.split("/").pop() as string;
     const submitted = await page.evaluate(async (attemptId) => {
@@ -62,9 +64,15 @@ for (const { key, message } of [
     const score = page.getByRole("region", { name: "Điểm" });
     await expect(score).toContainText("1/2 câu đúng");
     await expect(page.getByText(message)).toBeVisible();
-    await expect(
-      page.getByRole("region", { name: "Xem lại từng câu" }),
-    ).toHaveCount(0);
+    // Each question with my choice, but no marks, key or explanation.
+    const choices = page.getByRole("region", { name: "Xem lại từng câu" });
+    await expect(choices.getByRole("article")).toHaveCount(2);
+    await expect(choices.getByText("Bạn chọn")).toHaveCount(2);
+    for (const hint of ["Đáp án", "Sai", "Đúng", "Giải thích"])
+      await expect(
+        choices.getByRole("article").getByText(hint, { exact: true }),
+      ).toHaveCount(0);
+    await expect(choices.getByRole("button")).toHaveCount(0);
     await expect(page.getByRole("link", { name: "Làm lại" })).toBeVisible();
     await page.waitForLoadState("networkidle");
     expect(bodies.length).toBeGreaterThan(0);
@@ -118,4 +126,26 @@ test("exam guard: notice, blocked copy, events for the teacher only", async ({
   await expect(log).toContainText('"k": "copy"');
   await expect(log).toContainText('"k": "blur"');
   await admin.close();
+});
+
+test("scheduled lessons: not open yet, and closed once answers are out", async ({
+  page,
+}) => {
+  await page.goto("/lesson/e2e-not-open");
+  await expect(
+    page.getByText(/^Bài chưa mở\. Bạn có thể bắt đầu từ/),
+  ).toBeVisible();
+  await expect(page.getByText("Giờ bắt đầu: 01/01/2099 01:00")).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Bắt đầu làm bài" }),
+  ).toHaveCount(0);
+
+  await page.goto("/lesson/e2e-closed");
+  await expect(
+    page.getByText("Bài đã đóng vì đáp án đã được công bố."),
+  ).toBeVisible();
+  await expect(page.getByText(/^Công bố đáp án và đóng bài:/)).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Bắt đầu làm bài" }),
+  ).toHaveCount(0);
 });

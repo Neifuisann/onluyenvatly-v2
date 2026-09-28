@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
 import type { Question } from "../../lessons/schema.ts";
-import { DEADLINE_GRACE_MS } from "./deadline.ts";
 import {
   buildReview,
   correctCount,
@@ -21,20 +20,19 @@ describe("revealFor", () => {
     expect(revealFor("never", null, now, false)).toEqual({ kind: "never" });
   });
 
-  it("waits for the attempt's deadline + grace", () => {
-    const deadline = at(-DEADLINE_GRACE_MS + 1);
-    expect(revealFor("after_deadline", deadline, now, false)).toEqual({
+  it("waits for the lesson's reveal time", () => {
+    expect(revealFor("after_deadline", at(1), now, false)).toEqual({
       kind: "later",
       at: at(1),
     });
-    expect(
-      revealFor("after_deadline", at(-DEADLINE_GRACE_MS), now, false),
-    ).toEqual({ kind: "shown" });
+    expect(revealFor("after_deadline", now, now, false)).toEqual({
+      kind: "shown",
+    });
   });
 
-  it("treats after_deadline without a time limit as after_submit", () => {
+  it("keeps an unscheduled after_deadline lesson hidden", () => {
     expect(revealFor("after_deadline", null, now, false)).toEqual({
-      kind: "shown",
+      kind: "never",
     });
   });
 

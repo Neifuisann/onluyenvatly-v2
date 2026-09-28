@@ -157,6 +157,36 @@ export const e2eLessons: E2eLesson[] = [
     questions: runnerQuestions.slice(0, 2),
   },
   {
+    legacyId: "e2e-not-open",
+    title: "E2E – Chưa đến giờ",
+    grade: 12,
+    chapter: "Dao động cơ",
+    tags: ["e2e-runner"],
+    sortOrder: -195,
+    config: {
+      ...DEFAULT_LESSON_CONFIG,
+      startsAt: "2099-01-01T01:00:00+07:00",
+    },
+    status: "published",
+    questions: runnerQuestions.slice(0, 2),
+  },
+  {
+    legacyId: "e2e-closed",
+    title: "E2E – Đã công bố đáp án",
+    grade: 12,
+    chapter: "Dao động cơ",
+    tags: ["e2e-runner"],
+    sortOrder: -194,
+    config: {
+      ...DEFAULT_LESSON_CONFIG,
+      revealAnswers: "after_deadline",
+      startsAt: "2026-01-05T01:00:00+07:00",
+      timeLimitSec: 60,
+    },
+    status: "published",
+    questions: runnerQuestions.slice(0, 2),
+  },
+  {
     legacyId: "e2e-guard",
     title: "E2E – Có giám sát",
     grade: 12,
@@ -174,9 +204,11 @@ export const e2eLessons: E2eLesson[] = [
     chapter: "Dao động cơ",
     tags: ["e2e-runner"],
     sortOrder: -197,
+    // Opened a minute before seeding; answers out an hour later.
     config: {
       ...DEFAULT_LESSON_CONFIG,
       revealAnswers: "after_deadline",
+      startsAt: new Date(Date.now() - 60_000).toISOString(),
       timeLimitSec: 3600,
     },
     status: "published",

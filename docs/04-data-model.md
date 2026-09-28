@@ -147,6 +147,9 @@ Indexes:
 
 v2 computes the delta from `performance` and `time_bonus` rounded to 3 decimals, exactly as stored, so replaying a student's events (delete attempt, 05) reproduces every delta. `ratings` rows are created at 1500 on the first rated submit and locked `FOR UPDATE` in the submit transaction, so two tests submitted at once both count, one after the other.
 
+### `attempt_overrides`
+`(user_id, lesson_id)` PK, `extra_attempts` smallint (1–100), `granted_by` uuid null, `created_at`. Extra tries a teacher grants one student on one lesson (see scheduled tests above). Read only when a lesson has a limit or has closed; granted from the student admin pages (S6-02).
+
 ### `mistakes`
 | Column | Type | Notes |
 |---|---|---|
@@ -230,13 +233,16 @@ type LessonConfig = {
   pool: { enabled: boolean; size?: number; byType?: Partial<Record<'mcq'|'tf'|'short', number>> };
   points: { mode: 'per-question' } | { mode: 'per-type-total'; mcq?: number; tf?: number; short?: number };
   maxAttempts: number | null;
+  startsAt: string | null;              // ISO with offset; nobody starts before it (admins excepted)
   revealAnswers: 'after_submit' | 'after_deadline' | 'never';
   countsForRating: boolean;
   examGuard: boolean;                   // copy-block + blur tracking during the test
   tfScoring: 'thpt2025' | 'proportional';
 };
 ```
-Defaults match v1 behaviour: THPT scoring for tf, `revealAnswers: 'after_submit'`, `countsForRating: true`.
+Defaults match v1 behaviour: THPT scoring for tf, `revealAnswers: 'after_submit'`, `countsForRating: true`, `startsAt: null`.
+
+**Scheduled tests** (owner decision 2026-09-28, `attempts/domain/schedule.ts`): `after_deadline` requires `startsAt` and `timeLimitSec` (the schema refuses it otherwise). It is one shared exam window: an attempt started before the reveal ends at `startsAt + timeLimitSec` at the latest, answers open at `startsAt + timeLimitSec + 30 s`, and from then on the lesson is closed to new attempts. Only a student with extra tries in `attempt_overrides` may start it after that (each extra try is one attempt, with its own full time), and extra tries also raise that student's `maxAttempts`.
 
 ### 3.3 Editor text format (kept from v1, documented so the parser can be tested)
 ```

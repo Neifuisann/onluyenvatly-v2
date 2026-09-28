@@ -2,7 +2,7 @@ import "server-only";
 import { and, desc, eq } from "drizzle-orm";
 import { cache } from "react";
 import { db } from "@/db/client";
-import { attempts } from "@/db/schema";
+import { attemptOverrides, attempts } from "@/db/schema";
 
 /**
  * Per-user reads (05 §4, kind R): never shared-cached. A student has at most
@@ -23,6 +23,21 @@ export async function getMyLessonAttempts(userId: string, lessonId: number) {
     .where(and(eq(attempts.userId, userId), eq(attempts.lessonId, lessonId)))
     .orderBy(desc(attempts.startedAt))
     .limit(50);
+}
+
+/** Extra tries the teacher granted me on a lesson (0 if none). */
+export async function getMyExtraAttempts(userId: string, lessonId: number) {
+  const [row] = await db
+    .select({ extra: attemptOverrides.extraAttempts })
+    .from(attemptOverrides)
+    .where(
+      and(
+        eq(attemptOverrides.userId, userId),
+        eq(attemptOverrides.lessonId, lessonId),
+      ),
+    )
+    .limit(1);
+  return row?.extra ?? 0;
 }
 
 /**

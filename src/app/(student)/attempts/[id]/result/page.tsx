@@ -1,15 +1,19 @@
 import { Info } from "lucide-react";
 import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
+import { ChoiceItem } from "@/features/attempts/components/result/choice-item";
 import { ReviewItem } from "@/features/attempts/components/result/review-item";
 import { ReviewList } from "@/features/attempts/components/result/review-list";
 import { ScoreHero } from "@/features/attempts/components/result/score-hero";
 import { buildReview, revealFor } from "@/features/attempts/domain/review";
-import { resultCopy } from "@/features/attempts/messages";
+import { revealAt } from "@/features/attempts/domain/schedule";
+import { resultCopy, reviewCopy } from "@/features/attempts/messages";
 import { getAttempt } from "@/features/attempts/queries";
 import { AttemptIdSchema } from "@/features/attempts/schemas";
 import { requireStudent } from "@/features/auth/guards";
+import { withOptionOrder } from "@/features/lessons/domain/public-question";
 import {
+  getLessonForTaking,
   getLessonOverview,
   getLessonWithAnswers,
 } from "@/features/lessons/queries";
@@ -45,14 +49,20 @@ export default async function AttemptResultPage({
   ]);
   const reveal = revealFor(
     lesson?.revealAnswers ?? "never",
-    attempt.deadlineAt,
+    lesson ? revealAt(lesson) : null,
     new Date(),
     user.role === "admin",
   );
-  const questions =
-    reveal.kind === "shown" && lessonId && lessonVersionId
-      ? await getLessonWithAnswers(lessonId, lessonVersionId)
-      : null;
+  const shown = reveal.kind === "shown";
+  // Hidden: only the answer-free view is read, never the key.
+  const [questions, publicQuestions] =
+    lessonId && lessonVersionId
+      ? await Promise.all([
+          shown ? getLessonWithAnswers(lessonId, lessonVersionId) : null,
+          shown ? null : getLessonForTaking(lessonId, lessonVersionId),
+        ])
+      : [null, null];
+  const publicById = new Map(publicQuestions?.map((q) => [q.id, q]));
   const entries = questions
     ? buildReview(
         attempt.items,
@@ -78,12 +88,35 @@ export default async function AttemptResultPage({
           }))}
         />
       ) : (
-        <p className="flex items-start gap-2 rounded-lg border bg-surface p-4 text-sm">
-          <Info aria-hidden className="mt-0.5 size-4 shrink-0" />
-          {reveal.kind === "later"
-            ? resultCopy.revealLater(formatDateTime(reveal.at))
-            : resultCopy.revealNever}
-        </p>
+        <section
+          aria-labelledby="choices-heading"
+          className="flex flex-col gap-4"
+        >
+          <h2 id="choices-heading" className="font-semibold text-lg">
+            {reviewCopy.heading}
+          </h2>
+          <p className="flex items-start gap-2 rounded-lg border bg-surface p-4 text-sm">
+            <Info aria-hidden className="mt-0.5 size-4 shrink-0" />
+            {reveal.kind === "later"
+              ? resultCopy.revealLater(formatDateTime(reveal.at))
+              : resultCopy.revealNever}
+          </p>
+          {attempt.items.map((item, i) => {
+            const q = publicById.get(item.q);
+            return (
+              q && (
+                <ChoiceItem
+                  // Position, not the question id: keys ship in the RSC payload.
+                  // biome-ignore lint/suspicious/noArrayIndexKey: fixed test order
+                  key={i}
+                  index={i}
+                  question={withOptionOrder(q, item.o)}
+                  given={attempt.answers[i] ?? null}
+                />
+              )
+            );
+          })}
+        </section>
       )}
       {user.role === "admin" && (
         // S4-04: raw for now; S6-04 turns this into a timeline.

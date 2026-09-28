@@ -412,6 +412,35 @@ export const ratingEvents = pgTable(
   ],
 ).enableRLS();
 
+/**
+ * Extra tries a teacher grants one student on one lesson (S4-03 follow-up):
+ * they reopen a scheduled lesson after its answers are out and add to
+ * `maxAttempts`. Granted from the student admin pages (S6-02).
+ */
+export const attemptOverrides = pgTable(
+  "attempt_overrides",
+  {
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    lessonId: bigint("lesson_id", { mode: "number" })
+      .notNull()
+      .references(() => lessons.id, { onDelete: "cascade" }),
+    extraAttempts: smallint("extra_attempts").notNull(),
+    grantedBy: uuid("granted_by").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    createdAt: timestamptz("created_at").notNull().defaultNow(),
+  },
+  (t) => [
+    primaryKey({ columns: [t.userId, t.lessonId] }),
+    check(
+      "attempt_overrides_extra_check",
+      sql`${t.extraAttempts} between 1 and 100`,
+    ),
+  ],
+).enableRLS();
+
 export const mistakeStatus = pgEnum("mistake_status", ["open", "resolved"]);
 
 export const mistakes = pgTable(
@@ -461,3 +490,4 @@ export type NewAttempt = typeof attempts.$inferInsert;
 export type Rating = typeof ratings.$inferSelect;
 export type RatingEvent = typeof ratingEvents.$inferSelect;
 export type Mistake = typeof mistakes.$inferSelect;
+export type AttemptOverride = typeof attemptOverrides.$inferSelect;

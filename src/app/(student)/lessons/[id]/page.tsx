@@ -29,7 +29,12 @@ export default async function LessonPage({
           <LessonAttemptPanel
             userId={user.id}
             lessonId={lesson.id}
-            maxAttempts={lesson.maxAttempts}
+            schedule={{
+              startsAt: lesson.startsAt,
+              timeLimitSec: lesson.timeLimitSec,
+              revealAnswers: lesson.revealAnswers,
+              maxAttempts: lesson.maxAttempts,
+            }}
             unlimited={user.role === "admin"}
           />
         </Suspense>

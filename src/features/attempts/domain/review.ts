@@ -10,36 +10,35 @@ import {
 } from "../../grading/domain/grade.ts";
 import { toCents } from "../../grading/domain/points.ts";
 import type { LessonConfig, Question } from "../../lessons/schema.ts";
-import { DEADLINE_GRACE_MS } from "./deadline.ts";
 
 export type RevealPolicy = LessonConfig["revealAnswers"];
 
 export type Reveal =
   | { kind: "shown" }
-  /** after_deadline: shown once everyone's time window has closed. */
+  /** after_deadline: shown once the shared exam window has closed. */
   | { kind: "later"; at: Date }
   | { kind: "never" };
 
 /**
  * Answers, explanations and per-question marks are shown together or not at
  * all: right/wrong marks alone would give mcq answers away for a retake.
+ * Hidden, the student still sees each question, their choice and the total.
  *
- * `after_deadline` waits for the attempt's own time window to close
- * (`deadline_at` + grace), so an early finisher can't pass answers to
- * classmates still inside theirs. Without a time limit it is `after_submit`.
+ * `after_deadline` opens at the lesson's `revealAt` (schedule.ts:
+ * startsAt + time limit + 30 s); without one (not scheduled) it stays hidden.
  * Admins always see everything.
  */
 export function revealFor(
   policy: RevealPolicy,
-  deadlineAt: Date | null,
+  lessonRevealAt: Date | null,
   now: Date,
   isAdmin: boolean,
 ): Reveal {
   if (isAdmin || policy === "after_submit") return { kind: "shown" };
-  if (policy === "never") return { kind: "never" };
-  if (!deadlineAt) return { kind: "shown" };
-  const at = new Date(deadlineAt.getTime() + DEADLINE_GRACE_MS);
-  return now >= at ? { kind: "shown" } : { kind: "later", at };
+  if (policy === "never" || !lessonRevealAt) return { kind: "never" };
+  return now >= lessonRevealAt
+    ? { kind: "shown" }
+    : { kind: "later", at: lessonRevealAt };
 }
 
 /** Outcome from the stored mark (the grade at submit time is the truth). */

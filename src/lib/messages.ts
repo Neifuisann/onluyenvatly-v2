@@ -18,6 +18,8 @@ export const errorMessages = {
   CONFLICT: "Dữ liệu đã tồn tại.",
   ATTEMPT_CLOSED: "Bài làm đã được nộp hoặc đã đóng.",
   ATTEMPT_LIMIT: "Bạn đã hết số lần làm bài này.",
+  NOT_OPEN_YET: "Bài chưa đến giờ làm. Bạn quay lại sau nhé.",
+  LESSON_CLOSED: "Bài đã đóng vì đáp án đã được công bố.",
   DEADLINE_PASSED: "Đã hết thời gian làm bài.",
   AI_UNAVAILABLE: "Tính năng AI đang tạm dừng. Vui lòng thử lại sau.",
   AI_QUOTA: "Hôm nay đã hết lượt dùng AI. Vui lòng thử lại vào ngày mai.",

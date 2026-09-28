@@ -185,6 +185,11 @@ export const LessonConfigSchema = z
       }),
     ]),
     maxAttempts: z.number().int().positive().max(100).nullable(),
+    /**
+     * Scheduled test (ISO with offset): nobody starts before it. Required by
+     * `after_deadline`, which opens the answers at startsAt + time limit + 30 s.
+     */
+    startsAt: z.iso.datetime({ offset: true }).nullable().default(null),
     revealAnswers: z.enum(["after_submit", "after_deadline", "never"]),
     countsForRating: z.boolean(),
     /** Copy-block + blur tracking during the test. */
@@ -201,6 +206,16 @@ export const LessonConfigSchema = z
         "Bật bộ câu hỏi ngẫu nhiên thì cần số câu hoặc số câu theo loại.",
       path: ["pool"],
     },
+  )
+  .refine(
+    (c) =>
+      c.revealAnswers !== "after_deadline" ||
+      (c.startsAt !== null && c.timeLimitSec !== null),
+    {
+      message:
+        "Công bố đáp án sau giờ làm bài cần có giờ bắt đầu và thời gian làm bài.",
+      path: ["revealAnswers"],
+    },
   );
 export type LessonConfig = z.infer<typeof LessonConfigSchema>;
 
@@ -212,6 +227,7 @@ export const DEFAULT_LESSON_CONFIG: LessonConfig = {
   pool: { enabled: false },
   points: { mode: "per-question" },
   maxAttempts: null,
+  startsAt: null,
   revealAnswers: "after_submit",
   countsForRating: true,
   examGuard: false,

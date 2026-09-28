@@ -131,6 +131,7 @@ export async function getLessonOverview(
       revealAnswers: sql<
         LessonConfig["revealAnswers"]
       >`coalesce(${lessons.config}->>'revealAnswers', 'after_submit')`,
+      startsAt: sql<string | null>`${lessons.config}->>'startsAt'`,
     })
     .from(lessons)
     .where(
