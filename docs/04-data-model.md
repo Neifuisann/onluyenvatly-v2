@@ -86,11 +86,11 @@ Index `(user_id)`, `(expires_at)`. The daily cron deletes expired rows.
 | question_count | smallint | Denormalized from the current version, after pool selection |
 | type_counts | jsonb | `{mcq:18, tf:4, short:6}` for cards |
 | attempt_count | int default 0 | Denormalized, updated on submit |
-| search_text | text generated | `lower(immutable_unaccent(title ‖ ' ' ‖ coalesce(description,'') ‖ ' ' ‖ array_to_string(tags,' ')))` |
+| search_text | text generated | `lesson_search_text(title, description, tags)` = `lower(immutable_unaccent(concat_ws(' ', title, description, array_to_string(tags, ' '))))`. Both helpers are `IMMUTABLE` SQL functions created in migration `0002_lessons` (with a pinned `search_path` so they work whether the extensions live in `public` or Supabase's `extensions` schema) |
 | created_by | uuid FK | |
 | created_at, updated_at, published_at | timestamptz | |
 
-Indexes: `(status, sort_order)`, GIN `tags`, GIN trigram on `search_text`.
+Indexes: `(status, sort_order)`, GIN `tags`, GIN trigram on `search_text`. Extensions `unaccent` + `pg_trgm` (also loaded by PGlite in tests and `pnpm db:local`).
 Search: `WHERE search_text ILIKE '%' || lower(immutable_unaccent($q)) || '%'` using the trigram index, so it's accent-insensitive: "dao dong" matches "Dao động".
 
 ### `lesson_versions`
@@ -173,7 +173,7 @@ RETURNING count;
 ```
 
 ### `media`
-`id` uuid, `path` text unique, `bytes` int, `width`, `height`, `uploaded_by`, `created_at`. Used for the storage quota check and orphan cleanup.
+`id` uuid, `path` text unique, `bytes` int, `width`, `height` (null when unknown, e.g. migrated v1 files), `uploaded_by`, `created_at`. Used for the storage quota check and orphan cleanup.
 
 ### `audit_log`
 `id` bigint, `actor_id` uuid, `action` text (`student.approve`, `lesson.publish`, `attempt.delete`…), `target_type`, `target_id`, `data` jsonb, `created_at`. Kept for 180 days.

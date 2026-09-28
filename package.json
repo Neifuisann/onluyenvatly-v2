@@ -21,7 +21,7 @@
     "db:migrate": "drizzle-kit migrate",
     "db:studio": "drizzle-kit studio",
     "check:contrast": "node scripts/check-contrast.ts",
-    "db:local": "pglite-server --db=.pglite --port=54329 --max-connections=50",
+    "db:local": "pglite-server --db=.pglite --port=54329 --max-connections=50 --extensions=pg_trgm,unaccent",
     "seed": "node --env-file-if-exists=.env.local scripts/seed.ts"
   },
   "dependencies": {
