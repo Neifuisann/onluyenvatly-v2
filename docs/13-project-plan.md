@@ -88,7 +88,7 @@ gantt
 | S0-05 | ✅ Done | `tests/fixtures/v1/` (10 lessons, 20 rating rows, 50 results). Reviewed: no names, phones, emails, IPs, device ids or user agents; student ids pseudonymized. Phone check no longer flags decimals or timestamp ids |
 | S0-06 | ⏳ Owner accounts | GitHub repo done; Vercel project `onluyenvatly-v2` created (not yet connected to GitHub, no env vars). The rest of the checklist below needs the owner |
 | S0-07 | ✅ Done | Next 16 + TS strict + Tailwind v4 + shadcn config + Biome + Vitest + Playwright + pnpm; `src/` layout; `lib/env.ts` (Zod); `/api/health`. `/api/health` on preview still needs S0-06 |
-| S0-08 | 🟡 Partial | CI green on PRs #1 and #2; branch protection on `main` requires both checks and blocks force-push and deletion (the "require a PR" rule is still off). `migrate.yml` fails on every push to `main` until the `DATABASE_URL_DIRECT` secret exists (S0-06) |
+| S0-08 | 🟡 Partial | CI green on PRs #1 and #2; branch protection on `main` complete. `migrate.yml` fails on every push to `main` until the `DATABASE_URL_DIRECT` secret exists (S0-06) |
 | S0-09 | ⏳ Manual | Rehearsal checklist in 10 §6 |
 | S0-10 | ✅ Done | `AGENTS.md` (+ `CLAUDE.md` → `@AGENTS.md`) |
 
@@ -114,9 +114,9 @@ v1 inventory and baseline (2026-09-28, read-only; full output in `tmp/v1-invento
 
 S0-06 account checklist (put secrets only in Vercel/GitHub, never in the repo):
 - [x] GitHub repo under the **personal** account; push `main` (`Neifuisann/onluyenvatly-v2`, public)
-- [ ] Branch protection on `main`. Done: required checks `Lint, types, unit, build` + `E2E smoke`, no force-push, no deletion. To do: turn on "Require a pull request before merging" (0 approvals)
+- [x] Branch protection on `main`: PR required (0 approvals), checks `Lint, types, unit, build` + `E2E smoke`, no force-push, no deletion
 - [ ] GitHub secrets: `NEON_DATABASE_URL` (+ `_POOLED`) done; `DATABASE_URL_DIRECT` exists but must be the Supabase **session pooler** URL (`:5432` on `pooler.supabase.com`), see 12 §2
-- [ ] Vercel project `onluyenvatly-v2`. Done: created. To do: connect the GitHub repo (Settings → Git), check Fluid compute is on and Node is 22.x. Region `sin1` comes from `vercel.json`
+- [x] Vercel project `onluyenvatly-v2`: created, GitHub connected; Next.js preset, region `sin1` and Node 22 are pinned in `vercel.json`/`engines`
 - [x] Supabase v2 project in **Singapore (ap-southeast-1)**; pooler (`:6543`) URL in Vercel Production `DATABASE_URL`
 - [ ] Neon project `staging`: created, schema migrated. To do: pooled URL → Vercel **Preview** env `DATABASE_URL`
 - [ ] Google AI Studio: two Gemini keys (prod, staging)
@@ -372,7 +372,7 @@ Pilot data note: the final migration upserts only rows with `legacy_id`. Attempt
 ## 6. Sprint log (append each week)
 | Sprint | Dates | Planned d | Done d | Demo notes | Retro: keep / change |
 |---|---|---|---|---|---|
-| S0 | 2026-09-28 → | 4.0 | 3.25 (S0-01–05, S0-07, S0-10, most of S0-08) | v1 inventory and anonymized real fixtures | Keep: run against real data early, since it found 4 migration/rendering bugs the synthetic fixtures missed. Open: S0-06 accounts, S0-08 "require PR" rule, S0-09 |
+| S0 | 2026-09-28 → | 4.0 | 3.25 (S0-01–05, S0-07, S0-10, most of S0-08) | v1 inventory and anonymized real fixtures | Keep: run against real data early, since it found 4 migration/rendering bugs the synthetic fixtures missed. Open: S0-06 (Preview env vars, AI/R2/Sentry/UptimeRobot), S0-09 |
 | S1 | 2026-09-28 → | 4.5 | 4.0 (all tasks coded; S1-03 remote apply and S1-08 grade wait for S0-06) | | |
 | S2 | 2026-09-28 → | 4.5 | All seven tasks implemented; external acceptance gates above remain | Synthetic catalog and legacy-link demo; mobile/desktop light/dark browser checks | Keep domain/property tests and explicit answer-safe projections; run coverage separately from the production build to avoid local PGlite startup contention |
 | … | | | | | |
