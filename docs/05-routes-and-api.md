@@ -39,6 +39,8 @@ Conventions:
 
 **S4 leaderboard implementation:** `/leaderboard` takes `grade=10|11|12` and `period=all|week` (invalid values fall back to the defaults). `all` ranks active students with a `ratings` row by rating; `week` ranks those with a rated attempt in the last 7 days (rolling, like v1) by the sum of their changes. Equal values share a rank (1, 2, 2, 4). One cached query (`leaderboard` tag, revalidate 60 s, up to 1,000 rows) serves every student; the page shows the top 100 and finds the viewer's own row in the same data, pinned as a sticky row. Phone and date of birth are never selected.
 
+**S4 dashboard implementation:** `/dashboard` makes 3 per-user queries (session, `getDashboardStats`, `getContinueAttempt`). The rank reuses `getLeaderboard({ grade: myGrade, period: "all" })` and the recommendations reuse `getCatalog` for my grade (both shared caches): the first 4 lessons in the teacher's order that I have neither submitted nor have in progress. The rating sparkline is inline SVG rendered on the server.
+
 ### Admin (layout: `requireAdmin()`)
 
 | Path | Content |
@@ -134,7 +136,7 @@ Grouped by feature. Each one is either **shared-cached** (C) or **per-request** 
 | `getLessonWithAnswers(versionId)` | C `lesson:{id}:answers`, **server-only** | grading, result page |
 | `getAttempt(id, userId)` | R | runner, result |
 | `getLeaderboard({ grade, period })` | C `leaderboard`, 60 s | leaderboard, dashboard rank |
-| `getMyStats(userId)` | R | profile, dashboard |
+| `getMyStats(userId)` | R | profile, dashboard (split into `getDashboardStats` + `getContinueAttempt` in S4-06) |
 | `getMistakes(userId, filters)` | R | review |
 | `getLessonStats(lessonId)` | C `lesson:{id}:stats`, 5 min | admin stats |
 | `getSettings()` | C `settings` | everywhere |

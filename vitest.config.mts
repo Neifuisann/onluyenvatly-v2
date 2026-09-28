@@ -56,6 +56,12 @@ export default defineConfig({
           branches: 95,
           statements: 95,
         },
+        "src/features/dashboard/domain/**": {
+          lines: 95,
+          functions: 95,
+          branches: 95,
+          statements: 95,
+        },
         "src/features/auth/core/**": {
           lines: 95,
           functions: 95,

@@ -19,6 +19,7 @@ export const ratingCopy = {
   same: "không đổi",
   tierPrefix: "Hạng ",
   notRated: "Bài này không tính rating.",
+  sparkline: (values: string) => `Rating các lần gần nhất: ${values}`,
 } as const;
 
 export const leaderboardCopy = {

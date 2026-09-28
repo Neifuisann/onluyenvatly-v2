@@ -1,4 +1,3 @@
-import { ArrowDown, ArrowUp } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import {
@@ -7,12 +6,8 @@ import {
   type LeaderboardView,
   type RankedEntry,
 } from "../domain/leaderboard";
-import {
-  formatDelta,
-  formatRating,
-  ratingCopy,
-  leaderboardCopy as t,
-} from "../messages";
+import { formatRating, ratingCopy, leaderboardCopy as t } from "../messages";
+import { RatingDelta } from "./rating-delta";
 import { TierBadge } from "./tier-badge";
 
 /**
@@ -102,13 +97,13 @@ function Row({
       <div className="flex flex-col items-end gap-0.5 text-right">
         {byWeek ? (
           <>
-            <Delta value={row.weekDelta} strong />
+            <RatingDelta value={row.weekDelta} label={t.weekChange} strong />
             <RatingValue rating={row.rating} />
           </>
         ) : (
           <>
             <RatingValue rating={row.rating} strong />
-            <Delta value={row.weekDelta} />
+            <RatingDelta value={row.weekDelta} label={t.weekChange} />
           </>
         )}
       </div>
@@ -126,33 +121,6 @@ function RatingValue({ rating, strong }: { rating: number; strong?: boolean }) {
     >
       <span className="sr-only">{ratingCopy.label} </span>
       {formatRating(rating)}
-    </span>
-  );
-}
-
-/** Rating change over 7 days: icon + sign, never color alone (07 §1). */
-function Delta({ value, strong }: { value: number; strong?: boolean }) {
-  const Icon = value > 0 ? ArrowUp : value < 0 ? ArrowDown : null;
-  return (
-    <span
-      className={cn(
-        "inline-flex items-center gap-0.5 font-mono tabular-nums",
-        strong ? "font-semibold" : "text-xs",
-        value > 0 && "text-success-text",
-        value < 0 && "text-danger-text",
-        value === 0 && "text-muted-foreground",
-      )}
-    >
-      {Icon && <Icon aria-hidden className={strong ? "size-4" : "size-3"} />}
-      <span className="sr-only">
-        {t.weekChange}:{" "}
-        {value > 0
-          ? ratingCopy.up(value)
-          : value < 0
-            ? ratingCopy.down(-value)
-            : ratingCopy.same}
-      </span>
-      <span aria-hidden>{formatDelta(value)}</span>
     </span>
   );
 }
