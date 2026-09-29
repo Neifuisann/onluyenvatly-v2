@@ -1,0 +1,397 @@
+{/* Converted from v1 materials/grade12/dao-dong-dien-tu/bai-3-song-dien-tu.html by scripts/convert-materials.ts (S8-02). */}
+
+Sóng điện từ là một trong những phát minh vĩ đại nhất của khoa học, mở ra kỷ nguyên truyền thông không dây và làm thay đổi hoàn toàn cuộc sống con người.
+
+## 1. Định nghĩa và bản chất sóng điện từ
+
+### a) Định nghĩa
+
+Sóng điện từ là quá trình lan truyền điện từ trường biến thiên trong không gian.
+
+### b) Bản chất
+
+- Điện trường biến thiên sinh ra từ trường biến thiên
+- Từ trường biến thiên sinh ra điện trường biến thiên
+- Quá trình này tiếp diễn liên tục tạo thành sóng lan truyền
+
+<Callout kind="warning">
+
+<strong>Lưu ý quan trọng:</strong> Sóng điện từ khác với sóng cơ học - không cần môi trường vật chất để truyền, có thể lan truyền trong chân không.
+
+</Callout>
+
+## 2. Đặc điểm của sóng điện từ
+
+### a) Sóng điện từ là sóng ngang
+
+Các vectơ E⃗ và B⃗ luôn vuông góc với nhau và vuông góc với phương truyền sóng:
+
+<Callout kind="example">
+
+```text
+Phương truyền sóng →
+        ↑ E⃗
+        |
+    ----+----→ B⃗
+        |
+        
+E⃗ ⊥ B⃗ ⊥ v⃗
+```
+
+</Callout>
+
+### b) Vận tốc lan truyền
+
+Trong chân không:
+
+<Formula>
+
+c = 1/√(ε₀μ₀) = 3.10⁸ m/s
+
+</Formula>
+
+Trong môi trường vật chất:
+
+<Formula>
+
+v = c/n = c/√(εμ)
+
+</Formula>
+
+Trong đó n = √(εμ) là chiết suất của môi trường
+
+### c) Quan hệ giữa E và B
+
+Tại mỗi điểm trong sóng điện từ:
+
+<Formula>
+
+E/B = c
+
+</Formula>
+
+E và B luôn cùng pha, cùng tần số
+
+### d) Mang năng lượng
+
+Mật độ năng lượng sóng điện từ:
+
+<Formula>
+
+w = ε₀E² = B²/μ₀
+
+</Formula>
+
+Cường độ sóng (công suất/diện tích):
+
+<Formula>
+
+I = ½cε₀E₀² = cw\_tb
+
+</Formula>
+
+## 3. Các tính chất của sóng điện từ
+
+<Callout kind="warning">
+
+### Sóng điện từ có đầy đủ các tính chất của sóng:
+
+1. <strong>Phản xạ:</strong> Tuân theo định luật phản xạ
+2. <strong>Khúc xạ:</strong> Tuân theo định luật khúc xạ
+3. <strong>Giao thoa:</strong> Tạo vân giao thoa khi hai sóng kết hợp gặp nhau
+4. <strong>Nhiễu xạ:</strong> Lệch khỏi phương truyền thẳng khi gặp vật cản
+5. <strong>Phân cực:</strong> Có thể tạo sóng phân cực thẳng
+
+</Callout>
+
+## 4. Nguồn phát sóng điện từ
+
+### a) Nguyên tắc chung
+
+Mọi điện tích chuyển động có gia tốc đều phát ra sóng điện từ:
+
+- Điện tích dao động điều hòa
+- Dòng điện xoay chiều
+- Tia lửa điện
+- Chuyển động của electron trong nguyên tử
+
+### b) Mạch dao động hở (Anten)
+
+Biến đổi mạch LC thành mạch dao động hở:
+
+1. Tách xa hai bản tụ điện
+2. Duỗi thẳng cuộn cảm
+3. Tạo thành anten phát (dipole)
+
+<Callout kind="example">
+
+#### Ví dụ: Anten λ/2
+
+Anten hiệu quả nhất có chiều dài l = λ/2
+
+Với sóng FM 100 MHz:
+
+λ = c/f = 3.10⁸/(10⁸) = 3m
+
+Chiều dài anten: l = λ/2 = 1,5m
+
+</Callout>
+
+## 5. Thu sóng điện từ
+
+### a) Nguyên tắc
+
+Sóng điện từ tác dụng lên anten thu:
+
+1. Điện trường E⃗ làm electron dao động trong anten
+2. Tạo dòng điện cảm ứng cùng tần số với sóng
+3. Mạch cộng hưởng LC chọn lọc tần số cần thu
+
+### b) Mạch chọn sóng
+
+Sử dụng mạch LC với điều kiện cộng hưởng:
+
+<Formula>
+
+f\_thu = f\_sóng = 1/(2π√LC)
+
+</Formula>
+
+Điều chỉnh C (tụ xoay) để chọn đài cần thu
+
+## 6. Truyền thông bằng sóng điện từ
+
+### a) Sơ đồ khối hệ thống thông tin
+
+<Callout kind="definition">
+
+<strong>Phát:</strong>
+
+Nguồn tin → Điều chế → Khuếch đại → Anten phát
+
+<strong>Thu:</strong>
+
+Anten thu → Chọn sóng → Tách sóng → Khuếch đại → Loa/Màn hình
+
+</Callout>
+
+### b) Điều chế (Modulation)
+
+Trộn tín hiệu âm tần với sóng mang cao tần:
+
+1. <strong>Điều biên (AM):</strong> Thay đổi biên độ sóng mang
+   - Đơn giản, rẻ tiền
+   - Dễ bị nhiễu
+   - Dải tần: 530-1600 kHz
+2. <strong>Điều tần (FM):</strong> Thay đổi tần số sóng mang
+   - Chất lượng cao
+   - Chống nhiễu tốt
+   - Dải tần: 88-108 MHz
+
+## 7. Phân loại và ứng dụng sóng điện từ
+
+### a) Sóng dài (LF: 30-300 kHz)
+
+- Bước sóng: 1-10 km
+- Ít bị nước hấp thụ
+- Ứng dụng: Thông tin dưới nước, định vị
+
+### b) Sóng trung (MF: 300 kHz - 3 MHz)
+
+- Bước sóng: 100m - 1km
+- Ban ngày bị tầng điện ly hấp thụ
+- Ban đêm phản xạ tốt → truyền xa
+- Ứng dụng: Radio AM
+
+### c) Sóng ngắn (HF: 3-30 MHz)
+
+- Bước sóng: 10-100m
+- Phản xạ nhiều lần giữa tầng điện ly và mặt đất
+- Truyền được rất xa
+- Ứng dụng: Radio quốc tế, liên lạc hàng hải
+
+### d) Sóng cực ngắn (VHF, UHF: 30 MHz - 3 GHz)
+
+- Bước sóng: 0,1m - 10m
+- Không bị tầng điện ly phản xạ
+- Truyền thẳng, xuyên qua tầng điện ly
+- Ứng dụng: TV, FM, điện thoại di động
+
+### e) Vi ba (SHF: 3-30 GHz)
+
+- Bước sóng: 1cm - 10cm
+- Truyền thẳng, tập trung cao
+- Ứng dụng: Radar, lò vi sóng, vệ tinh
+
+<Callout kind="note">
+
+### Ứng dụng cụ thể của sóng điện từ:
+
+#### 1. Trong viễn thông:
+
+- <strong>Radio:</strong> AM (sóng trung), FM (VHF)
+- <strong>Truyền hình:</strong> VHF, UHF
+- <strong>Điện thoại di động:</strong> 900 MHz, 1800 MHz (2G), 2100 MHz (3G), 2600 MHz (4G)
+- <strong>Wifi:</strong> 2,4 GHz và 5 GHz
+- <strong>Bluetooth:</strong> 2,4 GHz
+
+#### 2. Trong y tế:
+
+- <strong>Điều trị diathermy:</strong> Sóng ngắn làm nóng sâu cơ thể
+- <strong>MRI:</strong> Sóng radio kết hợp từ trường
+
+#### 3. Trong công nghiệp:
+
+- <strong>Lò vi sóng:</strong> 2,45 GHz làm nóng thức ăn
+- <strong>Sấy gỗ, giấy:</strong> Sóng cao tần
+- <strong>Hàn nhựa:</strong> Sóng radio
+
+#### 4. Trong quân sự và hàng không:
+
+- <strong>Radar:</strong> Phát hiện máy bay, tàu thuyền
+- <strong>GPS:</strong> Định vị toàn cầu
+- <strong>Liên lạc vệ tinh:</strong> Băng C, Ku, Ka
+
+</Callout>
+
+## 8. Sự hấp thụ sóng điện từ
+
+### a) Bởi môi trường
+
+- <strong>Không khí:</strong> Hấp thụ mạnh ở một số tần số (H₂O, O₂)
+- <strong>Nước:</strong> Hấp thụ mạnh sóng cao tần
+- <strong>Tầng điện ly:</strong> Phản xạ sóng dài, hấp thụ sóng trung
+
+### b) Cửa sổ vô tuyến
+
+Dải tần số mà khí quyển trong suốt với sóng điện từ:
+
+- Sóng radio: 10 MHz - 40 GHz
+- Ánh sáng nhìn thấy và cận hồng ngoại
+
+## 9. An toàn với sóng điện từ
+
+<Callout kind="warning">
+
+### Tác động sinh học:
+
+- <strong>Hiệu ứng nhiệt:</strong> Sóng cao tần làm nóng mô
+- <strong>Hiệu ứng không nhiệt:</strong> Ảnh hưởng đến tế bào (đang nghiên cứu)
+
+### Giới hạn an toàn (WHO):
+
+- Công chúng: 2-10 W/m² (tùy tần số)
+- Nghề nghiệp: 10-50 W/m²
+
+### Biện pháp an toàn:
+
+- Giữ khoảng cách với nguồn phát mạnh
+- Hạn chế thời gian tiếp xúc
+- Sử dụng vật liệu chắn sóng
+
+</Callout>
+
+## 10. Thí nghiệm về sóng điện từ
+
+<Callout kind="example">
+
+#### Thí nghiệm đơn giản chứng minh sóng điện từ:
+
+<strong>Dụng cụ:</strong> Radio AM, tua vít, pin
+
+<strong>Tiến hành:</strong>
+
+1. Bật radio ở dải AM, chỉnh về tần số không có đài
+2. Nối tua vít với cực pin
+3. Chạm đầu tua vít vào cực còn lại → nghe tiếng "tách" trong radio
+
+<strong>Giải thích:</strong> Tia lửa điện nhỏ phát sóng điện từ được radio thu
+
+</Callout>
+
+## 11. Bài tập vận dụng
+
+<Callout kind="example">
+
+#### Bài 1:
+
+Đài phát thanh VOV1 phát sóng ở tần số 90 MHz.
+
+a) Tính bước sóng
+
+b) Anten thu hiệu quả nhất có chiều dài bao nhiêu?
+
+c) Mạch thu có L = 2μH. Tính C để thu được đài này
+
+<strong>Giải:</strong>
+
+a) λ = c/f = 3.10⁸/(90.10⁶) = 3,33m
+
+b) l = λ/2 = 1,67m hoặc l = λ/4 = 0,83m
+
+c) f = 1/(2π√LC) → C = 1/(4π²f²L)
+
+C = 1/(4π² × (90.10⁶)² × 2.10⁻⁶) = 1,56.10⁻¹² F = 1,56 pF
+
+</Callout>
+
+## 12. Tổng kết
+
+<Table>
+<thead>
+<tr>
+<th>Đặc điểm</th>
+<th>Sóng điện từ</th>
+<th>Sóng cơ học</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Bản chất</td>
+<td>Điện từ trường lan truyền</td>
+<td>Dao động cơ học lan truyền</td>
+</tr>
+<tr>
+<td>Môi trường truyền</td>
+<td>Không cần (truyền trong chân không)</td>
+<td>Cần môi trường vật chất</td>
+</tr>
+<tr>
+<td>Vận tốc trong chân không</td>
+<td>c = 3.10⁸ m/s</td>
+<td>Không truyền được</td>
+</tr>
+<tr>
+<td>Loại sóng</td>
+<td>Luôn là sóng ngang</td>
+<td>Có thể ngang hoặc dọc</td>
+</tr>
+<tr>
+<td>Năng lượng</td>
+<td>Tỉ lệ với f⁴</td>
+<td>Tỉ lệ với f²</td>
+</tr>
+</tbody>
+</Table>
+
+<Callout kind="definition">
+
+### Kết luận:
+
+Sóng điện từ là một trong những phát hiện quan trọng nhất của vật lý, tạo nền tảng cho:
+
+- Cách mạng thông tin liên lạc
+- Phát triển công nghệ không dây
+- Khám phá vũ trụ (thiên văn vô tuyến)
+- Y học hiện đại (X-quang, MRI)
+
+</Callout>
+
+<Callout kind="related">
+
+### Bài viết liên quan:
+
+- [Mạch dao động LC](/ly-thuyet/12/dao-dong-dien-tu/bai-1-mach-dao-dong-lc)
+- [Điện từ trường](/ly-thuyet/12/dao-dong-dien-tu/bai-2-dien-tu-truong)
+
+</Callout>

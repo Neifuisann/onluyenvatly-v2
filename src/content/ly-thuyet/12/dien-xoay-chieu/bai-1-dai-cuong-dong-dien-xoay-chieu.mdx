@@ -1,0 +1,411 @@
+{/* Converted from v1 materials/grade12/dien-xoay-chieu/bai-1-dai-cuong-dong-dien-xoay-chieu.html by scripts/convert-materials.ts (S8-02). */}
+
+Dòng điện xoay chiều (AC - Alternating Current) là dòng điện có cường độ biến thiên tuần hoàn theo thời gian. Đây là loại dòng điện được sử dụng phổ biến nhất trong sinh hoạt và công nghiệp.
+
+## 1. Nguyên tắc tạo ra dòng điện xoay chiều
+
+### a) Hiện tượng cảm ứng điện từ
+
+Dòng điện xoay chiều được tạo ra dựa trên hiện tượng cảm ứng điện từ:
+
+- Khi từ thông qua một khung dây biến thiên → xuất hiện suất điện động cảm ứng
+- Suất điện động cảm ứng tạo ra dòng điện cảm ứng trong mạch kín
+
+### b) Máy phát điện xoay chiều đơn giản
+
+Cấu tạo gồm:
+
+- <strong>Phần cảm (rotor):</strong> Nam châm hoặc nam châm điện quay
+- <strong>Phần ứng (stator):</strong> Khung dây dẫn cố định
+- <strong>Bộ góp:</strong> Vành khuyên và chổi quét để lấy điện ra ngoài
+
+<Callout kind="example">
+
+<strong>Sơ đồ nguyên lý máy phát điện:</strong>
+
+```text
+     N ╱│╲ S
+      ╱ │ ╲     ← Rotor quay
+     │  ●  │
+     │     │    ← Khung dây
+     └─────┘
+       ┃ ┃      ← Vành khuyên
+      ═╬═╬═     ← Chổi quét
+       │ │
+      (~)       ← Dòng điện xoay chiều
+```
+
+</Callout>
+
+## 2. Từ thông qua khung dây
+
+### a) Công thức từ thông
+
+Khi khung dây có N vòng, diện tích S, quay đều với tốc độ góc ω trong từ trường đều B:
+
+<Formula>
+
+Φ = NBScosα = NBScos(ωt + φ₀)
+
+</Formula>
+
+Trong đó:
+
+- Φ: Từ thông qua khung dây (Wb)
+- N: Số vòng dây
+- B: Cảm ứng từ (T)
+- S: Diện tích khung dây (m²)
+- α = ωt + φ₀: Góc giữa n⃗ và B⃗
+- φ₀: Pha ban đầu
+
+### b) Từ thông cực đại
+
+<Formula>
+
+Φ₀ = NBS
+
+</Formula>
+
+Vậy: Φ = Φ₀cos(ωt + φ₀)
+
+## 3. Suất điện động cảm ứng
+
+### a) Định luật Faraday
+
+Suất điện động cảm ứng:
+
+<Formula>
+
+e = -dΦ/dt = NBSωsin(ωt + φ₀)
+
+</Formula>
+
+### b) Biên độ suất điện động
+
+<Formula>
+
+E₀ = NBSω = Φ₀ω
+
+</Formula>
+
+### c) Biểu thức suất điện động
+
+<Formula>
+
+e = E₀sin(ωt + φ₀)
+
+</Formula>
+
+<Callout kind="warning">
+
+<strong>Lưu ý:</strong> Suất điện động sớm pha π/2 so với từ thông
+
+</Callout>
+
+## 4. Cường độ dòng điện và điện áp xoay chiều
+
+### a) Biểu thức tổng quát
+
+Cường độ dòng điện:
+
+<Formula>
+
+i = I₀sin(ωt + φᵢ) = I₀cos(ωt + φᵢ - π/2)
+
+</Formula>
+
+Điện áp:
+
+<Formula>
+
+u = U₀sin(ωt + φᵤ) = U₀cos(ωt + φᵤ - π/2)
+
+</Formula>
+
+### b) Các đại lượng đặc trưng
+
+- <strong>Biên độ:</strong> I₀, U₀ - giá trị cực đại
+- <strong>Tần số góc:</strong> ω = 2πf (rad/s)
+- <strong>Tần số:</strong> f (Hz) - ở Việt Nam f = 50Hz
+- <strong>Chu kỳ:</strong> T = 1/f = 0,02s
+- <strong>Pha:</strong> (ωt + φ) - xác định trạng thái dao động
+
+## 5. Giá trị hiệu dụng
+
+### a) Định nghĩa
+
+Giá trị hiệu dụng của dòng điện xoay chiều là giá trị của dòng điện một chiều khi đi qua cùng một điện trở R trong cùng thời gian thì tỏa ra cùng một nhiệt lượng.
+
+### b) Công thức
+
+<Formula>
+
+I = I₀/√2 ≈ 0,707I₀
+
+</Formula>
+
+<Formula>
+
+U = U₀/√2 ≈ 0,707U₀
+
+</Formula>
+
+<Formula>
+
+E = E₀/√2 ≈ 0,707E₀
+
+</Formula>
+
+<Callout kind="warning">
+
+### Ý nghĩa thực tế:
+
+\- Điện áp 220V trong gia đình là giá trị hiệu dụng
+
+\- Điện áp cực đại: U₀ = 220√2 ≈ 311V
+
+\- Các thiết bị đo (ampe kế, vôn kế) chỉ giá trị hiệu dụng
+
+</Callout>
+
+## 6. Các loại mạch điện xoay chiều
+
+### a) Dòng điện xoay chiều một pha
+
+- Sử dụng trong sinh hoạt gia đình
+- Có 2 dây: dây pha (nóng) và dây trung tính (nguội)
+- Điện áp: 220V - 50Hz
+
+### b) Dòng điện xoay chiều ba pha
+
+- Sử dụng trong công nghiệp
+- Gồm 3 dòng điện xoay chiều lệch pha nhau 120°
+- Điện áp dây: 380V, điện áp pha: 220V
+
+<Callout kind="example">
+
+#### Ví dụ 1:
+
+Một khung dây dẫn phẳng có 200 vòng, diện tích mỗi vòng 300 cm², quay đều với tốc độ 3000 vòng/phút trong từ trường đều B = 0,2T. Trục quay vuông góc với đường sức từ.
+
+a) Tính tần số của dòng điện
+
+b) Viết biểu thức từ thông và suất điện động. Chọn t = 0 lúc n⃗ ⊥ B⃗
+
+c) Tính giá trị hiệu dụng của suất điện động
+
+<strong>Giải:</strong>
+
+a) Tần số: f = n = 3000/60 = 50 Hz
+
+Tần số góc: ω = 2πf = 100π rad/s
+
+b) S = 300 cm² = 0,03 m²
+
+Φ₀ = NBS = 200 × 0,2 × 0,03 = 1,2 Wb
+
+Tại t = 0: n⃗ ⊥ B⃗ → α = π/2 → φ₀ = -π/2
+
+Φ = 1,2cos(100πt - π/2) = 1,2sin(100πt) (Wb)
+
+E₀ = Φ₀ω = 1,2 × 100π = 120π V
+
+e = 120πsin(100πt + π/2) = 120πcos(100πt) (V)
+
+c) E = E₀/√2 = 120π/√2 ≈ 267 V
+
+</Callout>
+
+## 7. Ưu điểm của dòng điện xoay chiều
+
+1. <strong>Dễ tạo ra:</strong> Máy phát điện xoay chiều đơn giản hơn máy phát một chiều
+2. <strong>Dễ biến đổi điện áp:</strong> Dùng máy biến áp để tăng giảm điện áp
+3. <strong>Truyền tải hiệu quả:</strong> Tăng điện áp để giảm hao phí trên đường dây
+4. <strong>Động cơ đơn giản:</strong> Động cơ xoay chiều không cần chổi than
+
+## 8. So sánh dòng điện xoay chiều và một chiều
+
+<Table>
+<thead>
+<tr>
+<th>Đặc điểm</th>
+<th>Dòng điện xoay chiều (AC)</th>
+<th>Dòng điện một chiều (DC)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Chiều dòng điện</td>
+<td>Thay đổi tuần hoàn</td>
+<td>Không đổi</td>
+</tr>
+<tr>
+<td>Cường độ</td>
+<td>Biến thiên điều hòa</td>
+<td>Không đổi</td>
+</tr>
+<tr>
+<td>Tạo ra</td>
+<td>Máy phát điện xoay chiều</td>
+<td>Pin, ắc quy, máy phát DC</td>
+</tr>
+<tr>
+<td>Biến đổi điện áp</td>
+<td>Dễ dàng (máy biến áp)</td>
+<td>Phức tạp</td>
+</tr>
+<tr>
+<td>Truyền tải xa</td>
+<td>Hiệu quả cao</td>
+<td>Hao phí lớn</td>
+</tr>
+<tr>
+<td>Ứng dụng</td>
+<td>Lưới điện, động cơ công nghiệp</td>
+<td>Điện tử, mạ điện, sạc pin</td>
+</tr>
+</tbody>
+</Table>
+
+## 9. Độ lệch pha
+
+### a) Định nghĩa
+
+Độ lệch pha giữa u và i:
+
+<Formula>
+
+φ = φᵤ - φᵢ
+
+</Formula>
+
+### b) Các trường hợp
+
+- φ &gt; 0: u sớm pha hơn i (mạch có tính cảm kháng)
+- φ &lt; 0: u trễ pha hơn i (mạch có tính dung kháng)
+- φ = 0: u cùng pha với i (mạch thuần trở)
+
+## 10. Biểu diễn bằng số phức
+
+Để thuận tiện cho việc tính toán, người ta biểu diễn các đại lượng xoay chiều bằng số phức:
+
+- i = I₀sin(ωt + φ) → I̅ = I₀e^(jφ)
+- u = U₀sin(ωt + φ) → U̅ = U₀e^(jφ)
+
+<Callout kind="example">
+
+#### Ví dụ 2:
+
+Điện áp xoay chiều có biểu thức u = 220√2cos(100πt - π/3) V.
+
+a) Xác định các đại lượng đặc trưng
+
+b) Tính điện áp tại thời điểm t = 0,01s
+
+c) Viết biểu thức dưới dạng sin
+
+<strong>Giải:</strong>
+
+a) So sánh với u = U₀cos(ωt + φ):
+
+\- Biên độ: U₀ = 220√2 V
+
+\- Giá trị hiệu dụng: U = U₀/√2 = 220 V
+
+\- Tần số góc: ω = 100π rad/s
+
+\- Tần số: f = ω/(2π) = 50 Hz
+
+\- Chu kỳ: T = 1/f = 0,02 s
+
+\- Pha ban đầu: φ = -π/3 rad
+
+b) Tại t = 0,01s = T/2:
+
+u = 220√2cos(100π × 0,01 - π/3) = 220√2cos(π - π/3)
+
+\= 220√2cos(2π/3) = 220√2 × (-1/2) = -110√2 V
+
+c) cos(α) = sin(α + π/2)
+
+u = 220√2sin(100πt - π/3 + π/2) = 220√2sin(100πt + π/6) V
+
+</Callout>
+
+## 11. Nguyên tắc hoạt động của các thiết bị
+
+### a) Đồng hồ đo điện xoay chiều
+
+- Ampe kế, vôn kế xoay chiều đo giá trị hiệu dụng
+- Sử dụng cơ cấu điện từ hoặc nhiệt điện
+
+### b) Công tơ điện
+
+- Đo năng lượng tiêu thụ W = P.t
+- Đơn vị: kWh (1 kWh = 3,6.10⁶ J)
+
+## 12. An toàn điện với dòng xoay chiều
+
+<Callout kind="warning">
+
+### Nguy hiểm của điện xoay chiều:
+
+- Điện áp an toàn: &lt; 24V
+- Dòng điện nguy hiểm: &gt; 10mA
+- Tần số 50-60Hz nguy hiểm nhất cho cơ thể
+
+### Biện pháp an toàn:
+
+- Sử dụng CB (circuit breaker) và cầu chì
+- Nối đất cho thiết bị
+- Dùng ELCB/RCCB chống giật
+- Cách điện tốt
+
+</Callout>
+
+## 13. Tổng kết
+
+<Callout kind="definition">
+
+### Các công thức quan trọng:
+
+<Table>
+<tbody>
+<tr>
+<td>Từ thông</td>
+<td>Φ = Φ₀cos(ωt + φ₀)</td>
+</tr>
+<tr>
+<td>Suất điện động</td>
+<td>e = E₀sin(ωt + φ₀)</td>
+</tr>
+<tr>
+<td>Cường độ dòng điện</td>
+<td>i = I₀sin(ωt + φᵢ)</td>
+</tr>
+<tr>
+<td>Điện áp</td>
+<td>u = U₀sin(ωt + φᵤ)</td>
+</tr>
+<tr>
+<td>Giá trị hiệu dụng</td>
+<td>I = I₀/√2, U = U₀/√2</td>
+</tr>
+<tr>
+<td>Tần số</td>
+<td>f = n (vòng/s) = ω/(2π)</td>
+</tr>
+</tbody>
+</Table>
+
+</Callout>
+
+<Callout kind="related">
+
+### Bài viết liên quan:
+
+- [Các mạch điện xoay chiều](/ly-thuyet/12/dien-xoay-chieu/bai-2-cac-mach-dien-xoay-chieu)
+- [Công suất điện xoay chiều](/ly-thuyet/12/dien-xoay-chieu/bai-3-cong-suat-dien-xoay-chieu)
+- [Máy biến áp và truyền tải điện năng](/ly-thuyet/12/dien-xoay-chieu/bai-4-may-bien-ap-truyen-tai-dien-nang)
+
+</Callout>
