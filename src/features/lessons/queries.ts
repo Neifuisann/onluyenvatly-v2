@@ -9,6 +9,7 @@ import {
   type PublicQuestion,
   toPublicQuestion,
 } from "./domain/public-question";
+import { previewQuestions, sharesQuestions } from "./domain/share";
 import type { TypeCounts } from "./domain/summary";
 import type { LessonConfig, Question } from "./schema";
 
@@ -220,3 +221,45 @@ export async function getLessonIdByLegacyId(
     .limit(1);
   return lesson?.id ?? null;
 }
+
+/**
+ * Public share page (S8-03): a published lesson's details and, unless it is
+ * an exam, its first questions without answers (`toPublicQuestion`). Shared
+ * by every visitor; publishing or unpublishing invalidates `lesson:{id}`.
+ */
+export async function getSharePreview(id: number) {
+  "use cache";
+  cacheTag(tags.lesson(id), tags.lessonPublic(id));
+  cacheLife("hours");
+  const [lesson] = await db
+    .select({
+      ...cardColumns,
+      description: lessons.description,
+      versionId: lessons.currentVersionId,
+      examGuard: sql<boolean>`coalesce((${lessons.config}->>'examGuard')::boolean, false)`,
+      startsAt: sql<string | null>`${lessons.config}->>'startsAt'`,
+    })
+    .from(lessons)
+    .where(and(eq(lessons.id, id), eq(lessons.status, "published")))
+    .limit(1);
+  if (!lesson) return null;
+  const { versionId, ...meta } = lesson;
+  let questions: PublicQuestion[] = [];
+  if (versionId !== null && sharesQuestions(meta)) {
+    const [row] = await db
+      .select({ questions: lessonVersions.questions })
+      .from(lessonVersions)
+      .where(
+        and(eq(lessonVersions.id, versionId), eq(lessonVersions.lessonId, id)),
+      )
+      .limit(1);
+    questions = previewQuestions((row?.questions ?? []) as Question[]).map(
+      (q) => toPublicQuestion(q),
+    );
+  }
+  return { ...meta, questions };
+}
+
+export type SharePreview = NonNullable<
+  Awaited<ReturnType<typeof getSharePreview>>
+>;
