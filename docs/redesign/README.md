@@ -11,4 +11,4 @@ Validation: lint, typecheck, all 1,040 unit tests (`--maxWorkers=2`), token cont
 
 Local Lighthouse mobile report: performance 83, accessibility 100, CLS 0. The S8-01 performance target of 95 remains open, primarily around font loading. Lighthouse produced the report but its Windows temporary Chrome-profile cleanup failed afterward. This is a local measurement, not deployed or physical-device acceptance.
 
-The separate S8 backend/content branch supplies future theory, share, settings and manifest work. This redesign changes the existing screens and adds the landing/404/social preview; it does not mark those separate features complete.
+The base merge adds the S8 theory pages and share/account endpoints. This pass preserves them and adds the landing page, custom 404, and social preview; it focuses the visual overhaul on the existing onboarding, study, and admin screens.
