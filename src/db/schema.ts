@@ -63,6 +63,12 @@ export const users = pgTable(
       .notNull()
       .default(false),
     avatarPath: text("avatar_path"),
+    /** Public surfaces (leaderboard) show initials only (S8-04, 06 §5). */
+    leaderboardInitials: boolean("leaderboard_initials")
+      .notNull()
+      .default(false),
+    /** The student asked to delete the account; an admin decides (06 §5). */
+    deletionRequestedAt: timestamptz("deletion_requested_at"),
     approvedAt: timestamptz("approved_at"),
     approvedBy: uuid("approved_by"),
     lastLoginAt: timestamptz("last_login_at"),
@@ -72,6 +78,9 @@ export const users = pgTable(
   (t) => [
     index("users_pending_idx").on(t.status).where(sql`${t.status} = 'pending'`),
     index("users_role_idx").on(t.role),
+    index("users_deletion_requested_idx")
+      .on(t.deletionRequestedAt)
+      .where(sql`${t.deletionRequestedAt} is not null`),
     // Accent-insensitive admin search on names (S2-01).
     index("users_full_name_trgm_idx").using(
       "gin",

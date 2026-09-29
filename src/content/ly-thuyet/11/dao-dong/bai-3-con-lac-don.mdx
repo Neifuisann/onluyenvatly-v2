@@ -1,0 +1,283 @@
+{/* Converted from v1 materials/grade11/dao-dong/bai-3-con-lac-don.html by scripts/convert-materials.ts (S8-02). */}
+
+Con lắc đơn là một trong những hệ dao động cơ học đơn giản nhất nhưng có vai trò quan trọng trong lịch sử phát triển vật lý. Galileo đã phát hiện tính đẳng thời của con lắc đơn, mở đường cho việc chế tạo đồng hồ quả lắc.
+
+## 1. Cấu tạo của con lắc đơn
+
+### a) Mô tả con lắc đơn
+
+Con lắc đơn gồm:
+
+- **Vật nặng**: Khối lượng m, kích thước nhỏ (coi như chất điểm)
+- **Dây treo**: Chiều dài l, khối lượng không đáng kể, không dãn
+- **Điểm treo**: Cố định
+
+<Callout kind="definition">
+
+<strong>Định nghĩa:</strong> Con lắc đơn là hệ gồm một vật nhỏ khối lượng m được treo vào đầu một sợi dây không dãn, khối lượng không đáng kể, chiều dài l.
+
+</Callout>
+
+## 2. Phương trình dao động của con lắc đơn
+
+### a) Phân tích lực
+
+Khi con lắc lệch khỏi VTCB góc α, vật chịu tác dụng của:
+
+- **Trọng lực P = mg**: Phân tích thành
+  - P<sub>n</sub> = mgcosα (theo phương dây)
+  - P<sub>t</sub> = mgsinα (tiếp tuyến với quỹ đạo)
+- **Lực căng dây T**: Cân bằng với P<sub>n</sub>
+
+### b) Điều kiện dao động điều hòa
+
+Với góc lệch nhỏ (α ≤ 10°), ta có: sinα ≈ α (rad)
+
+Lực phục hồi: F = -mgsinα ≈ -mgα = -mg(s/l)
+
+Trong đó s là li độ cong (độ dài cung).
+
+### c) Phương trình dao động
+
+Với dao động nhỏ, con lắc đơn dao động điều hòa với:
+
+<Formula>
+
+s = s₀cos(ωt + φ)
+
+</Formula>
+
+Hoặc theo li độ góc:
+
+<Formula>
+
+α = α₀cos(ωt + φ)
+
+</Formula>
+
+Với α₀ là biên độ góc (rad), s₀ = lα₀ là biên độ dài.
+
+## 3. Chu kỳ và tần số dao động
+
+<Formula>
+
+#### Tần số góc:
+
+<Formula>
+
+ω = √(g/l)
+
+</Formula>
+
+#### Chu kỳ dao động:
+
+<Formula>
+
+T = 2π/ω = 2π√(l/g)
+
+</Formula>
+
+#### Tần số dao động:
+
+<Formula>
+
+f = 1/T = (1/2π)√(g/l)
+
+</Formula>
+
+</Formula>
+
+<Formula>
+
+<strong>Nhận xét quan trọng:</strong>
+
+- Chu kỳ T chỉ phụ thuộc vào l và g, không phụ thuộc vào m và biên độ α₀
+- Tăng chiều dài l → T tăng (dao động chậm lại)
+- Tăng gia tốc g → T giảm (dao động nhanh hơn)
+- Con lắc đơn có tính đẳng thời (chu kỳ không đổi với biên độ nhỏ)
+
+</Formula>
+
+## 4. Vận tốc và gia tốc trong dao động
+
+### a) Vận tốc
+
+Vận tốc dài của vật:
+
+<Formula>
+
+v = s' = -ωs₀sin(ωt + φ)
+
+</Formula>
+
+Tốc độ cực đại: v<sub>max</sub> = ωs₀ = ωlα₀ (tại VTCB)
+
+### b) Gia tốc
+
+Gia tốc có hai thành phần:
+
+- **Gia tốc tiếp tuyến**: a<sub>t</sub> = -ω²s = -gsinα ≈ -gα
+- **Gia tốc pháp tuyến**: a<sub>n</sub> = v²/l
+
+## 5. Năng lượng của con lắc đơn
+
+### a) Động năng
+
+<Formula>
+
+W<sub>đ</sub> = ½mv²
+
+</Formula>
+
+### b) Thế năng
+
+Chọn mốc thế năng tại VTCB:
+
+<Formula>
+
+W<sub>t</sub> = mgh = mgl(1 - cosα)
+
+</Formula>
+
+Với dao động nhỏ: W<sub>t</sub> ≈ ½mglα²
+
+### c) Cơ năng
+
+<Formula>
+
+#### Cơ năng toàn phần:
+
+<Formula>
+
+W = W<sub>đ</sub> + W<sub>t</sub> = ½mglα₀² = const
+
+</Formula>
+
+</Formula>
+
+## 6. Con lắc đơn chịu tác dụng của các yếu tố khác
+
+### a) Con lắc trong thang máy
+
+<Table>
+<thead>
+<tr>
+<th>Trường hợp</th>
+<th>Gia tốc hiệu dụng</th>
+<th>Chu kỳ</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Thang máy đi lên nhanh dần (a↑)</td>
+<td>g' = g + a</td>
+<td>T giảm</td>
+</tr>
+<tr>
+<td>Thang máy đi lên chậm dần (a↓)</td>
+<td>g' = g - a</td>
+<td>T tăng</td>
+</tr>
+<tr>
+<td>Thang máy đi xuống nhanh dần (a↓)</td>
+<td>g' = g - a</td>
+<td>T tăng</td>
+</tr>
+<tr>
+<td>Thang máy đi xuống chậm dần (a↑)</td>
+<td>g' = g + a</td>
+<td>T giảm</td>
+</tr>
+</tbody>
+</Table>
+
+### b) Con lắc trong điện trường
+
+Khi con lắc mang điện tích q trong điện trường E:
+
+<Formula>
+
+g' = g + qE/m
+
+</Formula>
+
+(Dấu + hoặc - tùy thuộc hướng của E)
+
+## 7. Bài tập ví dụ
+
+<Callout kind="example">
+
+<strong>Ví dụ 1:</strong> Con lắc đơn có chiều dài 1m, dao động tại nơi có g = 10 m/s². Tính chu kỳ dao động.<br /><br /><strong>Giải:</strong><br />T = 2π√(l/g) = 2π√(1/10) = 2π/√10 ≈ 1,99 s ≈ 2 s
+
+</Callout>
+
+<Callout kind="example">
+
+<strong>Ví dụ 2:</strong> Con lắc đơn dao động với biên độ góc 5°. Tại vị trí có li độ góc 3°, tính tỉ số giữa động năng và thế năng.<br /><br /><strong>Giải:</strong><br />Với dao động nhỏ:<br />W<sub>t</sub> = ½mglα² = ½mgl(3π/180)²<br />W = ½mglα₀² = ½mgl(5π/180)²<br />W<sub>đ</sub> = W - W<sub>t</sub> = ½mgl\[(5π/180)² - (3π/180)²\]<br /><br />W<sub>đ</sub>/W<sub>t</sub> = \[(5π/180)² - (3π/180)²\]/(3π/180)² = (25 - 9)/9 = 16/9
+
+</Callout>
+
+<Callout kind="example">
+
+<strong>Ví dụ 3:</strong> Con lắc đơn dao động trong thang máy. Khi thang máy đứng yên, chu kỳ là T₀ = 2s. Tính chu kỳ khi thang máy đi lên nhanh dần đều với gia tốc a = 2 m/s². Lấy g = 10 m/s².<br /><br /><strong>Giải:</strong><br />Khi thang máy đứng yên: T₀ = 2π√(l/g) = 2s<br />→ l = gT₀²/(4π²) = 10×4/(4π²) = 10/π² m<br /><br />Khi thang máy đi lên nhanh dần: g' = g + a = 10 + 2 = 12 m/s²<br />T' = 2π√(l/g') = 2π√\[(10/π²)/12\] = 2√(10/12) = 2√(5/6) ≈ 1,83 s
+
+</Callout>
+
+## 8. Ứng dụng của con lắc đơn
+
+- **Đồng hồ quả lắc**: Ứng dụng tính đẳng thời để đo thời gian chính xác
+- **Xác định gia tốc trọng trường**: Đo T và l, tính g = 4π²l/T²
+- **Con lắc Foucault**: Chứng minh Trái Đất tự quay
+- **Địa chấn kế**: Ghi nhận dao động của mặt đất
+- **Nghiên cứu dao động trong kiến trúc**: Thiết kế công trình chống động đất
+
+## 9. So sánh con lắc đơn và con lắc lò xo
+
+<Table>
+<thead>
+<tr>
+<th>Đặc điểm</th>
+<th>Con lắc đơn</th>
+<th>Con lắc lò xo</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Chu kỳ</td>
+<td>T = 2π√(l/g)</td>
+<td>T = 2π√(m/k)</td>
+</tr>
+<tr>
+<td>Phụ thuộc khối lượng</td>
+<td>Không</td>
+<td>Có</td>
+</tr>
+<tr>
+<td>Phụ thuộc g</td>
+<td>Có</td>
+<td>Không</td>
+</tr>
+<tr>
+<td>Điều kiện dao động điều hòa</td>
+<td>Góc lệch nhỏ (≤ 10°)</td>
+<td>Luôn dao động điều hòa</td>
+</tr>
+<tr>
+<td>Lực phục hồi</td>
+<td>Thành phần trọng lực</td>
+<td>Lực đàn hồi</td>
+</tr>
+</tbody>
+</Table>
+
+<Callout kind="definition">
+
+<strong>Lưu ý học tập:</strong> Con lắc đơn là mô hình lý tưởng hóa nhưng rất quan trọng trong vật lý. Cần nắm vững điều kiện dao động điều hòa (góc nhỏ) và công thức chu kỳ T = 2π√(l/g). Khi giải bài tập, chú ý phân tích các yếu tố ảnh hưởng đến gia tốc hiệu dụng.
+
+</Callout>
+
+<Formula>
+
+<strong>Tổng kết:</strong> Con lắc đơn dao động điều hòa khi góc lệch nhỏ với chu kỳ không phụ thuộc khối lượng vật nặng. Đây là cơ sở cho nhiều ứng dụng quan trọng trong đo lường và nghiên cứu khoa học.
+
+</Formula>

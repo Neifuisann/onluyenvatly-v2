@@ -73,6 +73,19 @@ export const getAttempt = cache(async (id: string) => {
   return row ?? null;
 });
 
+/**
+ * A migrated v1 result (`/result/:id` bookmarks, S8-05) by its unique
+ * `legacy_result_id`. The caller checks the owner before redirecting.
+ */
+export async function getAttemptByLegacyResultId(legacyResultId: string) {
+  const [row] = await db
+    .select({ id: attempts.id, userId: attempts.userId })
+    .from(attempts)
+    .where(eq(attempts.legacyResultId, legacyResultId))
+    .limit(1);
+  return row ?? null;
+}
+
 export type AttemptView = NonNullable<Awaited<ReturnType<typeof getAttempt>>>;
 
 export type MyLessonAttempt = Awaited<

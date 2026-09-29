@@ -1,0 +1,373 @@
+{/* Converted from v1 materials/grade12/dao-dong-co/bai-3-con-lac-don.html by scripts/convert-materials.ts (S8-02). */}
+
+Con lắc đơn là một trong những hệ dao động cơ học cổ điển, được Galileo phát hiện và nghiên cứu từ thế kỷ 17. Đây là cơ sở để chế tạo đồng hồ quả lắc và nhiều ứng dụng khác.
+
+## 1. Cấu tạo của con lắc đơn
+
+### a) Định nghĩa
+
+Con lắc đơn gồm:
+
+- Một vật nhỏ khối lượng m (coi như chất điểm)
+- Treo vào đầu một sợi dây không dãn, khối lượng không đáng kể
+- Chiều dài dây là l
+- Dao động trong trọng trường đều g
+
+### b) Vị trí cân bằng
+
+Vị trí cân bằng là vị trí dây treo thẳng đứng, vật ở vị trí thấp nhất.
+
+## 2. Phương trình dao động của con lắc đơn
+
+### a) Lực tác dụng
+
+Khi con lắc lệch góc α so với phương thẳng đứng:
+
+- Trọng lực: P = mg
+- Lực căng dây: T
+- Thành phần tiếp tuyến của trọng lực: P\_t = -mg.sinα
+
+### b) Dao động nhỏ
+
+Với góc lệch nhỏ (α ≤ 10°), ta có: sinα ≈ α (rad)
+
+Li độ cong: s = lα
+
+Li độ góc: α = s/l
+
+<Formula>
+
+P\_t = -mgα = -mg(s/l) = -(mg/l)s
+
+</Formula>
+
+### c) Phương trình dao động
+
+Áp dụng định luật II Newton:
+
+<Formula>
+
+ma = -(mg/l)s → a = -(g/l)s
+
+</Formula>
+
+So sánh với a = -ω²s, ta có:
+
+<Formula>
+
+ω = √(g/l)
+
+</Formula>
+
+<Callout kind="warning">
+
+### Điều kiện dao động điều hòa:
+
+Con lắc đơn chỉ dao động điều hòa khi biên độ góc nhỏ (α₀ ≤ 10°)
+
+Khi đó: s = s₀cos(ωt + φ) hoặc α = α₀cos(ωt + φ)
+
+</Callout>
+
+## 3. Chu kỳ và tần số dao động
+
+### a) Chu kỳ
+
+<Formula>
+
+T = 2π/ω = 2π√(l/g)
+
+</Formula>
+
+### b) Tần số
+
+<Formula>
+
+f = 1/T = 1/(2π)√(g/l)
+
+</Formula>
+
+<Callout kind="definition">
+
+### Nhận xét quan trọng:
+
+\- Chu kỳ con lắc đơn chỉ phụ thuộc vào l và g
+
+\- Chu kỳ không phụ thuộc vào khối lượng m và biên độ A (khi dao động nhỏ)
+
+\- Chu kỳ tỉ lệ với √l và tỉ lệ nghịch với √g
+
+</Callout>
+
+<Callout kind="example">
+
+#### Ví dụ 1:
+
+Một con lắc đơn có chiều dài l = 1m dao động tại nơi có g = 9,8 m/s².
+
+a) Tính chu kỳ dao động
+
+b) Muốn chu kỳ tăng gấp đôi thì phải thay đổi chiều dài như thế nào?
+
+<strong>Giải:</strong>
+
+a) T = 2π√(l/g) = 2π√(1/9,8) = 2,006s ≈ 2s
+
+b) T' = 2T → 2π√(l'/g) = 2.2π√(l/g)
+
+→ √(l'/g) = 2√(l/g) → l' = 4l = 4m
+
+Vậy phải tăng chiều dài lên 4 lần.
+
+</Callout>
+
+## 4. Năng lượng của con lắc đơn
+
+### a) Động năng
+
+<Formula>
+
+W\_đ = ½mv²
+
+</Formula>
+
+### b) Thế năng
+
+Chọn mốc thế năng tại vị trí cân bằng:
+
+<Formula>
+
+W\_t = mgh = mgl(1 - cosα)
+
+</Formula>
+
+Với góc nhỏ: 1 - cosα ≈ α²/2
+
+<Formula>
+
+W\_t ≈ ½mglα² = ½mg(s²/l) = ½(mg/l)s²
+
+</Formula>
+
+### c) Cơ năng
+
+Với dao động nhỏ:
+
+<Formula>
+
+W = W\_đ + W\_t = ½mglα₀² = ½(mg/l)s₀² = const
+
+</Formula>
+
+## 5. Vận tốc và lực căng dây
+
+### a) Vận tốc tại vị trí bất kỳ
+
+Áp dụng bảo toàn cơ năng:
+
+<Formula>
+
+v² = 2gl(cosα - cosα₀)
+
+</Formula>
+
+Tại vị trí cân bằng (α = 0):
+
+<Formula>
+
+v\_max = √(2gl(1 - cosα₀))
+
+</Formula>
+
+Với góc nhỏ: v\_max ≈ α₀√(gl)
+
+### b) Lực căng dây
+
+Tại vị trí góc lệch α:
+
+<Formula>
+
+T = mg(3cosα - 2cosα₀)
+
+</Formula>
+
+Tại vị trí cân bằng: T\_max = mg(3 - 2cosα₀)
+
+Tại vị trí biên: T\_min = mgcosα₀
+
+<Callout kind="example">
+
+#### Ví dụ 2:
+
+Con lắc đơn dao động với biên độ góc α₀ = 60°. Tính tỉ số T\_max/T\_min.
+
+<strong>Giải:</strong>
+
+T\_max = mg(3 - 2cos60°) = mg(3 - 2.0,5) = 2mg
+
+T\_min = mgcos60° = 0,5mg
+
+T\_max/T\_min = 2mg/(0,5mg) = 4
+
+</Callout>
+
+## 6. Con lắc đơn chịu thêm lực phụ
+
+### a) Lực quán tính
+
+Khi con lắc trong thang máy chuyển động với gia tốc a:
+
+- Thang máy đi lên nhanh dần: g' = g + a
+- Thang máy đi xuống nhanh dần: g' = g - a
+
+### b) Lực điện trường
+
+Quả cầu tích điện q trong điện trường E:
+
+<Formula>
+
+g' = g ± qE/m
+
+</Formula>
+
+### c) Lực đẩy Archimedes
+
+Con lắc trong chất lỏng có khối lượng riêng ρ₀:
+
+<Formula>
+
+g' = g(1 - ρ₀/ρ)
+
+</Formula>
+
+<Callout kind="warning">
+
+<strong>Nguyên tắc chung:</strong> Thay g bằng g' trong các công thức tính chu kỳ
+
+</Callout>
+
+## 7. Sự thay đổi chu kỳ
+
+### a) Do thay đổi chiều dài
+
+Chiều dài thay đổi do nhiệt độ:
+
+<Formula>
+
+l = l₀(1 + αΔt)
+
+</Formula>
+
+Độ biến thiên tương đối của chu kỳ:
+
+<Formula>
+
+ΔT/T ≈ ½αΔt
+
+</Formula>
+
+### b) Do thay đổi độ cao
+
+Gia tốc trọng trường ở độ cao h:
+
+<Formula>
+
+g\_h = g₀R²/(R + h)²
+
+</Formula>
+
+Với h &lt;&lt; R:
+
+<Formula>
+
+ΔT/T ≈ h/R
+
+</Formula>
+
+### c) Đồng hồ quả lắc
+
+Thời gian đồng hồ chạy sai trong một ngày đêm:
+
+<Formula>
+
+Δτ = 86400.\|ΔT/T\| (giây)
+
+</Formula>
+
+## 8. Con lắc đơn trong thực tế
+
+### a) Đo gia tốc trọng trường
+
+Từ T = 2π√(l/g), ta có:
+
+<Formula>
+
+g = 4π²l/T²
+
+</Formula>
+
+### b) Con lắc Foucault
+
+Chứng minh Trái Đất tự quay quanh trục của nó.
+
+### c) Đồng hồ quả lắc
+
+Ứng dụng tính tuần hoàn của con lắc để đo thời gian.
+
+## 9. So sánh con lắc đơn và con lắc lò xo
+
+<Table>
+<thead>
+<tr>
+<th>Đặc điểm</th>
+<th>Con lắc đơn</th>
+<th>Con lắc lò xo</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Điều kiện dao động điều hòa</td>
+<td>Góc lệch nhỏ (≤ 10°)</td>
+<td>Luôn dao động điều hòa</td>
+</tr>
+<tr>
+<td>Chu kỳ phụ thuộc vào</td>
+<td>l và g</td>
+<td>m và k</td>
+</tr>
+<tr>
+<td>Phụ thuộc khối lượng</td>
+<td>Không</td>
+<td>Có</td>
+</tr>
+<tr>
+<td>Phụ thuộc trọng trường</td>
+<td>Có</td>
+<td>Không</td>
+</tr>
+<tr>
+<td>Lực kéo về</td>
+<td>F = -(mg/l)s</td>
+<td>F = -kx</td>
+</tr>
+</tbody>
+</Table>
+
+## 10. Tổng kết
+
+Con lắc đơn là một hệ dao động quan trọng với nhiều ứng dụng thực tế. Cần nắm vững:
+
+- Điều kiện để con lắc đơn dao động điều hòa
+- Công thức tính chu kỳ T = 2π√(l/g)
+- Các yếu tố ảnh hưởng đến chu kỳ
+- Cách tính năng lượng và lực căng dây
+
+<Callout kind="related">
+
+### Bài viết liên quan:
+
+- [Dao động điều hòa](/ly-thuyet/12/dao-dong-co/bai-1-dao-dong-dieu-hoa)
+- [Con lắc lò xo](/ly-thuyet/12/dao-dong-co/bai-2-con-lac-lo-xo)
+- [Dao động tắt dần và dao động cưỡng bức](/ly-thuyet/12/dao-dong-co/bai-4-dao-dong-tat-dan-cuong-buc)
+
+</Callout>

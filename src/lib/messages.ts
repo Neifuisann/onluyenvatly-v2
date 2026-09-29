@@ -100,6 +100,9 @@ export const authCopy = {
 
 export const shellCopy = {
   appName: "Ôn Luyện Vật Lý",
+  appShortName: "Vật Lý",
+  appDescription:
+    "Luyện đề Vật lý THPT theo cấu trúc đề thi mới: chấm điểm ngay, xem lại lời giải, ôn đúng câu còn sai.",
   skipToContent: "Bỏ qua điều hướng",
   mainNav: "Điều hướng chính",
   adminNav: "Quản trị",

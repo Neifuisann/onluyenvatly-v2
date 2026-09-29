@@ -1,0 +1,406 @@
+{/* Converted from v1 materials/grade12/dao-dong-dien-tu/bai-1-mach-dao-dong-lc.html by scripts/convert-materials.ts (S8-02). */}
+
+Mạch dao động LC là một hệ thống điện từ cơ bản, tạo nên nền tảng cho nhiều ứng dụng trong điện tử và viễn thông như radio, tivi, điện thoại di động.
+
+## 1. Cấu tạo mạch dao động LC
+
+### a) Thành phần của mạch
+
+Mạch dao động LC lý tưởng gồm:
+
+- <strong>Tụ điện C:</strong> Điện dung C (đơn vị: Farad - F)
+- <strong>Cuộn cảm L:</strong> Độ tự cảm L (đơn vị: Henry - H)
+- <strong>Điện trở:</strong> R = 0 (mạch lý tưởng)
+
+<Callout kind="example">
+
+<strong>Sơ đồ mạch LC:</strong>
+
+L ━━━━┫┣━━━━ C
+
+Cuộn cảm nối tiếp với tụ điện
+
+</Callout>
+
+### b) Nguyên lý hoạt động
+
+Khi tụ điện được tích điện rồi nối với cuộn cảm:
+
+1. Tụ phóng điện qua cuộn cảm → dòng điện tăng dần
+2. Năng lượng điện trường chuyển thành năng lượng từ trường
+3. Khi tụ phóng hết → dòng điện cực đại
+4. Dòng điện giảm → tụ được tích điện ngược lại
+5. Quá trình lặp lại tạo dao động điện từ
+
+<Callout kind="warning">
+
+<strong>Tương tự cơ học:</strong> Mạch LC giống như con lắc lò xo, với tụ điện tương tự lò xo và cuộn cảm tương tự khối lượng.
+
+</Callout>
+
+## 2. Dao động điện từ tự do trong mạch LC
+
+### a) Điện tích trên tụ điện
+
+Điện tích q trên tụ điện biến thiên điều hòa:
+
+<Formula>
+
+q = Q₀cos(ωt + φ)
+
+</Formula>
+
+Trong đó:
+
+- Q₀: Điện tích cực đại trên tụ (C)
+- ω: Tần số góc dao động (rad/s)
+- φ: Pha ban đầu (rad)
+
+### b) Cường độ dòng điện
+
+Dòng điện là đạo hàm của điện tích:
+
+<Formula>
+
+i = dq/dt = -ωQ₀sin(ωt + φ) = I₀cos(ωt + φ + π/2)
+
+</Formula>
+
+Với I₀ = ωQ₀ là cường độ dòng điện cực đại
+
+<Callout kind="warning">
+
+### Quan hệ pha:
+
+\- Dòng điện i sớm pha π/2 so với điện tích q
+
+\- Khi q = Q₀ thì i = 0 và ngược lại
+
+\- Khi q = 0 thì i = ±I₀
+
+</Callout>
+
+### c) Hiệu điện thế giữa hai bản tụ
+
+<Formula>
+
+u = q/C = (Q₀/C)cos(ωt + φ) = U₀cos(ωt + φ)
+
+</Formula>
+
+Với U₀ = Q₀/C là hiệu điện thế cực đại
+
+## 3. Tần số dao động riêng
+
+### a) Phương trình vi phân
+
+Áp dụng định luật Kirchhoff cho mạch LC:
+
+<Formula>
+
+L(di/dt) + u = 0
+
+</Formula>
+
+Thay u = q/C và i = dq/dt:
+
+<Formula>
+
+L(d²q/dt²) + q/C = 0
+
+</Formula>
+
+### b) Tần số góc riêng
+
+Giải phương trình vi phân ta được:
+
+<Formula>
+
+ω = 1/√(LC)
+
+</Formula>
+
+### c) Chu kỳ và tần số
+
+<Formula>
+
+T = 2π/ω = 2π√(LC)
+
+</Formula>
+
+<Formula>
+
+f = 1/T = 1/(2π√(LC))
+
+</Formula>
+
+<Callout kind="definition">
+
+### Công thức Thomson:
+
+T = 2π√(LC) được gọi là công thức Thomson, do nhà vật lý William Thomson (Lord Kelvin) tìm ra năm 1853.
+
+</Callout>
+
+## 4. Năng lượng trong mạch dao động LC
+
+### a) Năng lượng điện trường
+
+Năng lượng tích trữ trong tụ điện:
+
+<Formula>
+
+W\_C = ½(q²/C) = ½Cu² = ½(Q₀²/C)cos²(ωt + φ)
+
+</Formula>
+
+### b) Năng lượng từ trường
+
+Năng lượng tích trữ trong cuộn cảm:
+
+<Formula>
+
+W\_L = ½Li² = ½LI₀²sin²(ωt + φ)
+
+</Formula>
+
+### c) Năng lượng toàn phần
+
+Tổng năng lượng điện từ:
+
+<Formula>
+
+W = W\_C + W\_L = ½(Q₀²/C) = ½LI₀² = const
+
+</Formula>
+
+<Callout kind="warning">
+
+### Định luật bảo toàn năng lượng:
+
+\- Năng lượng toàn phần không đổi (mạch lý tưởng)
+
+\- W\_C và W\_L biến thiên tuần hoàn với tần số 2f
+
+\- Khi W\_C max thì W\_L = 0 và ngược lại
+
+\- W\_C = W\_L = W/2 khi \|q\| = Q₀/√2
+
+</Callout>
+
+## 5. Các hệ thức quan trọng
+
+### a) Liên hệ giữa Q₀, I₀, U₀
+
+<Formula>
+
+I₀ = ωQ₀ = Q₀/√(LC)
+
+</Formula>
+
+<Formula>
+
+U₀ = Q₀/C = I₀√(L/C)
+
+</Formula>
+
+### b) Hệ thức độc lập thời gian
+
+Tương tự dao động cơ:
+
+<Formula>
+
+q² + (i/ω)² = Q₀²
+
+</Formula>
+
+<Formula>
+
+u² + (Li)²/C = U₀²
+
+</Formula>
+
+<Callout kind="example">
+
+#### Ví dụ 1:
+
+Mạch dao động LC có L = 2mH, C = 8μF. Tại t = 0, tụ điện có điện tích Q₀ = 4.10⁻⁶C và dòng điện bằng 0.
+
+a) Tính chu kỳ và tần số dao động
+
+b) Viết biểu thức q(t) và i(t)
+
+c) Tính năng lượng của mạch
+
+<strong>Giải:</strong>
+
+a) T = 2π√(LC) = 2π√(2.10⁻³ × 8.10⁻⁶) = 2π√(16.10⁻⁹) = 8π.10⁻⁵s
+
+f = 1/T = 10⁵/(8π) ≈ 3979 Hz
+
+b) ω = 2π/T = 2,5.10⁴ rad/s
+
+Tại t = 0: q = Q₀ và i = 0 → φ = 0
+
+q = 4.10⁻⁶cos(2,5.10⁴t) (C)
+
+i = -0,1sin(2,5.10⁴t) (A)
+
+c) W = Q₀²/(2C) = (4.10⁻⁶)²/(2×8.10⁻⁶) = 10⁻⁶ J
+
+</Callout>
+
+## 6. Sự tương tự giữa dao động điện và dao động cơ
+
+<Table>
+<thead>
+<tr>
+<th>Đại lượng cơ</th>
+<th>Đại lượng điện</th>
+<th>Mối liên hệ</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Li độ x</td>
+<td>Điện tích q</td>
+<td>x ↔ q</td>
+</tr>
+<tr>
+<td>Vận tốc v</td>
+<td>Dòng điện i</td>
+<td>v = dx/dt ↔ i = dq/dt</td>
+</tr>
+<tr>
+<td>Khối lượng m</td>
+<td>Độ tự cảm L</td>
+<td>m ↔ L</td>
+</tr>
+<tr>
+<td>Độ cứng k</td>
+<td>1/C</td>
+<td>k ↔ 1/C</td>
+</tr>
+<tr>
+<td>Lực F = -kx</td>
+<td>Hiệu điện thế u = q/C</td>
+<td>F ↔ u</td>
+</tr>
+<tr>
+<td>W\_đ = ½mv²</td>
+<td>W\_L = ½Li²</td>
+<td>Động năng ↔ Năng lượng từ</td>
+</tr>
+<tr>
+<td>W\_t = ½kx²</td>
+<td>W\_C = ½q²/C</td>
+<td>Thế năng ↔ Năng lượng điện</td>
+</tr>
+</tbody>
+</Table>
+
+## 7. Mạch dao động có điện trở
+
+### a) Dao động tắt dần
+
+Khi mạch có điện trở R ≠ 0:
+
+- Năng lượng mất dần do tỏa nhiệt: P = I²R
+- Biên độ dao động giảm dần theo thời gian
+- Dao động tắt dần tương tự dao động cơ có ma sát
+
+### b) Điều kiện duy trì dao động
+
+Để duy trì dao động cần cung cấp năng lượng bù đắp phần hao phí.
+
+<Callout kind="warning">
+
+<strong>Ứng dụng:</strong> Trong các mạch dao động thực tế, người ta dùng transistor hoặc IC để bù năng lượng, tạo dao động duy trì.
+
+</Callout>
+
+## 8. Ứng dụng của mạch dao động LC
+
+### a) Mạch chọn sóng
+
+Trong radio, tivi: Điều chỉnh C để thay đổi tần số cộng hưởng, chọn kênh mong muốn.
+
+### b) Mạch tạo sóng cao tần
+
+Tạo sóng mang trong phát thanh, truyền hình, viễn thông.
+
+### c) Bộ lọc tần số
+
+Lọc nhiễu, tách tín hiệu theo tần số.
+
+### d) Mạch cộng hưởng
+
+Ứng dụng trong lò vi sóng, máy MRI, sạc không dây.
+
+<Callout kind="example">
+
+#### Ví dụ 2: Mạch chọn sóng
+
+Mạch chọn sóng của radio gồm L = 2μH và tụ xoay có C biến thiên từ 10pF đến 360pF.
+
+Tính dải tần số mà mạch có thể thu được.
+
+<strong>Giải:</strong>
+
+f\_min ứng với C\_max:
+
+f\_min = 1/(2π√(2.10⁻⁶ × 360.10⁻¹²)) = 5,93.10⁶ Hz = 5,93 MHz
+
+f\_max ứng với C\_min:
+
+f\_max = 1/(2π√(2.10⁻⁶ × 10.10⁻¹²)) = 35,6.10⁶ Hz = 35,6 MHz
+
+Vậy mạch thu được sóng từ 5,93 MHz đến 35,6 MHz (dải sóng ngắn)
+
+</Callout>
+
+## 9. Bài tập tự luyện
+
+<Callout kind="definition">
+
+### Bài 1:
+
+Mạch LC có L = 0,1H, C = 10μF. Ban đầu tụ được tích điện đến U₀ = 100V.
+
+a) Tính chu kỳ dao động
+
+b) Tính dòng điện cực đại
+
+c) Tính năng lượng từ trường khi u = 60V
+
+</Callout>
+
+<Callout kind="definition">
+
+### Bài 2:
+
+Mạch dao động LC lý tưởng đang hoạt động. Tại thời điểm năng lượng điện trường bằng 3 lần năng lượng từ trường thì:
+
+a) Tính tỉ số \|q\|/Q₀
+
+b) Tính tỉ số \|i\|/I₀
+
+</Callout>
+
+## 10. Tổng kết
+
+Mạch dao động LC là hệ thống cơ bản tạo ra dao động điện từ với các đặc điểm:
+
+- Tần số dao động riêng: f = 1/(2π√(LC))
+- Năng lượng bảo toàn, chuyển hóa giữa điện và từ
+- Có sự tương tự hoàn toàn với dao động cơ học
+- Ứng dụng rộng rãi trong kỹ thuật điện tử
+
+<Callout kind="related">
+
+### Bài viết liên quan:
+
+- [Điện từ trường](/ly-thuyet/12/dao-dong-dien-tu/bai-2-dien-tu-truong)
+- [Sóng điện từ](/ly-thuyet/12/dao-dong-dien-tu/bai-3-song-dien-tu)
+
+</Callout>

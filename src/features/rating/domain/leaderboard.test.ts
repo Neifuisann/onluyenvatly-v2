@@ -6,6 +6,7 @@ import {
   leaderboardHref,
   leaderboardView,
   parseLeaderboardParams,
+  publicName,
   withRanks,
 } from "./leaderboard";
 
@@ -90,6 +91,15 @@ describe("initials", () => {
     ["   ", "?"],
   ])("%j → %s", (name, expected) => {
     expect(initials(name)).toBe(expected);
+  });
+});
+
+describe("publicName", () => {
+  it("keeps the full name unless the student chose initials", () => {
+    expect(publicName("Nguyễn Văn Huy", false)).toBe("Nguyễn Văn Huy");
+    expect(publicName("  Nguyễn   văn huy ", true)).toBe("N. V. H.");
+    expect(publicName("Đặng", true)).toBe("Đ.");
+    expect(publicName("  ", true)).toBe("?");
   });
 });
 

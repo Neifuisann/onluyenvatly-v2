@@ -189,3 +189,45 @@ describe("admin actions require an admin", () => {
     });
   });
 });
+
+describe("a user's own account actions need a usable session (S8-04)", () => {
+  async function accountActions() {
+    const path = join(featuresDir, "account/actions.ts").replaceAll("\\", "/");
+    const mod = (await import(/* @vite-ignore */ path)) as Record<
+      string,
+      (input?: unknown) => Promise<unknown>
+    >;
+    return Object.entries(mod);
+  }
+
+  it.each([
+    ["a visitor", null, "/login"],
+    [
+      "a student who must change the password",
+      session({ mustChangePassword: true }),
+      "/change-password",
+    ],
+  ])("sends %s away from every action, writing nothing", async (_who, user, to) => {
+    current.user = user;
+    const actions = await accountActions();
+    expect(actions.map(([name]) => name).sort()).toEqual([
+      "cancelAccountDeletion",
+      "createAvatarUploadUrl",
+      "removeMyAvatar",
+      "requestAccountDeletion",
+      "revokeMySession",
+      "saveMyAvatar",
+      "setMyPrivacy",
+      "updateMyProfile",
+    ]);
+    for (const [name, action] of actions) {
+      const error = await action({ leaderboardInitials: true }).then(
+        () => null,
+        (e: unknown) => e,
+      );
+      expect(redirectPath(error), name).toBe(to);
+    }
+    expect(await tdb.select().from(auditLog)).toHaveLength(0);
+    expect(cache.updateTag).not.toHaveBeenCalled();
+  });
+});

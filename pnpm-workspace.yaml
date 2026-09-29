@@ -4,3 +4,6 @@ allowBuilds:
   protobufjs: false
   sharp: false
   unrs-resolver: false
+overrides:
+  # One KaTeX for MathText and the theory pages' rehype-katex (S8-02).
+  katex: ^0.18.9

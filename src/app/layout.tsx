@@ -1,5 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Bricolage_Grotesque, Inter, JetBrains_Mono } from "next/font/google";
+import { shellCopy } from "@/lib/messages";
+import { siteUrl } from "@/lib/site";
 import { themeScript } from "@/lib/theme";
 import "./globals.css";
 
@@ -26,15 +28,24 @@ const mono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
+  // Absolute URLs for canonical links and OG images (S8-05).
+  metadataBase: siteUrl(),
   title: {
-    default: "Ôn Luyện Vật Lý",
-    template: "%s · Ôn Luyện Vật Lý",
+    default: shellCopy.appName,
+    template: `%s · ${shellCopy.appName}`,
   },
-  description:
-    "Luyện đề Vật lý THPT theo cấu trúc đề thi mới, chấm điểm ngay và ôn lại đúng chỗ còn sai.",
-  applicationName: "Ôn Luyện Vật Lý",
+  description: shellCopy.appDescription,
+  applicationName: shellCopy.appName,
+  appleWebApp: { title: shellCopy.appShortName, capable: true },
+  formatDetection: { telephone: false },
+  openGraph: {
+    type: "website",
+    locale: "vi_VN",
+    siteName: shellCopy.appName,
+  },
 };
 
+/** Browser chrome uses the redesign palette. */
 export const viewport: Viewport = {
   themeColor: [
     { media: "(prefers-color-scheme: light)", color: "#f4f6f9" },

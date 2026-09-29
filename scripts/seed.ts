@@ -191,6 +191,12 @@ async function main() {
           status: s.status,
           passwordHash,
           mustChangePassword: false,
+          // S8-04 settings a spec may have changed.
+          fullName: s.fullName,
+          className: `${s.grade}A1`,
+          leaderboardInitials: false,
+          avatarPath: null,
+          deletionRequestedAt: null,
           updatedAt: new Date(),
         },
       })
@@ -501,6 +507,9 @@ async function seedStats(passwordHash: string) {
 main()
   .catch((error: unknown) => {
     console.error(error instanceof Error ? error.message : error);
+    // Drizzle wraps driver errors; the real reason (missing table, network) is the cause.
+    if (error instanceof Error && error.cause instanceof Error)
+      console.error(`Cause: ${error.cause.message}`);
     process.exitCode = 1;
   })
   .finally(() => client.end());

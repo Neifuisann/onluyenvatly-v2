@@ -36,18 +36,32 @@ const newPasswordField = z
       });
   });
 
+/** Profile fields, shared by registration and the student settings (S8-04). */
+export const fullNameField = z
+  .string()
+  .trim()
+  .transform((s) => s.replace(/\s+/g, " "))
+  .pipe(
+    z.string().min(2, fieldMessages.fullName).max(80, fieldMessages.fullName),
+  );
+export const dateOfBirthField = z
+  .string()
+  .min(1, fieldMessages.required)
+  .refine((v) => isReasonableBirthDate(v), fieldMessages.dateOfBirth);
+export const gradeField = z
+  .enum(["", "10", "11", "12"], { error: fieldMessages.grade })
+  .optional()
+  .transform((g) => (g ? Number(g) : null));
+export const classNameField = z
+  .string()
+  .trim()
+  .max(20, fieldMessages.className)
+  .optional()
+  .transform((c) => (c ? c.toUpperCase() : null));
+
 export const RegisterSchema = z
   .object({
-    fullName: z
-      .string()
-      .trim()
-      .transform((s) => s.replace(/\s+/g, " "))
-      .pipe(
-        z
-          .string()
-          .min(2, fieldMessages.fullName)
-          .max(80, fieldMessages.fullName),
-      ),
+    fullName: fullNameField,
     phone: z
       .string()
       .trim()
@@ -60,20 +74,9 @@ export const RegisterSchema = z
         }
         return phone;
       }),
-    dateOfBirth: z
-      .string()
-      .min(1, fieldMessages.required)
-      .refine((v) => isReasonableBirthDate(v), fieldMessages.dateOfBirth),
-    grade: z
-      .enum(["", "10", "11", "12"], { error: fieldMessages.grade })
-      .optional()
-      .transform((g) => (g ? Number(g) : null)),
-    className: z
-      .string()
-      .trim()
-      .max(20, fieldMessages.className)
-      .optional()
-      .transform((c) => (c ? c.toUpperCase() : null)),
+    dateOfBirth: dateOfBirthField,
+    grade: gradeField,
+    className: classNameField,
     // Field-level rules run even when other fields are invalid, so the
     // student sees every problem at once.
     password: newPasswordField,
