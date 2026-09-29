@@ -19,11 +19,14 @@ export function RatingDelta({
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-0.5 font-mono tabular-nums",
-        strong ? "font-semibold" : "text-xs",
+        "inline-flex items-center gap-0.5 num",
+        strong ? "rounded-full px-2 py-0.5 font-semibold text-sm" : "text-xs",
         value > 0 && "text-success-text",
         value < 0 && "text-danger-text",
         value === 0 && "text-muted-foreground",
+        strong && value > 0 && "bg-success-soft",
+        strong && value < 0 && "bg-danger-soft",
+        strong && value === 0 && "bg-muted",
       )}
     >
       {Icon && <Icon aria-hidden className={strong ? "size-4" : "size-3"} />}

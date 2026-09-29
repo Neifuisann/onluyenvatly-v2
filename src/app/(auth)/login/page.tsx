@@ -16,9 +16,7 @@ export default function LoginPage() {
   return (
     <Card>
       <CardHeader>
-        <h1 className="font-semibold text-2xl leading-tight">
-          {authCopy.loginTitle}
-        </h1>
+        <h1 className="heading-page">{authCopy.loginTitle}</h1>
         <CardDescription>{authCopy.loginLead}</CardDescription>
       </CardHeader>
       <CardContent>

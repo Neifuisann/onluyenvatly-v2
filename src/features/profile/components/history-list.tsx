@@ -27,7 +27,7 @@ export function HistoryList({ items }: { items: readonly HistoryItem[] }) {
               </p>
             </div>
             <div className="flex flex-col items-end gap-0.5">
-              <span className="font-mono font-semibold tabular-nums">
+              <span className="num font-semibold tabular-nums">
                 <span className="sr-only">{t.score} </span>
                 {formatScore(a.score10 ?? 0)}
               </span>

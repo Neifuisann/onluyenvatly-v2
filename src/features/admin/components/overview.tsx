@@ -25,7 +25,7 @@ function Tile({
       <dt className="text-muted-foreground text-sm">{label}</dt>
       <dd
         className={cn(
-          "font-mono font-semibold text-2xl tabular-nums",
+          "num font-semibold text-2xl tabular-nums",
           muted && "font-sans text-lg text-muted-foreground",
         )}
       >
@@ -71,7 +71,7 @@ export function OverviewTiles({
             {t.pending}
           </Link>
         </dt>
-        <dd className="flex items-center justify-between font-mono font-semibold text-2xl tabular-nums">
+        <dd className="flex items-center justify-between num font-semibold text-2xl tabular-nums">
           {pending}
           <ChevronRight aria-hidden className="size-5 text-muted-foreground" />
         </dd>

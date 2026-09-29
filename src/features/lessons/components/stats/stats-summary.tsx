@@ -6,7 +6,7 @@ function Tile({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex flex-col gap-1 rounded-lg border bg-surface p-4 shadow-card">
       <dt className="text-muted-foreground text-sm">{label}</dt>
-      <dd className="font-mono font-semibold text-2xl tabular-nums">{value}</dd>
+      <dd className="num font-semibold text-2xl tabular-nums">{value}</dd>
     </div>
   );
 }
@@ -52,7 +52,7 @@ export function ScoreHistogram({
               <span className="sr-only">{t.bucket(i, last, n)}</span>
               <span
                 aria-hidden
-                className="font-mono text-muted-foreground text-xs tabular-nums"
+                className="num text-muted-foreground text-xs tabular-nums"
               >
                 {n}
               </span>

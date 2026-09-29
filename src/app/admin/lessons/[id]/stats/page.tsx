@@ -69,9 +69,7 @@ export default async function LessonStatsPage({
           <ArrowLeft aria-hidden className="size-4" />
           {t.back}
         </Link>
-        <h1 className="break-words font-semibold text-2xl">
-          {t.title(lesson.title)}
-        </h1>
+        <h1 className="break-words heading-page">{t.title(lesson.title)}</h1>
         <p className="text-muted-foreground">{t.lead}</p>
       </header>
 
@@ -99,7 +97,7 @@ export default async function LessonStatsPage({
             className="flex flex-col gap-3"
           >
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <h2 id="questions-heading" className="font-semibold text-lg">
+              <h2 id="questions-heading" className="heading-section">
                 {t.questions}
               </h2>
               <SortToggle lessonId={lesson.id} params={pinned} />

@@ -68,7 +68,7 @@ function Row({
     >
       <span
         className={cn(
-          "flex size-9 items-center justify-center rounded-full font-mono font-semibold tabular-nums",
+          "flex size-9 items-center justify-center rounded-full num font-semibold tabular-nums",
           row.rank <= 3 ? "bg-accent text-accent-foreground" : "text-sm",
         )}
       >
@@ -115,7 +115,7 @@ function RatingValue({ rating, strong }: { rating: number; strong?: boolean }) {
   return (
     <span
       className={cn(
-        "font-mono tabular-nums",
+        "num",
         strong ? "font-semibold" : "text-muted-foreground text-xs",
       )}
     >

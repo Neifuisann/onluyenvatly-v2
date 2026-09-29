@@ -64,8 +64,8 @@ export function TestTimer({
         role="timer"
         aria-label={t.label}
         className={cn(
-          "flex items-center gap-1.5 rounded-md px-2.5 py-1 font-medium font-mono text-base tabular-nums",
-          left > WARN_S && "bg-muted",
+          "num flex h-9 items-center gap-1.5 rounded-full px-3 font-display font-semibold text-base transition-colors duration-300",
+          left > WARN_S && "bg-muted text-foreground",
           left <= WARN_S &&
             left > DANGER_S &&
             "bg-warning text-warning-foreground",

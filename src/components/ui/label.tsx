@@ -6,7 +6,7 @@ export function Label({ className, ...props }: React.ComponentProps<"label">) {
     // biome-ignore lint/a11y/noLabelWithoutControl: callers pass htmlFor
     <label
       data-slot="label"
-      className={cn("font-medium text-foreground text-sm", className)}
+      className={cn("font-semibold text-foreground text-sm", className)}
       {...props}
     />
   );

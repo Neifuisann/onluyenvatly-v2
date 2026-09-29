@@ -137,7 +137,7 @@ export default async function AttemptResultPage({
           aria-labelledby="choices-heading"
           className="flex flex-col gap-4"
         >
-          <h2 id="choices-heading" className="font-semibold text-lg">
+          <h2 id="choices-heading" className="heading-section">
             {reviewCopy.heading}
           </h2>
           <p className="flex items-start gap-2 rounded-lg border bg-surface p-4 text-sm">

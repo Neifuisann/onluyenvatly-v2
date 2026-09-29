@@ -50,9 +50,7 @@ export default async function AdminStudentPage({
           {t.back}
         </Link>
         <div className="flex flex-wrap items-center gap-3">
-          <h1 className="break-words font-semibold text-2xl">
-            {student.fullName}
-          </h1>
+          <h1 className="break-words heading-page">{student.fullName}</h1>
           <StatusBadge status={student.status} />
         </div>
       </div>

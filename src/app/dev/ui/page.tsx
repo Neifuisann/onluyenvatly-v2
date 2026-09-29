@@ -61,7 +61,7 @@ function Section({
 }) {
   return (
     <section className="flex flex-col gap-3">
-      <h2 className="font-semibold text-lg">{title}</h2>
+      <h2 className="heading-section">{title}</h2>
       {children}
     </section>
   );
@@ -74,7 +74,7 @@ export default function DevUiPage() {
       <PublicHeader />
       <main className="mx-auto flex w-full max-w-[1200px] flex-col gap-10 px-4 py-8">
         <div className="flex items-center justify-between gap-4">
-          <h1 className="font-semibold text-3xl">/dev/ui</h1>
+          <h1 className="heading-page">/dev/ui</h1>
           <ThemeToggle />
         </div>
 

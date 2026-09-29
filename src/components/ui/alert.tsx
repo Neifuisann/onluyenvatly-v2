@@ -4,13 +4,13 @@ import type * as React from "react";
 import { cn } from "@/lib/utils";
 
 const alertVariants = cva(
-  "flex gap-3 rounded-md border p-3 text-sm [&>svg]:mt-0.5 [&>svg]:size-5 [&>svg]:shrink-0",
+  "flex gap-3 rounded-md p-3.5 text-sm leading-relaxed [&>svg]:mt-0.5 [&>svg]:size-5 [&>svg]:shrink-0",
   {
     variants: {
       variant: {
-        info: "border-primary/30 bg-primary-soft text-foreground [&>svg]:text-primary",
-        danger: "border-danger/40 bg-surface text-danger-text",
-        success: "border-success/40 bg-surface text-success-text",
+        info: "bg-primary-soft text-foreground [&>svg]:text-primary",
+        danger: "bg-danger-soft text-danger-text",
+        success: "bg-success-soft text-success-text",
       },
     },
     defaultVariants: { variant: "info" },
@@ -34,7 +34,7 @@ export function Alert({
       className={cn(alertVariants({ variant }), className)}
       {...props}
     >
-      <Icon aria-hidden strokeWidth={1.75} />
+      <Icon aria-hidden strokeWidth={2} />
       <div className="min-w-0 flex-1">{children}</div>
     </div>
   );

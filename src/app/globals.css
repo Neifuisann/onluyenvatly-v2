@@ -1,38 +1,55 @@
 @import "tailwindcss";
 
 /*
- * Design tokens (07 §3). Light on :root, dark on .dark (set before first paint
- * by the theme script in layout.tsx). Colors are OKLCH. `pnpm check:contrast`
- * verifies every text/background pair listed in scripts/check-contrast.ts.
- * No raw colors outside this file.
+ * Design tokens (07 §3), v2 "Lagoon" palette taken from the Physics Bunny
+ * mascot: navy ink (the hoodie), lagoon teal (the hood lining), sun yellow
+ * (the sparkles) and a peach blush. Light on :root, dark on .dark (set before
+ * first paint by the theme script in layout.tsx). Colors are OKLCH.
+ * `pnpm check:contrast` verifies every text/background pair listed in
+ * scripts/check-contrast.ts. No raw colors outside this file.
  */
 
 @custom-variant dark (&:where(.dark, .dark *));
 
 :root {
-  --background: oklch(0.985 0.003 250);
-  --foreground: oklch(0.22 0.02 255);
+  --background: oklch(0.974 0.006 240);
+  --foreground: oklch(0.235 0.045 262);
   --surface: oklch(1 0 0);
+  /* The desktop content panel between background and surface. */
+  --panel: oklch(0.99 0.003 240);
   --surface-foreground: var(--foreground);
-  --muted: oklch(0.955 0.006 255);
-  --muted-foreground: oklch(0.5 0.02 255);
-  --border: oklch(0.91 0.008 255);
-  --input: oklch(0.63 0.015 255);
-  --ring: oklch(0.5 0.19 262);
+  --muted: oklch(0.953 0.009 240);
+  --muted-foreground: oklch(0.5 0.03 258);
+  --border: oklch(0.915 0.011 245);
+  --input: oklch(0.66 0.02 255);
+  --ring: oklch(0.53 0.1 198);
 
-  --primary: oklch(0.5 0.19 262);
-  --primary-foreground: oklch(0.99 0 0);
-  --primary-soft: oklch(0.95 0.03 262);
-  --accent: oklch(0.8 0.16 75);
-  --accent-foreground: oklch(0.25 0.05 75);
-  --success: oklch(0.6 0.15 150);
+  /* Lagoon teal: actions, links, the selected answer. */
+  --primary: oklch(0.52 0.1 198);
+  --primary-foreground: oklch(1 0 0);
+  --primary-soft: oklch(0.95 0.032 192);
+  /* Navy ink: hero surfaces (continue card, score, landing bands). */
+  --ink: oklch(0.27 0.065 264);
+  --ink-foreground: oklch(0.985 0.005 250);
+  --ink-muted: oklch(0.8 0.03 255);
+  /* Sun yellow: highlights, streaks, flags, stars. */
+  --accent: oklch(0.85 0.155 85);
+  --accent-foreground: oklch(0.3 0.07 62);
+  --accent-soft: oklch(0.965 0.045 92);
+  --accent-text: oklch(0.48 0.1 65);
+  --peach: oklch(0.93 0.045 45);
+
+  --success: oklch(0.64 0.16 150);
   --success-foreground: oklch(0.2 0.05 150);
-  --success-text: oklch(0.45 0.12 150);
-  --danger: oklch(0.58 0.2 27);
+  --success-soft: oklch(0.955 0.045 152);
+  --success-text: oklch(0.45 0.12 152);
+  --danger: oklch(0.575 0.2 26);
   --danger-foreground: oklch(0.99 0 0);
-  --danger-text: oklch(0.5 0.19 27);
-  --warning: oklch(0.75 0.15 75);
-  --warning-foreground: oklch(0.25 0.05 75);
+  --danger-soft: oklch(0.96 0.03 25);
+  --danger-text: oklch(0.5 0.19 26);
+  --warning: oklch(0.79 0.15 72);
+  --warning-foreground: oklch(0.27 0.06 62);
+  --warning-text: oklch(0.49 0.11 62);
 
   /* Tier colors: badges only (07 §3.1). */
   --tier-bronze: #b0703c;
@@ -42,40 +59,58 @@
   --tier-diamond: #5b7cfa;
   --tier-master: #e0457b;
 
-  --radius: 10px;
+  --radius: 12px;
   --shadow-card:
-    0 1px 2px oklch(0.22 0.02 255 / 0.06), 0 1px 3px oklch(0.22 0.02 255 / 0.08);
-  --shadow-popover: 0 8px 24px oklch(0.22 0.02 255 / 0.14);
+    0 1px 2px oklch(0.235 0.045 262 / 0.05),
+    0 4px 16px -4px oklch(0.235 0.045 262 / 0.08);
+  --shadow-raised:
+    0 2px 4px oklch(0.235 0.045 262 / 0.06),
+    0 12px 32px -8px oklch(0.235 0.045 262 / 0.16);
+  --shadow-popover:
+    0 4px 8px oklch(0.235 0.045 262 / 0.06),
+    0 20px 48px -12px oklch(0.235 0.045 262 / 0.24);
 
   color-scheme: light;
 }
 
 .dark {
-  --background: oklch(0.17 0.01 255);
-  --foreground: oklch(0.95 0.005 255);
-  --surface: oklch(0.21 0.012 255);
-  --muted: oklch(0.25 0.012 255);
-  --muted-foreground: oklch(0.72 0.015 255);
-  --border: oklch(0.3 0.012 255);
-  --input: oklch(0.56 0.015 255);
-  --ring: oklch(0.68 0.16 262);
+  --background: oklch(0.165 0.022 262);
+  --foreground: oklch(0.955 0.007 250);
+  --surface: oklch(0.212 0.026 262);
+  --panel: oklch(0.185 0.024 262);
+  --muted: oklch(0.258 0.028 262);
+  --muted-foreground: oklch(0.75 0.022 255);
+  --border: oklch(0.3 0.028 262);
+  --input: oklch(0.57 0.025 258);
+  --ring: oklch(0.8 0.115 190);
 
-  --primary: oklch(0.68 0.16 262);
-  --primary-foreground: oklch(0.15 0.02 262);
-  --primary-soft: oklch(0.27 0.05 262);
-  --accent: oklch(0.8 0.15 75);
-  --accent-foreground: oklch(0.2 0.04 75);
-  --success: oklch(0.72 0.15 150);
-  --success-foreground: oklch(0.17 0.04 150);
-  --success-text: oklch(0.75 0.15 150);
-  --danger: oklch(0.7 0.18 27);
-  --danger-foreground: oklch(0.15 0.03 27);
-  --danger-text: oklch(0.74 0.16 27);
-  --warning: oklch(0.8 0.15 75);
-  --warning-foreground: oklch(0.2 0.04 75);
+  --primary: oklch(0.8 0.115 190);
+  --primary-foreground: oklch(0.2 0.045 215);
+  --primary-soft: oklch(0.3 0.055 205);
+  --ink: oklch(0.27 0.06 264);
+  --ink-foreground: oklch(0.975 0.006 250);
+  --ink-muted: oklch(0.8 0.03 255);
+  --accent: oklch(0.85 0.15 85);
+  --accent-foreground: oklch(0.25 0.06 62);
+  --accent-soft: oklch(0.3 0.05 80);
+  --accent-text: oklch(0.87 0.13 88);
+  --peach: oklch(0.32 0.04 40);
 
-  --shadow-card: 0 1px 2px oklch(0 0 0 / 0.4);
-  --shadow-popover: 0 8px 24px oklch(0 0 0 / 0.5);
+  --success: oklch(0.74 0.16 152);
+  --success-foreground: oklch(0.18 0.045 152);
+  --success-soft: oklch(0.29 0.05 152);
+  --success-text: oklch(0.8 0.15 152);
+  --danger: oklch(0.7 0.18 26);
+  --danger-foreground: oklch(0.16 0.035 26);
+  --danger-soft: oklch(0.29 0.06 26);
+  --danger-text: oklch(0.77 0.15 26);
+  --warning: oklch(0.82 0.15 75);
+  --warning-foreground: oklch(0.22 0.05 62);
+  --warning-text: oklch(0.84 0.13 80);
+
+  --shadow-card: 0 1px 2px oklch(0 0 0 / 0.3);
+  --shadow-raised: 0 12px 32px -8px oklch(0 0 0 / 0.55);
+  --shadow-popover: 0 20px 48px -12px oklch(0 0 0 / 0.65);
 
   color-scheme: dark;
 }
@@ -84,6 +119,7 @@
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-surface: var(--surface);
+  --color-panel: var(--panel);
   --color-surface-foreground: var(--surface-foreground);
   --color-muted: var(--muted);
   --color-muted-foreground: var(--muted-foreground);
@@ -93,16 +129,25 @@
   --color-primary: var(--primary);
   --color-primary-foreground: var(--primary-foreground);
   --color-primary-soft: var(--primary-soft);
+  --color-ink: var(--ink);
+  --color-ink-foreground: var(--ink-foreground);
+  --color-ink-muted: var(--ink-muted);
   --color-accent: var(--accent);
   --color-accent-foreground: var(--accent-foreground);
+  --color-accent-soft: var(--accent-soft);
+  --color-accent-text: var(--accent-text);
+  --color-peach: var(--peach);
   --color-success: var(--success);
   --color-success-foreground: var(--success-foreground);
+  --color-success-soft: var(--success-soft);
   --color-success-text: var(--success-text);
   --color-danger: var(--danger);
   --color-danger-foreground: var(--danger-foreground);
+  --color-danger-soft: var(--danger-soft);
   --color-danger-text: var(--danger-text);
   --color-warning: var(--warning);
   --color-warning-foreground: var(--warning-foreground);
+  --color-warning-text: var(--warning-text);
   --color-tier-bronze: var(--tier-bronze);
   --color-tier-silver: var(--tier-silver);
   --color-tier-gold: var(--tier-gold);
@@ -110,7 +155,10 @@
   --color-tier-diamond: var(--tier-diamond);
   --color-tier-master: var(--tier-master);
 
-  --font-sans: var(--font-be-vietnam-pro), system-ui, sans-serif;
+  /* 07 §3.2: Inter for reading, Bricolage Grotesque for headings and big numbers. */
+  --font-sans: var(--font-inter), system-ui, sans-serif;
+  --font-display:
+    var(--font-bricolage), var(--font-inter), system-ui, sans-serif;
   --font-mono: var(--font-jetbrains-mono), ui-monospace, monospace;
 
   /* 07 §3.2 type scale */
@@ -118,13 +166,50 @@
   --text-stem: 1.125rem;
   --text-stem--line-height: 1.7;
 
-  --radius-sm: 6px;
+  --radius-sm: 8px;
   --radius-md: var(--radius);
-  --radius-lg: 12px;
-  --radius-xl: 16px;
+  --radius-lg: 18px;
+  --radius-xl: 24px;
+  --radius-2xl: 32px;
 
   --shadow-card: var(--shadow-card);
+  --shadow-raised: var(--shadow-raised);
   --shadow-popover: var(--shadow-popover);
+
+  --ease-out-soft: cubic-bezier(0.22, 1, 0.36, 1);
+
+  --animate-rise: rise 420ms var(--ease-out-soft) both;
+  --animate-pop: pop 360ms var(--ease-out-soft) both;
+  --animate-ring: ring 1100ms var(--ease-out-soft) 150ms both;
+
+  /* A ring sweeps from empty to its own dash offset (score rings). */
+  @keyframes ring {
+    from {
+      stroke-dashoffset: var(--ring-len);
+    }
+  }
+
+  @keyframes rise {
+    from {
+      opacity: 0;
+      transform: translateY(8px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
+  @keyframes pop {
+    from {
+      opacity: 0;
+      transform: scale(0.94);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
 }
 
 @layer base {
@@ -134,15 +219,32 @@
     border-color: var(--border);
   }
 
+  html {
+    -webkit-tap-highlight-color: transparent;
+  }
+
   body {
     background: var(--background);
     color: var(--foreground);
     font-family: var(--font-sans);
+    font-feature-settings: "cv11", "ss01";
+    text-rendering: optimizeLegibility;
+  }
+
+  h1,
+  h2,
+  h3 {
+    text-wrap: balance;
   }
 
   :focus-visible {
     outline: 2px solid var(--ring);
     outline-offset: 2px;
+  }
+
+  ::selection {
+    background: var(--primary-soft);
+    color: var(--foreground);
   }
 
   @media (prefers-reduced-motion: reduce) {
@@ -157,8 +259,45 @@
   }
 }
 
-/* MathText (S2-04): question text with server-rendered KaTeX (07 §3.2). */
 @layer components {
+  /* Page title: display face, tight, balanced (07 §3.2). */
+  .heading-page {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 1.75rem;
+    line-height: 1.15;
+    letter-spacing: -0.02em;
+  }
+
+  @media (min-width: 640px) {
+    .heading-page {
+      font-size: 2.125rem;
+    }
+  }
+
+  .heading-section {
+    font-family: var(--font-display);
+    font-weight: 650;
+    font-size: 1.25rem;
+    line-height: 1.25;
+    letter-spacing: -0.01em;
+  }
+
+  /* Small uppercase label above a card title. */
+  .eyebrow {
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  /* Numbers that change (scores, timers, ratings) never jiggle. */
+  .num {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum", "cv11";
+  }
+
+  /* MathText (S2-04): question text with server-rendered KaTeX (07 §3.2). */
   .math-text > p + p {
     margin-top: 0.75em;
   }

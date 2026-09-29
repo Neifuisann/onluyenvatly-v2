@@ -29,7 +29,7 @@ export function StudentAttempts({
                 {a.submittedAt && formatDateTime(a.submittedAt)}
               </p>
             </div>
-            <span className="font-mono font-semibold tabular-nums">
+            <span className="num font-semibold tabular-nums">
               <span className="sr-only">{t.score} </span>
               {formatScore(a.score10 ?? 0)}
             </span>

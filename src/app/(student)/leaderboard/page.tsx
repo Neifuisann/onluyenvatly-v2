@@ -32,7 +32,7 @@ export default async function LeaderboardPage({
   return (
     <div className="mx-auto flex max-w-3xl flex-col gap-5">
       <header className="space-y-2">
-        <h1 className="font-semibold text-2xl">{t.title}</h1>
+        <h1 className="heading-page">{t.title}</h1>
         <p className="text-muted-foreground">{week ? t.leadWeek : t.leadAll}</p>
       </header>
       <LeaderboardFilters filters={filters} />

@@ -26,9 +26,9 @@ export function ChoiceItem({
   return (
     <article
       aria-labelledby={`choice-${index}`}
-      className="flex flex-col gap-3 rounded-lg border bg-surface p-4 shadow-card"
+      className="flex flex-col gap-4 rounded-xl border border-border/70 bg-surface p-5 shadow-card sm:p-6 dark:border-border"
     >
-      <h3 id={`choice-${index}`} className="font-semibold">
+      <h3 id={`choice-${index}`} className="font-display font-semibold">
         {t.itemHeading(index + 1, questionTypeNames[q.type])}
       </h3>
       <div className="break-words">
@@ -44,22 +44,21 @@ export function ChoiceItem({
               <li
                 key={letter}
                 className={cn(
-                  "flex items-start gap-3 rounded-md border px-3 py-2.5",
+                  "flex items-start gap-3 rounded-lg border-2 border-border px-3.5 py-3",
                   chosen && "border-primary bg-primary-soft",
                 )}
               >
                 <span
                   aria-hidden
                   className={cn(
-                    "mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-full border font-semibold text-sm",
-                    chosen &&
-                      "border-primary bg-primary text-primary-foreground",
+                    "flex size-8 shrink-0 items-center justify-center rounded-full bg-muted font-bold font-display text-sm",
+                    chosen && "bg-primary text-primary-foreground",
                   )}
                 >
                   {letter}
                 </span>
                 <span className="sr-only">{letter}.</span>
-                <span className="min-w-0 flex-1 break-words pt-0.5">
+                <span className="min-w-0 flex-1 break-words pt-1">
                   <MathText text={option.text} />
                   {option.image && <QuestionImage media={option.image} />}
                 </span>
@@ -115,7 +114,7 @@ export function ChoiceItem({
       {q.type === "short" && (
         <p className="flex flex-wrap gap-1.5 text-sm">
           <span className="text-muted-foreground">{t.youAnswered}:</span>
-          <span className="font-medium font-mono">
+          <span className="font-medium num">
             {(typeof given === "string" && given.trim()) || t.noAnswer}
           </span>
         </p>

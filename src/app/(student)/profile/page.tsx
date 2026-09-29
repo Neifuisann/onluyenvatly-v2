@@ -66,9 +66,7 @@ export default async function ProfilePage({
           {initials(user.fullName)}
         </span>
         <div className="min-w-0">
-          <h1 className="break-words font-semibold text-2xl">
-            {user.fullName}
-          </h1>
+          <h1 className="break-words heading-page">{user.fullName}</h1>
           {subtitle && (
             <p className="text-muted-foreground text-sm">{subtitle}</p>
           )}
@@ -111,7 +109,7 @@ export default async function ProfilePage({
         aria-labelledby="chart-heading"
         className="space-y-3 rounded-lg border bg-surface p-5 shadow-card"
       >
-        <h2 id="chart-heading" className="font-semibold text-lg">
+        <h2 id="chart-heading" className="heading-section">
           {t.chartTitle}
         </h2>
         {first && last && ratingHistory.length > 1 ? (
@@ -140,7 +138,7 @@ export default async function ProfilePage({
         className="space-y-4 rounded-lg border bg-surface p-5 shadow-card"
       >
         <div className="space-y-1">
-          <h2 id="accuracy-heading" className="font-semibold text-lg">
+          <h2 id="accuracy-heading" className="heading-section">
             {t.accuracyTitle}
           </h2>
           <p className="text-muted-foreground text-sm">
@@ -157,7 +155,7 @@ export default async function ProfilePage({
         aria-labelledby="history-heading"
         className="flex flex-col gap-3"
       >
-        <h2 id="history-heading" className="font-semibold text-lg">
+        <h2 id="history-heading" className="heading-section">
           {t.historyTitle}
         </h2>
         {history.items.length ? (
@@ -208,5 +206,5 @@ function Stat({
 }
 
 const Num = ({ children }: { children: React.ReactNode }) => (
-  <span className="font-mono tabular-nums">{children}</span>
+  <span className="num">{children}</span>
 );

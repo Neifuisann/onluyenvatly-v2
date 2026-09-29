@@ -61,7 +61,7 @@ export default async function AdminExplanationsPage({
   return (
     <div className="mx-auto flex max-w-3xl flex-col gap-6">
       <header className="space-y-2">
-        <h1 className="font-semibold text-2xl">{t.title}</h1>
+        <h1 className="heading-page">{t.title}</h1>
         <p className="text-muted-foreground">{t.lead}</p>
       </header>
       <nav aria-label={t.tabsLabel} className="flex flex-wrap gap-2">
@@ -153,7 +153,7 @@ export default async function AdminExplanationsPage({
           {params.lesson &&
             (lesson ? (
               <>
-                <h2 className="font-semibold text-xl">{lesson.lesson.title}</h2>
+                <h2 className="heading-section">{lesson.lesson.title}</h2>
                 <p className="text-muted-foreground text-sm">
                   {t.counts(lesson.counts)}
                 </p>

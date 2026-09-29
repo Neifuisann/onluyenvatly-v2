@@ -1,5 +1,12 @@
-import { ArrowRight, CalendarClock } from "lucide-react";
+import {
+  ArrowRight,
+  CalendarClock,
+  ChevronRight,
+  Gift,
+  Ticket,
+} from "lucide-react";
 import Link from "next/link";
+import { Mascot } from "@/components/mascot";
 import { buttonVariants } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatDateTime, formatScore } from "@/lib/dates";
@@ -54,35 +61,50 @@ export async function LessonAttemptPanel({
       : schedule.maxAttempts + extra;
 
   return (
-    <section className="space-y-4 rounded-lg border bg-surface p-5 shadow-card">
-      <h2 className="font-semibold text-lg">{t.heading}</h2>
-      {schedule.startsAt && (
-        <ul className="space-y-1 text-sm">
-          <li className="flex items-center gap-2">
-            <CalendarClock aria-hidden className="size-4 shrink-0" />
-            {t.startsAt(formatDateTime(new Date(schedule.startsAt)))}
-          </li>
-          {close && (
-            <li className="text-muted-foreground">
-              {t.answersAt(formatDateTime(close))}
+    <div className="space-y-4">
+      {(schedule.startsAt || limit !== null || extra > 0) && (
+        <ul className="space-y-2.5 text-sm">
+          {schedule.startsAt && (
+            <li className="flex items-start gap-3">
+              <CalendarClock
+                aria-hidden
+                className="mt-0.5 size-4 shrink-0 text-muted-foreground"
+              />
+              <span>
+                {t.startsAt(formatDateTime(new Date(schedule.startsAt)))}
+                {close && (
+                  <span className="block text-muted-foreground">
+                    {t.answersAt(formatDateTime(close))}
+                  </span>
+                )}
+              </span>
+            </li>
+          )}
+          {limit !== null && (
+            <li className="flex items-start gap-3">
+              <Ticket
+                aria-hidden
+                className="mt-0.5 size-4 shrink-0 text-muted-foreground"
+              />
+              {t.used(Math.min(closed.length, limit), limit)}
+            </li>
+          )}
+          {extra > 0 && (
+            <li className="flex items-start gap-3 font-medium text-success-text">
+              <Gift aria-hidden className="mt-0.5 size-4 shrink-0" />
+              {t.extra(extra)}
             </li>
           )}
         </ul>
       )}
-      {limit !== null && (
-        <p className="text-muted-foreground text-sm">
-          {t.used(Math.min(closed.length, limit), limit)}
-        </p>
-      )}
-      {extra > 0 && <p className="text-sm">{t.extra(extra)}</p>}
       {open ? (
-        <div className="grid gap-3">
-          <p className="text-sm">{t.inProgress}</p>
+        <div className="grid gap-3 rounded-md bg-accent-soft p-4">
+          <p className="font-medium text-sm">{t.inProgress}</p>
           <Link
             href={`/attempts/${open.id}`}
             className={buttonVariants({
               size: "lg",
-              className: "w-full sm:w-auto sm:self-start",
+              className: "h-13 w-full text-base",
             })}
           >
             {t.continue}
@@ -92,34 +114,41 @@ export async function LessonAttemptPanel({
       ) : check.ok ? (
         <StartAttemptButton lessonId={lessonId} />
       ) : (
-        <p className="font-medium text-sm">
-          {check.code === "NOT_OPEN_YET"
-            ? t.notOpen(formatDateTime(check.at))
-            : check.code === "LESSON_CLOSED"
-              ? t.closed
-              : t.noneLeft}
-        </p>
+        <div className="flex items-center gap-3 rounded-md bg-muted p-4">
+          <Mascot pose="waiting" size={56} className="shrink-0" />
+          <p className="font-medium text-sm">
+            {check.code === "NOT_OPEN_YET"
+              ? t.notOpen(formatDateTime(check.at))
+              : check.code === "LESSON_CLOSED"
+                ? t.closed
+                : t.noneLeft}
+          </p>
+        </div>
       )}
-      <div className="space-y-2 border-t pt-4">
-        <h3 className="font-medium text-sm">{t.history}</h3>
+      <div className="space-y-1 border-t pt-4">
+        <h3 className="font-semibold text-sm">{t.history}</h3>
         {closed.length === 0 ? (
           <p className="text-muted-foreground text-sm">{t.historyEmpty}</p>
         ) : (
-          <ul className="divide-y">
+          <ul className="-mx-2">
             {closed.map((a) => (
               <li key={a.id}>
                 <Link
                   href={`/attempts/${a.id}/result`}
                   prefetch={false}
-                  className="flex min-h-11 items-center justify-between gap-3 py-2 text-sm hover:text-primary"
+                  className="group flex min-h-11 items-center justify-between gap-3 rounded-md px-2 py-1.5 text-sm transition-colors hover:bg-muted"
                 >
                   <span className="text-muted-foreground">
                     {formatDateTime(a.submittedAt ?? a.startedAt)}
                   </span>
-                  <span className="font-medium font-mono">
+                  <span className="num inline-flex items-center gap-1 font-semibold group-hover:text-primary">
                     {a.score10 === null
                       ? t.viewResult
                       : t.score(formatScore(a.score10))}
+                    <ChevronRight
+                      aria-hidden
+                      className="size-4 text-muted-foreground"
+                    />
                   </span>
                 </Link>
               </li>
@@ -127,20 +156,16 @@ export async function LessonAttemptPanel({
           </ul>
         )}
       </div>
-    </section>
+    </div>
   );
 }
 
 export function LessonAttemptPanelSkeleton() {
   return (
-    <section
-      aria-busy="true"
-      aria-label={t.loading}
-      className="space-y-4 rounded-lg border bg-surface p-5 shadow-card"
-    >
-      <Skeleton className="h-6 w-24" />
-      <Skeleton className="h-12 w-full sm:w-48" />
-      <Skeleton className="h-16 w-full" />
+    <section aria-busy="true" aria-label={t.loading} className="space-y-4">
+      <Skeleton className="h-13 w-full rounded-full" />
+      <Skeleton className="h-4 w-32" />
+      <Skeleton className="h-10 w-full" />
     </section>
   );
 }

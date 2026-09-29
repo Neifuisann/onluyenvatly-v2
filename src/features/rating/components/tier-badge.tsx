@@ -26,7 +26,7 @@ export function TierBadge({
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1.5 rounded-full border bg-surface px-2.5 py-0.5 font-medium text-xs",
+        "inline-flex items-center gap-1.5 rounded-full border border-border bg-surface px-2.5 py-0.5 font-semibold text-xs",
         className,
       )}
     >

@@ -1,5 +1,5 @@
-import { TriangleAlert } from "lucide-react";
 import type * as React from "react";
+import { Mascot } from "@/components/mascot";
 import { cn } from "@/lib/utils";
 
 /** Every data view has an error state (14 §5). Used by `error.tsx` boundaries. */
@@ -18,18 +18,18 @@ export function ErrorState({
     <div
       role="alert"
       className={cn(
-        "flex flex-col items-center gap-3 rounded-lg border border-dashed px-6 py-10 text-center",
+        "flex animate-rise flex-col items-center gap-3 rounded-lg px-6 py-10 text-center",
         className,
       )}
     >
-      <span className="flex size-12 items-center justify-center rounded-full bg-danger/10 text-danger-text">
-        <TriangleAlert aria-hidden className="size-6" strokeWidth={1.75} />
-      </span>
-      <h2 className="font-semibold text-lg">{title}</h2>
+      <Mascot pose="broken" size={148} className="mb-1" />
+      <h2 className="heading-section">{title}</h2>
       {description && (
-        <p className="max-w-sm text-muted-foreground text-sm">{description}</p>
+        <p className="max-w-sm text-balance text-muted-foreground">
+          {description}
+        </p>
       )}
-      {action}
+      {action && <div className="mt-2">{action}</div>}
     </div>
   );
 }

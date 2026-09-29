@@ -1,18 +1,44 @@
-import { ArrowRight, ChevronRight, Repeat, Trophy } from "lucide-react";
+import {
+  ArrowRight,
+  ChevronRight,
+  Clock,
+  ListChecks,
+  Repeat,
+  Trophy,
+} from "lucide-react";
 import Link from "next/link";
+import { Mascot } from "@/components/mascot";
 import { buttonVariants } from "@/components/ui/button";
+import { cardClass } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { catalogCopy, formatDuration } from "@/features/lessons/messages";
+import type { CatalogItem } from "@/features/lessons/queries";
 import { RatingDelta } from "@/features/rating/components/rating-delta";
 import { RatingSparkline } from "@/features/rating/components/rating-sparkline";
 import { TierBadge } from "@/features/rating/components/tier-badge";
 import { ratingSeries } from "@/features/rating/domain/sparkline";
 import { formatRating, ratingCopy } from "@/features/rating/messages";
 import { formatClock } from "@/lib/dates";
+import { cn } from "@/lib/utils";
 import type { ContinueSummary } from "../domain/dashboard";
 import { dashboardCopy as t } from "../messages";
 import type { RatingPoint } from "../queries";
 
-/** "Đang làm dở": the test I left, with a big resume button (07 §5.1). */
+/** The navy hero surface shared by "continue" and "next lesson". */
+const heroClass =
+  "relative isolate overflow-hidden rounded-xl bg-ink p-5 text-ink-foreground shadow-raised sm:p-7";
+
+/** A soft lagoon glow in the hero's corner: depth without decoration. */
+function HeroGlow() {
+  return (
+    <span
+      aria-hidden
+      className="-z-10 -right-24 -top-24 absolute size-72 rounded-full bg-primary/35 blur-3xl"
+    />
+  );
+}
+
+/** "Đang làm dở": the test I left, with its progress and a big resume button (07 §5.1). */
 export function ContinueCard({
   attemptId,
   lessonTitle,
@@ -29,31 +55,114 @@ export function ContinueCard({
       : secondsLeft > 0
         ? t.timeLeft(formatClock(secondsLeft))
         : t.timeUp;
+  const pct = total ? Math.round((answered / total) * 100) : 0;
   return (
     <section
       aria-labelledby="continue-heading"
-      className="flex flex-col gap-3 rounded-lg border border-primary bg-surface p-5 shadow-card"
+      className={cn(heroClass, "animate-rise")}
     >
-      <p className="font-semibold text-primary text-xs uppercase tracking-wide">
-        {t.continueLabel}
-      </p>
-      <h2 id="continue-heading" className="break-words font-semibold text-lg">
-        {lessonTitle}
-      </h2>
-      <p className="text-muted-foreground text-sm">
-        <span className="font-mono tabular-nums">
-          {answered}/{total}
-        </span>{" "}
-        {t.questions} · {time}
-      </p>
-      <Link
-        href={`/attempts/${attemptId}`}
-        className={buttonVariants({ size: "lg", className: "sm:self-start" })}
-      >
-        {t.continue}
-        <ArrowRight aria-hidden className="size-5" />
-      </Link>
+      <HeroGlow />
+      <div className="flex items-end gap-4">
+        <div className="min-w-0 flex-1 space-y-4">
+          <p className="eyebrow inline-flex items-center gap-2 text-ink-muted">
+            <span aria-hidden className="size-2 rounded-full bg-accent" />
+            {t.continueLabel}
+          </p>
+          <h2
+            id="continue-heading"
+            className="break-words font-display font-semibold text-2xl leading-tight tracking-tight sm:text-[1.75rem]"
+          >
+            {lessonTitle}
+          </h2>
+          <div className="max-w-md space-y-2">
+            <div
+              aria-hidden
+              className="h-2 overflow-hidden rounded-full bg-ink-foreground/15"
+            >
+              <div
+                className="h-full rounded-full bg-accent"
+                style={{ width: `${pct}%` }}
+              />
+            </div>
+            <p className="text-ink-muted text-sm">
+              <span className="num font-semibold text-ink-foreground">
+                {answered}/{total}
+              </span>{" "}
+              {t.questions} · {time}
+            </p>
+          </div>
+          <Link
+            href={`/attempts/${attemptId}`}
+            className={buttonVariants({ variant: "ink", size: "lg" })}
+          >
+            {t.continue}
+            <ArrowRight aria-hidden />
+          </Link>
+        </div>
+        <Mascot
+          pose="laptop"
+          size={150}
+          priority
+          className="-mb-2 hidden shrink-0 sm:block"
+        />
+      </div>
     </section>
+  );
+}
+
+/** The first recommendation, featured when nothing is in progress. */
+export function NextLessonCard({ lesson }: { lesson: CatalogItem }) {
+  return (
+    <Link
+      href={`/lessons/${lesson.id}`}
+      prefetch={false}
+      className={cn(
+        heroClass,
+        "group flex items-end gap-4 transition-transform duration-200 hover:-translate-y-0.5",
+      )}
+    >
+      <HeroGlow />
+      <div className="min-w-0 flex-1 space-y-3">
+        <p className="eyebrow inline-flex items-center gap-2 text-ink-muted">
+          <span aria-hidden className="size-2 rounded-full bg-accent" />
+          {t.nextLesson}
+        </p>
+        <h3 className="break-words font-display font-semibold text-2xl leading-tight tracking-tight sm:text-[1.75rem]">
+          {lesson.title}
+        </h3>
+        <p className="flex flex-wrap items-center gap-x-4 gap-y-1 text-ink-muted text-sm">
+          {lesson.chapter && <span>{lesson.chapter}</span>}
+          <span className="inline-flex items-center gap-1.5">
+            <ListChecks aria-hidden className="size-4" strokeWidth={1.75} />
+            {catalogCopy.questions(lesson.questionCount)}
+          </span>
+          <span className="inline-flex items-center gap-1.5">
+            <Clock aria-hidden className="size-4" strokeWidth={1.75} />
+            {lesson.timeLimitSec
+              ? formatDuration(lesson.timeLimitSec)
+              : catalogCopy.noTimeLimit}
+          </span>
+        </p>
+        <span
+          className={buttonVariants({
+            variant: "ink",
+            size: "lg",
+            className: "mt-1",
+          })}
+        >
+          {t.openLesson}
+          <ArrowRight
+            aria-hidden
+            className="transition-transform group-hover:translate-x-0.5"
+          />
+        </span>
+      </div>
+      <Mascot
+        pose="studying"
+        size={170}
+        className="-mb-2 hidden shrink-0 sm:block"
+      />
+    </Link>
   );
 }
 
@@ -70,31 +179,33 @@ export function RatingCard({
   return (
     <section
       aria-labelledby="rating-heading"
-      className="flex flex-col gap-3 rounded-lg border bg-surface p-5 shadow-card"
+      className={cn(cardClass, "flex flex-col gap-3 p-5")}
     >
-      <h2
-        id="rating-heading"
-        className="font-medium text-muted-foreground text-sm"
-      >
-        {t.ratingHeading}
-      </h2>
+      <div className="flex items-center justify-between gap-2">
+        <h2
+          id="rating-heading"
+          className="font-semibold text-muted-foreground text-sm"
+        >
+          {t.ratingHeading}
+        </h2>
+        {rating !== null && <TierBadge rating={rating} />}
+      </div>
       {rating === null ? (
         <p className="text-sm">{t.noRating}</p>
       ) : (
         <>
           <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
-            <p className="font-mono font-semibold text-3xl tabular-nums">
+            <p className="num font-bold font-display text-[2.5rem] leading-none tracking-tight">
               <span className="sr-only">{ratingCopy.label} </span>
               {formatRating(rating)}
             </p>
             {last && (
               <RatingDelta value={last.delta} label={t.lastChange} strong />
             )}
-            <TierBadge rating={rating} />
           </div>
           {series.length > 1 && (
-            <figure className="space-y-1">
-              <RatingSparkline values={series} />
+            <figure className="mt-auto space-y-1">
+              <RatingSparkline values={series} className="h-12" />
               <figcaption className="text-muted-foreground text-xs">
                 {t.recentCaption(recent.length)}
               </figcaption>
@@ -117,30 +228,34 @@ export function StatTiles({
   grade: number | null;
 }) {
   return (
-    <div className="grid grid-cols-2 gap-3">
+    <>
       <Tile
         href="/review"
-        icon={<Repeat aria-hidden className="size-5" strokeWidth={1.75} />}
+        tone="bg-accent-soft text-accent-text"
+        icon={<Repeat aria-hidden className="size-5" strokeWidth={2} />}
         title={openMistakes ? t.mistakes(openMistakes) : t.noMistakes}
         sub={openMistakes ? t.mistakesSub : t.noMistakesSub}
       />
       <Tile
         href={grade ? `/leaderboard?grade=${grade}` : "/leaderboard"}
-        icon={<Trophy aria-hidden className="size-5" strokeWidth={1.75} />}
+        tone="bg-primary-soft text-primary"
+        icon={<Trophy aria-hidden className="size-5" strokeWidth={2} />}
         title={rank ? t.rank(rank) : t.notRanked}
         sub={t.rankSub(grade)}
       />
-    </div>
+    </>
   );
 }
 
 function Tile({
   href,
+  tone,
   icon,
   title,
   sub,
 }: {
   href: string;
+  tone: string;
   icon: React.ReactNode;
   title: string;
   sub: string;
@@ -148,17 +263,31 @@ function Tile({
   return (
     <Link
       href={href}
-      className="group flex min-h-24 flex-col justify-between gap-2 rounded-lg border bg-surface p-4 shadow-card transition-colors hover:border-primary"
+      className={cn(
+        cardClass,
+        "group flex min-h-32 flex-col justify-between gap-4 p-5 transition-[transform,box-shadow,border-color] duration-200 hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-raised",
+      )}
     >
-      <span className="text-primary">{icon}</span>
+      <span
+        className={cn(
+          "flex size-10 items-center justify-center rounded-full",
+          tone,
+        )}
+      >
+        {icon}
+      </span>
       <span className="flex items-end justify-between gap-1">
         <span>
-          <span className="block font-semibold">{title}</span>
-          <span className="block text-muted-foreground text-sm">{sub}</span>
+          <span className="block font-display font-semibold text-xl leading-tight tracking-tight">
+            {title}
+          </span>
+          <span className="mt-0.5 block text-muted-foreground text-sm">
+            {sub}
+          </span>
         </span>
         <ChevronRight
           aria-hidden
-          className="size-5 shrink-0 text-muted-foreground group-hover:text-primary"
+          className="size-5 shrink-0 text-muted-foreground transition-[color,transform] group-hover:translate-x-0.5 group-hover:text-primary"
         />
       </span>
     </Link>
@@ -168,10 +297,11 @@ function Tile({
 export function DashboardCardsSkeleton() {
   return (
     <>
-      <Skeleton className="h-36 w-full rounded-lg" />
-      <div className="grid grid-cols-2 gap-3">
-        <Skeleton className="h-24 rounded-lg" />
-        <Skeleton className="h-24 rounded-lg" />
+      <Skeleton className="h-48 w-full rounded-xl" />
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <Skeleton className="h-40 rounded-lg sm:col-span-2 lg:col-span-1" />
+        <Skeleton className="h-32 rounded-lg" />
+        <Skeleton className="h-32 rounded-lg" />
       </div>
     </>
   );

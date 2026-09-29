@@ -131,6 +131,10 @@ export const shellCopy = {
   navBadge: (n: number) => ` (${n} mục cần xử lý)`,
   toStudentView: "Xem trang học sinh",
   toAdmin: "Trang quản trị",
+  adminBadge: "Quản trị",
+  roleStudent: "Học sinh",
+  roleAdmin: "Giáo viên",
+  accountMenu: "Tài khoản",
 } as const;
 
 /** The walking-skeleton home page (the admin one was replaced in S6-06). */

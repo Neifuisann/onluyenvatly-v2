@@ -14,9 +14,7 @@ export default function RegisterPage() {
   return (
     <Card>
       <CardHeader>
-        <h1 className="font-semibold text-2xl leading-tight">
-          {authCopy.registerTitle}
-        </h1>
+        <h1 className="heading-page">{authCopy.registerTitle}</h1>
         <CardDescription>{authCopy.registerLead}</CardDescription>
       </CardHeader>
       <CardContent>

@@ -178,7 +178,7 @@ export function LessonEditor({ lesson }: { lesson: EditorLesson }) {
           {t.back}
         </Link>
         <div className="flex flex-wrap items-center gap-2">
-          <h1 className="font-semibold text-2xl">{lesson.meta.title}</h1>
+          <h1 className="heading-page">{lesson.meta.title}</h1>
           <span
             className={cn(
               "rounded-full px-2 py-0.5 font-medium text-xs",

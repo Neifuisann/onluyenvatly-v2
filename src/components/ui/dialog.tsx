@@ -46,28 +46,34 @@ export function Dialog({
         if (e.target === e.currentTarget) onClose();
       }}
       className={cn(
-        "m-auto max-h-[85dvh] w-[calc(100%-2rem)] max-w-md overflow-hidden rounded-lg border bg-surface p-0 text-foreground shadow-popover backdrop:bg-black/50",
+        "m-auto max-h-[85dvh] w-[calc(100%-2rem)] max-w-md overflow-hidden rounded-xl border border-border/70 bg-surface p-0 text-foreground shadow-popover backdrop:bg-ink/45 backdrop:backdrop-blur-[2px] open:animate-pop dark:border-border",
         variant === "sheet" &&
-          "mb-0 w-full max-w-none rounded-b-none sm:mb-auto sm:w-[calc(100%-2rem)] sm:max-w-md sm:rounded-b-lg",
+          "mb-0 w-full max-w-none rounded-b-none open:animate-rise sm:mb-auto sm:w-[calc(100%-2rem)] sm:max-w-md sm:rounded-b-xl sm:open:animate-pop",
       )}
     >
       <div className="flex max-h-[85dvh] flex-col">
-        <div className="flex items-center gap-2 border-b px-4 py-2">
-          <h2 id={titleId} className="flex-1 font-semibold">
+        {variant === "sheet" && (
+          <span
+            aria-hidden
+            className="mx-auto mt-2 h-1.5 w-10 shrink-0 rounded-full bg-border sm:hidden"
+          />
+        )}
+        <div className="flex items-center gap-2 py-2 pr-2 pl-5">
+          <h2 id={titleId} className="heading-section flex-1 text-lg">
             {title}
           </h2>
           <button
             type="button"
             onClick={onClose}
             aria-label={closeLabel}
-            className="flex size-11 items-center justify-center rounded-md hover:bg-muted"
+            className="flex size-11 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
           >
             <X aria-hidden className="size-5" />
           </button>
         </div>
-        <div className="overflow-y-auto p-4">{children}</div>
+        <div className="overflow-y-auto px-5 pb-5">{children}</div>
         {footer && (
-          <div className="flex flex-wrap justify-end gap-2 border-t p-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
+          <div className="flex flex-wrap justify-end gap-2 border-t bg-muted/40 px-5 py-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
             {footer}
           </div>
         )}

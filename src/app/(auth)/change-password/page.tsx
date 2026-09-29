@@ -29,9 +29,7 @@ export default function ChangePasswordPage({
   return (
     <Card>
       <CardHeader>
-        <h1 className="font-semibold text-2xl leading-tight">
-          {authCopy.changePasswordTitle}
-        </h1>
+        <h1 className="heading-page">{authCopy.changePasswordTitle}</h1>
         <CardDescription>{authCopy.changePasswordLead}</CardDescription>
       </CardHeader>
       <CardContent>

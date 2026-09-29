@@ -9,7 +9,7 @@ export default function Home() {
     <>
       <PublicHeader />
       <main className="mx-auto flex w-full max-w-xl flex-1 flex-col justify-center gap-4 px-4 py-16">
-        <h1 className="font-semibold text-3xl">{placeholderCopy.homeTitle}</h1>
+        <h1 className="heading-page">{placeholderCopy.homeTitle}</h1>
         <p className="text-muted-foreground">{placeholderCopy.homeBody}</p>
         <div className="flex flex-wrap gap-3">
           <Link href="/register" className={buttonVariants({ size: "lg" })}>

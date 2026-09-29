@@ -18,7 +18,12 @@ export function RatingSparkline({
 }) {
   if (values.length < 2) return null;
   const points = sparklinePoints(values, W, H, 4);
-  const last = points.split(" ").at(-1)?.split(",");
+  const pairs = points.split(" ");
+  const last = pairs.at(-1)?.split(",");
+  const first = pairs[0]?.split(",");
+  // The area under the line, closed along the bottom edge.
+  const area =
+    first && last ? `${first[0]},${H} ${points} ${last[0]},${H}` : null;
   return (
     <svg
       role="img"
@@ -27,11 +32,12 @@ export function RatingSparkline({
       preserveAspectRatio="none"
       className={cn("h-10 w-full text-primary", className)}
     >
+      {area && <polygon points={area} fill="currentColor" opacity="0.12" />}
       <polyline
         points={points}
         fill="none"
         stroke="currentColor"
-        strokeWidth="2"
+        strokeWidth="2.5"
         strokeLinecap="round"
         strokeLinejoin="round"
         vectorEffect="non-scaling-stroke"

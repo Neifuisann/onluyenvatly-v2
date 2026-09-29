@@ -1,7 +1,6 @@
 "use client";
 
 import {
-  ArrowLeft,
   ChevronDown,
   ChevronLeft,
   ChevronRight,
@@ -9,6 +8,7 @@ import {
   LayoutList,
   Send,
   Square,
+  X,
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -214,17 +214,17 @@ function RunnerScreen({
     <div
       className={cn(
         "flex flex-col",
-        preview ? "rounded-lg border bg-background" : "min-h-dvh",
+        preview ? "rounded-xl border bg-background" : "min-h-dvh",
       )}
     >
       <header
         className={cn(
-          "border-b bg-background/95 backdrop-blur",
+          "border-border/60 border-b bg-background/80 backdrop-blur-xl",
           // In the editor the admin header stays on top.
           !preview && "sticky top-0 z-20",
         )}
       >
-        <div className="mx-auto flex h-14 max-w-5xl items-center gap-1 px-2">
+        <div className="mx-auto flex h-16 max-w-5xl items-center gap-1.5 px-2 sm:px-3">
           {!preview && (
             <Link
               href={
@@ -232,23 +232,24 @@ function RunnerScreen({
               }
               aria-label={practice ? practiceCopy.exit : t.exit}
               title={practice ? practiceCopy.exit : t.exit}
-              className="flex size-11 items-center justify-center rounded-md hover:bg-muted"
+              className="flex size-11 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
             >
-              <ArrowLeft aria-hidden className="size-5" />
+              <X aria-hidden className="size-5" />
             </Link>
           )}
           <Button
             type="button"
-            variant="ghost"
+            variant="secondary"
+            size="sm"
             onClick={() => setNavOpen(true)}
             aria-haspopup="dialog"
             aria-label={`${t.position(current + 1, total)}. ${t.openNavigator}`}
-            className="px-2 font-semibold font-mono text-base lg:hidden"
+            className="num h-10 gap-1 pr-3 pl-4 font-display font-semibold text-base shadow-none lg:hidden"
           >
             {t.position(current + 1, total)}
             <ChevronDown aria-hidden />
           </Button>
-          <p className="hidden min-w-0 truncate px-2 font-semibold lg:block">
+          <p className="hidden min-w-0 truncate px-2 font-display font-semibold text-lg tracking-tight lg:block">
             {title}
           </p>
           <div className="ml-auto flex items-center gap-1">
@@ -269,6 +270,7 @@ function RunnerScreen({
               variant="ghost"
               size="sm"
               onClick={() => changeView(view === "single" ? "list" : "single")}
+              className="h-10 px-3 text-muted-foreground hover:text-foreground"
             >
               {view === "single" ? (
                 <LayoutList aria-hidden />
@@ -281,28 +283,28 @@ function RunnerScreen({
             </Button>
           </div>
         </div>
-        <div className="mx-auto flex max-w-5xl items-center gap-3 px-4 pb-2">
+        <div className="mx-auto flex max-w-5xl items-center gap-3 px-4 pb-2.5">
           <div
             role="progressbar"
             aria-label={t.progress(answered, total)}
             aria-valuemin={0}
             aria-valuemax={total}
             aria-valuenow={answered}
-            className="h-1.5 flex-1 overflow-hidden rounded-full bg-muted"
+            className="h-2 flex-1 overflow-hidden rounded-full bg-muted"
           >
             <div
-              className="h-full rounded-full bg-primary transition-[width] duration-200"
+              className="h-full rounded-full bg-primary transition-[width] duration-300 ease-out"
               style={{ width: `${(answered / total) * 100}%` }}
             />
           </div>
           {preview ? (
-            <span className="shrink-0 rounded-full border px-2 py-0.5 text-muted-foreground text-xs">
+            <span className="shrink-0 rounded-full bg-accent-soft px-2.5 py-0.5 font-semibold text-accent-text text-xs">
               {previewCopy.badge}
             </span>
           ) : (
             <>
               {practice && (
-                <span className="hidden shrink-0 rounded-full border px-2 py-0.5 text-muted-foreground text-xs sm:inline">
+                <span className="hidden shrink-0 rounded-full bg-accent-soft px-2.5 py-0.5 font-semibold text-accent-text text-xs sm:inline">
                   {practiceCopy.badge}
                 </span>
               )}
@@ -311,7 +313,7 @@ function RunnerScreen({
           )}
         </div>
         {examGuard && (
-          <p className="mx-auto max-w-5xl px-4 pb-2 text-muted-foreground text-xs">
+          <p className="mx-auto max-w-5xl px-4 pb-2.5 text-muted-foreground text-xs">
             {t.guardNotice}
           </p>
         )}
@@ -343,7 +345,7 @@ function RunnerScreen({
 
       <Main
         id={preview ? undefined : "main"}
-        className="mx-auto w-full max-w-5xl flex-1 px-4 py-4 lg:grid lg:grid-cols-[minmax(0,1fr)_15rem] lg:items-start lg:gap-8"
+        className="mx-auto w-full max-w-5xl flex-1 px-4 py-5 sm:py-8 lg:grid lg:grid-cols-[minmax(0,1fr)_16rem] lg:items-start lg:gap-8"
       >
         {!preview && <h1 className="sr-only">{title}</h1>}
         <div className="space-y-4">
@@ -400,14 +402,15 @@ function RunnerScreen({
         </div>
         <aside
           className={cn(
-            "sticky hidden space-y-4 rounded-lg border bg-surface p-4 lg:block",
+            "sticky hidden space-y-4 rounded-xl border border-border/70 bg-surface p-5 shadow-card lg:block dark:border-border",
             preview ? "top-4" : "top-32",
           )}
         >
-          <h2 className="font-semibold text-sm">{t.navigatorTitle}</h2>
+          <h2 className="font-display font-semibold">{t.navigatorTitle}</h2>
           <QuestionNavigator onPick={pick} />
           <Button
             type="button"
+            size="lg"
             className="w-full"
             onClick={() => setSubmitOpen(true)}
           >
@@ -417,8 +420,8 @@ function RunnerScreen({
         </aside>
       </Main>
 
-      <footer className="sticky bottom-0 z-20 border-t bg-surface pb-[env(safe-area-inset-bottom)] lg:hidden">
-        <div className="mx-auto flex max-w-5xl items-center gap-2 px-3 py-2">
+      <footer className="sticky bottom-0 z-20 px-3 pt-2 pb-[max(0.75rem,env(safe-area-inset-bottom))] lg:hidden">
+        <div className="mx-auto flex max-w-lg items-center gap-1.5 rounded-[1.75rem] border border-border/70 bg-surface/90 p-1.5 shadow-raised backdrop-blur-xl dark:border-border">
           {view === "single" ? (
             <>
               <Button
@@ -426,7 +429,11 @@ function RunnerScreen({
                 variant="secondary"
                 aria-pressed={flagged}
                 onClick={() => toggleFlag(current)}
-                className={cn(flagged && "bg-accent text-accent-foreground")}
+                className={cn(
+                  "h-12 border-0 bg-muted shadow-none",
+                  flagged &&
+                    "bg-accent text-accent-foreground hover:bg-accent/90",
+                )}
               >
                 <Flag aria-hidden className={cn(flagged && "fill-current")} />
                 <span className="sr-only min-[380px]:not-sr-only">
@@ -438,18 +445,26 @@ function RunnerScreen({
                 variant="secondary"
                 onClick={() => pick(current - 1, false)}
                 disabled={current === 0}
-                className="ml-auto"
+                className="ml-auto h-12 border-0 shadow-none"
               >
                 <ChevronLeft aria-hidden />
                 {t.prev}
               </Button>
               {last ? (
-                <Button type="button" onClick={() => setSubmitOpen(true)}>
+                <Button
+                  type="button"
+                  className="h-12 px-6"
+                  onClick={() => setSubmitOpen(true)}
+                >
                   <Send aria-hidden />
                   {t.submit}
                 </Button>
               ) : (
-                <Button type="button" onClick={() => pick(current + 1, false)}>
+                <Button
+                  type="button"
+                  className="h-12 px-6"
+                  onClick={() => pick(current + 1, false)}
+                >
                   {t.next}
                   <ChevronRight aria-hidden />
                 </Button>
@@ -458,7 +473,7 @@ function RunnerScreen({
           ) : (
             <Button
               type="button"
-              className="ml-auto"
+              className="h-12 w-full"
               onClick={() => setSubmitOpen(true)}
             >
               <Send aria-hidden />

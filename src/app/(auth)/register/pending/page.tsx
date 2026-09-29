@@ -18,7 +18,7 @@ export default function RegisterPendingPage() {
         <span className="flex size-14 items-center justify-center rounded-full bg-primary-soft text-primary">
           <Hourglass aria-hidden className="size-7" strokeWidth={1.75} />
         </span>
-        <h1 className="font-semibold text-2xl">{authCopy.pendingTitle}</h1>
+        <h1 className="heading-page">{authCopy.pendingTitle}</h1>
         <p className="text-muted-foreground">{authCopy.pendingBody}</p>
         <Link href="/login" className={buttonVariants({ size: "lg" })}>
           {authCopy.pendingBack}

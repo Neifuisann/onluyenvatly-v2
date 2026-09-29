@@ -62,7 +62,7 @@ export default async function ReviewPage({
   return (
     <div className="mx-auto flex max-w-3xl flex-col gap-6">
       <header className="space-y-2">
-        <h1 className="font-semibold text-2xl">{t.title}</h1>
+        <h1 className="heading-page">{t.title}</h1>
         <p className="text-muted-foreground">{t.lead}</p>
       </header>
 
@@ -111,7 +111,7 @@ export default async function ReviewPage({
               aria-labelledby="start-review"
               className="flex flex-col gap-3 rounded-lg border bg-surface p-4 shadow-card"
             >
-              <h2 id="start-review" className="font-semibold text-lg">
+              <h2 id="start-review" className="heading-section">
                 {t.startTitle}
               </h2>
               <p className="text-muted-foreground text-sm">{t.startLead}</p>
@@ -130,7 +130,7 @@ export default async function ReviewPage({
           )}
 
           <section aria-labelledby="mistakes" className="flex flex-col gap-3">
-            <h2 id="mistakes" className="font-semibold text-lg">
+            <h2 id="mistakes" className="heading-section">
               {t.listTitle}{" "}
               <span className="font-normal text-muted-foreground text-sm">
                 ({summary.matching})
