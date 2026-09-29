@@ -61,7 +61,7 @@ export default async function AdminExplanationsPage({
   return (
     <div className="mx-auto flex max-w-3xl flex-col gap-6">
       <header className="space-y-2">
-        <h1 className="font-semibold text-2xl">{t.title}</h1>
+        <h1 className="heading-page">{t.title}</h1>
         <p className="text-muted-foreground">{t.lead}</p>
       </header>
       <nav aria-label={t.tabsLabel} className="flex flex-wrap gap-2">
@@ -94,7 +94,7 @@ export default async function AdminExplanationsPage({
             {flagged.map((e) => (
               <li
                 key={e.hash}
-                className="flex flex-col gap-3 rounded-lg border bg-surface p-4 shadow-card"
+                className="flex flex-col gap-3 rounded-lg border border-border/70 bg-surface p-5 shadow-card dark:border-border"
               >
                 <p className="flex flex-wrap items-center justify-between gap-2 text-sm">
                   <span className="font-medium">
@@ -123,7 +123,7 @@ export default async function AdminExplanationsPage({
             scroll={false}
             aria-label={t.pickerLabel}
             key={params.lesson ?? "none"}
-            className="flex flex-col gap-3 rounded-lg border bg-surface p-4 sm:flex-row sm:items-end"
+            className="flex flex-col gap-3 rounded-lg border border-border/70 bg-surface p-5 shadow-card dark:border-border sm:flex-row sm:items-end"
           >
             <div className="grid flex-1 gap-1.5">
               <Label htmlFor="explanations-lesson">{t.lesson}</Label>
@@ -153,7 +153,7 @@ export default async function AdminExplanationsPage({
           {params.lesson &&
             (lesson ? (
               <>
-                <h2 className="font-semibold text-xl">{lesson.lesson.title}</h2>
+                <h2 className="heading-section">{lesson.lesson.title}</h2>
                 <p className="text-muted-foreground text-sm">
                   {t.counts(lesson.counts)}
                 </p>

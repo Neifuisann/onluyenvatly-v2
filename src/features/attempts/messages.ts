@@ -21,6 +21,8 @@ export const runnerCopy = {
   questionLabel: (i: number) => `Câu ${i}`,
   questionHeading: (i: number, type: string, points: number) =>
     `Câu ${i} · ${type} · ${formatScore(points)}đ`,
+  /** The heading's parts, styled separately; together they read as `questionHeading`. */
+  points: (points: number) => `${formatScore(points)}đ`,
   flag: "Đánh dấu",
   unflag: "Bỏ đánh dấu",
   flagged: "Đã đánh dấu",
@@ -89,6 +91,7 @@ export const resultCopy = {
   review: "Xem lại bài",
   toCatalog: "Danh sách bài tập",
   good: "Làm tốt lắm!",
+  okay: "Khá lắm! Ôn thêm một chút là giỏi rồi.",
   keepGoing: "Cố lên, ôn lại rồi làm tiếp nhé!",
   revealLater: (when: string) => `Đáp án sẽ hiển thị sau ${when}.`,
   revealNever: "Giáo viên không công bố đáp án của bài này.",

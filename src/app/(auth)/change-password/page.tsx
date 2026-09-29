@@ -1,13 +1,8 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { Alert } from "@/components/ui/alert";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-} from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { AuthScreen } from "@/features/auth/components/auth-screen";
 import { ChangePasswordForm } from "@/features/auth/components/change-password-form";
 import { safeNextPath } from "@/features/auth/core/next-path";
 import { requireSessionUser } from "@/features/auth/guards";
@@ -27,19 +22,15 @@ export default function ChangePasswordPage({
   searchParams,
 }: PageProps<"/change-password">) {
   return (
-    <Card>
-      <CardHeader>
-        <h1 className="font-semibold text-2xl leading-tight">
-          {authCopy.changePasswordTitle}
-        </h1>
-        <CardDescription>{authCopy.changePasswordLead}</CardDescription>
-      </CardHeader>
-      <CardContent>
-        <Suspense fallback={<FormSkeleton />}>
-          <ChangePasswordGate searchParams={searchParams} />
-        </Suspense>
-      </CardContent>
-    </Card>
+    <AuthScreen
+      pose="key"
+      title={authCopy.changePasswordTitle}
+      lead={authCopy.changePasswordLead}
+    >
+      <Suspense fallback={<FormSkeleton />}>
+        <ChangePasswordGate searchParams={searchParams} />
+      </Suspense>
+    </AuthScreen>
   );
 }
 
@@ -67,7 +58,7 @@ function FormSkeleton() {
       <Skeleton className="h-20" />
       <Skeleton className="h-20" />
       <Skeleton className="h-20" />
-      <Skeleton className="h-12" />
+      <Skeleton className="h-12 rounded-full" />
     </div>
   );
 }

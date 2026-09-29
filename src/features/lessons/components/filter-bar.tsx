@@ -61,7 +61,7 @@ export function FilterBar({
   const extraFilters = [filters.chapter, filters.tag].filter(Boolean).length;
 
   return (
-    <div className="sticky top-14 z-20 -mx-4 border-b bg-background/95 px-4 py-3 backdrop-blur lg:top-0 lg:-mx-8 lg:px-8">
+    <div className="sticky top-14 z-20 -mx-4 bg-background/85 px-4 py-3 backdrop-blur-xl sm:-mx-6 sm:px-6 lg:top-3 lg:-mx-10 lg:bg-panel/85 lg:px-10">
       <Form
         ref={formRef}
         action="/lessons"
@@ -73,36 +73,41 @@ export function FilterBar({
         {filters.grade && (
           <input type="hidden" name="grade" value={filters.grade} />
         )}
-        <div className="flex gap-2">
+        <div className="relative">
           <Label htmlFor="catalog-q" className="sr-only">
             {t.searchLabel}
           </Label>
-          <div className="relative flex-1">
-            <Search
-              aria-hidden
-              className="pointer-events-none absolute top-1/2 left-3 size-5 -translate-y-1/2 text-muted-foreground"
-              strokeWidth={1.75}
-            />
-            <Input
-              id="catalog-q"
-              name="q"
-              type="search"
-              enterKeyHint="search"
-              autoComplete="off"
-              maxLength={80}
-              defaultValue={filters.q ?? ""}
-              placeholder={t.searchPlaceholder}
-              onChange={() => submit(400)}
-              className="pl-10"
-            />
-          </div>
-          <Button type="submit" variant="secondary">
+          <Search
+            aria-hidden
+            className="pointer-events-none absolute top-1/2 left-4 size-5 -translate-y-1/2 text-muted-foreground"
+            strokeWidth={2}
+          />
+          <Input
+            id="catalog-q"
+            name="q"
+            type="search"
+            enterKeyHint="search"
+            autoComplete="off"
+            maxLength={80}
+            defaultValue={filters.q ?? ""}
+            placeholder={t.searchPlaceholder}
+            onChange={() => submit(400)}
+            className="rounded-full pr-20 pl-11 shadow-card [&::-webkit-search-cancel-button]:hidden"
+          />
+          <Button
+            type="submit"
+            size="sm"
+            className="absolute top-1/2 right-1.5 -translate-y-1/2 active:-translate-y-1/2 active:scale-100"
+          >
             {t.searchSubmit}
           </Button>
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          <ul aria-label={t.gradeGroup} className="flex gap-1.5">
+          <ul
+            aria-label={t.gradeGroup}
+            className="flex rounded-full bg-muted p-1"
+          >
             {GRADES.map((g) => {
               const active = filters.grade === g;
               return (
@@ -113,10 +118,10 @@ export function FilterBar({
                     scroll={false}
                     aria-current={active ? "page" : undefined}
                     className={cn(
-                      "inline-flex h-9 items-center rounded-full border px-3.5 text-sm transition-colors",
+                      "inline-flex h-9 items-center rounded-full px-3.5 font-medium text-sm transition-[background-color,color,box-shadow] duration-150",
                       active
-                        ? "border-primary bg-primary text-primary-foreground"
-                        : "bg-surface hover:bg-muted",
+                        ? "bg-surface text-foreground shadow-card"
+                        : "text-muted-foreground hover:text-foreground",
                     )}
                   >
                     {g ? t.grade(g) : t.gradeAll}
@@ -126,18 +131,24 @@ export function FilterBar({
             })}
           </ul>
 
-          <details className="group w-full">
+          <details className="group/filters contents">
             <summary
               className={cn(
-                buttonVariants({ variant: "ghost", size: "sm" }),
-                "w-fit cursor-pointer list-none [&::-webkit-details-marker]:hidden",
+                buttonVariants({ variant: "secondary", size: "sm" }),
+                "ml-auto h-11 cursor-pointer list-none group-open/filters:border-primary group-open/filters:text-primary [&::-webkit-details-marker]:hidden",
               )}
             >
-              <SlidersHorizontal aria-hidden strokeWidth={1.75} />
+              <SlidersHorizontal aria-hidden strokeWidth={2} />
               {t.filters}
-              {extraFilters > 0 && ` (${extraFilters})`}
+              {extraFilters > 0 && (
+                <span className="num flex size-5 items-center justify-center rounded-full bg-primary text-primary-foreground text-xs">
+                  <span className="sr-only">(</span>
+                  {extraFilters}
+                  <span className="sr-only">)</span>
+                </span>
+              )}
             </summary>
-            <div className="mt-2 grid gap-3 sm:grid-cols-3">
+            <div className="grid w-full animate-rise gap-4 rounded-lg border border-border/70 bg-surface p-4 shadow-card sm:grid-cols-3 dark:border-border">
               <div className="flex flex-col gap-1.5">
                 <Label htmlFor="catalog-chapter">{t.chapter}</Label>
                 <Select
@@ -185,8 +196,8 @@ export function FilterBar({
                   ))}
                 </Select>
               </div>
-              <div className="flex items-center gap-3 sm:col-span-3">
-                {hasFilters(filters) && (
+              {hasFilters(filters) && (
+                <div className="sm:col-span-3">
                   <Link
                     href={catalogHref(DEFAULT_FILTERS)}
                     prefetch={false}
@@ -194,8 +205,8 @@ export function FilterBar({
                   >
                     {t.clear}
                   </Link>
-                )}
-              </div>
+                </div>
+              )}
             </div>
           </details>
         </div>

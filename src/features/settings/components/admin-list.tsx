@@ -15,7 +15,7 @@ export function AdminList({
   return (
     <ul
       aria-label={t.adminsLabel}
-      className="divide-y rounded-lg border bg-surface"
+      className="divide-y rounded-lg border border-border/70 bg-surface shadow-card dark:border-border"
     >
       {rows.map((a) => (
         <li key={a.id} className="px-4 py-3">

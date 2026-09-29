@@ -134,7 +134,7 @@ export function PreviewQuestion({
       {q.type === "short" && (
         <p className="text-sm">
           <span className="text-muted-foreground">{t.shortAnswer}: </span>
-          <span className="font-medium font-mono">
+          <span className="font-medium num">
             {q.answer.replace(".", ",") || "—"}
           </span>
           {q.tolerance !== undefined && q.tolerance > 0 && (

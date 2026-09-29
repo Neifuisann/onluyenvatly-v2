@@ -28,7 +28,7 @@ export default async function AdminLessonsPage({
     <div className="mx-auto flex max-w-6xl flex-col gap-6">
       <header className="flex flex-wrap items-end justify-between gap-3">
         <div className="space-y-2">
-          <h1 className="font-semibold text-2xl">{t.title}</h1>
+          <h1 className="heading-page">{t.title}</h1>
           <p className="text-muted-foreground">{t.lead}</p>
         </div>
         <form action={createLesson}>

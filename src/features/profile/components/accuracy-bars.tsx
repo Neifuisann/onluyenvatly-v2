@@ -27,7 +27,7 @@ export function AccuracyBars<K extends string>({
             <div className="flex items-baseline justify-between gap-3 text-sm">
               <span className="min-w-0 truncate">{label(e.key)}</span>
               <span className="shrink-0 text-muted-foreground">
-                <span className="font-mono font-semibold text-foreground tabular-nums">
+                <span className="num font-semibold text-foreground tabular-nums">
                   {percent(e.accuracy)}
                 </span>{" "}
                 · {t.questionsCount(e.questions)}

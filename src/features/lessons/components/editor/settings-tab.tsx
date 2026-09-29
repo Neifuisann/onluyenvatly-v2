@@ -385,7 +385,7 @@ function Section({
   children: React.ReactNode;
 }) {
   return (
-    <section className="flex flex-col gap-4 rounded-lg border bg-surface p-4 shadow-card">
+    <section className="flex flex-col gap-4 rounded-lg border border-border/70 bg-surface p-5 shadow-card dark:border-border">
       <h2 className="font-semibold">{title}</h2>
       {children}
     </section>

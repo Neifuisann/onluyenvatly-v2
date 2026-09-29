@@ -10,7 +10,7 @@ export function StudentSessions({
   rows: readonly StudentSessionRow[];
 }) {
   return (
-    <ul className="divide-y rounded-lg border bg-surface">
+    <ul className="divide-y rounded-lg border border-border/70 bg-surface shadow-card dark:border-border">
       {rows.map((s) => (
         <li
           // A session has no public id; time of creation is unique enough per user.

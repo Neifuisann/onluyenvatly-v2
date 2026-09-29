@@ -64,7 +64,7 @@ export function QuestionStatsCard({
   return (
     <article
       aria-labelledby={headingId}
-      className="flex flex-col gap-3 rounded-lg border bg-surface p-4 shadow-card"
+      className="flex flex-col gap-3 rounded-lg border border-border/70 bg-surface p-5 shadow-card dark:border-border"
     >
       <header className="flex flex-col gap-1">
         <h3 id={headingId} className="font-semibold">
@@ -141,7 +141,7 @@ function McqBreakdown({
                   {option?.image && <QuestionImage media={option.image} />}
                 </div>
                 {o.isKey && <KeyMarker />}
-                <span className="shrink-0 font-mono tabular-nums">
+                <span className="shrink-0 num">
                   {t.count(o.count)}
                   {seen > 0 && (
                     <span className="text-muted-foreground">
@@ -157,7 +157,7 @@ function McqBreakdown({
         })}
         <li className="flex items-center justify-between gap-2 px-2 text-muted-foreground text-sm">
           <span>{t.blank}</span>
-          <span className="font-mono tabular-nums">{t.count(d.blank)}</span>
+          <span className="num">{t.count(d.blank)}</span>
         </li>
       </ul>
       {seen > 0 && (
@@ -227,7 +227,7 @@ function TfBreakdown({
             </span>
             <span>
               {t.correctColumn}:{" "}
-              <span className="font-mono font-medium tabular-nums">
+              <span className="num font-medium tabular-nums">
                 {s.correctRate === null ? "–" : pct(s.correctRate)}
               </span>{" "}
               <span className="text-muted-foreground">
@@ -260,7 +260,7 @@ function ShortBreakdown({
   return (
     <div className="flex flex-col gap-2 text-sm">
       <p>
-        <KeyMarker /> <span className="font-mono">{t.shortKey(answer)}</span>
+        <KeyMarker /> <span className="num">{t.shortKey(answer)}</span>
       </p>
       <ul aria-label={t.topAnswers(n)} className="flex flex-col gap-2">
         {d.top.map((a) => (
@@ -272,9 +272,7 @@ function ShortBreakdown({
             )}
           >
             <div className="flex items-center gap-2">
-              <span className="min-w-0 flex-1 break-all font-mono">
-                {a.answer}
-              </span>
+              <span className="min-w-0 flex-1 break-all num">{a.answer}</span>
               <span
                 className={cn(
                   "inline-flex items-center gap-1 text-xs",
@@ -288,16 +286,14 @@ function ShortBreakdown({
                 )}
                 {a.correct ? t.correct : t.wrong}
               </span>
-              <span className="shrink-0 font-mono tabular-nums">
-                {t.count(a.count)}
-              </span>
+              <span className="shrink-0 num">{t.count(a.count)}</span>
             </div>
             <Bar value={a.count} total={seen} good={a.correct} />
           </li>
         ))}
         <li className="flex items-center justify-between gap-2 px-2 text-muted-foreground">
           <span>{t.blank}</span>
-          <span className="font-mono tabular-nums">{t.count(d.blank)}</span>
+          <span className="num">{t.count(d.blank)}</span>
         </li>
       </ul>
       {more > 0 && (

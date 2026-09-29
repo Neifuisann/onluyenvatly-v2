@@ -9,8 +9,8 @@ import { useRunner } from "./store";
 
 /**
  * Large tappable rows with a letter badge (07 §4). Toggle buttons rather than
- * radios so a second tap clears the choice; the selected row has a check icon
- * as well as the primary border, never color alone.
+ * radios so a second tap clears the choice; the selected row gets a check in
+ * its badge as well as the lagoon border, never color alone.
  */
 export function McqOptions({
   index,
@@ -22,7 +22,7 @@ export function McqOptions({
   const selected = useRunner((s) => s.answers[index]);
   const choose = useRunner((s) => s.choose);
   return (
-    <fieldset className="grid gap-2">
+    <fieldset className="grid gap-2.5">
       <legend className="sr-only">{t.optionsLabel(index + 1)}</legend>
       {options.map((option, i) => {
         const letter = OPTION_LETTERS[i] as string;
@@ -35,28 +35,27 @@ export function McqOptions({
             data-option={letter}
             onClick={() => choose(index, letter)}
             className={cn(
-              "flex min-h-12 w-full items-start gap-3 rounded-md border bg-surface px-3 py-2.5 text-left transition-colors duration-150",
-              "hover:border-primary/60",
-              on && "border-primary bg-primary-soft ring-1 ring-primary",
+              "group flex min-h-14 w-full items-center gap-3.5 rounded-lg border-2 bg-surface px-3.5 py-3 text-left transition-[border-color,background-color,transform] duration-150 active:scale-[0.99]",
+              on
+                ? "border-primary bg-primary-soft"
+                : "border-border hover:border-primary/50 hover:bg-muted/40",
             )}
           >
             <span
               aria-hidden
               className={cn(
-                "mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-full border font-semibold text-sm",
-                on && "border-primary bg-primary text-primary-foreground",
+                "flex size-9 shrink-0 items-center justify-center rounded-full font-bold font-display text-base transition-colors duration-150",
+                on
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-muted text-muted-foreground group-hover:text-foreground",
               )}
             >
-              {letter}
+              {on ? <Check className="size-5" strokeWidth={3} /> : letter}
             </span>
             <span className="sr-only">{letter}.</span>
-            <span className="min-w-0 flex-1 break-words pt-0.5">{option}</span>
-            {on && (
-              <Check
-                aria-hidden
-                className="mt-1 size-5 shrink-0 text-primary"
-              />
-            )}
+            <span className="min-w-0 flex-1 break-words text-[1.0625rem] leading-relaxed">
+              {option}
+            </span>
           </button>
         );
       })}

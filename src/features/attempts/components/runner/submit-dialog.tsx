@@ -39,7 +39,7 @@ export function SubmitDialog({
                 size="sm"
                 aria-label={t.goTo(i + 1)}
                 onClick={() => onPick(i)}
-                className="min-w-11 font-mono"
+                className="min-w-11 num"
               >
                 {i + 1}
               </Button>

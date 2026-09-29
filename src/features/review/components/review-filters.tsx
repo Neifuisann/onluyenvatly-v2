@@ -24,10 +24,10 @@ export function ReviewFilters({
   const typeCount = QUESTION_TYPES.reduce((s, q) => s + summary.types[q], 0);
   const chip = (active: boolean) =>
     cn(
-      "flex min-h-11 items-center rounded-full border px-3 text-sm",
+      "flex min-h-10 items-center rounded-full px-3.5 font-medium text-sm transition-[background-color,color,box-shadow]",
       active
-        ? "border-primary bg-primary-soft font-medium text-primary"
-        : "bg-surface hover:bg-muted",
+        ? "bg-surface text-foreground shadow-card"
+        : "text-muted-foreground hover:text-foreground",
     );
   return (
     <section aria-label={t.filtersLabel} className="flex flex-col gap-4">
@@ -62,7 +62,10 @@ export function ReviewFilters({
           </Button>
         </form>
       )}
-      <nav aria-label={t.type} className="flex flex-wrap gap-2">
+      <nav
+        aria-label={t.type}
+        className="flex w-fit max-w-full flex-wrap gap-1 rounded-3xl bg-muted p-1"
+      >
         <Link
           href={reviewHref(params, { type: null })}
           prefetch={false}

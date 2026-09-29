@@ -55,7 +55,7 @@ export function CoverPicker({
   return (
     <section
       aria-labelledby="cover-title"
-      className="mx-auto mt-6 flex max-w-3xl flex-col gap-3 rounded-lg border bg-surface p-4 shadow-card"
+      className="mx-auto mt-6 flex max-w-3xl flex-col gap-3 rounded-lg border border-border/70 bg-surface p-5 shadow-card dark:border-border"
     >
       <h2 id="cover-title" className="font-semibold">
         {t.cover}

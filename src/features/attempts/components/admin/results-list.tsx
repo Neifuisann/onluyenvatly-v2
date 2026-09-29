@@ -13,7 +13,7 @@ export function ResultsList({ rows }: { rows: readonly ResultRow[] }) {
   return (
     <ul
       aria-label={t.listLabel}
-      className="divide-y rounded-lg border bg-surface"
+      className="divide-y rounded-lg border border-border/70 bg-surface shadow-card dark:border-border"
     >
       {rows.map((r) => {
         const when = r.submittedAt ? formatDateTime(r.submittedAt) : "";

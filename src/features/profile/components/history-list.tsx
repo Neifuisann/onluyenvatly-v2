@@ -9,7 +9,7 @@ import type { HistoryItem } from "../queries";
 /** My submitted tests, newest first, each linking to its result page. */
 export function HistoryList({ items }: { items: readonly HistoryItem[] }) {
   return (
-    <ol className="divide-y rounded-lg border bg-surface">
+    <ol className="divide-y rounded-lg border border-border/70 bg-surface shadow-card dark:border-border">
       {items.map((a) => (
         <li key={a.id}>
           <Link
@@ -27,7 +27,7 @@ export function HistoryList({ items }: { items: readonly HistoryItem[] }) {
               </p>
             </div>
             <div className="flex flex-col items-end gap-0.5">
-              <span className="font-mono font-semibold tabular-nums">
+              <span className="num font-semibold tabular-nums">
                 <span className="sr-only">{t.score} </span>
                 {formatScore(a.score10 ?? 0)}
               </span>

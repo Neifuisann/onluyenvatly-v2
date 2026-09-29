@@ -178,7 +178,7 @@ export function LessonEditor({ lesson }: { lesson: EditorLesson }) {
           {t.back}
         </Link>
         <div className="flex flex-wrap items-center gap-2">
-          <h1 className="font-semibold text-2xl">{lesson.meta.title}</h1>
+          <h1 className="heading-page">{lesson.meta.title}</h1>
           <span
             className={cn(
               "rounded-full px-2 py-0.5 font-medium text-xs",
@@ -210,11 +210,11 @@ export function LessonEditor({ lesson }: { lesson: EditorLesson }) {
         />
       </header>
 
-      <div className="flex items-end justify-between gap-2 border-b">
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <div
           role="tablist"
           aria-label={t.tabsLabel}
-          className="flex gap-1 overflow-x-auto"
+          className="flex max-w-full gap-1 overflow-x-auto rounded-full bg-muted p-1"
         >
           {TABS.map((id) => (
             <button
@@ -231,10 +231,10 @@ export function LessonEditor({ lesson }: { lesson: EditorLesson }) {
               onClick={() => setTab(id)}
               onKeyDown={onTabKey}
               className={cn(
-                "-mb-px border-b-2 px-4 py-2 font-medium text-sm",
+                "min-h-11 shrink-0 rounded-full px-4 py-2 font-semibold text-sm transition-colors",
                 tab === id
-                  ? "border-primary text-primary"
-                  : "border-transparent text-muted-foreground hover:text-foreground",
+                  ? "bg-surface text-foreground shadow-card"
+                  : "text-muted-foreground hover:text-foreground",
               )}
             >
               {t.tabs[id]}
@@ -245,7 +245,7 @@ export function LessonEditor({ lesson }: { lesson: EditorLesson }) {
           work still triggers the browser's "leave page?" prompt. */}
         <a
           href={`/admin/lessons/${lesson.id}/stats`}
-          className="mb-1 flex min-h-9 shrink-0 items-center gap-1.5 rounded-md px-3 font-medium text-muted-foreground text-sm hover:bg-muted hover:text-foreground"
+          className="flex min-h-11 shrink-0 items-center gap-1.5 rounded-full px-3 font-medium text-muted-foreground text-sm hover:bg-muted hover:text-foreground"
         >
           <ChartColumn aria-hidden className="size-4" />
           {statsCopy.link}

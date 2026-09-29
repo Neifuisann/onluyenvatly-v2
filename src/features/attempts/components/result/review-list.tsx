@@ -33,10 +33,10 @@ export function ReviewList({
       aria-labelledby="review-heading"
       className="flex scroll-mt-4 flex-col gap-4"
     >
-      <h2 id="review-heading" className="font-semibold text-lg">
+      <h2 id="review-heading" className="heading-section">
         {t.heading}
       </h2>
-      <fieldset className="flex flex-wrap gap-2">
+      <fieldset className="flex w-fit flex-wrap gap-1 rounded-full bg-muted p-1">
         <legend className="sr-only">{t.filterLabel}</legend>
         {chips.map((c) => (
           <button
@@ -45,10 +45,10 @@ export function ReviewList({
             aria-pressed={filter === c.id}
             onClick={() => setFilter(c.id)}
             className={cn(
-              "h-10 rounded-full border bg-surface px-4 font-medium text-sm transition-colors duration-150",
-              "hover:border-primary/60",
-              filter === c.id &&
-                "border-primary bg-primary text-primary-foreground hover:border-primary",
+              "num h-10 rounded-full px-4 font-medium text-sm transition-[background-color,color,box-shadow] duration-150",
+              filter === c.id
+                ? "bg-surface text-foreground shadow-card"
+                : "text-muted-foreground hover:text-foreground",
             )}
           >
             {c.label}
@@ -56,7 +56,7 @@ export function ReviewList({
         ))}
       </fieldset>
       {visible.length === 0 && (
-        <p className="rounded-lg border border-dashed p-6 text-center text-muted-foreground text-sm">
+        <p className="rounded-xl border border-dashed p-8 text-center text-muted-foreground">
           {filter === "wrong" ? t.emptyWrong : t.emptyRight}
         </p>
       )}

@@ -34,7 +34,7 @@ export function StartReviewForm({
           {REVIEW_SIZES.map((n, i) => (
             <label
               key={n}
-              className="flex min-h-11 cursor-pointer items-center gap-2 rounded-md border bg-surface px-3 text-sm has-checked:border-primary has-checked:bg-primary-soft"
+              className="flex min-h-12 cursor-pointer items-center gap-2.5 rounded-full border-2 border-border bg-surface px-4 font-medium text-sm transition-colors has-checked:border-primary has-checked:bg-primary-soft"
             >
               <input
                 type="radio"

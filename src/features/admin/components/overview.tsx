@@ -25,7 +25,7 @@ function Tile({
       <dt className="text-muted-foreground text-sm">{label}</dt>
       <dd
         className={cn(
-          "font-mono font-semibold text-2xl tabular-nums",
+          "num font-bold font-display text-3xl",
           muted && "font-sans text-lg text-muted-foreground",
         )}
       >
@@ -36,7 +36,7 @@ function Tile({
 }
 
 const tileBox =
-  "flex flex-col gap-1 rounded-lg border bg-surface p-4 shadow-card";
+  "flex min-w-0 flex-col justify-between gap-3 rounded-lg border border-border/70 bg-surface p-5 shadow-card dark:border-border";
 
 /** The headline numbers; the pending tile opens the approval queue. */
 export function OverviewTiles({
@@ -58,7 +58,9 @@ export function OverviewTiles({
         className={cn(
           tileBox,
           "relative focus-within:ring-2 focus-within:ring-ring",
-          pending > 0 && "border-primary",
+          "col-span-2 lg:col-span-1",
+          pending > 0 &&
+            "border-primary/40 bg-primary-soft dark:border-primary/40",
         )}
       >
         <dt className="text-muted-foreground text-sm">
@@ -71,7 +73,7 @@ export function OverviewTiles({
             {t.pending}
           </Link>
         </dt>
-        <dd className="flex items-center justify-between font-mono font-semibold text-2xl tabular-nums">
+        <dd className="num flex items-center justify-between font-bold font-display text-3xl">
           {pending}
           <ChevronRight aria-hidden className="size-5 text-muted-foreground" />
         </dd>
@@ -125,9 +127,9 @@ export function AttemptsChart({ days }: { days: readonly DayCount[] }) {
   return (
     <section
       aria-labelledby="chart-heading"
-      className="flex flex-col gap-3 rounded-lg border bg-surface p-4 shadow-card"
+      className="flex flex-col gap-3 rounded-lg border border-border/70 bg-surface p-5 shadow-card dark:border-border"
     >
-      <h2 id="chart-heading" className="font-semibold">
+      <h2 id="chart-heading" className="heading-section">
         {t.chartTitle}
       </h2>
       <p className="text-muted-foreground text-sm">{summary}</p>
@@ -182,10 +184,10 @@ export function HardestList({ items }: { items: readonly HardQuestion[] }) {
   return (
     <section
       aria-labelledby="hardest-heading"
-      className="flex flex-col gap-3 rounded-lg border bg-surface p-4 shadow-card"
+      className="flex flex-col gap-3 rounded-lg border border-border/70 bg-surface p-5 shadow-card dark:border-border"
     >
       <div className="space-y-1">
-        <h2 id="hardest-heading" className="font-semibold">
+        <h2 id="hardest-heading" className="heading-section">
           {t.hardestTitle}
         </h2>
         <p className="text-muted-foreground text-sm">{t.hardestLead}</p>

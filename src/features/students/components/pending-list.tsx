@@ -54,7 +54,7 @@ export function PendingList({ rows }: { rows: readonly PendingRow[] }) {
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="flex flex-wrap items-center gap-2 rounded-lg border bg-surface px-3 py-2">
+      <div className="flex flex-wrap items-center gap-2 rounded-lg border border-border/70 bg-surface shadow-card dark:border-border px-3 py-2">
         <label className="flex min-h-11 w-full cursor-pointer items-center gap-3 text-sm sm:w-auto sm:flex-1">
           <input
             ref={allRef}
@@ -109,7 +109,7 @@ export function PendingList({ rows }: { rows: readonly PendingRow[] }) {
 
       <ul
         aria-label={t.pendingListLabel}
-        className="divide-y rounded-lg border bg-surface"
+        className="divide-y rounded-lg border border-border/70 bg-surface shadow-card dark:border-border"
       >
         {rows.map((r) => (
           <li key={r.id}>

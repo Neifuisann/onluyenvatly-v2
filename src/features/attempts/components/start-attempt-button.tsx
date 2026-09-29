@@ -20,9 +20,9 @@ export function StartAttemptButton({ lessonId }: { lessonId: number }) {
         size="lg"
         disabled={pending}
         aria-disabled={pending}
-        className="w-full sm:w-auto"
+        className="h-13 w-full text-base"
       >
-        <Play aria-hidden />
+        <Play aria-hidden className="fill-current" />
         {pending ? t.starting : t.start}
       </Button>
     </form>

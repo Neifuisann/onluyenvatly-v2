@@ -50,9 +50,7 @@ export default async function AdminStudentPage({
           {t.back}
         </Link>
         <div className="flex flex-wrap items-center gap-3">
-          <h1 className="break-words font-semibold text-2xl">
-            {student.fullName}
-          </h1>
+          <h1 className="break-words heading-page">{student.fullName}</h1>
           <StatusBadge status={student.status} />
         </div>
       </div>
@@ -61,7 +59,7 @@ export default async function AdminStudentPage({
 
       <section
         aria-labelledby="student-actions"
-        className="rounded-lg border bg-surface p-4"
+        className="rounded-lg border border-border/70 bg-surface p-5 shadow-card dark:border-border"
       >
         <h2 id="student-actions" className="mb-3 font-semibold">
           {t.actionsSection}
@@ -76,7 +74,7 @@ export default async function AdminStudentPage({
 
       <section
         aria-labelledby="student-grants"
-        className="rounded-lg border bg-surface p-4"
+        className="rounded-lg border border-border/70 bg-surface p-5 shadow-card dark:border-border"
       >
         <h2 id="student-grants" className="mb-3 font-semibold">
           {t.grantSection}

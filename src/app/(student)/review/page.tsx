@@ -1,7 +1,7 @@
-import { Repeat, SearchX } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { EmptyState } from "@/components/empty-state";
+import { Mascot } from "@/components/mascot";
 import { buttonVariants } from "@/components/ui/button";
 import { requireStudent } from "@/features/auth/guards";
 import { getLessonForTaking } from "@/features/lessons/queries";
@@ -62,17 +62,22 @@ export default async function ReviewPage({
   return (
     <div className="mx-auto flex max-w-3xl flex-col gap-6">
       <header className="space-y-2">
-        <h1 className="font-semibold text-2xl">{t.title}</h1>
+        <h1 className="heading-page">{t.title}</h1>
         <p className="text-muted-foreground">{t.lead}</p>
       </header>
 
       {openReview && (
         <section
           aria-labelledby="open-review"
-          className="flex flex-col gap-3 rounded-lg border border-primary/40 bg-primary-soft p-4 sm:flex-row sm:items-center"
+          className="flex animate-rise flex-col gap-4 rounded-xl bg-accent-soft p-5 sm:flex-row sm:items-center sm:p-6"
         >
-          <div className="flex-1">
-            <h2 id="open-review" className="font-semibold">
+          <Mascot
+            pose="studying"
+            size={88}
+            className="hidden shrink-0 sm:block"
+          />
+          <div className="flex-1 space-y-1">
+            <h2 id="open-review" className="heading-section">
               {t.continueTitle}
             </h2>
             <p className="text-sm">{t.continueLead(openReview.count)}</p>
@@ -89,7 +94,7 @@ export default async function ReviewPage({
 
       {summary.total === 0 ? (
         <EmptyState
-          icon={Repeat}
+          mascot="all-clear"
           title={t.empty}
           description={t.emptyHint}
           action={
@@ -109,13 +114,22 @@ export default async function ReviewPage({
           {!openReview && (
             <section
               aria-labelledby="start-review"
-              className="flex flex-col gap-3 rounded-lg border bg-surface p-4 shadow-card"
+              className="relative isolate flex flex-col gap-3 overflow-hidden rounded-xl border border-primary/30 bg-primary-soft/60 p-5 sm:p-6 dark:border-primary/40"
             >
-              <h2 id="start-review" className="font-semibold text-lg">
+              <Mascot
+                pose="idea"
+                size={112}
+                className="-right-2 -top-1 absolute hidden opacity-95 sm:block"
+              />
+              <h2 id="start-review" className="heading-section sm:pr-28">
                 {t.startTitle}
               </h2>
-              <p className="text-muted-foreground text-sm">{t.startLead}</p>
-              <p className="text-sm">{t.available(summary.practicable)}</p>
+              <p className="text-muted-foreground text-sm sm:pr-28">
+                {t.startLead}
+              </p>
+              <p className="font-medium text-sm">
+                {t.available(summary.practicable)}
+              </p>
               {summary.matching > summary.practicable && (
                 <p className="text-muted-foreground text-sm">
                   {t.hiddenNote(summary.matching - summary.practicable)}
@@ -130,7 +144,7 @@ export default async function ReviewPage({
           )}
 
           <section aria-labelledby="mistakes" className="flex flex-col gap-3">
-            <h2 id="mistakes" className="font-semibold text-lg">
+            <h2 id="mistakes" className="heading-section">
               {t.listTitle}{" "}
               <span className="font-normal text-muted-foreground text-sm">
                 ({summary.matching})
@@ -140,7 +154,7 @@ export default async function ReviewPage({
               <MistakeList rows={list.rows} questionOf={questionOf} />
             ) : (
               <EmptyState
-                icon={SearchX}
+                mascot="telescope"
                 title={t.emptyFiltered}
                 action={
                   filtered && (

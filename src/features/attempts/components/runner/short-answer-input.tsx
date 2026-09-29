@@ -17,7 +17,7 @@ export function ShortAnswerInput({ index }: { index: number }) {
   const id = `short-${index}`;
   return (
     <div className="grid gap-1.5">
-      <label htmlFor={id} className="font-medium text-sm">
+      <label htmlFor={id} className="font-semibold text-sm">
         {t.shortLabel}
       </label>
       <Input
@@ -31,7 +31,7 @@ export function ShortAnswerInput({ index }: { index: number }) {
         aria-describedby={`${id}-hint`}
         value={text}
         onChange={(e) => setText(index, e.target.value)}
-        className="max-w-xs font-mono text-lg"
+        className="num h-14 max-w-sm font-display font-semibold text-xl"
       />
       <p id={`${id}-hint`} className="text-muted-foreground text-sm">
         {readAs !== "" && readAs !== text.trim()

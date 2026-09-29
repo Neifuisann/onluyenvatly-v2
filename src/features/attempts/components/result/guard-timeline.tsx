@@ -29,7 +29,7 @@ export function GuardTimeline({ events }: { events: readonly GuardEvent[] }) {
   return (
     <section
       aria-labelledby="guard-heading"
-      className="flex flex-col gap-3 rounded-lg border bg-surface p-4"
+      className="flex flex-col gap-3 rounded-lg border border-border/70 bg-surface p-5 shadow-card dark:border-border"
     >
       <div className="space-y-1">
         <h2 id="guard-heading" className="font-semibold">
@@ -58,7 +58,7 @@ export function GuardTimeline({ events }: { events: readonly GuardEvent[] }) {
                 <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-warning/25 text-foreground">
                   <Icon aria-hidden className="size-4" strokeWidth={1.75} />
                 </span>
-                <span className="w-14 shrink-0 font-mono text-sm tabular-nums">
+                <span className="w-14 shrink-0 num text-sm tabular-nums">
                   {formatClock(e.t)}
                 </span>
                 <span className="min-w-0 text-sm">{t.kinds[e.kind]}</span>

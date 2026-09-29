@@ -11,7 +11,7 @@ export function StudentAttempts({
   rows: readonly StudentAttemptRow[];
 }) {
   return (
-    <ol className="divide-y rounded-lg border bg-surface">
+    <ol className="divide-y rounded-lg border border-border/70 bg-surface shadow-card dark:border-border">
       {rows.map((a) => (
         <li key={a.id}>
           <Link
@@ -29,7 +29,7 @@ export function StudentAttempts({
                 {a.submittedAt && formatDateTime(a.submittedAt)}
               </p>
             </div>
-            <span className="font-mono font-semibold tabular-nums">
+            <span className="num font-semibold tabular-nums">
               <span className="sr-only">{t.score} </span>
               {formatScore(a.score10 ?? 0)}
             </span>

@@ -173,7 +173,7 @@ export function LessonTable({
       >
         {message?.text}
       </output>
-      <div className="overflow-hidden rounded-lg border bg-surface">
+      <div className="overflow-hidden rounded-lg border border-border/70 bg-surface shadow-card dark:border-border">
         <table className="w-full border-collapse text-sm">
           <thead className="bg-muted/60 text-left text-muted-foreground">
             <tr>

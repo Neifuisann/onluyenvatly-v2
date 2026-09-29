@@ -152,7 +152,7 @@ export function ContentTab({
               {images.status.text}
             </Alert>
           )}
-          <div className="h-[70dvh] overflow-hidden rounded-lg border bg-surface lg:h-[calc(100dvh-15rem)]">
+          <div className="h-[70dvh] overflow-hidden rounded-lg border border-border/70 bg-surface shadow-card dark:border-border lg:h-[calc(100dvh-15rem)]">
             <CodeEditor
               initialValue={initialText}
               onChange={onTextChange}
@@ -172,7 +172,7 @@ export function ContentTab({
         >
           <section
             aria-labelledby="editor-issues"
-            className="rounded-lg border bg-surface p-3"
+            className="rounded-lg border border-border/70 bg-surface shadow-card dark:border-border p-3"
           >
             <h2
               id="editor-issues"
@@ -236,7 +236,7 @@ export function ContentTab({
 
           <output
             aria-label={t.statsTypes}
-            className="sticky top-0 z-10 flex flex-wrap gap-x-4 gap-y-1 rounded-lg border bg-surface px-3 py-2 font-medium text-sm tabular-nums shadow-card"
+            className="sticky top-0 z-10 flex flex-wrap gap-x-4 gap-y-1 rounded-lg border border-border/70 bg-surface shadow-card dark:border-border px-3 py-2 font-medium text-sm tabular-nums"
           >
             <span>
               {t.stats(

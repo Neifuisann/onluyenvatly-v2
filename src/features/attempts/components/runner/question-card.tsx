@@ -32,35 +32,53 @@ export function QuestionCard({
       aria-labelledby={headingId}
       // Focus target when jumping here from the navigator.
       tabIndex={-1}
-      className="scroll-mt-28 space-y-4 rounded-lg border bg-surface p-4 shadow-card outline-none focus-visible:ring-2 focus-visible:ring-ring sm:p-5"
+      className={cn(
+        "scroll-mt-32 space-y-5 rounded-xl border border-border/70 bg-surface p-5 shadow-card outline-none transition-[border-color] focus-visible:ring-2 focus-visible:ring-ring sm:p-7 dark:border-border",
+        flagged && "border-accent/70 dark:border-accent/50",
+      )}
     >
-      <header className="flex items-start gap-2">
+      <header className="flex items-center gap-2">
+        {/* Reads as "Câu 3 · Đúng/Sai · 1đ" (`t.questionHeading`). */}
         <h2
           id={headingId}
-          className="flex-1 pt-2 font-medium text-muted-foreground text-sm"
+          className="flex flex-1 flex-wrap items-center gap-2 text-muted-foreground text-sm"
         >
-          {t.questionHeading(
-            index + 1,
-            questionTypeNames[question.type],
-            question.points,
-          )}
+          <span className="num rounded-full bg-ink px-3 py-1 font-bold font-display text-ink-foreground text-sm">
+            {t.questionLabel(index + 1)}
+          </span>
+          <span className="sr-only"> · </span>
+          <span className="font-medium">
+            {questionTypeNames[question.type]}
+          </span>
+          <span aria-hidden>·</span>
+          <span className="sr-only"> · </span>
+          <span className="num">{t.points(question.points)}</span>
           {flagged && <span className="sr-only">, {t.flagged}</span>}
         </h2>
-        {showFlag && (
+        {showFlag ? (
           <Button
             type="button"
             variant="ghost"
             size="sm"
             aria-pressed={flagged}
             onClick={() => toggleFlag(index)}
-            className={cn(flagged && "text-accent-foreground bg-accent")}
+            className={cn(
+              flagged && "bg-accent text-accent-foreground hover:bg-accent/90",
+            )}
           >
             <Flag aria-hidden className={cn(flagged && "fill-current")} />
             {flagged ? t.flagged : t.flag}
           </Button>
+        ) : (
+          flagged && (
+            <Flag
+              aria-hidden
+              className="size-5 fill-accent text-accent-foreground"
+            />
+          )
         )}
       </header>
-      <div className="text-stem">{question.stem}</div>
+      <div className="text-stem sm:text-[1.1875rem]">{question.stem}</div>
       {question.type === "mcq" && (
         <McqOptions index={index} options={question.options ?? []} />
       )}
