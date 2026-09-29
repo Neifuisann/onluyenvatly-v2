@@ -41,15 +41,15 @@ function Fact({
   value: string;
 }) {
   return (
-    <div className={cn(cardClass, "flex flex-col gap-3 p-4")}>
+    <li className={cn(cardClass, "flex flex-col gap-3 p-4")}>
       <Icon aria-hidden className="size-5 text-primary" strokeWidth={2} />
       <div>
-        <dt className="text-muted-foreground text-xs">{label}</dt>
-        <dd className="font-display font-semibold text-base leading-tight tracking-tight sm:text-lg">
+        <p className="text-muted-foreground text-xs">{label}</p>
+        <p className="font-display font-semibold text-base leading-tight tracking-tight sm:text-lg">
           {value}
-        </dd>
+        </p>
       </div>
-    </div>
+    </li>
   );
 }
 
@@ -119,7 +119,7 @@ export function LessonOverviewContent({
         )}
       </header>
 
-      <dl className="grid grid-cols-3 gap-3 lg:col-start-1">
+      <ul className="grid grid-cols-3 gap-3 lg:col-start-1">
         <Fact
           icon={ListChecks}
           label={t.questionsLabel}
@@ -139,7 +139,7 @@ export function LessonOverviewContent({
           label={t.mode}
           value={lesson.countsForRating ? t.modeRated : t.modePractice}
         />
-      </dl>
+      </ul>
 
       {/* Phones: start right after the facts; desktop: a sticky right column. */}
       <div className="lg:sticky lg:top-8 lg:col-start-2 lg:row-span-4 lg:row-start-1 lg:self-start">
@@ -175,9 +175,9 @@ export function LessonOverviewContent({
             })}
           </div>
         )}
-        <dl className="grid gap-3 sm:grid-cols-3">
+        <ul className="grid gap-3 sm:grid-cols-3">
           {TYPES.map((type) => (
-            <div
+            <li
               key={type}
               className="flex items-center gap-3 rounded-md bg-muted/70 p-3"
             >
@@ -185,13 +185,13 @@ export function LessonOverviewContent({
                 aria-hidden
                 className={cn("size-3 shrink-0 rounded-full", TYPE_FILL[type])}
               />
-              <dt className="flex-1 text-sm">{questionTypeLabels[type]}</dt>
-              <dd className="num font-display font-semibold text-lg">
+              <span className="flex-1 text-sm">{questionTypeLabels[type]}</span>
+              <span className="num font-display font-semibold text-lg">
                 {lesson.typeCounts[type] ?? 0}
-              </dd>
-            </div>
+              </span>
+            </li>
           ))}
-        </dl>
+        </ul>
       </section>
     </article>
   );
