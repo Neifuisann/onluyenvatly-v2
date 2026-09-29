@@ -4,8 +4,14 @@ import { refresh, updateTag } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { renderTex } from "@/components/math-text/render";
+import { HELPER_CALLS_PER_10_MIN } from "@/features/ai/domain/lesson-helpers";
+import {
+  generateDescription as generateDescriptionService,
+  suggestTags as suggestTagsService,
+} from "@/features/ai/lesson-helpers-service";
 import { requireAdmin } from "@/features/auth/guards";
 import { tags } from "@/lib/cache-tags";
+import { rateLimit } from "@/lib/rate-limit";
 import { err, ok, type Result } from "@/lib/result";
 import {
   createLesson as createLessonService,
@@ -253,4 +259,41 @@ export async function setCover(
     refresh();
   }
   return result;
+}
+
+const HelperSchema = z.strictObject({
+  title: z.string().trim().min(1).max(200),
+  grade: z.union([z.literal(10), z.literal(11), z.literal(12)]).nullable(),
+  chapter: z.string().trim().max(100).nullable(),
+  sourceText: SourceTextSchema,
+});
+
+/** 09 AI3/AI4: each one is a Gemini call, so admins get a few a minute. */
+async function helperLimit(userId: string) {
+  return rateLimit(`ai:helper:${userId}`, HELPER_CALLS_PER_10_MIN, "10m");
+}
+
+/**
+ * "Viết mô tả bằng AI" (S7-05): a description from the editor's current
+ * title and text. Nothing is saved; the form takes it and the teacher saves.
+ */
+export async function generateDescription(
+  input: unknown,
+): Promise<Result<{ description: string }>> {
+  const user = await requireAdmin();
+  const parsed = HelperSchema.safeParse(input);
+  if (!parsed.success) return err("VALIDATION");
+  if (!(await helperLimit(user.id)).ok) return err("RATE_LIMITED");
+  return generateDescriptionService(parsed.data);
+}
+
+/** "Gợi ý thẻ" (S7-05): tags for the form, preferring the catalog's own. */
+export async function suggestTags(
+  input: unknown,
+): Promise<Result<{ tags: string[] }>> {
+  const user = await requireAdmin();
+  const parsed = HelperSchema.safeParse(input);
+  if (!parsed.success) return err("VALIDATION");
+  if (!(await helperLimit(user.id)).ok) return err("RATE_LIMITED");
+  return suggestTagsService(parsed.data);
 }

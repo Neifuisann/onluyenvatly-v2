@@ -23,6 +23,18 @@ export const FAKE_EXPLANATION = [
   "- Mẹo: đừng nhầm với chu kì (giây).",
 ];
 
+/** Editor helpers (S7-05), recognised by their prompts. */
+export const FAKE_DESCRIPTION =
+  "Bài ôn tập chu kì và tần số của con lắc lò xo.";
+export const FAKE_TAGS = ["con lắc lò xo", "chu kì", "ôn tập"];
+
+/** The canned answer for a prompt, split into stream chunks. */
+function replyFor(prompt: string): string[] {
+  if (prompt.includes("Viết một đoạn mô tả ngắn")) return [FAKE_DESCRIPTION];
+  if (prompt.includes("thẻ ngắn")) return [FAKE_TAGS.join(", ")];
+  return FAKE_EXPLANATION;
+}
+
 type Call = { model: string; method: string; prompt: string };
 
 function main() {
@@ -69,12 +81,13 @@ function main() {
     const [, model = "", method = ""] = match;
     calls.push({ model, method, prompt });
 
+    const reply = replyFor(prompt);
     if (method === "generateContent")
-      return send(200, chunk(FAKE_EXPLANATION.join(""), true));
+      return send(200, chunk(reply.join(""), true));
     res.writeHead(200, { "content-type": "text/event-stream" });
-    for (const [i, text] of FAKE_EXPLANATION.entries()) {
+    for (const [i, text] of reply.entries()) {
       res.write(
-        `data: ${JSON.stringify(chunk(text, i === FAKE_EXPLANATION.length - 1))}\n\n`,
+        `data: ${JSON.stringify(chunk(text, i === reply.length - 1))}\n\n`,
       );
       await sleep(150);
     }

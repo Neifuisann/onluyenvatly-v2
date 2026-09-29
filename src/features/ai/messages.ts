@@ -94,3 +94,21 @@ export const adminExplanationsCopy = {
   errorTitle: "Không tải được trang giải thích AI",
   loading: "Đang tải giải thích AI",
 } as const;
+
+/** Editor helpers (S7-05): "Viết mô tả bằng AI", "Gợi ý thẻ". */
+export const lessonHelpersCopy = {
+  describe: "Viết mô tả bằng AI",
+  suggestTags: "Gợi ý thẻ",
+  working: "AI đang viết…",
+  described: "AI đã viết mô tả. Xem lại rồi bấm Lưu cài đặt.",
+  tagsAdded: (n: number) =>
+    n > 0
+      ? `Đã thêm ${n} thẻ gợi ý. Xem lại rồi bấm Lưu cài đặt.`
+      : "AI không gợi ý thêm thẻ nào mới.",
+  noQuestions: "Bài chưa có câu hỏi nào để AI đọc. Soạn nội dung trước.",
+  noTitle: "Nhập tên bài trước.",
+  quota:
+    "Hôm nay đã hết lượt AI (theo giới hạn trong Cài đặt). Thử lại vào ngày mai.",
+  unavailable: "AI đang bận hoặc chưa được cấu hình. Thử lại sau.",
+  incomplete: "AI trả lời chưa trọn vẹn. Thử lại.",
+} as const;
