@@ -22,6 +22,8 @@ const ADMIN_PAGES = [
   "/admin/settings",
   "/admin/results",
   "/admin/results?lesson=1&q=an&from=2026-01-01",
+  "/admin/explanations",
+  "/admin/explanations?lesson=1",
 ];
 /** A download: answers JSON, never a redirect (S6-04). */
 const EXPORT = "/admin/results/export?q=an";

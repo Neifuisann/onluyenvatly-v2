@@ -91,6 +91,46 @@ export const aiQuestions = (project: "d" | "m"): Question[] => [
   },
 ];
 
+/**
+ * S7-03 admin explanations: two questions for "Tạo sẵn cho cả bài" and one
+ * with the teacher's text. Per project, so each generates its own.
+ */
+export const aiAdminQuestions = (project: "d" | "m"): Question[] => [
+  {
+    id: "q_pre_1",
+    type: "mcq",
+    stem: `Biên độ dao động kí hiệu là (${project})`,
+    options: [{ text: "$A$" }, { text: "$T$" }],
+    answer: 0,
+  },
+  {
+    id: "q_pre_2",
+    type: "short",
+    stem: `Chu kì $T = 2$ s. Tần số bằng bao nhiêu Hz? (${project})`,
+    answer: "0.5",
+  },
+  {
+    id: "q_pre_teacher",
+    type: "mcq",
+    stem: "Đơn vị của biên độ là",
+    options: [{ text: "mét" }, { text: "giây" }],
+    answer: 0,
+    explanation: "Biên độ là độ dời lớn nhất, đo bằng mét.",
+  },
+];
+
+/**
+ * The 👎 queue (S7-03): one flagged explanation per project, inserted by
+ * the seed for the `e2e-ai-admin-*` lesson (the hashes match no question).
+ */
+export const flaggedExplanations = (["d", "m"] as const).map((p) => ({
+  legacyId: `e2e-ai-admin-${p}`,
+  questionHash: (p === "d" ? "d" : "e").repeat(64),
+  questionId: "q_flagged",
+  contentMd: `Lời giải bị đánh giá chưa tốt (${p}).`,
+  votesDown: 3,
+}));
+
 export type E2eLesson = NewLesson & { questions?: Question[] };
 
 export const e2eLessons: E2eLesson[] = [
@@ -265,6 +305,19 @@ export const e2eLessons: E2eLesson[] = [
       config: { ...DEFAULT_LESSON_CONFIG, countsForRating: false },
       status: "published",
       questions: aiQuestions(p),
+    }),
+  ),
+  // S7-03 admin explanations, one per project; unpublished content would
+  // hide it from the page, so published but off every student list.
+  ...(["d", "m"] as const).map(
+    (p): E2eLesson => ({
+      legacyId: `e2e-ai-admin-${p}`,
+      title: `E2E – Giải thích AI quản trị (${p})`,
+      tags: ["e2e-ai"],
+      sortOrder: 501,
+      config: { ...DEFAULT_LESSON_CONFIG, countsForRating: false },
+      status: "published",
+      questions: aiAdminQuestions(p),
     }),
   ),
   // S6-05 statistics: archived (off the catalog and every student page);

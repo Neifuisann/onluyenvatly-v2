@@ -24,6 +24,7 @@ export const E2E_SPEC_ADMINS = [
   "settings",
   "results",
   "stats",
+  "explanations",
 ] as const;
 export type E2eSpecAdmin = (typeof E2E_SPEC_ADMINS)[number];
 export const e2eSpecAdminUsername = (spec: E2eSpecAdmin, project: string) =>

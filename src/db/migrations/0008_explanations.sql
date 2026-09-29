@@ -25,8 +25,8 @@ CREATE TABLE "question_explanations" (
 );
 --> statement-breakpoint
 ALTER TABLE "question_explanations" ENABLE ROW LEVEL SECURITY;--> statement-breakpoint
-ALTER TABLE "explanation_votes" ADD CONSTRAINT "explanation_votes_question_hash_question_explanations_question_hash_fk" FOREIGN KEY ("question_hash") REFERENCES "public"."question_explanations"("question_hash") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "explanation_votes" ADD CONSTRAINT "explanation_votes_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "explanation_votes" ADD CONSTRAINT "explanation_votes_question_hash_fk" FOREIGN KEY ("question_hash") REFERENCES "public"."question_explanations"("question_hash") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "question_explanations" ADD CONSTRAINT "question_explanations_lesson_id_lessons_id_fk" FOREIGN KEY ("lesson_id") REFERENCES "public"."lessons"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "question_explanations" ADD CONSTRAINT "question_explanations_reviewed_by_users_id_fk" FOREIGN KEY ("reviewed_by") REFERENCES "public"."users"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
 CREATE INDEX "question_explanations_lesson_idx" ON "question_explanations" USING btree ("lesson_id");--> statement-breakpoint

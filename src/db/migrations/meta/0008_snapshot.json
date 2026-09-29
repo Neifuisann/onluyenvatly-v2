@@ -1,5 +1,5 @@
 {
-  "id": "38e0971d-b3fc-4cd4-b30d-62595550c982",
+  "id": "23a2a343-bfbd-4870-881b-de5a70f9ad6c",
   "prevId": "a380cd5f-f9d9-418c-a58c-772eb8abec97",
   "version": "7",
   "dialect": "postgresql",
@@ -507,21 +507,21 @@
       },
       "indexes": {},
       "foreignKeys": {
-        "explanation_votes_question_hash_question_explanations_question_hash_fk": {
-          "name": "explanation_votes_question_hash_question_explanations_question_hash_fk",
-          "tableFrom": "explanation_votes",
-          "tableTo": "question_explanations",
-          "columnsFrom": ["question_hash"],
-          "columnsTo": ["question_hash"],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
         "explanation_votes_user_id_users_id_fk": {
           "name": "explanation_votes_user_id_users_id_fk",
           "tableFrom": "explanation_votes",
           "tableTo": "users",
           "columnsFrom": ["user_id"],
           "columnsTo": ["id"],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "explanation_votes_question_hash_fk": {
+          "name": "explanation_votes_question_hash_fk",
+          "tableFrom": "explanation_votes",
+          "tableTo": "question_explanations",
+          "columnsFrom": ["question_hash"],
+          "columnsTo": ["question_hash"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }

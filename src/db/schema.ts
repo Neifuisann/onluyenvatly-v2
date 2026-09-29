@@ -15,6 +15,7 @@ import {
   boolean,
   check,
   date,
+  foreignKey,
   index,
   inet,
   integer,
@@ -539,18 +540,22 @@ export const questionExplanations = pgTable(
 export const explanationVotes = pgTable(
   "explanation_votes",
   {
-    questionHash: text("question_hash")
-      .notNull()
-      .references(() => questionExplanations.questionHash, {
-        onDelete: "cascade",
-      }),
+    questionHash: text("question_hash").notNull(),
     userId: uuid("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
     up: boolean("up").notNull(),
     createdAt: timestamptz("created_at").notNull().defaultNow(),
   },
-  (t) => [primaryKey({ columns: [t.questionHash, t.userId] })],
+  (t) => [
+    primaryKey({ columns: [t.questionHash, t.userId] }),
+    // Named here: the generated name is longer than Postgres allows (63).
+    foreignKey({
+      name: "explanation_votes_question_hash_fk",
+      columns: [t.questionHash],
+      foreignColumns: [questionExplanations.questionHash],
+    }).onDelete("cascade"),
+  ],
 ).enableRLS();
 
 export type User = typeof users.$inferSelect;

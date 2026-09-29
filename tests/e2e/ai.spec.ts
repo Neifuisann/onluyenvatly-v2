@@ -66,10 +66,8 @@ test("explain a question with AI, render it, vote, and never generate twice", as
     .click();
   await expect(page).toHaveURL(/\/result$/);
 
-  const [aiItem, teacherItem] = [
-    page.getByRole("article").nth(0),
-    page.getByRole("article").nth(1),
-  ];
+  const aiItem = page.getByRole("article", { name: /^Câu 1 ·/ });
+  const teacherItem = page.getByRole("article", { name: /^Câu 2 ·/ });
   // The teacher's explanation wins: no AI offered there.
   await expect(teacherItem).toContainText("Lời giải của giáo viên");
   await expect(
