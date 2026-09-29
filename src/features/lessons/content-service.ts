@@ -5,11 +5,16 @@ import { db } from "@/db/client";
 import { attempts, lessons, lessonVersions, mistakes } from "@/db/schema";
 import { writeAudit } from "@/lib/audit";
 import { err, ok, type Result } from "@/lib/result";
-import type { Actor } from "./admin-service";
+import { type Actor, insertLesson } from "./admin-service";
 import { checkPublishable, draftContent } from "./domain/content";
 import { summarizeLesson } from "./domain/summary";
 import { publishCopy } from "./messages";
-import { LessonConfigSchema, type Question, QuestionsSchema } from "./schema";
+import {
+  DEFAULT_LESSON_CONFIG,
+  LessonConfigSchema,
+  type Question,
+  QuestionsSchema,
+} from "./schema";
 
 /**
  * Lesson content versioning (S5-04, 04 `lesson_versions`):
@@ -109,6 +114,45 @@ async function previousQuestions(tx: Tx, lesson: LockedLesson) {
     return { draft, questions: draft.questions };
   const current = await readVersion(tx, lesson.currentVersionId);
   return { draft, questions: current?.questions ?? [] };
+}
+
+/**
+ * AI import (S7-04): a new draft lesson holding the imported text, in one
+ * transaction, so a failure leaves no empty lesson behind. Students see
+ * nothing until it is published.
+ */
+export async function createImportedLesson(
+  actor: Actor,
+  input: { title: string; sourceText: string },
+): Promise<{ id: number; questions: number; errors: number }> {
+  return db.transaction(async (tx) => {
+    const id = await insertLesson(tx, actor, input.title);
+    const content = draftContent(input.sourceText);
+    const versionId = await writeDraft(
+      tx,
+      actor,
+      id,
+      {
+        status: "draft",
+        config: DEFAULT_LESSON_CONFIG,
+        currentVersionId: null,
+        draftVersionId: null,
+      },
+      content,
+    );
+    const counts = {
+      questions: content.questions.length,
+      errors: content.errors,
+    };
+    await writeAudit(tx, {
+      actorId: actor.id,
+      action: "lesson.import",
+      targetType: "lesson",
+      targetId: id,
+      data: { versionId, ...counts },
+    });
+    return { id, ...counts };
+  });
 }
 
 export type SaveDraftResult = {

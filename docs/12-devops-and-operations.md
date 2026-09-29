@@ -57,6 +57,8 @@ Only daily jobs (a safe choice on Hobby):
 ```json
 { "crons": [{ "path": "/api/cron/daily", "schedule": "0 20 * * *" }] }
 ```
+As built (S7-04): the route exists and only removes AI import files older than 24 h so far; the rest below comes with S9-05. Owner steps for the import: create the **private** bucket `imports` in Supabase Storage (no public access, 10 MB file limit) and set `CRON_SECRET` in Vercel (Vercel sends it to the cron route).
+
 `/api/cron/daily` (03:00 VN): expire in-progress attempts past `deadline_at + 1h` (grade with the last saved answers), delete expired sessions and old `rate_limits` rows, prune unused lesson versions and 24-hour-old imports, trim `guard_events`/IPs older than 180 days, and run `select 1` so the Supabase project never counts as inactive.
 
 ## 5. Monitoring & alerting

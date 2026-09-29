@@ -3,9 +3,11 @@
 import { refresh } from "next/cache";
 import { z } from "zod";
 import { requireAdmin } from "@/features/auth/guards";
+import { createImportedLesson as createImportedLessonService } from "@/features/lessons/content-service";
+import { SourceTextSchema } from "@/features/lessons/domain/content";
 import { MAX_QUESTIONS, QuestionIdSchema } from "@/features/lessons/schema";
 import { rateLimit } from "@/lib/rate-limit";
-import { err, type Result } from "@/lib/result";
+import { err, ok, type Result } from "@/lib/result";
 import {
   approveExplanation as approveService,
   type PregenerateStep,
@@ -13,7 +15,13 @@ import {
   regenerateExplanation as regenerateService,
   updateExplanation as updateService,
 } from "./admin-service";
+import {
+  IMPORT_CONTENT_TYPES,
+  IMPORT_MAX_BYTES,
+  type ImportContentType,
+} from "./domain/import";
 import { ExplanationTextSchema, PREGEN_PER_MINUTE } from "./domain/pregenerate";
+import { createImportUpload as createImportUploadService } from "./import-service";
 import { ExplanationHashSchema } from "./schemas";
 
 /**
@@ -85,4 +93,44 @@ export async function regenerateExplanation(
   const result = await regenerateService(user, parsed.data);
   if (result.ok) refresh();
   return result;
+}
+
+const ImportUploadSchema = z.strictObject({
+  contentType: z.enum(
+    IMPORT_CONTENT_TYPES as [ImportContentType, ...ImportContentType[]],
+  ),
+  bytes: z.number().int().positive().max(IMPORT_MAX_BYTES),
+});
+
+/**
+ * AI import step 1 (S7-04): a signed upload URL in the private `imports`
+ * bucket; the browser PUTs the file there itself.
+ */
+export async function createImportUpload(
+  input: unknown,
+): Promise<Result<{ path: string; uploadUrl: string }>> {
+  const user = await requireAdmin();
+  const parsed = ImportUploadSchema.safeParse(input);
+  if (!parsed.success) return err("VALIDATION");
+  return createImportUploadService(user, parsed.data);
+}
+
+const ImportedLessonSchema = z.strictObject({
+  title: z.string().trim().min(1).max(200),
+  sourceText: SourceTextSchema.refine((s) => s.trim().length > 0),
+});
+
+/**
+ * AI import step 3 (S7-04): the text the teacher accepted becomes a new
+ * draft (audit `lesson.import`); the browser then opens the editor.
+ */
+export async function createImportedLesson(
+  input: unknown,
+): Promise<Result<{ id: number; questions: number; errors: number }>> {
+  const user = await requireAdmin();
+  const parsed = ImportedLessonSchema.safeParse(input);
+  if (!parsed.success) return err("VALIDATION");
+  // A draft is invisible to students: no shared tag changes (the admin
+  // list is read per request).
+  return ok(await createImportedLessonService(user, parsed.data));
 }

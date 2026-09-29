@@ -307,7 +307,7 @@ Implemented in `src/features/grading/domain/` (`grade.ts`, `points.ts`, `short-a
 - `score10 = round2(score / max_score × 10)`.
 
 ## 5. Row-level security
-RLS is **enabled on every table with no policies**. The app connects with a role that has `BYPASSRLS` or table grants, via the pooler. This blocks the public PostgREST API (anon key) from reading anything. Storage bucket `media` is public-read, and writes only happen through signed URLs.
+RLS is **enabled on every table with no policies**. The app connects with a role that has `BYPASSRLS` or table grants, via the pooler. This blocks the public PostgREST API (anon key) from reading anything. Storage bucket `media` is public-read, and writes only happen through signed URLs (and, since S7-04, the server storing a DOCX's images with the service key). Bucket `imports` (S7-04) is **private**: exam files for the AI import, uploaded through signed URLs, read back only by `POST /api/ai/import` with the service key, and deleted after 24 h by the daily cron.
 
 ## 6. Size budget (Supabase Free = 500 MB)
 | Table | Row size (approx.) | Rows after 1 year | Size |

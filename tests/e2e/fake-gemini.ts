@@ -28,14 +28,33 @@ export const FAKE_DESCRIPTION =
   "Bài ôn tập chu kì và tần số của con lắc lò xo.";
 export const FAKE_TAGS = ["con lắc lò xo", "chu kì", "ôn tập"];
 
+/**
+ * AI import (S7-04): three questions in the text format, streamed in
+ * pieces; the last mcq has no `*` (the source had no key), so the editor
+ * must flag it, and one figure is left as `[Hình]`.
+ */
+export const FAKE_IMPORT = [
+  "```\nCâu 1: Đơn vị của chu kì dao động là\nA. Héc\n*B. Giây\n",
+  "C. Mét\nD. Niutơn\n\nCâu 2: Cho con lắc lò xo.\n*a) Chu kì phụ thuộc khối lượng.\n",
+  "b) Chu kì phụ thuộc biên độ.\n\nCâu 3: Quan sát đồ thị. Tần số là\n[Hình]\n",
+  "A. 1 Hz\nB. 2 Hz\nC. 3 Hz\nD. 4 Hz\n```",
+];
+
 /** The canned answer for a prompt, split into stream chunks. */
 function replyFor(prompt: string): string[] {
+  if (prompt.includes("Chuyển đề sau sang định dạng")) return FAKE_IMPORT;
   if (prompt.includes("Viết một đoạn mô tả ngắn")) return [FAKE_DESCRIPTION];
   if (prompt.includes("thẻ ngắn")) return [FAKE_TAGS.join(", ")];
   return FAKE_EXPLANATION;
 }
 
-type Call = { model: string; method: string; prompt: string };
+type Call = {
+  model: string;
+  method: string;
+  prompt: string;
+  /** MIME types of inline files (AI import of a PDF or an image). */
+  files: string[];
+};
 
 function main() {
   const calls: Call[] = [];
@@ -72,14 +91,19 @@ function main() {
     if (req.headers["x-goog-api-key"] !== FAKE_GEMINI_KEY)
       return send(403, { error: { code: 403, message: "bad key" } });
     const body = JSON.parse(Buffer.concat(parts).toString() || "{}") as {
-      contents?: { parts?: { text?: string }[] }[];
+      contents?: {
+        parts?: { text?: string; inlineData?: { mimeType?: string } }[];
+      }[];
     };
     const prompt = (body.contents ?? [])
       .flatMap((c) => c.parts ?? [])
       .map((p) => p.text ?? "")
       .join("\n");
     const [, model = "", method = ""] = match;
-    calls.push({ model, method, prompt });
+    const files = (body.contents ?? [])
+      .flatMap((c) => c.parts ?? [])
+      .flatMap((p) => (p.inlineData?.mimeType ? [p.inlineData.mimeType] : []));
+    calls.push({ model, method, prompt, files });
 
     const reply = replyFor(prompt);
     if (method === "generateContent")

@@ -24,10 +24,19 @@ const ADMIN_PAGES = [
   "/admin/results?lesson=1&q=an&from=2026-01-01",
   "/admin/explanations",
   "/admin/explanations?lesson=1",
+  "/admin/import",
 ];
 /** A download: answers JSON, never a redirect (S6-04). */
 const EXPORT = "/admin/results/export?q=an";
-const STUDENT_PAGES = ["/dashboard", "/lessons", "/leaderboard", "/profile"];
+const STUDENT_PAGES = [
+  "/dashboard",
+  "/lessons",
+  "/review",
+  "/leaderboard",
+  "/profile",
+];
+/** AI import (S7-04): a same-origin POST, so only the session decides. */
+const IMPORT_BODY = { path: `2026/10/${UUID}.pdf` };
 
 test.beforeEach(async ({ page }) => {
   await page.setExtraHTTPHeaders({
@@ -45,6 +54,20 @@ test.describe("a visitor", () => {
       );
     });
   }
+
+  test("gets 401 from the AI import and the daily cron", async ({
+    request,
+    baseURL,
+  }) => {
+    const res = await request.post("/api/ai/import", {
+      headers: { origin: baseURL ?? "" },
+      data: IMPORT_BODY,
+    });
+    expect(res.status()).toBe(401);
+    // 503 where CRON_SECRET is unset (CI), 401 otherwise; never the job.
+    const cron = await request.get("/api/cron/daily");
+    expect([401, 503]).toContain(cron.status());
+  });
 
   test("gets 401 JSON from the results export", async ({ request }) => {
     const res = await request.get(EXPORT, { maxRedirects: 0 });
@@ -95,6 +118,15 @@ test.describe("a student", () => {
     const res = await page.request.get(EXPORT, { maxRedirects: 0 });
     expect(res.status()).toBe(403);
     expect(res.headers()["cache-control"]).toContain("no-store");
+    expect(await res.json()).toMatchObject({ ok: false, code: "FORBIDDEN" });
+  });
+
+  test("gets 403 from the AI import", async ({ page, baseURL }) => {
+    const res = await page.request.post("/api/ai/import", {
+      headers: { origin: baseURL ?? "" },
+      data: IMPORT_BODY,
+    });
+    expect(res.status()).toBe(403);
     expect(await res.json()).toMatchObject({ ok: false, code: "FORBIDDEN" });
   });
 

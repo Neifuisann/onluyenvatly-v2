@@ -12,7 +12,7 @@
  */
 import { randomBytes } from "node:crypto";
 import { parseArgs } from "node:util";
-import { and, eq, inArray, like, ne, or } from "drizzle-orm";
+import { and, eq, inArray, isNull, like, ne, or } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
 import * as schema from "../src/db/schema.ts";
@@ -33,6 +33,7 @@ import {
   e2eLessons,
   e2eQuestions,
   flaggedExplanations,
+  IMPORTED_TITLE_PREFIX,
 } from "../tests/e2e/fixtures/lessons.ts";
 import { e2eResultAttempts } from "../tests/e2e/fixtures/results.ts";
 import {
@@ -292,6 +293,15 @@ async function main() {
   // or mistakes (S7-06: they also pin the versions deleted below).
   await db.delete(schema.mistakes);
   await db.delete(schema.attempts);
+  // Drafts the AI import spec created (S7-04).
+  await db
+    .delete(schema.lessons)
+    .where(
+      and(
+        isNull(schema.lessons.legacyId),
+        like(schema.lessons.title, `${IMPORTED_TITLE_PREFIX}%`),
+      ),
+    );
   await seedResults();
   // Versions a publish spec added (S5-04); the fixture is version 1.
   await db

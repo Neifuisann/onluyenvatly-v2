@@ -91,6 +91,9 @@ export const aiQuestions = (project: "d" | "m"): Question[] => [
   },
 ];
 
+/** Title prefix of the drafts the AI import spec creates; the seed removes them. */
+export const IMPORTED_TITLE_PREFIX = "E2E – Nhập đề";
+
 /**
  * S7-06 review journey: three mcq questions whose right option says so, so
  * the spec can pick it however the practice set shuffles the options.
