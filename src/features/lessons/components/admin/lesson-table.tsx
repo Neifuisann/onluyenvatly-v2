@@ -28,7 +28,7 @@ import {
   restore,
 } from "../../admin-actions";
 import { moveItem } from "../../domain/admin-list";
-import { adminLessonsCopy as t } from "../../messages";
+import { statsCopy, adminLessonsCopy as t } from "../../messages";
 
 export type LessonTableRow = {
   id: number;
@@ -255,6 +255,15 @@ export function LessonTable({
                       .filter(Boolean)
                       .join(" · ")}
                     <span className="md:hidden"> · {row.updated}</span>
+                    {" · "}
+                    <Link
+                      href={`/admin/lessons/${row.id}/stats`}
+                      prefetch={false}
+                      aria-label={statsCopy.linkFor(row.title)}
+                      className="font-medium text-primary hover:underline"
+                    >
+                      {statsCopy.link}
+                    </Link>
                   </p>
                 </td>
                 <td className="hidden whitespace-nowrap px-3 py-3 text-muted-foreground md:table-cell">

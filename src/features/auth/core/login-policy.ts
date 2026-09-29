@@ -54,3 +54,21 @@ export function landingPath(role: Role, next: string | null): string {
     return homePath(role);
   return next;
 }
+
+export const CHANGE_PASSWORD_PATH = "/change-password";
+
+/**
+ * Where a login lands: the change-password page first while an admin reset
+ * the password (carrying the real destination along), else `landingPath`.
+ */
+export function postLoginPath(
+  role: Role,
+  mustChangePassword: boolean,
+  next: string | null,
+): string {
+  const landing = landingPath(role, next);
+  if (!mustChangePassword) return landing;
+  return landing === homePath(role)
+    ? CHANGE_PASSWORD_PATH
+    : `${CHANGE_PASSWORD_PATH}?next=${encodeURIComponent(landing)}`;
+}

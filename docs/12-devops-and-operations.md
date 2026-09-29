@@ -88,7 +88,7 @@ Set `ai_enabled = false` in `/admin/settings` if errors are noisy. Cached explan
 Vercel → Deployments → previous → Instant Rollback. Then revert the PR on `main`.
 
 ### Student can't log in
-Check `/admin/students/[id]`: status (pending?), device binding (reset device), sessions (revoke), reset password (temp password is shown once; send it via Zalo).
+Check `/admin/students/[id]`: status (pending? disabled?), sessions (revoke), reset password (temp password is shown once; send it via Zalo).
 
 ### Restore from backup
 1. Download the latest `.sql.age` from R2 and decrypt it with the owner's `age` key (the key is kept offline and in a password manager).

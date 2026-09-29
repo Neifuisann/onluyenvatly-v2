@@ -4,6 +4,7 @@ import {
   isValidUsername,
   landingPath,
   parseIdentifier,
+  postLoginPath,
   statusError,
 } from "./login-policy";
 
@@ -73,5 +74,23 @@ describe("landingPath", () => {
     expect(landingPath("student", "/admin")).toBe("/dashboard");
     expect(landingPath("student", "/admin/settings")).toBe("/dashboard");
     expect(landingPath("student", "/administrator")).toBe("/administrator");
+  });
+});
+
+describe("postLoginPath", () => {
+  it("is the landing path when nothing must change", () => {
+    expect(postLoginPath("student", false, null)).toBe("/dashboard");
+    expect(postLoginPath("admin", false, "/admin/students")).toBe(
+      "/admin/students",
+    );
+  });
+
+  it("goes to change-password first after an admin reset", () => {
+    expect(postLoginPath("student", true, null)).toBe("/change-password");
+    expect(postLoginPath("student", true, "/lessons/3?tab=1")).toBe(
+      "/change-password?next=%2Flessons%2F3%3Ftab%3D1",
+    );
+    // A student's /admin target is already replaced by the landing rule.
+    expect(postLoginPath("student", true, "/admin")).toBe("/change-password");
   });
 });

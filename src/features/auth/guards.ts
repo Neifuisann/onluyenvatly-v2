@@ -1,6 +1,6 @@
 import "server-only";
 import { redirect } from "next/navigation";
-import { homePath } from "./core/login-policy";
+import { CHANGE_PASSWORD_PATH, homePath } from "./core/login-policy";
 import { getCurrentUser } from "./queries";
 import type { SessionUser } from "./session";
 
@@ -9,9 +9,24 @@ import type { SessionUser } from "./session";
  * protected layout calls one of these first. `proxy.ts` is not a boundary.
  */
 
-export async function requireUser(): Promise<SessionUser> {
+/**
+ * The signed-in user, without the must-change-password redirect. Only the
+ * change-password page and its action use this; every other page and action
+ * goes through `requireUser()`.
+ */
+export async function requireSessionUser(): Promise<SessionUser> {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
+  return user;
+}
+
+/**
+ * While an admin reset the password (`must_change_password`), nothing but
+ * the change-password page, logout and the change itself is reachable (06 §1).
+ */
+export async function requireUser(): Promise<SessionUser> {
+  const user = await requireSessionUser();
+  if (user.mustChangePassword) redirect(CHANGE_PASSWORD_PATH);
   return user;
 }
 

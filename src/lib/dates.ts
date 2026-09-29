@@ -45,3 +45,9 @@ const dayKey = new Intl.DateTimeFormat("en-CA", {
 export function vnDateKey(date: Date): string {
   return dayKey.format(date);
 }
+
+/** A `YYYY-MM-DD` date column as `28/09/2026` (no time zone involved). */
+export function formatDateOnly(value: string): string {
+  const [y, m, d] = value.split("-");
+  return y && m && d ? `${d}/${m}/${y}` : value;
+}

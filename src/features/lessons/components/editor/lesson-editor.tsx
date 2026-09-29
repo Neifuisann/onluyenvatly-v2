@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, ChartColumn } from "lucide-react";
 import Link from "next/link";
 import {
   type KeyboardEvent,
@@ -25,6 +25,7 @@ import { countByType } from "../../domain/summary";
 import {
   adminLessonsCopy,
   settingsCopy,
+  statsCopy,
   editorCopy as t,
 } from "../../messages";
 import type { LessonConfig, Question } from "../../schema";
@@ -209,35 +210,46 @@ export function LessonEditor({ lesson }: { lesson: EditorLesson }) {
         />
       </header>
 
-      <div
-        role="tablist"
-        aria-label={t.tabsLabel}
-        className="flex gap-1 border-b"
-      >
-        {TABS.map((id) => (
-          <button
-            key={id}
-            ref={(el) => {
-              if (el) tabRefs.current.set(id, el);
-            }}
-            type="button"
-            role="tab"
-            id={`tab-${id}`}
-            aria-selected={tab === id}
-            aria-controls={`panel-${id}`}
-            tabIndex={tab === id ? 0 : -1}
-            onClick={() => setTab(id)}
-            onKeyDown={onTabKey}
-            className={cn(
-              "-mb-px border-b-2 px-4 py-2 font-medium text-sm",
-              tab === id
-                ? "border-primary text-primary"
-                : "border-transparent text-muted-foreground hover:text-foreground",
-            )}
-          >
-            {t.tabs[id]}
-          </button>
-        ))}
+      <div className="flex items-end justify-between gap-2 border-b">
+        <div
+          role="tablist"
+          aria-label={t.tabsLabel}
+          className="flex gap-1 overflow-x-auto"
+        >
+          {TABS.map((id) => (
+            <button
+              key={id}
+              ref={(el) => {
+                if (el) tabRefs.current.set(id, el);
+              }}
+              type="button"
+              role="tab"
+              id={`tab-${id}`}
+              aria-selected={tab === id}
+              aria-controls={`panel-${id}`}
+              tabIndex={tab === id ? 0 : -1}
+              onClick={() => setTab(id)}
+              onKeyDown={onTabKey}
+              className={cn(
+                "-mb-px border-b-2 px-4 py-2 font-medium text-sm",
+                tab === id
+                  ? "border-primary text-primary"
+                  : "border-transparent text-muted-foreground hover:text-foreground",
+              )}
+            >
+              {t.tabs[id]}
+            </button>
+          ))}
+        </div>
+        {/* A page of its own, not a tab. A plain link, so leaving with unsaved
+          work still triggers the browser's "leave page?" prompt. */}
+        <a
+          href={`/admin/lessons/${lesson.id}/stats`}
+          className="mb-1 flex min-h-9 shrink-0 items-center gap-1.5 rounded-md px-3 font-medium text-muted-foreground text-sm hover:bg-muted hover:text-foreground"
+        >
+          <ChartColumn aria-hidden className="size-4" />
+          {statsCopy.link}
+        </a>
       </div>
       {/* Content and settings stay mounted so the editor keeps its undo history. */}
       <TexProvider texts={texts}>

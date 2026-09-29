@@ -4,7 +4,12 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import { Skeleton } from "@/components/ui/skeleton";
 import { shellCopy } from "@/lib/messages";
 import { cn } from "@/lib/utils";
-import { MobileNav, type ShellVariant, SidebarNav } from "./nav";
+import {
+  MobileNav,
+  type NavBadges,
+  type ShellVariant,
+  SidebarNav,
+} from "./nav";
 import { type ShellUser, UserMenu } from "./user-menu";
 
 /**
@@ -15,11 +20,14 @@ export function AppShell({
   user,
   variant,
   announcement,
+  badges,
   children,
 }: {
   user: ShellUser;
   variant: ShellVariant;
   announcement?: string | null;
+  /** Counts next to nav items, keyed by `href`. */
+  badges?: NavBadges | undefined;
   children: React.ReactNode;
 }) {
   const home = variant === "admin" ? "/admin" : "/dashboard";
@@ -38,7 +46,7 @@ export function AppShell({
           <Logo href={home} />
         </div>
         <nav aria-label={navLabel} className="flex-1 overflow-y-auto px-3 py-2">
-          <SidebarNav variant={variant} />
+          <SidebarNav variant={variant} badges={badges} />
         </nav>
         <div className="flex items-center gap-1 border-t p-3">
           <div className="min-w-0 flex-1">
@@ -59,7 +67,7 @@ export function AppShell({
           </div>
           {variant === "admin" && (
             <nav aria-label={navLabel}>
-              <MobileNav variant="admin" />
+              <MobileNav variant="admin" badges={badges} />
             </nav>
           )}
         </header>

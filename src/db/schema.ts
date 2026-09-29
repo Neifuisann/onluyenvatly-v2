@@ -352,6 +352,11 @@ export const attempts = pgTable(
     index("attempts_lesson_submitted_idx")
       .on(t.lessonId, t.submittedAt.desc())
       .where(sql`${t.status} = 'submitted'`),
+    // Newest submitted attempts first: `/admin/results`, its CSV export and
+    // the admin dashboard (S6-04, migration 0007).
+    index("attempts_submitted_idx")
+      .on(t.submittedAt.desc())
+      .where(sql`${t.status} = 'submitted'`),
     index("attempts_expiry_idx")
       .on(t.status, t.deadlineAt)
       .where(sql`${t.status} = 'in_progress'`),

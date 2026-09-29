@@ -45,7 +45,7 @@ flowchart TD
 ### Passwords
 - New passwords: at least 8 characters, not all digits, not the phone number. Checked with Zod on client and server.
 - Hash: bcryptjs cost 10 (≈ 60–120 ms on a Vercel function). Login rate limits keep the CPU cost bounded (see 08).
-- Admin reset: generates a 10-character temporary password and sets `must_change_password = true`. The student has to change it on next login.
+- Admin reset: generates a 10-character temporary password and sets `must_change_password = true`. The student has to change it on next login. As built (S6-02): the reset also deletes every session of the student and shows the password to the teacher once (never stored in clear, logged or audited). While the flag is set, login sends the user to `/change-password` (carrying `?next=`), and `requireUser()` (so also `requireStudent()` and `requireAdmin()`) redirects there from every page and action. Only the change page and `changePassword`, which use `requireSessionUser()`, plus `logout`, are exempt. `changePassword` needs the current (temporary) password, is rate limited (5 per 10 minutes per user), applies the policy, clears the flag and revokes the other sessions. A unit test (`auth/authz.test.ts`) calls every export of every `features/*/admin-actions.ts` (and the media actions) as a student, a visitor and an admin who must change the password: each redirects (`/dashboard`, `/login`, `/change-password`) before reading input, writes nothing and invalidates no tag.
 
 ## 2. Authorization matrix
 
@@ -59,6 +59,7 @@ flowchart TD
 | Leaderboard | ❌ | ❌ | ✅ (phone never shown) | ✅ |
 | Other student's profile | ❌ | ❌ | ✅ name/tier/rating only, if not private | ✅ full |
 | Admin pages & actions | ❌ | ❌ | ❌ | ✅ |
+| Results CSV export (`GET /admin/results/export`) | 401 JSON | 403 JSON | 403 JSON | ✅ (not while the password must be changed: 403) |
 
 Implemented as helpers in `src/features/auth/guards.ts`: `requireUser()`, `requireStudent()`, `requireAdmin()`, `assertOwnsAttempt(attempt, user)`. **Every** server action and route handler calls one of them on its first line. A unit test lists all exported actions and checks that each one is wrapped (see 11).
 
@@ -70,7 +71,7 @@ Implemented as helpers in `src/features/auth/guards.ts`: `requireUser()`, `requi
 | Submitting after the time limit | `deadline_at + 30 s` checked on the server; late submissions graded from the last save |
 | Restarting to get easier pool questions | One `in_progress` attempt per lesson (unique index); `maxAttempts`; each start is logged |
 | Sharing answers between students | Per-attempt question and option shuffle (seeded); pool selection; stats page can spot identical answer patterns (P2) |
-| Switching tabs to search | Exam guard (lesson `examGuard`) records blur/visibility/fullscreen-exit events and blocked copy/cut/context-menu attempts with timestamps; the runner tells the student it is on. Events append only (a forged save can't erase them), shown to the admin on the result page (JSON until S6-04), never auto-penalized. A blocked-by-JS guard is advisory: a student can disable it, which is why nothing is scored from it |
+| Switching tabs to search | Exam guard (lesson `examGuard`) records blur/visibility/fullscreen-exit events and blocked copy/cut/context-menu attempts with timestamps; the runner tells the student it is on. Events append only (a forged save can't erase them), shown to the admin on the result page as a timeline (S6-04: mm:ss since the start, what happened, an icon), never auto-penalized. A blocked-by-JS guard is advisory: a student can disable it, which is why nothing is scored from it |
 | Copying questions | In test mode only: disable selection/copy/context menu. This is a deterrent, not a guarantee, and it's not applied anywhere else |
 | Account sharing | Device policy + single session (optional) |
 
@@ -100,6 +101,7 @@ Implemented as helpers in `src/features/auth/guards.ts`: `requireUser()`, `requi
 - Data held: full name, phone, DOB, class, attempt history, IP of sessions and attempts.
 - Public surfaces show the name (optionally initials only, per privacy setting), tier and rating. Never phone or DOB.
 - `exportMyData` returns JSON with the profile, attempts and rating history.
+- The admin results CSV (S6-04) holds name, class, grade, lesson, scores, time taken, submission time and the guard-event count: **never the phone or date of birth**. Every text cell that a spreadsheet would run as a formula (starting with `=`, `+`, `-`, `@`, a tab or a carriage return) is prefixed with `'` (CSV/formula injection: a student could name themself `=HYPERLINK(…)`), and the response is `Cache-Control: private, no-store`.
 - A deletion request creates an admin task. On approval, the user row is deleted (cascade) and an audit entry keeps the action but no personal data.
 - IP addresses are dropped from sessions on expiry and from attempts after 180 days.
 

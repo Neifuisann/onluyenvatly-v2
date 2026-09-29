@@ -3,8 +3,14 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { db } from "@/db/client";
 import { sessions, settings, users } from "@/db/schema";
 import { resetDb, type TestDb } from "@/test/db";
-import { hashPassword } from "./core/password";
-import { AUTH_LIMITS, loginWithPassword, registerStudent } from "./service";
+import { hashPassword, verifyPassword } from "./core/password";
+import {
+  AUTH_LIMITS,
+  changeOwnPassword,
+  loginWithPassword,
+  registerStudent,
+} from "./service";
+import { createSession } from "./session";
 
 vi.mock("@/db/client", async () => (await import("@/test/db")).mockDbModule());
 // `"use cache"` is a no-op outside Next; stub the tag helpers.
@@ -118,6 +124,118 @@ describe("loginWithPassword", () => {
     await tdb.update(settings).set({ singleSession: false });
     await login();
     expect(await tdb.select().from(sessions)).toHaveLength(2);
+  });
+});
+
+describe("must_change_password", () => {
+  it("is reported by login so the caller can redirect", async () => {
+    await addUser({ phone: "0912345678", mustChangePassword: true });
+    await addUser({ phone: "0987654321" });
+    expect(
+      await loginWithPassword(
+        { identifier: "0912345678", password: PASSWORD },
+        meta,
+      ),
+    ).toMatchObject({ ok: true, data: { mustChangePassword: true } });
+    expect(
+      await loginWithPassword(
+        { identifier: "0987654321", password: PASSWORD },
+        meta,
+      ),
+    ).toMatchObject({ ok: true, data: { mustChangePassword: false } });
+  });
+});
+
+describe("changeOwnPassword", () => {
+  const NEW_PASSWORD = "moi-mat-khau-9";
+
+  async function setup() {
+    const id = await addUser({
+      phone: "0912345678",
+      mustChangePassword: true,
+    });
+    const keep = await createSession(id, meta);
+    const drop = await createSession(id, meta);
+    return { id, keep: keep.sessionId, drop: drop.sessionId };
+  }
+
+  it("checks the current password, sets the new one, clears the flag, keeps only this session", async () => {
+    const { id, keep } = await setup();
+    const other = await addUser({ phone: "0999999999" });
+    await createSession(other, meta);
+
+    const result = await changeOwnPassword(
+      { id, sessionId: keep },
+      { current: PASSWORD, password: NEW_PASSWORD },
+    );
+    expect(result).toEqual({ ok: true, data: null });
+
+    const [row] = await tdb.select().from(users).where(eq(users.id, id));
+    expect(row?.mustChangePassword).toBe(false);
+    expect(await verifyPassword(NEW_PASSWORD, row?.passwordHash)).toBe(true);
+    expect(await verifyPassword(PASSWORD, row?.passwordHash)).toBe(false);
+    const left = await tdb.select().from(sessions);
+    expect(left.map((x) => x.userId).sort()).toEqual([id, other].sort());
+    expect(left.find((x) => x.userId === id)?.id).toBe(keep);
+  });
+
+  it("refuses a wrong current password without changing anything", async () => {
+    const { id, keep } = await setup();
+    const result = await changeOwnPassword(
+      { id, sessionId: keep },
+      { current: "not-my-password", password: NEW_PASSWORD },
+    );
+    expect(result).toMatchObject({
+      ok: false,
+      code: "VALIDATION",
+      fieldErrors: { current: expect.any(String) },
+    });
+    const [row] = await tdb.select().from(users).where(eq(users.id, id));
+    expect(row?.mustChangePassword).toBe(true);
+    expect(await tdb.select().from(sessions)).toHaveLength(2);
+  });
+
+  it("refuses the same password, the phone number and policy breaches", async () => {
+    const { id, keep } = await setup();
+    const change = (password: string) =>
+      changeOwnPassword(
+        { id, sessionId: keep },
+        { current: PASSWORD, password },
+      );
+    for (const password of [PASSWORD, "x0912345678y", "12345678", "short"])
+      expect(await change(password)).toMatchObject({
+        ok: false,
+        code: "VALIDATION",
+        fieldErrors: { password: expect.any(String) },
+      });
+    const [row] = await tdb.select().from(users).where(eq(users.id, id));
+    expect(row?.mustChangePassword).toBe(true);
+  });
+
+  it("limits guesses of the current password", async () => {
+    const { id, keep } = await setup();
+    const now = new Date("2026-10-12T08:00:05Z");
+    const [limit] = AUTH_LIMITS.changePasswordPerUser;
+    const codes = [];
+    for (let i = 0; i <= limit; i++) {
+      const r = await changeOwnPassword(
+        { id, sessionId: keep },
+        { current: "wrong-guess-1", password: NEW_PASSWORD },
+        now,
+      );
+      codes.push(r.ok ? "OK" : r.code);
+    }
+    expect(codes.slice(0, limit)).toEqual(Array(limit).fill("VALIDATION"));
+    expect(codes.at(-1)).toBe("RATE_LIMITED");
+  });
+
+  it("has no user to change for a deleted account", async () => {
+    expect(
+      await changeOwnPassword(
+        { id: "00000000-0000-4000-8000-000000000000", sessionId: "x" },
+        { current: PASSWORD, password: NEW_PASSWORD },
+      ),
+    ).toMatchObject({ ok: false, code: "NOT_FOUND" });
   });
 });
 

@@ -64,8 +64,10 @@ Index `(user_id)`, `(expires_at)`. The daily cron deletes expired rows.
 | single_session | boolean | true |
 | ai_enabled | boolean | true |
 | ai_daily_budget | int | 200 |
-| announcement | text null | Banner on the dashboard |
+| announcement | text null | Banner at the top of every student page (plain text, ≤ 300 characters) |
 | updated_at, updated_by | | |
+
+Edited on `/admin/settings` (S6-03, `updateSettings`): only the keys whose value changes are written, with `updated_by`, and audited as `settings.update` `{ changed: [keys] }` (never the values). There is no `device_policy` (no device binding) and no rating-formula column (v2 only): owner decisions 01 §7.
 
 ### `lessons`
 | Column | Type | Notes |
@@ -141,6 +143,7 @@ Indexes:
 - `(user_id, submitted_at DESC)` for history.
 - `(lesson_id, submitted_at DESC) WHERE status='submitted'` for lesson stats.
 - `(status, deadline_at) WHERE status='in_progress'` for the expiry sweep.
+- `(submitted_at DESC NULLS LAST) WHERE status='submitted'` (`attempts_submitted_idx`, migration `0007`, S6-04): the newest submitted attempts of every student, for `/admin/results`, its CSV export and the admin dashboard. The results query orders by `submitted_at DESC NULLS LAST, id DESC`, so the index gives the order and an incremental sort only breaks ties.
 
 ### `ratings`
 `user_id` uuid PK FK, `rating` int default 1500, `peak` int, `rated_attempts` int, `updated_at`. Index `(rating DESC)`.
@@ -150,8 +153,10 @@ Indexes:
 
 v2 computes the delta from `performance` and `time_bonus` rounded to 3 decimals, exactly as stored, so replaying a student's events (delete attempt, 05) reproduces every delta. `ratings` rows are created at 1500 on the first rated submit and locked `FOR UPDATE` in the submit transaction, so two tests submitted at once both count, one after the other.
 
+As built (S6-04, `deleteAttempt`): deleting an attempt locks it, then the student's `ratings` row (the submit order), deletes it (its event cascades) and replays the student's other events in `created_at, id` order with `replayWithout` (`rating/domain/rating.ts`), starting from the `before` of the student's first event (1500 for v2 students; the v1 starting point for migrated history). Events whose `before/delta/after` change are rewritten in one `UPDATE … FROM (VALUES …)`; `v1-legacy` rows keep their stored delta but move with the chain. The `ratings` row takes the replayed rating, peak (recomputed from the events) and count, and is deleted when no event remains. A submitted attempt also leaves `lessons.attempt_count` (never below 0). **Mistakes are left untouched:** the bank keeps what the student got wrong (`mistakes.last_attempt_id` becomes null through its FK), and the next attempts correct it as usual.
+
 ### `attempt_overrides`
-`(user_id, lesson_id)` PK, `extra_attempts` smallint (1–100), `granted_by` uuid null, `created_at`. Extra tries a teacher grants one student on one lesson (see scheduled tests above). Read only when a lesson has a limit or has closed; granted from the student admin pages (S6-02).
+`(user_id, lesson_id)` PK, `extra_attempts` smallint (1–100), `granted_by` uuid null, `created_at`. Extra tries a teacher grants one student on one lesson (see scheduled tests above). Read only when a lesson has a limit or has closed; granted from the student detail page (S6-02, `grantExtraAttempts`: 1–100 replaces the grant, 0 removes it; audit `student.grant_attempts` / `student.revoke_attempts`).
 
 ### `mistakes`
 | Column | Type | Notes |
@@ -190,7 +195,7 @@ RETURNING count;
 As built (S5-05): `createUploadUrl` writes the row when it signs the upload, with the size the browser reported, so the quota check (`sum(bytes)` + the new file ≤ 900 MB) counts uploads in flight. Paths are `yyyy/mm/<uuid>.webp` (`.jpg` from browsers that can't encode WebP). A row whose object never arrived is an orphan for the daily cron (S9-05) to remove. `lessons.cover_path` only accepts a path that has a `media` row.
 
 ### `audit_log`
-`id` bigint, `actor_id` uuid, `action` text (`student.approve`, `lesson.publish`, `attempt.delete`…), `target_type`, `target_id`, `data` jsonb, `created_at`. Kept for 180 days.
+`id` bigint, `actor_id` uuid, `action` text (`student.approve`, `lesson.publish`, `attempt.delete`…), `target_type`, `target_id`, `data` jsonb, `created_at`. Kept for 180 days. Student actions (S6): `student.approve`, `student.reject`, `student.reset_password`, `student.revoke_sessions`, `student.disable`, `student.enable`, `student.delete` (`{ attempts, lessons }`), `student.grant_attempts`, `student.revoke_attempts`, `admin.create`; settings (S6-03): `settings.update` (`{ changed }`, the keys only); results (S6-04): `attempt.delete` (`{ userId, lessonId, status, rated }`); `data` carries ids and counts only, never a name, phone or password.
 
 ## 3. JSON contracts (Zod schemas in `src/features/lessons/schema.ts`)
 

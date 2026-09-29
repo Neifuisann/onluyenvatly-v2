@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   GUARD_DEDUPE_SEC,
   guardSecond,
+  guardTimeline,
   MAX_GUARD_BATCH,
   pushGuard,
 } from "./guard";
@@ -36,5 +37,30 @@ describe("pushGuard", () => {
     for (let i = 1; i < MAX_GUARD_BATCH + 5; i++)
       pending = pushGuard(pending, { t: i * 10, k: "blur" });
     expect(pending).toHaveLength(MAX_GUARD_BATCH);
+  });
+});
+
+describe("guardTimeline", () => {
+  it("orders by time, keeps the recorded order within a second", () => {
+    expect(
+      guardTimeline([
+        { t: 30, k: "copy" },
+        { t: 5, k: "blur" },
+        { t: 5, k: "hidden" },
+        { t: 12.7, k: "fs-exit" },
+      ]),
+    ).toEqual([
+      { t: 5, kind: "blur" },
+      { t: 5, kind: "hidden" },
+      { t: 12, kind: "fs-exit" },
+      { t: 30, kind: "copy" },
+    ]);
+  });
+
+  it("labels unknown kinds as other and clamps negative times", () => {
+    expect(guardTimeline([{ t: -3, k: "paste" }])).toEqual([
+      { t: 0, kind: "other" },
+    ]);
+    expect(guardTimeline([])).toEqual([]);
   });
 });

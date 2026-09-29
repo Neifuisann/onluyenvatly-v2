@@ -91,9 +91,6 @@ export const resultCopy = {
   keepGoing: "Cố lên, ôn lại rồi làm tiếp nhé!",
   revealLater: (when: string) => `Đáp án sẽ hiển thị sau ${when}.`,
   revealNever: "Giáo viên không công bố đáp án của bài này.",
-  guardEvents: (n: number) => `Sự kiện giám sát (${n})`,
-  guardHelp:
-    "t = số giây từ lúc bắt đầu; blur: rời cửa sổ, hidden: ẩn tab/chuyển ứng dụng, fs-exit: thoát toàn màn hình, copy: thử sao chép.",
 } as const;
 
 /** Per-question review on the result page (07 §4 `ReviewItem`). */
@@ -191,4 +188,70 @@ export const previewCopy = {
   restart: "Làm lại",
   close: "Đóng",
   timeLimit: (min: number) => `Thời gian làm bài: ${min} phút`,
+} as const;
+
+/** Exam-guard timeline on the result page, admins only (S6-04). */
+export const guardCopy = {
+  heading: (n: number) => `Sự kiện giám sát (${n})`,
+  lead: "Thời điểm tính từ lúc bắt đầu làm bài. Chỉ để giáo viên tham khảo, không tự trừ điểm.",
+  empty: "Không có sự kiện nào trong lúc làm bài.",
+  listLabel: "Dòng thời gian giám sát",
+  kinds: {
+    blur: "Rời cửa sổ làm bài",
+    hidden: "Ẩn tab hoặc chuyển ứng dụng",
+    "fs-exit": "Thoát toàn màn hình",
+    copy: "Thử sao chép đề",
+    other: "Sự kiện khác",
+  },
+} as const;
+
+/** "Xóa bài làm" on the result page, admins only (S6-04). */
+export const deleteAttemptCopy = {
+  section: "Quản trị bài làm",
+  button: "Xóa bài làm",
+  title: "Xóa bài làm này?",
+  body: "Bài làm bị xóa vĩnh viễn. Nếu bài tính điểm xếp hạng, điểm của học sinh được tính lại như chưa từng làm bài này. Lỗi sai đã ghi trong mục Ôn tập được giữ nguyên.",
+  confirm: "Xóa vĩnh viễn",
+  cancel: "Hủy",
+  close: "Đóng",
+  deleting: "Đang xóa…",
+} as const;
+
+/** `/admin/results` (S6-04). */
+export const resultsCopy = {
+  title: "Kết quả",
+  lead: "Mọi bài đã nộp của học sinh, mới nhất trước.",
+  loading: "Đang tải kết quả",
+  errorTitle: "Không tải được kết quả",
+  filtersLabel: "Lọc kết quả",
+  lesson: "Bài tập",
+  allLessons: "Tất cả bài",
+  deletedLesson: (title: string) => `${title} (đã xóa)`,
+  student: "Tên học sinh",
+  studentPlaceholder: "Tìm theo tên",
+  from: "Từ ngày",
+  to: "Đến ngày",
+  apply: "Lọc",
+  clear: "Xóa bộ lọc",
+  export: "Xuất CSV",
+  exportHint: "Tệp CSV theo bộ lọc hiện tại, tối đa 10.000 bài.",
+  listLabel: "Danh sách bài làm",
+  shown: (n: number, more: boolean) =>
+    more ? `Đang hiển thị ${n} bài mới nhất` : `${n} bài`,
+  loadMore: "Xem thêm",
+  limitReached: "Đã hiển thị tối đa. Hãy lọc thêm hoặc xuất CSV để xem hết.",
+  emptyTitle: "Chưa có bài nộp nào",
+  emptyBody: "Bài học sinh nộp sẽ xuất hiện ở đây.",
+  noMatchTitle: "Không có bài làm phù hợp",
+  noMatchBody: "Thử bài khác, tên khác hoặc khoảng ngày rộng hơn.",
+  review: "Ôn tập cá nhân",
+  class: (className: string | null, grade: number | null) =>
+    [className, grade ? `Khối ${grade}` : null].filter(Boolean).join(" · "),
+  score: "Điểm",
+  time: (clock: string) => `Làm trong ${clock}`,
+  submitted: (when: string) => `Nộp ${when}`,
+  guardBadge: (n: number) => `${n} cảnh báo`,
+  view: "Xem bài",
+  viewLabel: (name: string, when: string) =>
+    `Xem bài làm của ${name}, nộp ${when}`,
 } as const;

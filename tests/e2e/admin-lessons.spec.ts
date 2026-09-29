@@ -24,7 +24,8 @@ const SOURCE = "E2E – Bản nháp kín";
 const COPY = `${SOURCE} (bản sao)`;
 
 async function titles(page: Page) {
-  const links = page.locator("main tbody tr a");
+  // The title links (each row also links its statistics, S6-05).
+  const links = page.locator('main tbody tr a[href$="/edit"]');
   await expect(links.first()).toBeVisible();
   return links.allTextContents();
 }
@@ -152,10 +153,9 @@ test("duplicate, reorder (keys and drag), archive, restore and delete", async ({
   await expect(page.getByText("Chưa có câu hỏi")).toBeVisible();
   await page.goto("/admin/lessons");
   const created = page.locator("main tbody tr").last();
-  await expect(created.getByRole("link")).toHaveAttribute(
-    "href",
-    `/admin/lessons/${id}/edit`,
-  );
+  await expect(
+    created.getByRole("link", { name: "Bài tập mới", exact: true }),
+  ).toHaveAttribute("href", `/admin/lessons/${id}/edit`);
   await created.getByRole("button", { name: "Xóa: Bài tập mới" }).click();
   await dialog.getByRole("button", { name: "Xóa bài" }).click();
   await expect(status).toHaveText("Đã xóa bài.");

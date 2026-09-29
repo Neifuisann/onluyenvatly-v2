@@ -1,0 +1,1 @@
+CREATE INDEX "attempts_submitted_idx" ON "attempts" USING btree ("submitted_at" DESC NULLS LAST) WHERE "attempts"."status" = 'submitted';

@@ -121,10 +121,11 @@ test("exam guard: notice, blocked copy, events for the teacher only", async ({
   await expect(adminPage).toHaveURL(/\/admin$/);
   await adminPage.goto(resultUrl);
   // At least our two; a real focus change in the browser may add more.
-  await adminPage.getByText(/^Sự kiện giám sát \([2-9]\d*\)$/).click();
-  const log = adminPage.locator("pre");
-  await expect(log).toContainText('"k": "copy"');
-  await expect(log).toContainText('"k": "blur"');
+  const timeline = adminPage.getByRole("region", {
+    name: /^Sự kiện giám sát \([2-9]\d*\)$/,
+  });
+  await expect(timeline).toContainText("Thử sao chép đề");
+  await expect(timeline).toContainText("Rời cửa sổ làm bài");
   await admin.close();
 });
 

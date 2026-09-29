@@ -9,6 +9,7 @@ import {
   performance,
   ratingDelta,
   replayRatings,
+  replayWithout,
   tierOf,
   timeBonusV1,
   timeBonusV2,
@@ -160,6 +161,93 @@ describe("replayRatings", () => {
       { rating: 1550, peak: 1600, rated: 5 },
     );
     expect(state).toEqual({ rating: 2511, peak: 2511, rated: 7 });
+  });
+});
+
+describe("replayWithout (delete attempt, S6-04)", () => {
+  const inputs = [
+    { performance: 1, timeBonus: 1 },
+    { performance: 0.286, timeBonus: 0.842 },
+    { performance: 0, timeBonus: 0.5 },
+  ];
+
+  /** Stored events as the submit transaction writes them, from `start`. */
+  function stored(list: typeof inputs, start = INITIAL_RATING) {
+    let state = start;
+    return list.map((a, i) => {
+      const s = applyRating(state, a.performance, a.timeBonus);
+      state = s.state;
+      return { id: i + 1, formula: "v2", ...a, ...s };
+    });
+  }
+
+  it("equals a fresh computation without the removed event", () => {
+    const events = stored(inputs);
+    const { state, changed } = replayWithout(events, 2);
+    const fresh = stored([inputs[0], inputs[2]] as typeof inputs);
+    const last = fresh.at(-1);
+    expect(state).toEqual(last?.state);
+    // The first event is unchanged; only the third is rewritten.
+    expect(changed).toEqual([
+      {
+        id: 3,
+        before: fresh[1]?.before,
+        delta: fresh[1]?.delta,
+        after: fresh[1]?.after,
+      },
+    ]);
+  });
+
+  it("rewrites every later event when the first one goes", () => {
+    const events = stored(inputs);
+    const { state, changed } = replayWithout(events, 1);
+    const fresh = stored(inputs.slice(1));
+    expect(state).toEqual(fresh.at(-1)?.state);
+    expect(changed.map((c) => c.id)).toEqual([2, 3]);
+    expect(changed[0]?.before).toBe(1500);
+  });
+
+  it("changes nothing else when the last one goes", () => {
+    const events = stored(inputs);
+    expect(replayWithout(events, 3)).toEqual({
+      state: events[1]?.state,
+      changed: [],
+    });
+  });
+
+  it("returns no state when no event remains", () => {
+    expect(replayWithout(stored(inputs.slice(0, 1)), 1)).toEqual({
+      state: null,
+      changed: [],
+    });
+    expect(replayWithout([], 1)).toEqual({ state: null, changed: [] });
+  });
+
+  it("starts from the first event's rating (migrated history)", () => {
+    const start = { rating: 1720, peak: 1720, rated: 0 };
+    const events = [
+      {
+        id: 7,
+        formula: "v1-legacy",
+        delta: 30,
+        before: 1720,
+        after: 1750,
+        performance: 0.9,
+        timeBonus: null,
+      },
+      ...stored(inputs.slice(0, 2), { rating: 1750, peak: 1750, rated: 1 }).map(
+        (e, i) => ({ ...e, id: 8 + i }),
+      ),
+    ];
+    const { state } = replayWithout(events, 8);
+    const fresh = stored(inputs.slice(1, 2), {
+      ...start,
+      rating: 1750,
+      peak: 1750,
+      rated: 1,
+    });
+    expect(state).toEqual(fresh.at(-1)?.state);
+    expect(state?.rated).toBe(2);
   });
 });
 

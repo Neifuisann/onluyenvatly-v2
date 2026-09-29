@@ -38,3 +38,26 @@ export function pushGuard(
   if (pending.length >= MAX_GUARD_BATCH) return pending;
   return [...pending, event];
 }
+
+export type TimelineEntry = {
+  /** Whole seconds since the start. */
+  t: number;
+  /** A known kind, or `other` for anything an older client recorded. */
+  kind: GuardKind | "other";
+};
+
+const isGuardKind = (k: string): k is GuardKind =>
+  (GUARD_KINDS as readonly string[]).includes(k);
+
+/**
+ * The teacher's timeline (S6-04): events in time order (stable, so equal
+ * seconds keep the order they were recorded in), negative times shown as 0.
+ */
+export function guardTimeline(events: readonly GuardEvent[]): TimelineEntry[] {
+  return events
+    .map((e) => ({
+      t: Math.max(0, Math.floor(e.t)),
+      kind: isGuardKind(e.k) ? e.k : ("other" as const),
+    }))
+    .sort((a, b) => a.t - b.t);
+}

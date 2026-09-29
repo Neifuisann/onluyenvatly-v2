@@ -23,6 +23,19 @@ function isReasonableBirthDate(value: string, today = new Date()): boolean {
   return year >= 1940 && d.getTime() <= today.getTime();
 }
 
+/** A new password: the policy of 06 §1, one message per problem. */
+const newPasswordField = z
+  .string()
+  .min(1, fieldMessages.required)
+  .superRefine((password, ctx) => {
+    const issue = passwordIssue(password);
+    if (issue)
+      ctx.addIssue({
+        code: "custom",
+        message: passwordIssueMessages[issue],
+      });
+  });
+
 export const RegisterSchema = z
   .object({
     fullName: z
@@ -63,17 +76,7 @@ export const RegisterSchema = z
       .transform((c) => (c ? c.toUpperCase() : null)),
     // Field-level rules run even when other fields are invalid, so the
     // student sees every problem at once.
-    password: z
-      .string()
-      .min(1, fieldMessages.required)
-      .superRefine((password, ctx) => {
-        const issue = passwordIssue(password);
-        if (issue)
-          ctx.addIssue({
-            code: "custom",
-            message: passwordIssueMessages[issue],
-          });
-      }),
+    password: newPasswordField,
   })
   // Needs the normalized phone, so it only runs once all fields are valid.
   .superRefine((data, ctx) => {
@@ -86,6 +89,24 @@ export const RegisterSchema = z
       });
   });
 export type RegisterInput = z.infer<typeof RegisterSchema>;
+
+export const ChangePasswordSchema = z
+  .object({
+    current: z.string().min(1, fieldMessages.required).max(200),
+    password: newPasswordField,
+    confirm: z.string().min(1, fieldMessages.required),
+    /** Where to go afterwards; checked with `safeNextPath`. */
+    next: z.string().max(512).optional(),
+  })
+  .superRefine((data, ctx) => {
+    if (data.confirm !== data.password)
+      ctx.addIssue({
+        code: "custom",
+        path: ["confirm"],
+        message: fieldMessages.passwordMismatch,
+      });
+  });
+export type ChangePasswordInput = z.infer<typeof ChangePasswordSchema>;
 
 /** First message per field, for inline form errors. */
 export function fieldErrorsOf(error: z.ZodError): Record<string, string> {
