@@ -27,7 +27,7 @@ export default async function AdminSettingsPage() {
 
       <section
         aria-labelledby="settings-general"
-        className="flex flex-col gap-4 rounded-lg border bg-surface p-4"
+        className="flex flex-col gap-4 rounded-lg border border-border/70 bg-surface p-5 shadow-card dark:border-border"
       >
         <div className="space-y-1">
           <h2 id="settings-general" className="font-semibold">
@@ -54,7 +54,7 @@ export default async function AdminSettingsPage() {
 
       <section
         aria-labelledby="settings-create-admin"
-        className="flex flex-col gap-4 rounded-lg border bg-surface p-4"
+        className="flex flex-col gap-4 rounded-lg border border-border/70 bg-surface p-5 shadow-card dark:border-border"
       >
         <div className="space-y-1">
           <h2 id="settings-create-admin" className="font-semibold">

@@ -170,7 +170,7 @@ export function ImportPanel({ aiEnabled }: { aiEnabled: boolean }) {
           e.preventDefault();
           void start();
         }}
-        className="flex flex-col gap-4 rounded-lg border bg-surface p-4 shadow-card"
+        className="flex flex-col gap-4 rounded-lg border border-border/70 bg-surface p-5 shadow-card dark:border-border"
       >
         <FormField id="import-file" label={t.file} hint={t.fileHint}>
           <input
@@ -228,7 +228,7 @@ export function ImportPanel({ aiEnabled }: { aiEnabled: boolean }) {
       {hasText && (
         <div className="flex flex-col gap-3">
           {!busy && (
-            <div className="flex flex-col gap-1 rounded-lg border bg-surface p-4 text-sm">
+            <div className="flex flex-col gap-1 rounded-lg border border-border/70 bg-surface p-5 shadow-card dark:border-border text-sm">
               {phase === "done" && (
                 <h2 className="font-semibold text-base">{t.doneTitle}</h2>
               )}

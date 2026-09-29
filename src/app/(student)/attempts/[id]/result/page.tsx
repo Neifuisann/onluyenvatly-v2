@@ -140,7 +140,7 @@ export default async function AttemptResultPage({
           <h2 id="choices-heading" className="heading-section">
             {reviewCopy.heading}
           </h2>
-          <p className="flex items-start gap-2 rounded-lg border bg-surface p-4 text-sm">
+          <p className="flex items-start gap-2 rounded-lg border border-border/70 bg-surface p-5 shadow-card dark:border-border text-sm">
             <Info aria-hidden className="mt-0.5 size-4 shrink-0" />
             {reveal.kind === "later"
               ? resultCopy.revealLater(formatDateTime(reveal.at))

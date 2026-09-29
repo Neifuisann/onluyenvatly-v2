@@ -27,19 +27,19 @@ export function MistakeList({
         return (
           <li
             key={`${row.lessonId}:${row.questionId}`}
-            className="flex flex-col gap-3 rounded-lg border bg-surface p-4 shadow-card"
+            className="flex flex-col gap-3 rounded-lg border border-border/70 bg-surface p-5 shadow-card dark:border-border"
           >
             <div className="flex flex-wrap items-center gap-2 text-xs">
               {type && (
-                <span className="rounded-full bg-muted px-2 py-0.5 font-medium">
+                <span className="rounded-full bg-muted px-2.5 py-1 font-semibold">
                   {t.types[type]}
                 </span>
               )}
-              <span className="rounded-full border border-danger/40 px-2 py-0.5 font-medium text-danger-text">
+              <span className="rounded-full bg-danger-soft px-2.5 py-1 font-semibold text-danger-text">
                 {t.wrongCount(row.wrongCount)}
               </span>
               {!row.practicable && (
-                <span className="flex items-center gap-1 rounded-full border px-2 py-0.5 text-muted-foreground">
+                <span className="flex items-center gap-1 rounded-full bg-muted px-2.5 py-1 text-muted-foreground">
                   <EyeOff aria-hidden className="size-3" />
                   {t.hidden}
                 </span>

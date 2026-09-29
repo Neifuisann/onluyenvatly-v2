@@ -26,7 +26,7 @@ export function StudentProfile({ student }: { student: StudentDetail }) {
     <div className="grid gap-4 lg:grid-cols-2">
       <section
         aria-labelledby="student-profile"
-        className="rounded-lg border bg-surface p-4"
+        className="rounded-lg border border-border/70 bg-surface p-5 shadow-card dark:border-border"
       >
         <h2 id="student-profile" className="mb-3 font-semibold">
           {t.profile}
@@ -65,7 +65,7 @@ export function StudentProfile({ student }: { student: StudentDetail }) {
 
       <section
         aria-labelledby="student-rating"
-        className="rounded-lg border bg-surface p-4"
+        className="rounded-lg border border-border/70 bg-surface p-5 shadow-card dark:border-border"
       >
         <h2 id="student-rating" className="mb-3 font-semibold">
           {t.ratingSection}

@@ -32,7 +32,7 @@ export function DeleteAttempt({ attemptId }: { attemptId: string }) {
   return (
     <section
       aria-labelledby="attempt-admin-heading"
-      className="flex flex-col gap-3 rounded-lg border bg-surface p-4"
+      className="flex flex-col gap-3 rounded-lg border border-border/70 bg-surface p-5 shadow-card dark:border-border"
     >
       <h2 id="attempt-admin-heading" className="font-semibold">
         {t.section}

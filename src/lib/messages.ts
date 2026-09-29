@@ -137,9 +137,102 @@ export const shellCopy = {
   accountMenu: "Tài khoản",
 } as const;
 
-/** The walking-skeleton home page (the admin one was replaced in S6-06). */
-export const placeholderCopy = {
-  homeTitle: "Ôn Luyện Vật Lý",
-  homeBody:
-    "Luyện đề Vật lý THPT theo cấu trúc đề thi mới. Phiên bản mới đang được xây dựng.",
+/** Sign-in/sign-up frame and the first-run welcome (07 §2, onboarding). */
+export const onboardingCopy = {
+  headline: ["Luyện đề Vật lý,", "hiểu tới đâu chắc tới đó."],
+  values: {
+    format: {
+      title: "Đề theo cấu trúc thi mới",
+      body: "Trắc nghiệm, Đúng/Sai và trả lời ngắn như đề thật.",
+    },
+    instant: {
+      title: "Chấm điểm ngay khi nộp",
+      body: "Xem đáp án và lời giải chi tiết cho từng câu.",
+    },
+    review: {
+      title: "Ôn đúng chỗ còn sai",
+      body: "Câu làm sai được gom lại để bạn luyện lại.",
+    },
+    rank: {
+      title: "Tiến bộ thấy rõ",
+      body: "Rating và bảng xếp hạng sau mỗi bài kiểm tra.",
+    },
+  },
+  stepsLabel: "Các bước bắt đầu",
+  steps: ["Đăng ký", "Giáo viên duyệt", "Luyện đề"],
+  welcomeTitle: "Bắt đầu thế nào?",
+  welcomeLead: "Ba bước để làm quen với Ôn Luyện Vật Lý:",
+  welcomeSteps: [
+    {
+      title: "Chọn một bài",
+      body: "Vào mục Bài tập, chọn đề hợp với lớp của bạn.",
+    },
+    {
+      title: "Làm và nộp bài",
+      body: "Bài làm tự lưu. Nộp xong là có điểm và lời giải ngay.",
+    },
+    {
+      title: "Ôn lại câu sai",
+      body: "Mục Ôn tập gom các câu bạn làm sai để luyện lại.",
+    },
+  ],
+  welcomeCta: "Chọn bài đầu tiên",
+} as const;
+
+export const notFoundCopy = {
+  title: "Không tìm thấy trang",
+  body: "Trang này không tồn tại hoặc đã được chuyển đi. Mình quay về trang chủ nhé.",
+  home: "Về trang chủ",
+} as const;
+
+/** The public landing page (S8-01). Honest: only what the site does today. */
+export const landingCopy = {
+  eyebrow: "Vật lý THPT · Lớp 10, 11, 12",
+  lead: "Đề theo cấu trúc thi mới, chấm điểm ngay khi nộp, lời giải chi tiết cho từng câu, và một chỗ riêng để ôn lại những câu bạn còn sai.",
+  ctaPrimary: "Tạo tài khoản",
+  ctaSecondary: "Đăng nhập",
+  featuresTitle: "Mọi thứ bạn cần để luyện đề",
+  howTitle: "Bắt đầu trong ba bước",
+  howSteps: [
+    {
+      title: "Đăng ký",
+      body: "Điền họ tên, số điện thoại, lớp và đặt mật khẩu.",
+    },
+    {
+      title: "Giáo viên duyệt",
+      body: "Giáo viên xác nhận tài khoản để lớp học luôn đúng người.",
+    },
+    {
+      title: "Luyện đề",
+      body: "Chọn bài, làm bài, xem điểm và lời giải ngay sau khi nộp.",
+    },
+  ],
+  topicsTitle: "Theo các chủ đề của chương trình THPT",
+  topics: {
+    kinematics: "Động học",
+    dynamics: "Động lực học",
+    energy: "Năng lượng",
+    oscillation: "Dao động",
+    wave: "Sóng",
+    electric: "Điện trường",
+    current: "Dòng điện",
+    magnetic: "Từ trường",
+    optics: "Quang học",
+    thermal: "Vật lí nhiệt",
+    nuclear: "Vật lí hạt nhân",
+  },
+  closingTitle: "Sẵn sàng luyện đề chưa?",
+  closingBody:
+    "Tạo tài khoản, chờ giáo viên duyệt, rồi làm bài đầu tiên của bạn.",
+  preview: {
+    label: "Xem trước giao diện làm bài",
+    question: "Câu 3",
+    type: "Trắc nghiệm",
+    stem: "Một con lắc lò xo có k = 100 N/m, m = 1 kg. Chu kì dao động là",
+    // T = 2π√(m/k) = 0,2π s: option B, the one shown as chosen.
+    options: ["0,1π s", "0,2π s", "2π s", "20π s"],
+    saved: "Đã lưu",
+    timer: "32:15",
+  },
+  footer: "Ôn Luyện Vật Lý · Luyện đề Vật lý THPT",
 } as const;

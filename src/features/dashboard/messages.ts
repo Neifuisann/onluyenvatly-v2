@@ -23,6 +23,7 @@ export const dashboardCopy = {
   leadContinue: "Bạn còn một bài đang làm dở. Làm tiếp nhé!",
   leadMistakes: (n: number) => `Có ${n} câu đang chờ bạn ôn lại.`,
   leadDefault: "Hôm nay mình luyện bài nào nhỉ?",
+  leadWelcome: "Chào mừng bạn đến với Ôn Luyện Vật Lý!",
   seeAll: "Xem tất cả bài tập",
   allDoneTitle: "Bạn đã làm hết bài được gợi ý",
   allDoneBody: "Xem lại các bài đã làm hoặc chọn bài ở lớp khác.",

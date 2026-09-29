@@ -35,7 +35,7 @@ export function LessonExplanationList({
         <li key={q.id}>
           <article
             aria-labelledby={`expl-q-${position}`}
-            className="flex flex-col gap-3 rounded-lg border bg-surface p-4 shadow-card"
+            className="flex flex-col gap-3 rounded-lg border border-border/70 bg-surface p-5 shadow-card dark:border-border"
           >
             <h3 id={`expl-q-${position}`} className="font-semibold">
               {t.question(position, questionTypeNames[q.type])}

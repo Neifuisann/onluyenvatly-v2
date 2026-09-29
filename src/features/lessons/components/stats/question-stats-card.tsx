@@ -64,7 +64,7 @@ export function QuestionStatsCard({
   return (
     <article
       aria-labelledby={headingId}
-      className="flex flex-col gap-3 rounded-lg border bg-surface p-4 shadow-card"
+      className="flex flex-col gap-3 rounded-lg border border-border/70 bg-surface p-5 shadow-card dark:border-border"
     >
       <header className="flex flex-col gap-1">
         <h3 id={headingId} className="font-semibold">

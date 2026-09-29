@@ -115,7 +115,11 @@ export async function LessonAttemptPanel({
         <StartAttemptButton lessonId={lessonId} />
       ) : (
         <div className="flex items-center gap-3 rounded-md bg-muted p-4">
-          <Mascot pose="waiting" size={56} className="shrink-0" />
+          <Mascot
+            pose={check.code === "ATTEMPT_LIMIT" ? "ok" : "sleeping"}
+            size={64}
+            className="shrink-0"
+          />
           <p className="font-medium text-sm">
             {check.code === "NOT_OPEN_YET"
               ? t.notOpen(formatDateTime(check.at))

@@ -18,7 +18,7 @@ export function LeaderboardFilters({ filters }: { filters: Filters }) {
     <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
       <ul
         aria-label={t.periodGroup}
-        className="grid grid-cols-2 rounded-lg border bg-muted p-1 sm:inline-grid"
+        className="grid grid-cols-2 rounded-full bg-muted p-1 sm:inline-grid"
       >
         {LEADERBOARD_PERIODS.map((period) => {
           const active = filters.period === period;
@@ -30,7 +30,7 @@ export function LeaderboardFilters({ filters }: { filters: Filters }) {
                 scroll={false}
                 aria-current={active ? "page" : undefined}
                 className={cn(
-                  "flex h-10 items-center justify-center rounded-md px-4 font-medium text-sm transition-colors",
+                  "flex h-10 items-center justify-center rounded-full px-5 font-medium text-sm transition-[background-color,color,box-shadow]",
                   active
                     ? "bg-surface text-foreground shadow-card"
                     : "text-muted-foreground hover:text-foreground",
@@ -42,7 +42,10 @@ export function LeaderboardFilters({ filters }: { filters: Filters }) {
           );
         })}
       </ul>
-      <ul aria-label={t.gradeGroup} className="flex flex-wrap gap-1.5">
+      <ul
+        aria-label={t.gradeGroup}
+        className="flex w-fit rounded-full bg-muted p-1"
+      >
         {GRADES.map((grade) => {
           const active = filters.grade === grade;
           return (
@@ -53,10 +56,10 @@ export function LeaderboardFilters({ filters }: { filters: Filters }) {
                 scroll={false}
                 aria-current={active ? "page" : undefined}
                 className={cn(
-                  "inline-flex h-9 items-center rounded-full border px-3.5 text-sm transition-colors",
+                  "inline-flex h-10 items-center rounded-full px-3.5 font-medium text-sm transition-[background-color,color,box-shadow]",
                   active
-                    ? "border-primary bg-primary text-primary-foreground"
-                    : "bg-surface hover:bg-muted",
+                    ? "bg-surface text-foreground shadow-card"
+                    : "text-muted-foreground hover:text-foreground",
                 )}
               >
                 {grade ? t.grade(grade) : t.allGrades}

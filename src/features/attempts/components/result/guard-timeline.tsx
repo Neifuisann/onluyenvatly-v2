@@ -29,7 +29,7 @@ export function GuardTimeline({ events }: { events: readonly GuardEvent[] }) {
   return (
     <section
       aria-labelledby="guard-heading"
-      className="flex flex-col gap-3 rounded-lg border bg-surface p-4"
+      className="flex flex-col gap-3 rounded-lg border border-border/70 bg-surface p-5 shadow-card dark:border-border"
     >
       <div className="space-y-1">
         <h2 id="guard-heading" className="font-semibold">

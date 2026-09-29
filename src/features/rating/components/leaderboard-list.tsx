@@ -61,15 +61,20 @@ function Row({
   return (
     <li
       className={cn(
-        "grid grid-cols-[2.25rem_2.25rem_minmax(0,1fr)_auto] items-center gap-3 rounded-lg border bg-surface px-3 py-2.5",
+        "grid grid-cols-[2.25rem_2.25rem_minmax(0,1fr)_auto] items-center gap-3 rounded-lg border border-border/70 bg-surface shadow-card dark:border-border px-3 py-2.5",
         isMe &&
-          "sticky top-[4.25rem] bottom-[calc(4.25rem+env(safe-area-inset-bottom))] z-10 border-primary bg-primary-soft shadow-card lg:top-4 lg:bottom-4",
+          "sticky top-[4.25rem] bottom-[calc(5.75rem+env(safe-area-inset-bottom))] z-10 border-primary bg-primary-soft shadow-card lg:top-4 lg:bottom-4",
       )}
     >
       <span
         className={cn(
-          "flex size-9 items-center justify-center rounded-full num font-semibold tabular-nums",
-          row.rank <= 3 ? "bg-accent text-accent-foreground" : "text-sm",
+          "num flex size-9 items-center justify-center rounded-full font-bold font-display",
+          // Podium: metal as a ring, the number keeps full contrast.
+          row.rank === 1 &&
+            "bg-accent text-accent-foreground ring-2 ring-tier-gold",
+          row.rank === 2 && "bg-muted ring-2 ring-tier-silver",
+          row.rank === 3 && "bg-peach ring-2 ring-tier-bronze",
+          row.rank > 3 && "text-muted-foreground text-sm",
         )}
       >
         <span className="sr-only">{t.rank(row.rank)}</span>
@@ -91,7 +96,7 @@ function Row({
             </span>
           )}
           {row.className && <span>{row.className}</span>}
-          <TierBadge rating={row.rating} className="px-2 py-0" />
+          <TierBadge rating={row.rating} className="py-0" />
         </p>
       </div>
       <div className="flex flex-col items-end gap-0.5 text-right">

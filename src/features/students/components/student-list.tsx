@@ -10,7 +10,7 @@ export function StudentList({ rows }: { rows: readonly StudentListRow[] }) {
   return (
     <ul
       aria-label={t.listLabel}
-      className="divide-y rounded-lg border bg-surface"
+      className="divide-y rounded-lg border border-border/70 bg-surface shadow-card dark:border-border"
     >
       {rows.map((s) => (
         <li key={s.id}>

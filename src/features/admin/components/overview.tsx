@@ -36,7 +36,7 @@ function Tile({
 }
 
 const tileBox =
-  "flex flex-col gap-1 rounded-lg border bg-surface p-4 shadow-card";
+  "flex flex-col gap-1 rounded-lg border border-border/70 bg-surface p-5 shadow-card dark:border-border";
 
 /** The headline numbers; the pending tile opens the approval queue. */
 export function OverviewTiles({
@@ -125,7 +125,7 @@ export function AttemptsChart({ days }: { days: readonly DayCount[] }) {
   return (
     <section
       aria-labelledby="chart-heading"
-      className="flex flex-col gap-3 rounded-lg border bg-surface p-4 shadow-card"
+      className="flex flex-col gap-3 rounded-lg border border-border/70 bg-surface p-5 shadow-card dark:border-border"
     >
       <h2 id="chart-heading" className="font-semibold">
         {t.chartTitle}
@@ -182,7 +182,7 @@ export function HardestList({ items }: { items: readonly HardQuestion[] }) {
   return (
     <section
       aria-labelledby="hardest-heading"
-      className="flex flex-col gap-3 rounded-lg border bg-surface p-4 shadow-card"
+      className="flex flex-col gap-3 rounded-lg border border-border/70 bg-surface p-5 shadow-card dark:border-border"
     >
       <div className="space-y-1">
         <h2 id="hardest-heading" className="font-semibold">

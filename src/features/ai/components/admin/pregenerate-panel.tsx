@@ -78,7 +78,7 @@ export function PregeneratePanel({
   return (
     <section
       aria-labelledby="pregen-heading"
-      className="flex flex-col gap-3 rounded-lg border bg-surface p-4"
+      className="flex flex-col gap-3 rounded-lg border border-border/70 bg-surface p-5 shadow-card dark:border-border"
     >
       <h2 id="pregen-heading" className="font-semibold">
         {t.pregenTitle}

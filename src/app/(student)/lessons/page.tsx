@@ -1,4 +1,3 @@
-import { BookOpen, SearchX } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { EmptyState } from "@/components/empty-state";
@@ -48,7 +47,7 @@ export default async function LessonsPage({
         </div>
       ) : (
         <EmptyState
-          icon={filtered ? SearchX : BookOpen}
+          mascot={filtered ? "telescope" : "studying"}
           title={filtered ? t.noMatchTitle : t.emptyTitle}
           description={filtered ? t.noMatchBody : t.emptyBody}
           action={

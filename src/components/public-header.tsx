@@ -8,8 +8,8 @@ import { cn } from "@/lib/utils";
 /** Public top bar (07 §2): logo, "Lý thuyết", "Đăng nhập", primary "Đăng ký". */
 export function PublicHeader() {
   return (
-    <header className="sticky top-0 z-30 border-b bg-background/90 backdrop-blur">
-      <div className="mx-auto flex h-16 max-w-[1200px] items-center gap-2 px-4">
+    <header className="sticky top-0 z-30 border-border/60 border-b bg-background/80 backdrop-blur-xl">
+      <div className="mx-auto flex h-16 max-w-6xl items-center gap-2 px-4 sm:px-6">
         <Logo narrow />
         <nav
           aria-label={shellCopy.mainNav}

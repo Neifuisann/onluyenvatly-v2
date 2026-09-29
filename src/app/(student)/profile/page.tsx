@@ -1,4 +1,3 @@
-import { History } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { EmptyState } from "@/components/empty-state";
@@ -23,8 +22,9 @@ import {
   getProfileSummary,
   getRatingHistory,
 } from "@/features/profile/queries";
-import { TierBadge } from "@/features/rating/components/tier-badge";
+import { TierBadge, TierEmblem } from "@/features/rating/components/tier-badge";
 import { initials } from "@/features/rating/domain/leaderboard";
+import { tierOf } from "@/features/rating/domain/rating";
 import { formatRating } from "@/features/rating/messages";
 import { formatScore, vnDateKey } from "@/lib/dates";
 
@@ -61,16 +61,21 @@ export default async function ProfilePage({
       <header className="flex items-center gap-4">
         <span
           aria-hidden
-          className="flex size-16 shrink-0 items-center justify-center rounded-full bg-primary-soft font-semibold text-primary text-xl"
+          className="flex size-16 shrink-0 items-center justify-center rounded-full bg-primary font-bold font-display text-primary-foreground text-xl sm:size-20 sm:text-2xl"
         >
           {initials(user.fullName)}
         </span>
         <div className="min-w-0">
           <h1 className="break-words heading-page">{user.fullName}</h1>
-          {subtitle && (
-            <p className="text-muted-foreground text-sm">{subtitle}</p>
-          )}
+          {subtitle && <p className="text-muted-foreground">{subtitle}</p>}
         </div>
+        {summary.rating !== null && (
+          <TierEmblem
+            tier={tierOf(summary.rating)}
+            size={72}
+            className="ml-auto hidden animate-pop sm:block"
+          />
+        )}
       </header>
 
       <section aria-label={t.overview}>
@@ -107,7 +112,7 @@ export default async function ProfilePage({
 
       <section
         aria-labelledby="chart-heading"
-        className="space-y-3 rounded-lg border bg-surface p-5 shadow-card"
+        className="space-y-3 rounded-lg border border-border/70 bg-surface p-5 shadow-card sm:p-6 dark:border-border"
       >
         <h2 id="chart-heading" className="heading-section">
           {t.chartTitle}
@@ -135,7 +140,7 @@ export default async function ProfilePage({
 
       <section
         aria-labelledby="accuracy-heading"
-        className="space-y-4 rounded-lg border bg-surface p-5 shadow-card"
+        className="space-y-4 rounded-lg border border-border/70 bg-surface p-5 shadow-card sm:p-6 dark:border-border"
       >
         <div className="space-y-1">
           <h2 id="accuracy-heading" className="heading-section">
@@ -162,7 +167,7 @@ export default async function ProfilePage({
           <HistoryList items={history.items} />
         ) : (
           <EmptyState
-            icon={History}
+            mascot="laptop"
             title={t.historyEmptyTitle}
             description={t.historyEmptyBody}
             action={
@@ -198,9 +203,11 @@ function Stat({
   children: React.ReactNode;
 }) {
   return (
-    <div className="rounded-lg border bg-surface p-4 shadow-card">
+    <div className="rounded-lg border border-border/70 bg-surface p-5 shadow-card dark:border-border">
       <dt className="text-muted-foreground text-sm">{label}</dt>
-      <dd className="mt-1 font-semibold text-2xl">{children}</dd>
+      <dd className="mt-1 font-display font-semibold text-2xl tracking-tight">
+        {children}
+      </dd>
     </div>
   );
 }

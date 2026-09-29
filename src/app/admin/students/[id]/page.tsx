@@ -59,7 +59,7 @@ export default async function AdminStudentPage({
 
       <section
         aria-labelledby="student-actions"
-        className="rounded-lg border bg-surface p-4"
+        className="rounded-lg border border-border/70 bg-surface p-5 shadow-card dark:border-border"
       >
         <h2 id="student-actions" className="mb-3 font-semibold">
           {t.actionsSection}
@@ -74,7 +74,7 @@ export default async function AdminStudentPage({
 
       <section
         aria-labelledby="student-grants"
-        className="rounded-lg border bg-surface p-4"
+        className="rounded-lg border border-border/70 bg-surface p-5 shadow-card dark:border-border"
       >
         <h2 id="student-grants" className="mb-3 font-semibold">
           {t.grantSection}

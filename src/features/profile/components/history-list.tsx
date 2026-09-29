@@ -9,7 +9,7 @@ import type { HistoryItem } from "../queries";
 /** My submitted tests, newest first, each linking to its result page. */
 export function HistoryList({ items }: { items: readonly HistoryItem[] }) {
   return (
-    <ol className="divide-y rounded-lg border bg-surface">
+    <ol className="divide-y rounded-lg border border-border/70 bg-surface shadow-card dark:border-border">
       {items.map((a) => (
         <li key={a.id}>
           <Link

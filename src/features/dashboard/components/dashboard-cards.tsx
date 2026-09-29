@@ -15,10 +15,12 @@ import { catalogCopy, formatDuration } from "@/features/lessons/messages";
 import type { CatalogItem } from "@/features/lessons/queries";
 import { RatingDelta } from "@/features/rating/components/rating-delta";
 import { RatingSparkline } from "@/features/rating/components/rating-sparkline";
-import { TierBadge } from "@/features/rating/components/tier-badge";
+import { TierBadge, TierEmblem } from "@/features/rating/components/tier-badge";
+import { tierOf } from "@/features/rating/domain/rating";
 import { ratingSeries } from "@/features/rating/domain/sparkline";
 import { formatRating, ratingCopy } from "@/features/rating/messages";
 import { formatClock } from "@/lib/dates";
+import { onboardingCopy } from "@/lib/messages";
 import { cn } from "@/lib/utils";
 import type { ContinueSummary } from "../domain/dashboard";
 import { dashboardCopy as t } from "../messages";
@@ -106,6 +108,47 @@ export function ContinueCard({
           className="-mb-2 hidden shrink-0 sm:block"
         />
       </div>
+    </section>
+  );
+}
+
+/**
+ * First visit (no attempt yet): how the site works in three steps. It needs
+ * no dismiss button or storage; it goes away after the first test.
+ */
+export function WelcomeCard() {
+  return (
+    <section
+      aria-labelledby="welcome-heading"
+      className={cn(
+        cardClass,
+        "flex animate-rise items-center gap-6 p-5 sm:p-7",
+      )}
+    >
+      <div className="min-w-0 flex-1 space-y-4">
+        <div className="space-y-1">
+          <h2 id="welcome-heading" className="heading-section">
+            {onboardingCopy.welcomeTitle}
+          </h2>
+          <p className="text-muted-foreground">{onboardingCopy.welcomeLead}</p>
+        </div>
+        <ol className="grid gap-3 sm:grid-cols-3">
+          {onboardingCopy.welcomeSteps.map((step, i) => (
+            <li key={step.title} className="flex gap-3">
+              <span className="num flex size-8 shrink-0 items-center justify-center rounded-full bg-primary font-bold font-display text-primary-foreground text-sm">
+                {i + 1}
+              </span>
+              <span>
+                <span className="block font-semibold">{step.title}</span>
+                <span className="block text-muted-foreground text-sm">
+                  {step.body}
+                </span>
+              </span>
+            </li>
+          ))}
+        </ol>
+      </div>
+      <Mascot pose="teacher" size={140} className="hidden shrink-0 md:block" />
     </section>
   );
 }
@@ -202,6 +245,11 @@ export function RatingCard({
             {last && (
               <RatingDelta value={last.delta} label={t.lastChange} strong />
             )}
+            <TierEmblem
+              tier={tierOf(rating)}
+              size={52}
+              className="ml-auto animate-pop"
+            />
           </div>
           {series.length > 1 && (
             <figure className="mt-auto space-y-1">

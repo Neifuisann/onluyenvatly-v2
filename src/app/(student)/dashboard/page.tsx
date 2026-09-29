@@ -8,6 +8,7 @@ import {
   NextLessonCard,
   RatingCard,
   StatTiles,
+  WelcomeCard,
 } from "@/features/dashboard/components/dashboard-cards";
 import {
   continueSummary,
@@ -58,11 +59,16 @@ export default async function DashboardPage() {
   // Nothing in progress: the first recommendation becomes the one big action.
   const featured = open ? null : (recommended[0] ?? null);
   const others = featured ? recommended.slice(1) : recommended;
+  // Nothing done yet: explain how the site works (it goes away after one test).
+  const firstVisit =
+    !open && stats.rating === null && stats.doneLessonIds.length === 0;
   const lead = open
     ? t.leadContinue
     : stats.openMistakes
       ? t.leadMistakes(stats.openMistakes)
-      : t.leadDefault;
+      : firstVisit
+        ? t.leadWelcome
+        : t.leadDefault;
 
   return (
     <div className="mx-auto flex max-w-6xl flex-col gap-6 sm:gap-8">
@@ -70,6 +76,7 @@ export default async function DashboardPage() {
         <h1 className="heading-page">{shellCopy.greeting(firstName)}</h1>
         <p className="text-muted-foreground sm:text-lg">{lead}</p>
       </header>
+      {firstVisit && <WelcomeCard />}
       {open && (
         <ContinueCard
           attemptId={open.id}

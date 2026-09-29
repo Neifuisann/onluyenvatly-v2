@@ -4,7 +4,7 @@ import { statsCopy as t } from "../../messages";
 
 function Tile({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex flex-col gap-1 rounded-lg border bg-surface p-4 shadow-card">
+    <div className="flex flex-col gap-1 rounded-lg border border-border/70 bg-surface p-5 shadow-card dark:border-border">
       <dt className="text-muted-foreground text-sm">{label}</dt>
       <dd className="num font-semibold text-2xl tabular-nums">{value}</dd>
     </div>
@@ -37,7 +37,7 @@ export function ScoreHistogram({
   return (
     <section
       aria-labelledby="histogram-heading"
-      className="flex flex-col gap-3 rounded-lg border bg-surface p-4 shadow-card"
+      className="flex flex-col gap-3 rounded-lg border border-border/70 bg-surface p-5 shadow-card dark:border-border"
     >
       <h2 id="histogram-heading" className="font-semibold">
         {t.distribution}

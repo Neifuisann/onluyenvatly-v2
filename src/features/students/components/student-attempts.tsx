@@ -11,7 +11,7 @@ export function StudentAttempts({
   rows: readonly StudentAttemptRow[];
 }) {
   return (
-    <ol className="divide-y rounded-lg border bg-surface">
+    <ol className="divide-y rounded-lg border border-border/70 bg-surface shadow-card dark:border-border">
       {rows.map((a) => (
         <li key={a.id}>
           <Link
