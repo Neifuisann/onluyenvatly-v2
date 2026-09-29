@@ -83,6 +83,7 @@ Assumptions:
 6. AI calls always go through the DB cache and the global daily budget (ADR-007).
 7. Upload bytes never pass through functions (ADR-006).
 8. Bots: `robots.txt` disallows everything except the landing, materials and share pages. `/admin` and `/attempts` send `noindex`.
+9. Admin insight (S6-05/06) adds nothing to the student hot path: a submit invalidates neither the lesson statistics nor the dashboard; both are shared-cached for 5 minutes and computed from one indexed read (stats: the latest 2,000 attempts of a version; dashboard: one statement over the last 30 days, ~20–85 ms on 25,000 attempts in PGlite). A teacher opening them costs a few invocations a day.
 
 ## 5. What happens if we exceed a free limit
 | Limit hit | Effect | Mitigation |

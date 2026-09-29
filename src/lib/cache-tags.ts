@@ -13,4 +13,6 @@ export const tags = {
   leaderboard: "leaderboard",
   /** Admin nav badge: students waiting for approval. */
   pendingStudents: "pendingStudents",
+  /** Admin dashboard aggregates (S6-06, 5 min); deleting an attempt invalidates it. */
+  adminOverview: "adminOverview",
 } as const;

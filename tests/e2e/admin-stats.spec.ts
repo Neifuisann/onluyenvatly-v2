@@ -5,16 +5,17 @@ import { STATS_LESSON } from "./fixtures/stats";
 import type { StorageState } from "./runner-helpers";
 
 /**
- * S6-05 lesson statistics. Read only: the seed
+ * S6-05 lesson statistics and S6-06 admin dashboard. Read only: the seed
  * gives the archived stats lesson a current version 2 with the five
  * hand-computed attempts of fixtures/stats.ts (numbers checked here are the
  * same literals as `lessons/domain/stats.test.ts`) and one attempt on
- * version 1. Own admin per project.
+ * version 1. Own admin per project. The dashboard's counts also include
+ * what other specs submit, so only lower bounds are checked there.
  */
 
 let storageState: StorageState;
 test.beforeAll(async ({ browser }, info) => {
-  storageState = await loginAdminOnce(browser, info, "stats");
+  storageState = await loginAdminOnce(browser, info, "stats", "/admin");
 });
 test.use({
   // biome-ignore lint/correctness/noEmptyPattern: Playwright requires destructured fixture dependencies.
@@ -197,4 +198,62 @@ test("the editor links to the stats; accessible in light and dark, fits 360 px",
     page.getByRole("heading", { name: "Chưa có bài nộp" }),
   ).toBeVisible();
   await expectNoOverflow(page);
+});
+
+test("dashboard: tiles, 30-day chart and hardest questions", async ({
+  page,
+}) => {
+  await page.goto("/admin");
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Tổng quan");
+  const number = async (label: string) =>
+    Number(await tile(page, label).innerText());
+  // The stats fixture alone: five students, five attempts this week.
+  expect(await number("Học sinh hoạt động (7 ngày)")).toBeGreaterThanOrEqual(5);
+  expect(await number("Lượt nộp (7 ngày)")).toBeGreaterThanOrEqual(5);
+  expect(await number("Lượt nộp hôm nay")).toBeGreaterThanOrEqual(0);
+  await expect(tile(page, "AI hôm nay")).toHaveText("Chưa bật");
+
+  const chart = page.getByRole("region", { name: "Lượt nộp bài 30 ngày qua" });
+  await expect(chart.getByRole("img")).toHaveAttribute(
+    "aria-label",
+    /^Lượt nộp bài 30 ngày qua\. Tổng \d+ lượt; nhiều nhất \d+ lượt ngày \d\d\/\d\d\.$/,
+  );
+  await expect(chart.locator("svg rect")).toHaveCount(30);
+  await expect(chart.locator("svg rect title").last()).toHaveText(
+    /^\d\d\/\d\d: \d+ lượt$/,
+  );
+
+  const hardest = page.getByRole("region", { name: "Câu khó nhất tuần này" });
+  const items = hardest.getByRole("listitem");
+  expect(await items.count()).toBeGreaterThanOrEqual(1);
+  expect(await items.count()).toBeLessThanOrEqual(5);
+  for (const link of await hardest.getByRole("link").all())
+    await expect(link).toHaveAttribute(
+      "href",
+      /^\/admin\/lessons\/\d+\/stats\?version=\d+&sort=hardest$/,
+    );
+  await expect(items.first()).toContainText(
+    /Câu \d+ · Đạt tối đa \d+% \(\d+\/\d+\)/,
+  );
+  await hardest.getByRole("link").first().click();
+  await expect(page).toHaveURL(/\/stats\?version=\d+&sort=hardest$/);
+  await expect(
+    page
+      .getByRole("navigation", { name: "Sắp xếp câu hỏi" })
+      .getByRole("link", { name: "Khó nhất trước" }),
+  ).toHaveAttribute("aria-current", "page");
+
+  await page.goto("/admin");
+  await page.getByRole("link", { name: /^Chờ duyệt: \d+ học sinh/ }).click();
+  await expect(page).toHaveURL(/\/admin\/students\?view=pending$/);
+});
+
+test("dashboard: accessible in light and dark, fits 360 px", async ({
+  page,
+}) => {
+  await page.goto("/admin");
+  await expect(
+    page.getByRole("region", { name: "Câu khó nhất tuần này" }),
+  ).toBeVisible();
+  await expectAccessible(page);
 });

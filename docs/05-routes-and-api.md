@@ -47,7 +47,7 @@ Conventions:
 
 | Path | Content |
 |---|---|
-| `/admin` | Dashboard |
+| `/admin` | Dashboard (S6-06): tiles pending students (→ `/admin/students?view=pending`), active students and submitted attempts in the last 7 Vietnam days, attempts today (Vietnam day), AI today ("Chưa bật" placeholder until S7, no query); attempts per day for the last 30 Vietnam days (server SVG bars, zero-filled, summary sentence as the accessible name, a `<title>` per bar); hardest questions this week (lowest full-marks rate among (lesson, question) pairs with ≥ 5 answers in the last 7 Vietnam days, top 5, "Câu N" by position in the newest version answered, linking to that lesson's stats with `sort=hardest`). Students' attempts only |
 | `/admin/lessons` | List, reorder, status filter |
 | `/admin/lessons/new`, `/admin/lessons/[id]/edit` | Editor (tabs: Nội dung, Cài đặt, Xem trước; a "Thống kê" link opens the stats page) |
 | `/admin/lessons/[id]/stats?version=&sort=` | Lesson statistics (S6-05): version picker (versions with students' submitted attempts plus the current one, newest first; default the current, else the newest), tiles (attempts, students, average and median /10), a 10-bucket CSS histogram, per question in version order or "Khó nhất trước" (`sort=hardest`): % full marks, average share of points, answered; mcq counts per original option with the key marked (word + icon), blanks and students per option in `<details>`; tf % correct per statement; short: top 5 normalized answers with counts and correctness. Linked from each row of `/admin/lessons` and from the editor. Students' attempts only; the latest 2,000 per version (the page says when capped) |
@@ -168,6 +168,7 @@ Grouped by feature. Each one is either **shared-cached** (C) or **per-request** 
 | `getMistakes(userId, filters)` | R | review |
 | `getLessonStats(lessonId, versionId, tfScoring)`, `getStatsVersions(lessonId)` | C `lesson:{id}:stats` (`tags.lessonStats`, invalidated by `deleteAttempt`), `cacheLife({ stale: 60, revalidate: 300, expire: 600 })`; a submit does **not** invalidate, so the page lags by up to 5 minutes. Only the computed result is cached (pure `computeLessonStats`), not the attempt rows | `/admin/lessons/[id]/stats` (S6-05); the header `getStatsLesson(id)` is R (one primary-key read) |
 | `getResults(filters)`, `getResultsForExport(filters)` | R | `/admin/results`, CSV export (S6-04) |
+| `getAdminOverview()` | C `adminOverview` (invalidated by `deleteAttempt`), `cacheLife({ stale: 60, revalidate: 300, expire: 600 })`; one SQL statement (both time windows are range scans of `attempts_submitted_idx`; hardest questions via `jsonb_array_elements(items) WITH ORDINALITY` × `earned[ord]` and the item's `p`) | `/admin` (S6-06), with the nav badge's cached `getPendingCount()` |
 | `getSettings()` | C `settings` | everywhere |
 
 ## 5. Error codes (returned by actions, mapped to Vietnamese messages in `src/lib/messages.ts`)
