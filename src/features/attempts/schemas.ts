@@ -65,3 +65,15 @@ export type SubmitAttemptInput = z.input<typeof SubmitAttemptSchema>;
 
 /** Request bodies are tiny (≈ 1 KB for 40 questions); refuse anything big. */
 export const MAX_BODY_BYTES = 16_384;
+
+/** `checkPracticeAnswer` (S7-06): one item's answer in a practice set. */
+export const CheckPracticeSchema = z.strictObject({
+  attemptId: AttemptIdSchema,
+  index: z
+    .number()
+    .int()
+    .min(0)
+    .max(MAX_QUESTIONS - 1),
+  answer: AnswerSchema,
+});
+export type CheckPracticeInput = z.infer<typeof CheckPracticeSchema>;

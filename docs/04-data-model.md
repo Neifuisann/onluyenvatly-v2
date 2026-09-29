@@ -108,7 +108,7 @@ Search: `WHERE search_text ILIKE '%' || lower(immutable_unaccent($q)) || '%'` us
 
 **Versioning policy (keeps the DB small):** saving a draft overwrites the draft version in place. Publishing makes the draft current. A new version number is created only when the previous current version already has attempts. Versions with no attempts that aren't current or draft are pruned by the daily cron.
 
-As built (S5-04, `features/lessons/content-service.ts`): a lesson has at most one draft row. The first save of a draft inserts it as `max(version) + 1`; later saves overwrite it. Publishing points `current_version_id` at the draft and clears `draft_version_id`; the version it replaces is then locked and deleted in the same transaction **unless an attempt references it**, and the new version takes over its number. So students' attempts always keep the exact content they started on (`attempts.lesson_version_id` is `NO ACTION`), and a lesson without attempts never grows past one published row plus one draft. The row lock waits for any attempt insert already pointing at the old version; an insert that arrives after the delete fails its foreign-key check and `startAttempt` retries once on the new version. "Bỏ bản nháp" deletes the draft row (drafts never have attempts). A draft is saved even with parse errors (its `questions` keep only the questions that are valid on their own, so ids stay stable); publishing re-parses the text on the server and refuses errors, an empty lesson, or a pool the questions can't fill.
+As built (S5-04, `features/lessons/content-service.ts`): a lesson has at most one draft row. The first save of a draft inserts it as `max(version) + 1`; later saves overwrite it. Publishing points `current_version_id` at the draft and clears `draft_version_id`; the version it replaces is then locked and deleted in the same transaction **unless an attempt references it** (S7-06: or a mistake, through `mistakes.lesson_version_id`, which kept a version whose attempt an admin deleted and made the publish fail on the foreign key; or a review attempt's item `v`), and the new version takes over its number. So students' attempts always keep the exact content they started on (`attempts.lesson_version_id` is `NO ACTION`), and a lesson without attempts never grows past one published row plus one draft. The row lock waits for any attempt insert already pointing at the old version; an insert that arrives after the delete fails its foreign-key check and `startAttempt` retries once on the new version. "Bỏ bản nháp" deletes the draft row (drafts never have attempts). A draft is saved even with parse errors (its `questions` keep only the questions that are valid on their own, so ids stay stable); publishing re-parses the text on the server and refuses errors, an empty lesson, or a pool the questions can't fill.
 
 ### `attempts`
 | Column | Type | Notes |
@@ -123,6 +123,7 @@ As built (S5-04, `features/lessons/content-service.ts`): a lesson has at most on
 | items | jsonb | Ordered `[{q:"q_ab12", v:57, o:[2,0,3,1], p:0.25}]`: question id, version id (omitted when equal to `lesson_version_id`), mcq option order, and the points fixed at start (so a config edit mid-attempt can't change the marks) |
 | answers | jsonb | Array aligned with `items`: `"B"` \| `[true,false,null,true]` \| `"1,5"` \| `null` |
 | flagged | smallint[] | Item indexes flagged for review |
+| checked | smallint[] | Practice and review attempts (S7-06, migration `0009`): item indexes whose answer was checked with `checkPracticeAnswer`. Those answers are locked: a save keeps the stored value for them (one `CASE` in the same guarded UPDATE, a no-op while the array is empty) and the submit grades the stored value |
 | guard_events | jsonb | `[{t: 132, k: "blur"}]`, seconds since start (server clock) + kind: `blur`, `hidden`, `fs-exit`, `copy`. Append-only through save/submit (≤ 50 new per request), capped at the first 200 |
 | earned | numeric(5,2)[] | Array aligned with `items`, set on submit |
 | score | numeric(7,2) null | Sum of `earned` (7 digits: 200 questions × 100 points fits) |
@@ -143,6 +144,7 @@ Indexes:
 - `(user_id, submitted_at DESC)` for history.
 - `(lesson_id, submitted_at DESC) WHERE status='submitted'` for lesson stats.
 - `(status, deadline_at) WHERE status='in_progress'` for the expiry sweep.
+- `UNIQUE (user_id) WHERE status = 'in_progress' AND lesson_id IS NULL` (`attempts_one_open_review_uq`, migration `0009`, S7-06): one personalized practice in progress per student; `startReviewPractice` returns it instead of starting another, and `/review` finds it through this index.
 - `(submitted_at DESC NULLS LAST) WHERE status='submitted'` (`attempts_submitted_idx`, migration `0007`, S6-04): the newest submitted attempts of every student, for `/admin/results`, its CSV export and the admin dashboard. The results query orders by `submitted_at DESC NULLS LAST, id DESC`, so the index gives the order and an incremental sort only breaks ties.
 
 ### `ratings`
@@ -171,7 +173,11 @@ As built (S6-04, `deleteAttempt`): deleting an attempt locks it, then the studen
 | last_attempt_id | uuid | |
 | updated_at | timestamptz | |
 
+| question_type | text null | `mcq` / `tf` / `short` (check constraint), copied from the question on every wrong answer so `/review` filters and counts by type without reading version content. S7-06, migration `0009`, which backfilled existing rows from `lesson_version_id` |
+
 Index `(user_id, status, updated_at DESC)`.
+
+As built (S7-06): a `review` attempt spans lessons, so the submit keys every item by lesson and question (`{lessonId}:{questionId}`, from the item's version) before `mistakeChanges`, and `recordMistakes` writes one multi-row upsert (each row with its own lesson, version and type) and one `UPDATE … FROM (VALUES …)` for the correct ones. Practice answers follow the same rules as tests: two correct rounds in a row resolve a mistake, a wrong one reopens it.
 
 Rules (`features/review/domain/mistakes.ts`, applied in the submit transaction): any item short of full marks (wrong, partially right tf, or blank) upserts the row: `wrong_count + 1`, streak 0, `open` (a resolved mistake reopens). A correct answer adds 1 to the streak of an **open** mistake and resolves it at 2; correct answers never create rows. At most one multi-row upsert and one UPDATE per submit.
 

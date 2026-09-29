@@ -254,6 +254,26 @@ describe("publishLesson", () => {
     expect(row?.versionId).toBe(result.ok ? result.data.versionId : -1);
   });
 
+  it("keeps a version the mistakes bank still uses after its attempt is deleted (S7-06)", async () => {
+    const id = await addLesson();
+    await publishLesson(admin, id, V1);
+    const started = await startAttempt(student, id, { ip: null, seed: 1 });
+    if (!started.ok) throw new Error("start failed");
+    await submitAttempt(student.id, started.data.attemptId, {
+      answers: [null, null],
+      flagged: [],
+      clientSubmitId: crypto.randomUUID(),
+    });
+    // The teacher deletes the attempt; its mistakes stay (S6-04).
+    await tdb.delete(attempts).where(eq(attempts.id, started.data.attemptId));
+    const result = await publishLesson(admin, id, V2);
+    expect(result).toMatchObject({
+      ok: true,
+      data: { version: 2, retired: false },
+    });
+    expect(await versions(id)).toHaveLength(2);
+  });
+
   it("re-publishes the current version after unpublishing", async () => {
     const id = await addLesson();
     await publishLesson(admin, id, V1);

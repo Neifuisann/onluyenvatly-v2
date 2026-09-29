@@ -85,6 +85,7 @@ export const resultCopy = {
   submittedAt: (when: string) => `Nộp lúc ${when}`,
   backToLesson: "Về trang bài tập",
   retake: "Làm lại",
+  backToReview: "Về trang ôn tập",
   review: "Xem lại bài",
   toCatalog: "Danh sách bài tập",
   good: "Làm tốt lắm!",
@@ -254,4 +255,26 @@ export const resultsCopy = {
   view: "Xem bài",
   viewLabel: (name: string, when: string) =>
     `Xem bài làm của ${name}, nộp ${when}`,
+} as const;
+
+/** Practice mode in the runner (S7-06): "Kiểm tra" under each question. */
+export const practiceCopy = {
+  badge: "Ôn tập · không tính xếp hạng",
+  check: "Kiểm tra",
+  checking: "Đang kiểm tra…",
+  answerFirst: "Trả lời rồi bấm Kiểm tra để xem đáp án.",
+  failed: "Chưa kiểm tra được. Thử lại.",
+  key: (k: string) => `Đáp án: ${k}`,
+  keyTf: (parts: string) => `Đáp án: ${parts}`,
+  true: "Đúng",
+  false: "Sai",
+  outcome: {
+    correct: "Chính xác!",
+    partial: (earned: string, max: string) =>
+      `Đúng một phần (${earned}/${max}đ)`,
+    wrong: "Chưa đúng",
+    blank: "Chưa trả lời",
+  },
+  later: "Lời giải chi tiết có ở trang kết quả sau khi nộp bài.",
+  exit: "Thoát bài ôn tập (bài làm đã được lưu)",
 } as const;

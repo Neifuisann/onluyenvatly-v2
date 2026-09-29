@@ -192,6 +192,21 @@ export const e2eStudents = [
     status: "active",
     grade: 10,
   },
+  // S7-06 review journey (journey 6), one per Playwright project.
+  {
+    key: "review",
+    phone: "0900000024",
+    fullName: "Học Sinh Ôn Tập",
+    status: "active",
+    grade: 12,
+  },
+  {
+    key: "review2",
+    phone: "0900000025",
+    fullName: "Học Sinh Ôn Tập Hai",
+    status: "active",
+    grade: 12,
+  },
   {
     key: "pending",
     phone: "0900000004",
@@ -212,7 +227,14 @@ export type E2eStudentKey = (typeof e2eStudents)[number]["key"];
 
 /** Each Playwright project takes its own copy of a per-project student. */
 export function projectStudentKey(
-  base: "queueA" | "queueB" | "manage" | "access" | "remove" | "results",
+  base:
+    | "queueA"
+    | "queueB"
+    | "manage"
+    | "access"
+    | "remove"
+    | "results"
+    | "review",
   project: string,
 ): E2eStudentKey {
   return project === "mobile" ? (`${base}2` as E2eStudentKey) : base;

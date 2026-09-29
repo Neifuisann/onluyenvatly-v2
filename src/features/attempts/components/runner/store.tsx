@@ -21,6 +21,9 @@ export type RunnerStore = RunnerState & {
   recordGuard: (event: GuardEvent) => void;
   /** The first `n` pending events reached the server. */
   ackGuard: (n: number) => void;
+  /** Practice (S7-06): items whose answer was checked and can't change. */
+  locked: readonly number[];
+  lock: (index: number) => void;
   choose: (index: number, letter: string) => void;
   setStatement: (
     index: number,
@@ -33,31 +36,44 @@ export type RunnerStore = RunnerState & {
   goTo: (index: number) => void;
 };
 
-export function createRunnerStore(initial: RunnerState) {
-  return createStore<RunnerStore>()((set) => ({
-    ...initial,
-    guard: [],
-    recordGuard: (e) => set((s) => ({ guard: pushGuard(s.guard, e) })),
-    ackGuard: (n) => set((s) => ({ guard: s.guard.slice(n) })),
-    choose: (i, letter) => set((s) => chooseOption(s, i, letter)),
-    setStatement: (i, statement, value, count) =>
-      set((s) => setStatement(s, i, statement, value, count)),
-    setText: (i, text) => set((s) => setText(s, i, text)),
-    toggleFlag: (i) => set((s) => toggleFlag(s, i)),
-    goTo: (i) => set((s) => goTo(s, i)),
-  }));
+export function createRunnerStore(
+  initial: RunnerState,
+  locked: readonly number[] = [],
+) {
+  return createStore<RunnerStore>()((set) => {
+    /** Answer changes skip locked items (keyboard shortcuts included). */
+    const edit = (i: number, change: (s: RunnerStore) => RunnerState) =>
+      set((s) => (s.locked.includes(i) ? s : change(s)));
+    return {
+      ...initial,
+      guard: [],
+      recordGuard: (e) => set((s) => ({ guard: pushGuard(s.guard, e) })),
+      ackGuard: (n) => set((s) => ({ guard: s.guard.slice(n) })),
+      locked,
+      lock: (i) =>
+        set((s) => (s.locked.includes(i) ? s : { locked: [...s.locked, i] })),
+      choose: (i, letter) => edit(i, (s) => chooseOption(s, i, letter)),
+      setStatement: (i, statement, value, count) =>
+        edit(i, (s) => setStatement(s, i, statement, value, count)),
+      setText: (i, text) => edit(i, (s) => setText(s, i, text)),
+      toggleFlag: (i) => set((s) => toggleFlag(s, i)),
+      goTo: (i) => set((s) => goTo(s, i)),
+    };
+  });
 }
 
 const RunnerContext = createContext<StoreApi<RunnerStore> | null>(null);
 
 export function RunnerProvider({
   initial,
+  locked,
   children,
 }: {
   initial: () => RunnerState;
+  locked?: readonly number[];
   children: ReactNode;
 }) {
-  const [store] = useState(() => createRunnerStore(initial()));
+  const [store] = useState(() => createRunnerStore(initial(), locked));
   return (
     <RunnerContext.Provider value={store}>{children}</RunnerContext.Provider>
   );

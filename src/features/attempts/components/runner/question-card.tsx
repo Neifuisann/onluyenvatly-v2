@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { questionTypeNames, runnerCopy as t } from "../../messages";
 import { McqOptions } from "./mcq-options";
+import { PracticeCheck } from "./practice";
 import { PreviewKey } from "./preview";
 import { ShortAnswerInput } from "./short-answer-input";
 import { useRunner } from "./store";
@@ -68,6 +69,7 @@ export function QuestionCard({
       )}
       {question.type === "short" && <ShortAnswerInput index={index} />}
       <PreviewKey index={index} />
+      <PracticeCheck index={index} />
     </section>
   );
 }

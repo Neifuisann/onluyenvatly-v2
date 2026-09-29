@@ -97,18 +97,17 @@ export function ScoreHero({
             {t.review}
           </a>
         )}
-        {attempt.lessonId && (
-          <Link
-            href={`/lessons/${attempt.lessonId}`}
-            className={cn(
-              buttonVariants({ size: "lg" }),
-              !hasReview && "col-span-2",
-            )}
-          >
-            <RotateCcw aria-hidden />
-            {t.retake}
-          </Link>
-        )}
+        <Link
+          // Personalized practice (S7-06) goes back to the mistakes bank.
+          href={attempt.lessonId ? `/lessons/${attempt.lessonId}` : "/review"}
+          className={cn(
+            buttonVariants({ size: "lg" }),
+            !hasReview && "col-span-2",
+          )}
+        >
+          <RotateCcw aria-hidden />
+          {attempt.lessonId ? t.retake : t.backToReview}
+        </Link>
       </div>
     </header>
   );

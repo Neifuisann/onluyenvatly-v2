@@ -10,19 +10,25 @@ import { GuardTimeline } from "@/features/attempts/components/result/guard-timel
 import { ReviewItem } from "@/features/attempts/components/result/review-item";
 import { ReviewList } from "@/features/attempts/components/result/review-list";
 import { ScoreHero } from "@/features/attempts/components/result/score-hero";
-import { buildReview, revealFor } from "@/features/attempts/domain/review";
+import {
+  itemPublicQuestions,
+  itemQuestions,
+  itemSources,
+} from "@/features/attempts/content";
+import {
+  buildReview,
+  type Reveal,
+  revealFor,
+} from "@/features/attempts/domain/review";
 import { revealAt } from "@/features/attempts/domain/schedule";
 import { resultCopy, reviewCopy } from "@/features/attempts/messages";
 import { getAttempt } from "@/features/attempts/queries";
 import { AttemptIdSchema } from "@/features/attempts/schemas";
 import { requireStudent } from "@/features/auth/guards";
 import { withOptionOrder } from "@/features/lessons/domain/public-question";
-import {
-  getLessonForTaking,
-  getLessonOverview,
-  getLessonWithAnswers,
-} from "@/features/lessons/queries";
+import { getLessonOverview } from "@/features/lessons/queries";
 import { getAttemptRatingEvent } from "@/features/rating/queries";
+import { reviewCopy as practiceCopy } from "@/features/review/messages";
 import { getSettings } from "@/features/settings/queries";
 import { formatDateTime } from "@/lib/dates";
 
@@ -51,34 +57,33 @@ export default async function AttemptResultPage({
     if (attempt.userId === user.id) redirect(`/attempts/${attempt.id}`);
     notFound();
   }
-  const { lessonId, lessonVersionId } = attempt;
-  const [lesson, rating] = await Promise.all([
+  const { lessonId } = attempt;
+  const [lesson, rating, sources] = await Promise.all([
     lessonId ? getLessonOverview(lessonId, true) : null,
     getAttemptRatingEvent(attempt.id),
+    itemSources(attempt),
   ]);
-  const reveal = revealFor(
-    lesson?.revealAnswers ?? "never",
-    lesson ? revealAt(lesson) : null,
-    new Date(),
-    user.role === "admin",
-  );
+  // Personalized practice (S7-06) is built only from questions whose answers
+  // may be shown, and showed each key when checked: its review is open.
+  const reveal: Reveal =
+    lessonId === null
+      ? { kind: "shown" }
+      : revealFor(
+          lesson?.revealAnswers ?? "never",
+          lesson ? revealAt(lesson) : null,
+          new Date(),
+          user.role === "admin",
+        );
   const shown = reveal.kind === "shown";
   // Hidden: only the answer-free view is read, never the key.
-  const [questions, publicQuestions] =
-    lessonId && lessonVersionId
-      ? await Promise.all([
-          shown ? getLessonWithAnswers(lessonId, lessonVersionId) : null,
-          shown ? null : getLessonForTaking(lessonId, lessonVersionId),
-        ])
-      : [null, null];
-  const publicById = new Map(publicQuestions?.map((q) => [q.id, q]));
+  const [questions, publicQuestions] = sources
+    ? await Promise.all([
+        shown ? itemQuestions(attempt, sources) : null,
+        shown ? null : itemPublicQuestions(attempt, sources),
+      ])
+    : [null, null];
   const entries = questions
-    ? buildReview(
-        attempt.items,
-        attempt.answers,
-        attempt.earned,
-        new Map(questions.map((q) => [q.id, q])),
-      )
+    ? buildReview(attempt.items, attempt.answers, attempt.earned, questions)
     : null;
   const hashes = entries?.map((e) =>
     needsAi(e.question) ? questionHash(e.question) : null,
@@ -97,7 +102,9 @@ export default async function AttemptResultPage({
     <article className="mx-auto flex max-w-2xl flex-col gap-8">
       <ScoreHero
         attempt={attempt}
-        lessonTitle={lesson?.title ?? ""}
+        lessonTitle={
+          lesson?.title ?? (lessonId === null ? practiceCopy.practiceTitle : "")
+        }
         rating={rating}
         hasReview={entries !== null}
       />
@@ -140,7 +147,7 @@ export default async function AttemptResultPage({
               : resultCopy.revealNever}
           </p>
           {attempt.items.map((item, i) => {
-            const q = publicById.get(item.q);
+            const q = publicQuestions?.[i];
             return (
               q && (
                 <ChoiceItem

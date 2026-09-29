@@ -2,7 +2,7 @@ import "server-only";
 import { and, eq, isNull, max, sql } from "drizzle-orm";
 import type { Tx } from "@/db/client";
 import { db } from "@/db/client";
-import { attempts, lessons, lessonVersions } from "@/db/schema";
+import { attempts, lessons, lessonVersions, mistakes } from "@/db/schema";
 import { writeAudit } from "@/lib/audit";
 import { err, ok, type Result } from "@/lib/result";
 import type { Actor } from "./admin-service";
@@ -245,6 +245,10 @@ export async function publishLesson(
           and(
             eq(lessonVersions.id, old),
             sql`not exists (select 1 from ${attempts} where ${attempts.lessonVersionId} = ${old})`,
+            // The mistakes bank and personalized practice (S7-06) point at
+            // versions too: a mistake by FK, a review item through its `v`.
+            sql`not exists (select 1 from ${mistakes} where ${mistakes.lessonVersionId} = ${old})`,
+            sql`not exists (select 1 from ${attempts} where ${attempts.lessonId} is null and ${attempts.items} @> ${JSON.stringify([{ v: old }])}::jsonb)`,
           ),
         )
         .returning({ version: lessonVersions.version });

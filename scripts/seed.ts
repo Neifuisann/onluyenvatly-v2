@@ -288,7 +288,9 @@ async function main() {
       .insert(schema.questionExplanations)
       .values({ ...flagged, lessonId: lesson?.id ?? null });
   }
-  // Every run starts without attempts (in-progress ones would be resumed).
+  // Every run starts without attempts (in-progress ones would be resumed)
+  // or mistakes (S7-06: they also pin the versions deleted below).
+  await db.delete(schema.mistakes);
   await db.delete(schema.attempts);
   await seedResults();
   // Versions a publish spec added (S5-04); the fixture is version 1.
