@@ -11,6 +11,8 @@ const STATUS: Partial<Record<ErrorCode, number>> = {
   CONFLICT: 409,
   ATTEMPT_CLOSED: 409,
   DEADLINE_PASSED: 409,
+  AI_QUOTA: 429,
+  AI_UNAVAILABLE: 503,
   INTERNAL: 500,
 };
 

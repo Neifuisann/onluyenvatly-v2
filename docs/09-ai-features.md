@@ -46,6 +46,10 @@ Tối đa 250 từ.
 - Output is rendered as Markdown (no HTML) plus KaTeX on the server when stored.
 - Rough size: ~600 input + ~450 output tokens per explanation.
 
+As built (S7-02, `PROMPT_VERSION = "explain-v1"`, `ai/domain/explain.ts`): the system instruction above plus a format rule (plain text, **bold** and `$…$` only; no headings, tables, HTML or images; one idea per line), because the stored text is rendered by `MathText` (Markdown-lite). MCQ options are listed in the teacher's order with the key, and the model is told that each student sees them **shuffled**, so it names an option by its content, not its letter. TF lists each statement with Đúng/Sai; short gives the answer and tolerance. A question with a figure tells the model it can't see it. The teacher's explanation is **not** sent: a question that has one shows it and offers no AI (ADR-007). Temperature 0.3, up to 2,048 output tokens (thinking included), 25 s.
+
+On the result page (only once answers may be shown), every question without a teacher explanation shows either the stored explanation ("Giải thích của AI", server-rendered with KaTeX, an "AI có thể nhầm" note until a teacher reviews it, 👍/👎 with counts) or, when AI is on, a "Giải thích bằng AI" button. The button posts to `POST /api/ai/explain` (05 §3), shows the text as it streams (plain, formulas not yet rendered), then refreshes the page into the stored version. Errors: "Hết lượt giải thích AI hôm nay, hãy thử lại vào ngày mai" (global budget), a per-student variant (20 a day), and "Giải thích đang được chuẩn bị. Bạn quay lại sau nhé." (Gemini down or AI off, ADR-007), each with "Thử lại". The page reads stored explanations with one query (`getReviewExplanations`: primary keys + my vote).
+
 ## 4. AI2: document import
 1. The admin uploads a PDF, DOCX or image (≤ 10 MB) directly to a private Storage bucket `imports/` via a signed URL. Bytes don't go through the function body.
 2. `POST /api/ai/import { path }` (route handler, `maxDuration = 300`). It downloads the file server-side and:

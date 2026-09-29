@@ -68,6 +68,29 @@ export const runnerQuestions: Question[] = [
   },
 ];
 
+/**
+ * S7-02: the first question has no teacher explanation (AI offered), the
+ * second has one (shown instead, no AI). The stem differs per project so
+ * each project's question has its own cache entry.
+ */
+export const aiQuestions = (project: "d" | "m"): Question[] => [
+  {
+    id: "q_ai_mcq",
+    type: "mcq",
+    stem: `Đơn vị của tần số dao động là (${project})`,
+    options: [{ text: "Giây" }, { text: "Héc" }],
+    answer: 1,
+  },
+  {
+    id: "q_ai_teacher",
+    type: "mcq",
+    stem: "Đơn vị của chu kì dao động là",
+    options: [{ text: "Giây" }, { text: "Héc" }],
+    answer: 0,
+    explanation: "Lời giải của giáo viên: chu kì đo bằng giây.",
+  },
+];
+
 export type E2eLesson = NewLesson & { questions?: Question[] };
 
 export const e2eLessons: E2eLesson[] = [
@@ -228,6 +251,20 @@ export const e2eLessons: E2eLesson[] = [
       config: { ...DEFAULT_LESSON_CONFIG, countsForRating: false },
       status: "published",
       questions: runnerQuestions.slice(0, 2),
+    }),
+  ),
+  // S7-02 AI explanations, one per Playwright project so each generates its
+  // own. No grade (off the dashboard's recommendations), unrated, last in
+  // the catalog.
+  ...(["d", "m"] as const).map(
+    (p): E2eLesson => ({
+      legacyId: `e2e-ai-${p}`,
+      title: `E2E – Giải thích AI (${p})`,
+      tags: ["e2e-ai"],
+      sortOrder: 500,
+      config: { ...DEFAULT_LESSON_CONFIG, countsForRating: false },
+      status: "published",
+      questions: aiQuestions(p),
     }),
   ),
   // S6-05 statistics: archived (off the catalog and every student page);

@@ -178,6 +178,11 @@ Rules (`features/review/domain/mistakes.ts`, applied in the submit transaction):
 ### `question_explanations`
 `question_hash` text PK, `lesson_id`, `question_id`, `source` enum (`ai`,`teacher`), `model` text, `content_md` text, `votes_up`, `votes_down` int, `created_at`, `updated_at`.
 
+As built (S7-02, migration `0008`): also `prompt_version` text (09 §5) and `reviewed_at`/`reviewed_by` (an admin edited or approved it, so it leaves the 👎 queue). `lesson_id` → `lessons` `SET NULL`: an explanation outlives the lesson it was first generated for, since the hash is what matters; `question_id` is where it was first generated. `question_hash` = sha256 of the normalized question (NFC, whitespace collapsed): type, stem, image path, options (text + image) or statements (text + answer), and the key (short: answer + tolerance), prefixed with a scheme version. Not the id, points or the teacher explanation (`ai/domain/explain.ts`). Indexes: `lesson_id`, and a partial `(votes_down DESC) WHERE reviewed_at IS NULL AND votes_down >= 3` for the queue. `content_md` is cleaned before it is stored (headings → bold lines, list markers → "•", no images, ≤ 6,000 characters).
+
+### `explanation_votes`
+`(question_hash, user_id)` PK (→ `question_explanations` and `users`, both cascade), `up` boolean, `created_at`. One vote per student per explanation; `voteExplanation` moves the counters on `question_explanations` in the same transaction (S7-02).
+
 ### `rate_limits`
 `key` text PK (e.g. `login:ip:1.2.3.4@10m`; the window is part of the key so one logical key can carry several limits), `window_start` timestamptz, `count` int. Identifiers such as phone numbers are hashed before they go into a key. Windows are fixed and UTC-aligned (`1m`, `10m`, `1h`, `1d`), computed in `src/lib/rate-limit.ts`.
 Implemented as one atomic upsert:
