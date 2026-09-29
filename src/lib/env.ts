@@ -13,6 +13,12 @@ const serverSchema = z.object({
     .default("development"),
   VERCEL_ENV: z.enum(["development", "preview", "production"]).optional(),
   VERCEL_GIT_COMMIT_SHA: z.string().optional(),
+  // Host of the production deployment (Vercel sets it on every build), the
+  // fallback for SITE_URL.
+  VERCEL_PROJECT_PRODUCTION_URL: z.string().min(1).optional(),
+  // Public origin for canonical links, the sitemap and OG images (S8-05),
+  // e.g. https://onluyenvatly.vn once the domain is set.
+  SITE_URL: z.url().optional(),
 
   DATABASE_URL: z.url(),
   // 5 in production (08). Local PGlite (`pnpm db:local`) needs 1.
