@@ -3,6 +3,7 @@ import {
   DEFAULT_LESSON_CONFIG,
   type Question,
 } from "../../../src/features/lessons/schema.ts";
+import { STATS_LESSON, statsQuestionsV1 } from "./stats.ts";
 
 // Synthetic content only. The marker must never appear in student responses.
 export const ANSWER_MARKER = "PRIVATE_EXPLANATION_S2_E2E";
@@ -229,4 +230,17 @@ export const e2eLessons: E2eLesson[] = [
       questions: runnerQuestions.slice(0, 2),
     }),
   ),
+  // S6-05 statistics: archived (off the catalog and every student page);
+  // the seed adds version 2 and the attempts of fixtures/stats.ts.
+  {
+    legacyId: STATS_LESSON.legacyId,
+    title: STATS_LESSON.title,
+    grade: 11,
+    chapter: "Dòng điện không đổi",
+    tags: ["e2e-stats"],
+    sortOrder: -300,
+    config: DEFAULT_LESSON_CONFIG,
+    status: "archived",
+    questions: statsQuestionsV1,
+  },
 ];

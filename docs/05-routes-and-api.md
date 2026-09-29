@@ -49,8 +49,8 @@ Conventions:
 |---|---|
 | `/admin` | Dashboard |
 | `/admin/lessons` | List, reorder, status filter |
-| `/admin/lessons/new`, `/admin/lessons/[id]/edit` | Editor (tabs: Nội dung, Cài đặt, Xem trước, Thống kê) |
-| `/admin/lessons/[id]/stats` | Lesson statistics |
+| `/admin/lessons/new`, `/admin/lessons/[id]/edit` | Editor (tabs: Nội dung, Cài đặt, Xem trước; a "Thống kê" link opens the stats page) |
+| `/admin/lessons/[id]/stats?version=&sort=` | Lesson statistics (S6-05): version picker (versions with students' submitted attempts plus the current one, newest first; default the current, else the newest), tiles (attempts, students, average and median /10), a 10-bucket CSS histogram, per question in version order or "Khó nhất trước" (`sort=hardest`): % full marks, average share of points, answered; mcq counts per original option with the key marked (word + icon), blanks and students per option in `<details>`; tf % correct per statement; short: top 5 normalized answers with counts and correctness. Linked from each row of `/admin/lessons` and from the editor. Students' attempts only; the latest 2,000 per version (the page says when capped) |
 | `/admin/import` | AI import (PDF/DOCX/image → text) → opens the editor |
 | `/admin/students` | Pending queue + all students |
 | `/admin/students/[id]` | Student detail: attempts, rating, sessions, actions |
@@ -166,7 +166,7 @@ Grouped by feature. Each one is either **shared-cached** (C) or **per-request** 
 | `getLeaderboard({ grade, period })` | C `leaderboard`, 60 s | leaderboard, dashboard rank |
 | `getMyStats(userId)` | R | profile, dashboard (split into `getDashboardStats` + `getContinueAttempt` in S4-06) |
 | `getMistakes(userId, filters)` | R | review |
-| `getLessonStats(lessonId)` | C `lesson:{id}:stats` (`tags.lessonStats`, added in S6-04 and invalidated by `deleteAttempt`), 5 min | admin stats |
+| `getLessonStats(lessonId, versionId, tfScoring)`, `getStatsVersions(lessonId)` | C `lesson:{id}:stats` (`tags.lessonStats`, invalidated by `deleteAttempt`), `cacheLife({ stale: 60, revalidate: 300, expire: 600 })`; a submit does **not** invalidate, so the page lags by up to 5 minutes. Only the computed result is cached (pure `computeLessonStats`), not the attempt rows | `/admin/lessons/[id]/stats` (S6-05); the header `getStatsLesson(id)` is R (one primary-key read) |
 | `getResults(filters)`, `getResultsForExport(filters)` | R | `/admin/results`, CSV export (S6-04) |
 | `getSettings()` | C `settings` | everywhere |
 

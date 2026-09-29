@@ -32,6 +32,12 @@ import {
 import { e2eLessons, e2eQuestions } from "../tests/e2e/fixtures/lessons.ts";
 import { e2eResultAttempts } from "../tests/e2e/fixtures/results.ts";
 import {
+  STATS_LESSON,
+  statsAttempts,
+  statsQuestionsV2,
+  statsStudents,
+} from "../tests/e2e/fixtures/stats.ts";
+import {
   CREATED_ADMIN_PREFIX,
   E2E_PASSWORD,
   e2eAdmin,
@@ -278,6 +284,7 @@ async function main() {
         ne(schema.lessonVersions.version, 1),
       ),
     );
+  await seedStats(passwordHash);
   // Tests assume the defaults.
   await db
     .update(settings)
@@ -367,6 +374,96 @@ async function seedResults() {
       ratedAttempts: state.rated,
     });
   }
+}
+
+/**
+ * S6-05 statistics spec: the archived stats lesson gets a current version 2
+ * and the hand-computed attempts of fixtures/stats.ts from five students of
+ * its own (grade 10, unrated). Runs after the stray-version cleanup.
+ */
+async function seedStats(passwordHash: string) {
+  const lesson = await db.query.lessons.findFirst({
+    columns: { id: true, config: true },
+    where: (l, { eq }) => eq(l.legacyId, STATS_LESSON.legacyId),
+  });
+  if (!lesson) throw new Error("No stats lesson");
+  const versions = new Map<number, number>();
+  const [v1] = await db
+    .select({ id: schema.lessonVersions.id })
+    .from(schema.lessonVersions)
+    .where(
+      and(
+        eq(schema.lessonVersions.lessonId, lesson.id),
+        eq(schema.lessonVersions.version, 1),
+      ),
+    );
+  if (!v1) throw new Error("No stats version 1");
+  versions.set(1, v1.id);
+  const content = {
+    questions: statsQuestionsV2,
+    sourceText: serializeLesson(statsQuestionsV2),
+  };
+  const [v2] = await db
+    .insert(schema.lessonVersions)
+    .values({ lessonId: lesson.id, version: 2, ...content })
+    .returning({ id: schema.lessonVersions.id });
+  if (!v2) throw new Error("Stats version seed failed");
+  versions.set(2, v2.id);
+  await db
+    .update(schema.lessons)
+    .set({
+      currentVersionId: v2.id,
+      draftVersionId: null,
+      attemptCount: statsAttempts.length,
+      ...summarizeLesson(
+        statsQuestionsV2,
+        LessonConfigSchema.parse(lesson.config),
+      ),
+    })
+    .where(eq(schema.lessons.id, lesson.id));
+  const ids: string[] = [];
+  for (const s of statsStudents) {
+    const [student] = await db
+      .insert(users)
+      .values({
+        role: "student",
+        status: "active",
+        phone: s.phone,
+        fullName: s.fullName,
+        grade: 10,
+        className: "10A2",
+        dateOfBirth: "2008-01-01",
+        passwordHash,
+      })
+      .onConflictDoUpdate({
+        target: users.phone,
+        set: { status: "active", fullName: s.fullName, updatedAt: new Date() },
+      })
+      .returning({ id: users.id });
+    if (!student) throw new Error("Stats student seed failed");
+    ids.push(student.id);
+  }
+  const hour = 60 * 60 * 1000;
+  await db.insert(schema.attempts).values(
+    statsAttempts.map((a) => {
+      const submittedAt = new Date(Date.now() - a.hoursAgo * hour);
+      return {
+        userId: ids[a.student] ?? "",
+        lessonId: lesson.id,
+        lessonVersionId: versions.get(a.version) ?? 0,
+        status: "submitted" as const,
+        items: a.items,
+        answers: a.answers,
+        earned: a.earned,
+        score: a.earned.reduce((sum, e) => sum + e, 0),
+        maxScore: a.items.reduce((sum, i) => sum + i.p, 0),
+        score10: a.score10,
+        startedAt: new Date(submittedAt.getTime() - 600_000),
+        submittedAt,
+        timeTakenSec: 600,
+      };
+    }),
+  );
 }
 
 main()

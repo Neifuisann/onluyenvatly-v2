@@ -15,6 +15,8 @@ const ADMIN_PAGES = [
   "/admin",
   "/admin/lessons",
   "/admin/lessons/1/edit",
+  "/admin/lessons/1/stats",
+  "/admin/lessons/1/stats?version=1&sort=hardest",
   "/admin/students",
   `/admin/students/${UUID}`,
   "/admin/settings",
