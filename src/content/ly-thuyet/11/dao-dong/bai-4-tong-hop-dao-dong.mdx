@@ -1,0 +1,237 @@
+{/* Converted from v1 materials/grade11/dao-dong/bai-4-tong-hop-dao-dong.html by scripts/convert-materials.ts (S8-02). */}
+
+Trong thực tế, một vật có thể tham gia đồng thời nhiều dao động. Việc xác định dao động tổng hợp là bài toán quan trọng trong vật lý, có nhiều ứng dụng trong kỹ thuật và đời sống.
+
+## 1. Dao động tổng hợp
+
+### a) Nguyên lý chồng chất dao động
+
+<Callout kind="definition">
+
+Khi một vật tham gia đồng thời nhiều dao động, li độ của vật bằng tổng đại số các li độ thành phần tại mọi thời điểm.
+
+</Callout>
+
+### b) Điều kiện để tổng hợp dao động
+
+Bài toán tổng hợp dao động thường xét với các dao động:
+
+- **Cùng phương**: Các dao động theo cùng một phương
+- **Cùng tần số**: Có cùng tần số góc ω
+
+## 2. Phương pháp giản đồ Fresnel
+
+### a) Biểu diễn dao động bằng vectơ quay
+
+Mỗi dao động điều hòa x = Acos(ωt + φ) được biểu diễn bằng một vectơ quay:
+
+- Độ dài vectơ = Biên độ A
+- Góc với trục Ox = Pha ban đầu φ
+- Vectơ quay với tốc độ góc ω
+
+<Callout kind="note">
+
+<strong>Giản đồ vectơ:</strong>
+
+Vectơ OA biểu diễn dao động x = Acos(ωt + φ)
+
+\- Độ dài OA = A (biên độ)
+
+\- Góc (OA, Ox) = φ (pha ban đầu)
+
+\- Hình chiếu của A lên Ox = x (li độ)
+
+</Callout>
+
+### b) Tổng hợp hai dao động
+
+Cho hai dao động cùng phương, cùng tần số:
+
+- x₁ = A₁cos(ωt + φ₁)
+- x₂ = A₂cos(ωt + φ₂)
+
+Dao động tổng hợp: x = x₁ + x₂ = Acos(ωt + φ)
+
+## 3. Công thức tổng hợp dao động
+
+<Formula>
+
+#### Biên độ dao động tổng hợp:
+
+<Formula>
+
+A² = A₁² + A₂² + 2A₁A₂cos(φ₂ - φ₁)
+
+</Formula>
+
+#### Pha ban đầu của dao động tổng hợp:
+
+<Formula>
+
+tanφ = (A₁sinφ₁ + A₂sinφ₂)/(A₁cosφ₁ + A₂cosφ₂)
+
+</Formula>
+
+</Formula>
+
+## 4. Các trường hợp đặc biệt
+
+### a) Hai dao động cùng pha
+
+Khi φ₂ - φ₁ = 2kπ (k ∈ Z):
+
+<Formula>
+
+A = A₁ + A₂ (biên độ cực đại)
+
+</Formula>
+
+Dao động tổng hợp cùng pha với hai dao động thành phần.
+
+### b) Hai dao động ngược pha
+
+Khi φ₂ - φ₁ = (2k + 1)π:
+
+<Formula>
+
+A = \|A₁ - A₂\| (biên độ cực tiểu)
+
+</Formula>
+
+Dao động tổng hợp cùng pha với dao động có biên độ lớn hơn.
+
+### c) Hai dao động vuông pha
+
+Khi φ₂ - φ₁ = ±π/2:
+
+<Formula>
+
+A = √(A₁² + A₂²)
+
+</Formula>
+
+### d) Độ lệch pha bất kỳ
+
+<Table>
+<thead>
+<tr>
+<th>Độ lệch pha Δφ</th>
+<th>Biên độ tổng hợp A</th>
+<th>Nhận xét</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0</td>
+<td>A₁ + A₂</td>
+<td>Cực đại</td>
+</tr>
+<tr>
+<td>π/3</td>
+<td>√(A₁² + A₂² + A₁A₂)</td>
+<td>-</td>
+</tr>
+<tr>
+<td>π/2</td>
+<td>√(A₁² + A₂²)</td>
+<td>-</td>
+</tr>
+<tr>
+<td>2π/3</td>
+<td>√(A₁² + A₂² - A₁A₂)</td>
+<td>-</td>
+</tr>
+<tr>
+<td>π</td>
+<td>\|A₁ - A₂\|</td>
+<td>Cực tiểu</td>
+</tr>
+</tbody>
+</Table>
+
+<Formula>
+
+<strong>Giới hạn biên độ tổng hợp:</strong>
+
+<Formula>
+
+\|A₁ - A₂\| ≤ A ≤ A₁ + A₂
+
+</Formula>
+
+</Formula>
+
+## 5. Tổng hợp nhiều dao động
+
+### a) Phương pháp vectơ
+
+Khi có n dao động cùng phương, cùng tần số:
+
+1. Vẽ các vectơ biểu diễn từng dao động
+2. Cộng vectơ theo quy tắc hình bình hành
+3. Vectơ tổng là dao động tổng hợp
+
+### b) Phương pháp đại số
+
+Sử dụng công thức lượng giác để cộng các hàm cos:
+
+- x = x₁ + x₂ + ... + xₙ
+- Chuyển về dạng: x = Acos(ωt + φ)
+
+## 6. Bài tập ví dụ
+
+<Callout kind="example">
+
+<strong>Ví dụ 1:</strong> Hai dao động cùng phương: x₁ = 3cos(10t + π/6) cm và x₂ = 4cos(10t + 2π/3) cm. Tìm dao động tổng hợp.<br /><br /><strong>Giải:</strong><br />A₁ = 3 cm, φ₁ = π/6 rad<br />A₂ = 4 cm, φ₂ = 2π/3 rad<br /><br />Độ lệch pha: Δφ = φ₂ - φ₁ = 2π/3 - π/6 = π/2<br /><br />Biên độ tổng hợp: A = √(A₁² + A₂²) = √(9 + 16) = 5 cm<br /><br />Pha ban đầu: tanφ = (3sin(π/6) + 4sin(2π/3))/(3cos(π/6) + 4cos(2π/3))<br />= (3×0,5 + 4×√3/2)/(3×√3/2 + 4×(-0,5))<br />= (1,5 + 2√3)/(1,5√3 - 2) ≈ 2,19<br />→ φ ≈ 1,14 rad ≈ 65,3°<br /><br />Dao động tổng hợp: x = 5cos(10t + 1,14) cm
+
+</Callout>
+
+<Callout kind="example">
+
+<strong>Ví dụ 2:</strong> Một vật thực hiện đồng thời 3 dao động: x₁ = 2cos(ωt), x₂ = 3cos(ωt + π/2), x₃ = cos(ωt + π). Tìm dao động tổng hợp.<br /><br /><strong>Giải:</strong><br />Sử dụng phương pháp vectơ:<br />- Vectơ 1: A₁ = 2, φ₁ = 0<br />- Vectơ 2: A₂ = 3, φ₂ = π/2 (vuông góc với vectơ 1)<br />- Vectơ 3: A₃ = 1, φ₃ = π (ngược chiều vectơ 1)<br /><br />Tổng hợp 1 và 3 trước (cùng phương):<br />A₁₃ = A₁ - A₃ = 2 - 1 = 1 (cùng chiều với vectơ 1)<br /><br />Tổng hợp với vectơ 2 (vuông góc):<br />A = √(A₁₃² + A₂²) = √(1² + 3²) = √10<br /><br />tanφ = A₂/A₁₃ = 3/1 = 3 → φ = arctan(3) ≈ 71,6°<br /><br />Dao động tổng hợp: x = √10.cos(ωt + 71,6°)
+
+</Callout>
+
+## 7. Ứng dụng của tổng hợp dao động
+
+- **Âm học**: Tổng hợp âm thanh, phách (beat) trong nhạc cụ
+- **Quang học**: Giao thoa ánh sáng, màu sắc giao thoa
+- **Điện tử**: Điều chế tín hiệu AM, FM
+- **Cơ học**: Phân tích dao động của máy móc, công trình
+- **Địa chấn học**: Phân tích sóng địa chấn
+
+## 8. Hiện tượng phách
+
+Khi hai dao động có tần số gần bằng nhau (f₁ ≈ f₂):
+
+<Formula>
+
+#### Tần số phách:
+
+<Formula>
+
+f<sub>phách</sub> = \|f₁ - f₂\|
+
+</Formula>
+
+Biên độ dao động tổng hợp biến thiên tuần hoàn với tần số phách.
+
+</Formula>
+
+<Callout kind="example">
+
+<strong>Ví dụ phách:</strong> Hai âm thoa có tần số 440 Hz và 442 Hz. Khi cùng phát âm, ta nghe được phách với tần số:<br />f<sub>phách</sub> = \|440 - 442\| = 2 Hz<br />Nghĩa là âm thanh to nhỏ 2 lần trong 1 giây.
+
+</Callout>
+
+<Callout kind="definition">
+
+<strong>Lưu ý học tập:</strong> Khi giải bài tập tổng hợp dao động, nên vẽ giản đồ vectơ để hình dung rõ hơn. Với các trường hợp đặc biệt (cùng pha, ngược pha, vuông pha), nên nhớ công thức để giải nhanh.
+
+</Callout>
+
+<Formula>
+
+<strong>Tổng kết:</strong> Tổng hợp dao động là phép cộng vectơ. Biên độ tổng hợp phụ thuộc vào độ lệch pha giữa các dao động thành phần. Phương pháp giản đồ Fresnel là công cụ mạnh để giải quyết bài toán tổng hợp dao động.
+
+</Formula>

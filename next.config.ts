@@ -1,19 +1,20 @@
+import createMDX from "@next/mdx";
 import type { NextConfig } from "next";
+import { catalog } from "./src/content/ly-thuyet/catalog";
+import { materialRedirects } from "./src/features/materials/domain/materials";
+import { LEGACY_REDIRECTS } from "./src/lib/legacy-redirects";
 import { originOf, securityHeaders } from "./src/lib/security-headers";
 
-// Lesson bookmarks ship in S2-07; the remaining legacy redirects arrive in S8-05.
 const nextConfig: NextConfig = {
   // Enables `"use cache"`, `cacheTag` and `cacheLife` (ADR-005).
   cacheComponents: true,
   poweredByHeader: false,
   async redirects() {
-    return [
-      {
-        source: "/lesson/:legacyId",
-        destination: "/lessons/by-legacy/:legacyId",
-        permanent: true,
-      },
-    ];
+    // v1 bookmarks (05 §1, S8-05): permanent, so browsers remember them.
+    return [...LEGACY_REDIRECTS, ...materialRedirects(catalog)].map((r) => ({
+      ...r,
+      permanent: true,
+    }));
   },
   async headers() {
     return [
@@ -24,8 +25,30 @@ const nextConfig: NextConfig = {
           mediaOrigin: originOf(process.env.NEXT_PUBLIC_MEDIA_BASE_URL),
         }),
       },
+      // Private areas stay out of search results even if a link leaks (08 §5).
+      ...["/admin/:path*", "/attempts/:path*"].map((source) => ({
+        source,
+        headers: [{ key: "X-Robots-Tag", value: "noindex, nofollow" }],
+      })),
     ];
   },
 };
 
-export default nextConfig;
+/**
+ * Theory pages (S8-02) are MDX under src/content. `$…$` formulas become KaTeX
+ * HTML at build time, like MathText's options (no KaTeX JS in the browser).
+ * Plugins are named by string so Turbopack can load them.
+ */
+const withMDX = createMDX({
+  options: {
+    remarkPlugins: ["remark-math"],
+    rehypePlugins: [
+      [
+        "rehype-katex",
+        { strict: "ignore", trust: false, output: "htmlAndMathml" },
+      ],
+    ],
+  },
+});
+
+export default withMDX(nextConfig);

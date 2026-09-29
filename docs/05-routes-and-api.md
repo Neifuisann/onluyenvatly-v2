@@ -16,6 +16,25 @@ Conventions:
 | `/register` | Static shell + action | Registration form → `/register/pending` "chờ duyệt" (pending approval) screen |
 | `/ly-thuyet`, `/ly-thuyet/[grade]/[chapter]/[slug]` | Static (MDX) | Theory materials migrated from v1 `materials/` |
 | `/gallery` | Static | Handout gallery |
+
+As built (S8-02, content only): the 56 v1 theory pages are MDX in `src/content/ly-thuyet/<grade>/<chapter>/<topic>.mdx` with a typed catalog (`catalog.ts`: grades → chapters → topics with title, description, subtopics, v1 path; grade 12 chapters keep v1's 24 external reference links), converted by `scripts/convert-materials.ts`. Formulas are `$…# 05 — Routes, Server Actions & Route Handlers
+
+Conventions:
+- **Pages** read data through `features/*/queries.ts` (`import 'server-only'`).
+- **Mutations** are Server Actions in `features/*/actions.ts`. Every action: (1) authenticates (`requireStudent`/`requireAdmin`), (2) validates input with Zod, (3) rate-limits if needed, (4) does the work in a transaction if there's more than one write, (5) invalidates cache tags, (6) returns a typed `Result<T>`: `{ ok: true, data } | { ok: false, code, message }`. Actions never throw raw errors to the client.
+- **Route handlers** exist only for streaming, beacons, cron and health.
+- **URLs are English and short**, close to v1 so bookmarks survive. UI text is Vietnamese.
+
+## 1. Pages
+
+### Public
+| Path | Render | Content |
+|---|---|---|
+| `/` | Static | Landing: value proposition, how it works, grade chapters, CTA register/login |
+| `/login` | Static shell + action | Single login form (phone or username + password) |
+| `/register` | Static shell + action | Registration form → `/register/pending` "chờ duyệt" (pending approval) screen |
+| `/ly-thuyet`, `/ly-thuyet/[grade]/[chapter]/[slug]` | Static (MDX) | Theory materials migrated from v1 `materials/` |
+ rendered by remark-math + rehype-katex at build time (`next.config.ts`); the pages may only use `Callout`, `Formula`, `Table` and links (`src/mdx-components.tsx`, unstyled, `data-*` hooks). Pure helpers in `features/materials/domain/materials.ts` (`allTopics`, `findTopic` with neighbours, accent-insensitive `searchTopics`, `materialRedirects`). The `/ly-thuyet` pages themselves are part of the UI work: import a page with `` await import(`@/content/ly-thuyet/${grade}/${chapter}/${slug}.mdx`) `` and prerender with `generateStaticParams` from `topicParams(catalog)`.
 | `/share/lessons/[id]` | ISR | Public lesson preview + OG image (`opengraph-image.tsx`) |
 | `/privacy`, `/terms` | Static | Short Vietnamese policy pages |
 
@@ -72,6 +91,8 @@ Conventions:
 | `/study-materials` | `/ly-thuyet` |
 | `/review-mistakes`, `/practice` | `/review` |
 | `/history` | `/admin/results` |
+
+As built (S8-05): every row above plus the other v1 pages (`/lesson/last-incomplete` → `/dashboard`, `/quizgame`, `/student/results`, `/result`, and v1's `/admin/...` editor/statistics/tool pages → the matching admin list) lives in one table, `src/lib/legacy-redirects.ts` (unit-tested: each v1 URL, first-match order, destinations exist), and each v1 theory page `/materials/gradeN/<folder>/<file>` redirects to its `/ly-thuyet/N/<chapter>/<topic>` (from the theory catalog). `/result/:id` goes to `/attempts/by-legacy/:id` (session required; the migrated attempt's owner or an admin, else 404) and `/share/lesson/:id` to the public `/share/lessons/by-legacy/:id` (published lessons only, `Cache-Control: public, max-age=300`). `/admin/**` and `/attempts/**` send `X-Robots-Tag: noindex, nofollow`; `robots.txt` allows only the public pages; `sitemap.xml` lists `PUBLIC_PATHS` (`src/lib/public-paths.ts`, add pages as they ship); `manifest.webmanifest` starts at `/dashboard` (icons in `public/icons`, `scripts/make-icons.ts`). Absolute URLs use `SITE_URL`, else the Vercel production host.
 
 S2-07 implements the lesson redirect only. The authenticated lookup validates the legacy key, uses the unique `legacy_id` index, caches under `lessons`, and returns a 308 with `Cache-Control: private, no-store`. Missing or student-inaccessible lessons return 404. Signed-out visitors log in before the lookup; the `next` URL preserves their bookmark.
 
@@ -149,6 +170,10 @@ As built (S6-04): `requireAdmin()`, the id (`z.uuid()`), then one transaction in
 Pages (S6-04): `/admin/results?lesson=&q=&from=&to=&page=` (`attempts/admin-queries.ts`, per request, uncached): students' submitted attempts (admins' own tries are left out), newest first, cumulative "Xem thêm" by 50 (at most 20 steps; one extra row says "more", no `count(*)`). Filters in the URL, parsed by the pure `parseResultsParams` (invalid → no filter): a lesson select (every lesson, deleted ones marked), accent-insensitive student-name words (the `users_full_name_trgm_idx` expression), and a date range in Vietnam days (`from` 00:00 +07 inclusive to the day after `to`, swapped if reversed). Each row: the student (link to `/admin/students/[id]`), class and grade, lesson (or "Ôn tập cá nhân"), score /10, time taken, submitted at (Vietnam time), a guard-event count badge and "Xem bài" (`/attempts/[id]/result`); `prefetch={false}` on every row link. `/attempts/[id]/result` shows admins the exam-guard timeline (mm:ss since the start, Vietnamese label, icon, "no events" state; `guardTimeline` in `attempts/domain/guard.ts`) instead of the raw JSON, and "Xóa bài làm" behind a confirm dialog.
 
 ### `features/settings/actions.ts`
+
+As built (S8-04): the student's own actions live in `features/account/actions.ts` (so the admin-only settings file stays admin-only; `auth/authz.test.ts` checks every account action sends visitors to `/login` and must-change-password users to `/change-password`). Each runs `requireUser()`, Zod, one service call scoped to the caller's row: `updateMyProfile` (name, birth date, grade, class with registration's rules; audit of the changed keys; invalidates `leaderboard`), `setMyPrivacy({ leaderboardInitials })` (invalidates `leaderboard`), `revokeMySession(handle)` (16 hex chars of the session id from `getMySessions`; never the current session), `requestAccountDeletion({ password })` / `cancelAccountDeletion()`, `createAvatarUploadUrl({ contentType: image/webp, bytes, width, height })` then `saveMyAvatar(path)` / `removeMyAvatar()`. Reads: `getMyAccount`, `getMySessions` (R). Download: `GET /settings/export` (JSON, 401/403 JSON rather than a redirect; `proxy.ts` lets it through without a cookie). The `/settings` page is part of the UI work.
+
+As built (S8-03): `getSharePreview(id)` (`lessons/queries.ts`, C `lesson:{id}` + `lesson:{id}:public`): a published lesson's card fields and description plus its first two questions through `toPublicQuestion`, none for exam-mode (`examGuard`) or scheduled (`startsAt`) tests. The `/share/lessons/[id]` page, its OG image and `/gallery` (images in `public/gallery`, sizes in `src/content/gallery.ts`, `scripts/convert-gallery.ts`) are part of the UI work.
 `updateSettings(partial)` (admin), `updateMyProfile`, `uploadAvatar` (signed URL), `requestDeletion`, `exportMyData` (returns JSON download).
 
 As built (S6-03): `updateSettings(partial)` runs `requireAdmin()`, then `SettingsPatchSchema` (`settings/domain/settings.ts`: any of `registrationOpen`, `singleSession`, `aiEnabled` booleans, `aiDailyBudget` an integer 0–5000, `announcement` plain text cleaned to one line and ≤ 300 characters, empty → `null`; unknown keys refused; `VALIDATION` with `fieldErrors` per field). The service locks row 1, writes only the keys whose value changes plus `updated_by/at`, and audits `settings.update` `{ changed: [keys] }` in the same transaction; nothing changed → no write, no audit. Then `updateTag(settings)` and `refresh()`. Returns `{ changed }`. Every login and registration reads `getSettings()` (tag `settings`), so a new policy applies from the next login or registration (integration test in `settings/service.test.ts`); the student layout shows the announcement. There is no device policy and no rating-formula setting (01 §7). `/admin/settings` shows the form (the settings from the shared cache), the admin accounts (name, username, last login; `getAdmins()`, per request) and "Thêm quản trị viên", which calls S6-02's `createAdmin`: the new admin logs in with the password the creating admin set (not forced to change it). These admin actions live in `settings/actions.ts`, listed by name in `auth/authz.test.ts`; the student settings actions above will get their own file.

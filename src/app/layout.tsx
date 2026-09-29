@@ -1,5 +1,7 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Be_Vietnam_Pro, JetBrains_Mono } from "next/font/google";
+import { shellCopy } from "@/lib/messages";
+import { siteUrl } from "@/lib/site";
 import { themeScript } from "@/lib/theme";
 import "./globals.css";
 
@@ -17,11 +19,29 @@ const mono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
+  // Absolute URLs for canonical links and OG images (S8-05).
+  metadataBase: siteUrl(),
   title: {
-    default: "Ôn Luyện Vật Lý",
-    template: "%s · Ôn Luyện Vật Lý",
+    default: shellCopy.appName,
+    template: `%s · ${shellCopy.appName}`,
   },
-  description: "Luyện đề Vật lý THPT theo cấu trúc đề thi mới.",
+  description: shellCopy.appDescription,
+  applicationName: shellCopy.appName,
+  appleWebApp: { title: shellCopy.appShortName, capable: true },
+  formatDetection: { telephone: false },
+  openGraph: {
+    type: "website",
+    locale: "vi_VN",
+    siteName: shellCopy.appName,
+  },
+};
+
+/** Browser chrome follows the page (light/dark `--background` in sRGB). */
+export const viewport: Viewport = {
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#f9fafc" },
+    { media: "(prefers-color-scheme: dark)", color: "#0d1014" },
+  ],
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

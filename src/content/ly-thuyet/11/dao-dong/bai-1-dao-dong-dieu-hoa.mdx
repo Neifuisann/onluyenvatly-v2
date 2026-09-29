@@ -1,0 +1,201 @@
+{/* Converted from v1 materials/grade11/dao-dong/bai-1-dao-dong-dieu-hoa.html by scripts/convert-materials.ts (S8-02). */}
+
+Dao động điều hòa là một trong những dạng chuyển động cơ bản và quan trọng nhất trong vật lý. Nó xuất hiện trong nhiều hiện tượng tự nhiên và ứng dụng kỹ thuật.
+
+## 1. Dao động cơ
+
+### a) Thế nào là dao động cơ?
+
+Dao động cơ là chuyển động qua lại quanh một vị trí cân bằng.
+
+<Callout kind="example">
+
+<strong>Ví dụ:</strong>
+
+- Con lắc đồng hồ dao động qua lại quanh vị trí thẳng đứng
+- Dây đàn guitar rung động khi được gảy
+- Piston trong động cơ chuyển động lên xuống
+
+</Callout>
+
+### b) Dao động tuần hoàn
+
+Dao động tuần hoàn là dao động mà sau những khoảng thời gian bằng nhau (gọi là chu kỳ), vật trở lại vị trí cũ với vận tốc cũ.
+
+## 2. Phương trình dao động điều hòa
+
+### a) Định nghĩa dao động điều hòa
+
+<Callout kind="definition">
+
+Dao động điều hòa là dao động trong đó li độ của vật là một hàm cosin (hoặc sin) của thời gian.
+
+</Callout>
+
+### b) Phương trình dao động điều hòa
+
+<Formula>
+
+x = A.cos(ωt + φ)
+
+</Formula>
+
+Trong đó:
+
+- **x**: Li độ của vật (cm, m) - độ lệch của vật so với vị trí cân bằng
+- **A**: Biên độ dao động (cm, m) - độ lệch cực đại của vật so với VTCB
+- **ω**: Tần số góc (rad/s)
+- **t**: Thời gian (s)
+- **φ**: Pha ban đầu (rad) - xác định trạng thái dao động tại t = 0
+- <strong>(ωt + φ)</strong>: Pha dao động tại thời điểm t
+
+## 3. Các đại lượng đặc trưng của dao động điều hòa
+
+### a) Chu kỳ và tần số
+
+<Formula>
+
+T = 2π/ω
+
+</Formula>
+
+**Chu kỳ T**: Thời gian để vật thực hiện một dao động toàn phần (đơn vị: s)
+
+<Formula>
+
+f = 1/T = ω/2π
+
+</Formula>
+
+**Tần số f**: Số dao động toàn phần thực hiện trong một giây (đơn vị: Hz)
+
+<Formula>
+
+ω = 2πf = 2π/T
+
+</Formula>
+
+**Tần số góc ω**: Tốc độ biến thiên của pha dao động (đơn vị: rad/s)
+
+### b) Vận tốc trong dao động điều hòa
+
+Vận tốc là đạo hàm của li độ theo thời gian:
+
+<Formula>
+
+v = x' = -Aω.sin(ωt + φ)
+
+</Formula>
+
+Có thể viết: v = ωA.cos(ωt + φ + π/2)
+
+<Formula>
+
+<strong>Nhận xét quan trọng:</strong>
+
+- Vận tốc biến thiên điều hòa cùng tần số với li độ
+- Vận tốc sớm pha π/2 so với li độ
+- Vận tốc cực đại: v<sub>max</sub> = ωA (khi vật qua VTCB)
+- Vận tốc bằng 0 khi vật ở vị trí biên
+
+</Formula>
+
+### c) Gia tốc trong dao động điều hòa
+
+Gia tốc là đạo hàm của vận tốc theo thời gian:
+
+<Formula>
+
+a = v' = x'' = -ω²A.cos(ωt + φ) = -ω²x
+
+</Formula>
+
+<Formula>
+
+<strong>Nhận xét quan trọng:</strong>
+
+- Gia tốc luôn hướng về vị trí cân bằng
+- Gia tốc ngược pha với li độ
+- Gia tốc cực đại: a<sub>max</sub> = ω²A (khi vật ở vị trí biên)
+- Gia tốc bằng 0 khi vật qua VTCB
+
+</Formula>
+
+## 4. Đồ thị dao động điều hòa
+
+Đồ thị của x, v, a theo thời gian đều là các đường hình sin với:
+
+- Cùng chu kỳ T
+- v sớm pha π/2 so với x
+- a sớm pha π so với x (ngược pha)
+
+## 5. Mối liên hệ giữa các đại lượng
+
+<Table>
+<thead>
+<tr>
+<th>Vị trí</th>
+<th>Li độ x</th>
+<th>Vận tốc v</th>
+<th>Gia tốc a</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Vị trí cân bằng</td>
+<td>x = 0</td>
+<td>\|v\| = v<sub>max</sub> = ωA</td>
+<td>a = 0</td>
+</tr>
+<tr>
+<td>Vị trí biên</td>
+<td>x = ±A</td>
+<td>v = 0</td>
+<td>\|a\| = a<sub>max</sub> = ω²A</td>
+</tr>
+</tbody>
+</Table>
+
+### Công thức độc lập thời gian
+
+<Formula>
+
+A² = x² + (v/ω)²
+
+</Formula>
+
+<Formula>
+
+v² = ω²(A² - x²)
+
+</Formula>
+
+## 6. Bài tập ví dụ
+
+<Callout kind="example">
+
+<strong>Ví dụ 1:</strong> Một vật dao động điều hòa với phương trình x = 5cos(4πt + π/3) cm. Xác định:
+
+- a) Biên độ, tần số góc, chu kỳ, tần số
+- b) Pha ban đầu và pha dao động tại t = 0,5s
+- c) Li độ, vận tốc, gia tốc tại t = 0,5s
+
+<strong>Giải:</strong><br />a) Từ phương trình: A = 5 cm; ω = 4π rad/s<br />T = 2π/ω = 2π/4π = 0,5 s<br />f = 1/T = 2 Hz<br />b) Pha ban đầu: φ = π/3 rad<br />Pha tại t = 0,5s: (ωt + φ) = 4π.0,5 + π/3 = 2π + π/3 = 7π/3 rad<br />c) Tại t = 0,5s:<br />x = 5cos(7π/3) = 5cos(π/3) = 2,5 cm<br />v = -5.4π.sin(7π/3) = -20π.sin(π/3) = -10π√3 ≈ -54,4 cm/s<br />a = -ω²x = -(4π)².2,5 = -40π² ≈ -394,8 cm/s²
+
+</Callout>
+
+## 7. Ứng dụng của dao động điều hòa
+
+Dao động điều hòa có nhiều ứng dụng quan trọng trong đời sống và kỹ thuật:
+
+- Con lắc đồng hồ để đo thời gian
+- Hệ thống giảm xóc trong ô tô
+- Mạch dao động LC trong điện tử
+- Nghiên cứu động đất và sóng địa chấn
+- Thiết kế nhạc cụ và âm học
+
+<Callout kind="definition">
+
+<strong>Lưu ý khi học:</strong> Dao động điều hòa là nền tảng để học các phần tiếp theo như con lắc lò xo, con lắc đơn, sóng cơ. Cần nắm vững các công thức và mối quan hệ giữa các đại lượng.
+
+</Callout>

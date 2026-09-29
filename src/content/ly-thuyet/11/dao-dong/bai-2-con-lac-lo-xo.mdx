@@ -1,0 +1,258 @@
+{/* Converted from v1 materials/grade11/dao-dong/bai-2-con-lac-lo-xo.html by scripts/convert-materials.ts (S8-02). */}
+
+Con lắc lò xo là một hệ dao động điều hòa quan trọng, được ứng dụng rộng rãi trong thực tế như hệ thống giảm xóc, cân lò xo, các thiết bị đo lường...
+
+## 1. Cấu tạo của con lắc lò xo
+
+### a) Mô tả con lắc lò xo
+
+Con lắc lò xo gồm:
+
+- **Lò xo**: có độ cứng k (N/m), khối lượng không đáng kể
+- **Vật nặng**: có khối lượng m (kg), được gắn vào một đầu lò xo
+- **Giá đỡ**: cố định đầu còn lại của lò xo
+
+### b) Các loại con lắc lò xo
+
+<Callout kind="example">
+
+- **Con lắc lò xo ngang**: Vật dao động trên mặt phẳng ngang, không có ma sát
+- **Con lắc lò xo thẳng đứng**: Vật dao động theo phương thẳng đứng
+- **Con lắc lò xo trên mặt phẳng nghiêng**: Vật dao động trên mặt phẳng nghiêng góc α
+
+</Callout>
+
+## 2. Phương trình dao động của con lắc lò xo
+
+### a) Lực phục hồi
+
+Khi vật ở li độ x so với vị trí cân bằng, lò xo biến dạng một đoạn \|x\|. Lực đàn hồi của lò xo:
+
+<Formula>
+
+F = -kx
+
+</Formula>
+
+Dấu trừ cho biết lực luôn hướng về vị trí cân bằng.
+
+### b) Phương trình vi phân dao động
+
+Áp dụng định luật II Newton:
+
+<Formula>
+
+ma = -kx → a = -(k/m)x
+
+</Formula>
+
+So sánh với a = -ω²x, ta được:
+
+<Formula>
+
+ω = √(k/m)
+
+</Formula>
+
+### c) Phương trình dao động
+
+<Formula>
+
+x = A.cos(ωt + φ)
+
+</Formula>
+
+Với ω = √(k/m) là tần số góc riêng của con lắc lò xo.
+
+## 3. Chu kỳ và tần số dao động
+
+<Formula>
+
+#### Công thức chu kỳ con lắc lò xo:
+
+<Formula>
+
+T = 2π/ω = 2π√(m/k)
+
+</Formula>
+
+#### Công thức tần số:
+
+<Formula>
+
+f = 1/T = (1/2π)√(k/m)
+
+</Formula>
+
+</Formula>
+
+<Formula>
+
+<strong>Nhận xét quan trọng:</strong>
+
+- Chu kỳ T chỉ phụ thuộc vào m và k, không phụ thuộc vào biên độ A
+- Tăng khối lượng m → T tăng (dao động chậm lại)
+- Tăng độ cứng k → T giảm (dao động nhanh hơn)
+- T không phụ thuộc vào gia tốc trọng trường g
+
+</Formula>
+
+## 4. Con lắc lò xo thẳng đứng
+
+### a) Vị trí cân bằng
+
+Tại vị trí cân bằng, trọng lực cân bằng với lực đàn hồi:
+
+<Formula>
+
+mg = k.Δl₀ → Δl₀ = mg/k
+
+</Formula>
+
+Trong đó Δl₀ là độ giãn của lò xo tại vị trí cân bằng.
+
+### b) Phương trình dao động
+
+Chọn gốc tọa độ tại vị trí cân bằng, chiều dương hướng xuống:
+
+<Formula>
+
+x = A.cos(ωt + φ)
+
+</Formula>
+
+Với ω = √(k/m) (giống như con lắc ngang)
+
+### c) Chiều dài lò xo
+
+<Table>
+<thead>
+<tr>
+<th>Vị trí</th>
+<th>Chiều dài lò xo</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Tự nhiên (chưa treo vật)</td>
+<td>l₀</td>
+</tr>
+<tr>
+<td>Vị trí cân bằng</td>
+<td>l<sub>cb</sub> = l₀ + Δl₀</td>
+</tr>
+<tr>
+<td>Vị trí thấp nhất</td>
+<td>l<sub>max</sub> = l₀ + Δl₀ + A</td>
+</tr>
+<tr>
+<td>Vị trí cao nhất</td>
+<td>l<sub>min</sub> = l₀ + Δl₀ - A</td>
+</tr>
+</tbody>
+</Table>
+
+## 5. Năng lượng của con lắc lò xo
+
+### a) Động năng
+
+<Formula>
+
+W<sub>đ</sub> = ½mv² = ½mω²A²sin²(ωt + φ)
+
+</Formula>
+
+### b) Thế năng đàn hồi
+
+<Formula>
+
+W<sub>t</sub> = ½kx² = ½kA²cos²(ωt + φ)
+
+</Formula>
+
+### c) Cơ năng
+
+<Formula>
+
+#### Cơ năng toàn phần:
+
+<Formula>
+
+W = W<sub>đ</sub> + W<sub>t</sub> = ½kA² = ½mω²A² = const
+
+</Formula>
+
+</Formula>
+
+<Formula>
+
+<strong>Đặc điểm năng lượng:</strong>
+
+- Cơ năng được bảo toàn (nếu bỏ qua ma sát)
+- Cơ năng tỉ lệ với bình phương biên độ
+- Động năng và thế năng biến thiên tuần hoàn với f' = 2f
+- W<sub>đ max</sub> = W<sub>t max</sub> = W
+- Khi W<sub>đ</sub> = W<sub>t</sub> thì x = ±A/√2
+
+</Formula>
+
+## 6. Các dạng bài tập thường gặp
+
+### Dạng 1: Xác định chu kỳ, tần số
+
+<Callout kind="example">
+
+<strong>Ví dụ 1:</strong> Con lắc lò xo có k = 100 N/m, m = 250g. Tính chu kỳ dao động.<br /><br /><strong>Giải:</strong><br />m = 250g = 0,25 kg<br />T = 2π√(m/k) = 2π√(0,25/100) = 2π√(0,0025) = 2π.0,05 = 0,314 s
+
+</Callout>
+
+### Dạng 2: Con lắc lò xo thẳng đứng
+
+<Callout kind="example">
+
+<strong>Ví dụ 2:</strong> Con lắc lò xo thẳng đứng, tại VTCB lò xo giãn 10cm. Lấy g = 10 m/s². Tính chu kỳ dao động.<br /><br /><strong>Giải:</strong><br />Tại VTCB: mg = kΔl₀<br />→ k/m = g/Δl₀ = 10/0,1 = 100 rad²/s²<br />→ ω = √(k/m) = 10 rad/s<br />→ T = 2π/ω = 2π/10 = 0,628 s
+
+</Callout>
+
+### Dạng 3: Năng lượng dao động
+
+<Callout kind="example">
+
+<strong>Ví dụ 3:</strong> Con lắc lò xo dao động với biên độ A = 5cm, k = 200 N/m. Tính:
+
+- a) Cơ năng của con lắc
+- b) Li độ khi động năng bằng 3 lần thế năng
+
+<strong>Giải:</strong><br />a) W = ½kA² = ½.200.(0,05)² = 0,25 J<br /><br />b) Khi W<sub>đ</sub> = 3W<sub>t</sub>:<br />W = W<sub>đ</sub> + W<sub>t</sub> = 3W<sub>t</sub> + W<sub>t</sub> = 4W<sub>t</sub><br />→ W<sub>t</sub> = W/4 = ½kx²<br />→ ½kx² = W/4 = ½kA²/4<br />→ x² = A²/4 → x = ±A/2 = ±2,5 cm
+
+</Callout>
+
+## 7. Một số lưu ý khi giải bài tập
+
+<Callout kind="definition">
+
+<strong>Kinh nghiệm giải bài:</strong>
+
+- Đổi đơn vị: khối lượng về kg, độ cứng về N/m
+- Con lắc lò xo ngang: VTCB là vị trí lò xo không biến dạng
+- Con lắc lò xo đứng: VTCB là vị trí lò xo giãn Δl₀ = mg/k
+- Chu kỳ con lắc lò xo chỉ phụ thuộc m và k, không phụ thuộc A và g
+- Khi cắt lò xo: k tỉ lệ nghịch với chiều dài (k.l = const)
+
+</Callout>
+
+## 8. Ứng dụng thực tế
+
+Con lắc lò xo có nhiều ứng dụng quan trọng:
+
+- **Hệ thống giảm xóc**: Trong ô tô, xe máy để giảm chấn động
+- **Cân lò xo**: Đo khối lượng dựa vào độ giãn của lò xo
+- **Đồng hồ cơ**: Lò xo tóc điều khiển dao động của bánh xe cân bằng
+- **Thiết bị đo địa chấn**: Ghi nhận dao động của mặt đất
+- **Bộ phận đàn hồi trong máy móc**: Tạo lực ép, lực kéo về
+
+<Formula>
+
+<strong>Tổng kết:</strong> Con lắc lò xo là mô hình dao động điều hòa cơ bản. Cần nắm vững công thức T = 2π√(m/k) và các đặc điểm riêng của từng loại con lắc lò xo để giải quyết bài tập hiệu quả.
+
+</Formula>

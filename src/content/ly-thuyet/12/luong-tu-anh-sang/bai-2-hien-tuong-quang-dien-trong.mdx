@@ -1,0 +1,468 @@
+{/* Converted from v1 materials/grade12/luong-tu-anh-sang/bai-2-hien-tuong-quang-dien-trong.html by scripts/convert-materials.ts (S8-02). */}
+
+Hiện tượng quang điện trong là cơ sở của nhiều linh kiện quang điện tử hiện đại như pin mặt trời, cảm biến hình ảnh CCD/CMOS, và các thiết bị quang dẫn.
+
+## 1. Hiện tượng quang điện trong
+
+### a) Định nghĩa
+
+Hiện tượng quang điện trong là hiện tượng electron liên kết được giải phóng thành electron dẫn (và lỗ trống) khi chất bán dẫn hấp thụ photon có năng lượng đủ lớn.
+
+### b) So sánh với quang điện ngoài
+
+<Table>
+<thead>
+<tr>
+<th>Đặc điểm</th>
+<th>Quang điện ngoài</th>
+<th>Quang điện trong</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Vị trí xảy ra</td>
+<td>Bề mặt kim loại</td>
+<td>Trong khối bán dẫn</td>
+</tr>
+<tr>
+<td>Electron sau khi hấp thụ</td>
+<td>Bật ra khỏi vật</td>
+<td>Vẫn trong vật</td>
+</tr>
+<tr>
+<td>Điều kiện năng lượng</td>
+<td>hf ≥ A (công thoát)</td>
+<td>hf ≥ ΔE (năng lượng vùng cấm)</td>
+</tr>
+<tr>
+<td>Giới hạn quang điện</td>
+<td>λ₀ \~ 0,3-0,6 μm</td>
+<td>λ₀ \~ 1-5 μm</td>
+</tr>
+</tbody>
+</Table>
+
+### c) Điều kiện xảy ra
+
+<Formula>
+
+hf ≥ ΔE → λ ≤ λ₀ = hc/ΔE
+
+</Formula>
+
+Với ΔE là độ rộng vùng cấm của bán dẫn
+
+## 2. Chất quang dẫn
+
+### a) Định nghĩa
+
+Chất quang dẫn là chất bán dẫn có tính dẫn điện tăng mạnh khi được chiếu sáng do hiện tượng quang điện trong.
+
+### b) Cơ chế quang dẫn
+
+1. Photon có ε ≥ ΔE bị hấp thụ
+2. Electron từ vùng hóa trị → vùng dẫn
+3. Tạo cặp electron - lỗ trống
+4. Độ dẫn điện tăng: σ = σ₀ + Δσ
+
+### c) Các chất quang dẫn thông dụng
+
+<Table>
+<thead>
+<tr>
+<th>Chất</th>
+<th>ΔE (eV)</th>
+<th>λ₀ (μm)</th>
+<th>Vùng nhạy</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Si</td>
+<td>1,12</td>
+<td>1,11</td>
+<td>Hồng ngoại gần</td>
+</tr>
+<tr>
+<td>Ge</td>
+<td>0,67</td>
+<td>1,85</td>
+<td>Hồng ngoại</td>
+</tr>
+<tr>
+<td>CdS</td>
+<td>2,42</td>
+<td>0,51</td>
+<td>Khả kiến</td>
+</tr>
+<tr>
+<td>PbS</td>
+<td>0,37</td>
+<td>3,35</td>
+<td>Hồng ngoại</td>
+</tr>
+<tr>
+<td>GaAs</td>
+<td>1,43</td>
+<td>0,87</td>
+<td>Hồng ngoại gần</td>
+</tr>
+</tbody>
+</Table>
+
+## 3. Quang điện trở
+
+### a) Cấu tạo
+
+- Lớp bán dẫn mỏng trên đế cách điện
+- Hai điện cực ở hai đầu
+- Bề mặt nhạy sáng hình ziczac để tăng diện tích
+- Vỏ bảo vệ có cửa sổ trong suốt
+
+### b) Nguyên lý hoạt động
+
+- Tối: Điện trở lớn (MΩ)
+- Sáng: Điện trở giảm mạnh (kΩ)
+- Độ nhạy: ΔR/R \~ cường độ sáng
+
+### c) Đặc tính
+
+- Quan hệ R-E gần tuyến tính ở vùng làm việc
+- Thời gian đáp ứng: ms đến s
+- Nhiệt độ ảnh hưởng đến điện trở tối
+
+## 4. Pin quang điện (Pin mặt trời)
+
+### a) Cấu tạo
+
+- Lớp tiếp xúc p-n trong bán dẫn
+- Điện cực trên: lưới mỏng để ánh sáng xuyên qua
+- Điện cực dưới: tấm kim loại
+- Lớp chống phản xạ tăng hiệu suất
+
+### b) Nguyên lý hoạt động
+
+1. Photon tạo cặp electron - lỗ trống gần lớp p-n
+2. Điện trường trong tách electron về vùng n, lỗ trống về vùng p
+3. Tạo hiệu điện thế giữa hai cực
+4. Khi nối mạch ngoài → dòng điện
+
+### c) Đặc trưng vôn-ampe
+
+<Formula>
+
+I = I\_s - I₀(e^(eU/kT) - 1)
+
+</Formula>
+
+Trong đó:
+
+- I\_s: Dòng quang điện (tỉ lệ với cường độ sáng)
+- I₀: Dòng bão hòa ngược
+- U: Hiệu điện thế
+
+## 5. Các thông số của pin mặt trời
+
+### a) Hiệu điện thế hở mạch (V\_oc)
+
+Hiệu điện thế khi không có dòng (I = 0):
+
+<Formula>
+
+V\_oc = (kT/e)ln(I\_s/I₀ + 1)
+
+</Formula>
+
+### b) Dòng ngắn mạch (I\_sc)
+
+Dòng điện khi U = 0: I\_sc ≈ I\_s
+
+### c) Công suất cực đại
+
+<Formula>
+
+P\_max = V\_m × I\_m = FF × V\_oc × I\_sc
+
+</Formula>
+
+FF: Hệ số lấp đầy (Fill Factor) \~ 0,7-0,8
+
+### d) Hiệu suất chuyển đổi
+
+<Formula>
+
+η = P\_max/P\_in × 100%
+
+</Formula>
+
+<Table>
+<thead>
+<tr>
+<th>Loại pin</th>
+<th>Hiệu suất (%)</th>
+<th>Ưu điểm</th>
+<th>Nhược điểm</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Si đơn tinh thể</td>
+<td>20-25</td>
+<td>Hiệu suất cao</td>
+<td>Đắt</td>
+</tr>
+<tr>
+<td>Si đa tinh thể</td>
+<td>15-20</td>
+<td>Rẻ hơn</td>
+<td>Hiệu suất thấp hơn</td>
+</tr>
+<tr>
+<td>Màng mỏng</td>
+<td>10-15</td>
+<td>Rất rẻ, mềm dẻo</td>
+<td>Hiệu suất thấp</td>
+</tr>
+<tr>
+<td>GaAs</td>
+<td>25-30</td>
+<td>Hiệu suất cao nhất</td>
+<td>Rất đắt</td>
+</tr>
+</tbody>
+</Table>
+
+## 6. Photodiode
+
+### a) Cấu tạo và nguyên lý
+
+- Diode p-n phân cực ngược
+- Khi chiếu sáng: dòng ngược tăng
+- Dòng tỉ lệ tuyến tính với cường độ sáng
+
+### b) Các chế độ hoạt động
+
+- <strong>Chế độ quang dẫn:</strong> Phân cực ngược, đáp ứng nhanh
+- <strong>Chế độ quang thế:</strong> Không phân cực, như pin
+
+### c) Đặc điểm
+
+- Đáp ứng nhanh: ns - μs
+- Tuyến tính tốt
+- Nhiễu thấp
+- Kích thước nhỏ
+
+## 7. Phototransistor
+
+### a) Cấu tạo
+
+- Transistor với vùng base nhạy sáng
+- Hoặc không có chân base
+
+### b) Nguyên lý
+
+- Ánh sáng tạo dòng base quang điện
+- Được khuếch đại β lần thành dòng collector
+- Độ nhạy cao hơn photodiode β lần
+
+### c) So sánh với photodiode
+
+<Table>
+<thead>
+<tr>
+<th>Đặc điểm</th>
+<th>Photodiode</th>
+<th>Phototransistor</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Độ nhạy</td>
+<td>Thấp</td>
+<td>Cao (β lần)</td>
+</tr>
+<tr>
+<td>Tốc độ</td>
+<td>Nhanh</td>
+<td>Chậm hơn</td>
+</tr>
+<tr>
+<td>Tuyến tính</td>
+<td>Tốt</td>
+<td>Kém hơn</td>
+</tr>
+<tr>
+<td>Ứng dụng</td>
+<td>Đo chính xác</td>
+<td>Chuyển mạch</td>
+</tr>
+</tbody>
+</Table>
+
+## 8. Ứng dụng của quang điện trong
+
+<Callout kind="note">
+
+### a) Năng lượng mặt trời
+
+- Hệ thống điện mặt trời dân dụng
+- Nhà máy điện mặt trời
+- Vệ tinh, trạm vũ trụ
+- Thiết bị di động
+
+### b) Cảm biến và đo lường
+
+- Máy đo ánh sáng
+- Cảm biến vị trí, tốc độ
+- Máy quét mã vạch
+- Điều khiển từ xa
+
+### c) Truyền thông quang
+
+- Thu tín hiệu cáp quang
+- Truyền dữ liệu không dây
+- LiFi - truyền dữ liệu qua ánh sáng
+
+### d) Hình ảnh và video
+
+- Cảm biến CCD/CMOS trong camera
+- Máy ảnh kỹ thuật số
+- Camera an ninh
+- Thiết bị y tế
+
+</Callout>
+
+## 9. Cảm biến hình ảnh CCD/CMOS
+
+### a) CCD (Charge Coupled Device)
+
+- Ma trận photodiode tích điện
+- Chuyển điện tích tuần tự
+- Chất lượng ảnh cao
+- Tiêu thụ điện nhiều
+
+### b) CMOS (Complementary Metal Oxide Semiconductor)
+
+- Mỗi pixel có bộ khuếch đại riêng
+- Đọc trực tiếp từng pixel
+- Tiêu thụ điện ít
+- Tích hợp xử lý trên chip
+
+<Callout kind="example">
+
+#### Ví dụ 1: Pin mặt trời
+
+Pin Si có diện tích 100cm², V\_oc = 0,6V, I\_sc = 3A, FF = 0,75. Cường độ ánh sáng 1000W/m².
+
+a) Tính công suất cực đại
+
+b) Tính hiệu suất
+
+<strong>Giải:</strong>
+
+a) P\_max = FF × V\_oc × I\_sc = 0,75 × 0,6 × 3 = 1,35W
+
+b) P\_in = 1000 × 0,01 = 10W
+
+η = P\_max/P\_in × 100% = 1,35/10 × 100% = 13,5%
+
+</Callout>
+
+## 10. Hiệu ứng quang điện âm
+
+### a) Định nghĩa
+
+Độ dẫn điện giảm khi chiếu sáng do electron bị bẫy vào các tâm tái hợp.
+
+### b) Điều kiện xảy ra
+
+- Nhiều tâm tái hợp (tạp chất, sai hỏng)
+- Tốc độ bẫy &gt; tốc độ sinh cặp e-h
+- Thường ở nhiệt độ thấp
+
+## 11. Bài toán quang điện trong
+
+<Callout kind="example">
+
+#### Ví dụ 2: Quang điện trở
+
+CdS có ΔE = 2,42eV. Chiếu ánh sáng λ = 500nm, công suất 1mW lên điện trở.
+
+Hiệu suất lượng tử 20%. Mỗi cặp e-h tồn tại 10⁻⁴s. Tính số hạt dẫn được tạo ra.
+
+<strong>Giải:</strong>
+
+Năng lượng photon: ε = hc/λ = 2,48eV &gt; ΔE → gây quang điện
+
+Số photon/s: N = P/ε = 10⁻³/(2,48×1,6×10⁻¹⁹) = 2,52×10¹⁵
+
+Số cặp e-h/s: n = 0,2 × N = 5,04×10¹⁴
+
+Số hạt dẫn: N\_dẫn = 2 × n × τ = 2 × 5,04×10¹⁴ × 10⁻⁴ = 1,01×10¹¹
+
+</Callout>
+
+## 12. Bài tập tự luyện
+
+<Callout kind="definition">
+
+### Bài 1:
+
+Si có ΔE = 1,12eV. Tính:
+
+a) Giới hạn quang điện
+
+b) Có thể dùng Si làm cảm biến ánh sáng khả kiến không?
+
+</Callout>
+
+<Callout kind="definition">
+
+### Bài 2:
+
+Pin mặt trời 10×10cm, chiếu sáng 800W/m² cho V\_oc = 0,55V, I\_sc = 2,4A.
+
+a) Tính công suất cực đại nếu FF = 0,72
+
+b) Để có 12V, 10W cần bao nhiêu pin và mắc thế nào?
+
+</Callout>
+
+<Callout kind="definition">
+
+### Bài 3:
+
+Photodiode Si phân cực ngược 5V. Khi tối I = 10nA, khi chiếu sáng I = 50μA.
+
+a) Tính dòng quang điện
+
+b) Nếu mỗi photon tạo 1 cặp e-h, tính số photon/s
+
+</Callout>
+
+## 13. Tổng kết
+
+<Callout kind="warning">
+
+### Những điều cần nhớ:
+
+- Quang điện trong: e được giải phóng nhưng vẫn trong vật
+- Điều kiện: hf ≥ ΔE (năng lượng vùng cấm)
+- Quang dẫn: Độ dẫn điện tăng khi chiếu sáng
+- Pin mặt trời: Chuyển quang năng → điện năng
+- Hiệu suất pin Si: 15-25%
+- Photodiode: Nhanh, tuyến tính
+- Phototransistor: Nhạy, chậm hơn
+- Ứng dụng: Năng lượng, cảm biến, camera
+
+</Callout>
+
+<Callout kind="related">
+
+### Bài viết liên quan:
+
+- Hiện tượng quang điện - Thuyết lượng tử ánh sáng
+- [Quang phổ vạch của nguyên tử Hydro](/ly-thuyet/12/luong-tu-anh-sang/bai-3-quang-pho-vach-nguyen-tu-hydro)
+- [Hiện tượng quang - phát quang. Laser](/ly-thuyet/12/luong-tu-anh-sang/bai-4-hien-tuong-quang-phat-quang-laser)
+
+</Callout>

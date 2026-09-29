@@ -39,7 +39,9 @@ erDiagram
 | class_name | text null | e.g. `12A1` |
 | password_hash | text not null | bcrypt `$2a/$2b$` |
 | must_change_password | boolean default false | Set after an admin reset |
-| avatar_path | text null | Storage path |
+| avatar_path | text null | Storage path. Since S8-04 a student's own picture: `avatars/<user id>/<uuid>.webp` in the `media` bucket (≤ 256 px, ≤ 150 KB), with a `media` row |
+| leaderboard_initials | boolean default false | S8-04 (migration `0010`): public surfaces show "N. V. A." instead of the name |
+| deletion_requested_at | timestamptz null | S8-04: the student asked to delete the account; partial index `users_deletion_requested_idx`. The admin's "Xóa" (S6-02) completes it |
 | approved_at, approved_by | timestamptz, uuid null | |
 | last_login_at | timestamptz null | |
 | created_at, updated_at | timestamptz | |

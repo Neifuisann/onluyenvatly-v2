@@ -1,0 +1,527 @@
+{/* Converted from v1 materials/grade12/dien-xoay-chieu/bai-2-cac-mach-dien-xoay-chieu.html by scripts/convert-materials.ts (S8-02). */}
+
+Trong chương này, chúng ta sẽ nghiên cứu cách dòng điện xoay chiều tác động trong các loại mạch điện khác nhau: mạch thuần trở, thuần cảm, thuần dung và mạch RLC nối tiếp.
+
+## 1. Mạch điện xoay chiều chỉ có điện trở R
+
+### a) Quan hệ giữa u và i
+
+Xét mạch chỉ có điện trở R, đặt vào điện áp: u = U₀sin(ωt)
+
+Theo định luật Ohm:
+
+<Formula>
+
+i = u/R = (U₀/R)sin(ωt) = I₀sin(ωt)
+
+</Formula>
+
+Với I₀ = U₀/R
+
+### b) Đặc điểm
+
+- <strong>Cường độ hiệu dụng:</strong> I = U/R
+- <strong>Độ lệch pha:</strong> u và i cùng pha (φ = 0)
+- <strong>Công suất tức thời:</strong> p = ui = U₀I₀sin²(ωt)
+
+<Callout kind="example">
+
+```text
+     R
+ ----████----
+      │
+      u
+      │
+ -----------
+```
+
+</Callout>
+
+<Callout kind="example">
+
+#### Giản đồ vectơ:
+
+Vectơ U⃗ và I⃗ cùng phương, cùng chiều
+
+```text
+    I⃗, U⃗
+    ━━━━━━→
+```
+
+</Callout>
+
+## 2. Mạch điện xoay chiều chỉ có cuộn cảm thuần L
+
+### a) Quan hệ giữa u và i
+
+Cuộn cảm thuần có độ tự cảm L, điện trở r = 0.
+
+Suất điện động tự cảm:
+
+<Formula>
+
+e = -L(di/dt)
+
+</Formula>
+
+Theo định luật Kirchhoff: u + e = 0
+
+<Formula>
+
+u = L(di/dt)
+
+</Formula>
+
+Với i = I₀sin(ωt), ta có:
+
+<Formula>
+
+u = ωLI₀cos(ωt) = U₀sin(ωt + π/2)
+
+</Formula>
+
+### b) Cảm kháng
+
+<Formula>
+
+Z\_L = ωL = 2πfL (Ω)
+
+</Formula>
+
+Định luật Ohm cho mạch thuần cảm:
+
+<Formula>
+
+I = U/Z\_L = U/(ωL)
+
+</Formula>
+
+### c) Đặc điểm
+
+- <strong>Độ lệch pha:</strong> u sớm pha π/2 so với i
+- <strong>Cảm kháng tỉ lệ với tần số:</strong> f tăng → Z\_L tăng
+- <strong>Cuộn cảm cản trở dòng xoay chiều:</strong> Tần số càng cao càng cản mạnh
+
+<Callout kind="example">
+
+```text
+     L
+ ----⚉⚉⚉⚉----
+      │
+      u
+      │
+ -----------
+```
+
+</Callout>
+
+<Callout kind="example">
+
+#### Giản đồ vectơ:
+
+```text
+      U⃗
+      ↑
+      │
+ ─────┼───→ I⃗
+      │
+```
+
+U⃗ vuông góc với I⃗, sớm pha π/2
+
+</Callout>
+
+<Callout kind="warning">
+
+<strong>Ghi nhớ:</strong> Cuộn cảm "chặn cao tần, thông thấp tần". Với dòng một chiều (f = 0) thì Z\_L = 0.
+
+</Callout>
+
+## 3. Mạch điện xoay chiều chỉ có tụ điện C
+
+### a) Quan hệ giữa u và i
+
+Điện tích trên tụ: q = Cu
+
+Cường độ dòng điện:
+
+<Formula>
+
+i = dq/dt = C(du/dt)
+
+</Formula>
+
+Với u = U₀sin(ωt):
+
+<Formula>
+
+i = ωCU₀cos(ωt) = I₀sin(ωt + π/2)
+
+</Formula>
+
+### b) Dung kháng
+
+<Formula>
+
+Z\_C = 1/(ωC) = 1/(2πfC) (Ω)
+
+</Formula>
+
+Định luật Ohm cho mạch thuần dung:
+
+<Formula>
+
+I = U/Z\_C = UωC
+
+</Formula>
+
+### c) Đặc điểm
+
+- <strong>Độ lệch pha:</strong> i sớm pha π/2 so với u
+- <strong>Dung kháng tỉ lệ nghịch với tần số:</strong> f tăng → Z\_C giảm
+- <strong>Tụ điện không cho dòng một chiều đi qua:</strong> f = 0 → Z\_C = ∞
+
+<Callout kind="example">
+
+```text
+     C
+ ----||----
+      │
+      u
+      │
+ -----------
+```
+
+</Callout>
+
+<Callout kind="example">
+
+#### Giản đồ vectơ:
+
+```text
+      I⃗
+      ↑
+      │
+ ─────┼───→ U⃗
+      │
+```
+
+I⃗ vuông góc với U⃗, sớm pha π/2
+
+</Callout>
+
+<Callout kind="warning">
+
+<strong>Ghi nhớ:</strong> Tụ điện "chặn một chiều, thông xoay chiều" và "chặn thấp tần, thông cao tần".
+
+</Callout>
+
+## 4. Mạch RLC nối tiếp
+
+### a) Tổng trở của mạch
+
+Áp dụng định luật Kirchhoff cho điện áp:
+
+<Formula>
+
+u = u\_R + u\_L + u\_C
+
+</Formula>
+
+Với các điện áp thành phần lệch pha nhau, ta dùng phương pháp vectơ:
+
+<Formula>
+
+Z = √(R² + (Z\_L - Z\_C)²)
+
+</Formula>
+
+Trong đó:
+
+- Z: Tổng trở của mạch (Ω)
+- R: Điện trở (Ω)
+- Z\_L = ωL: Cảm kháng (Ω)
+- Z\_C = 1/(ωC): Dung kháng (Ω)
+
+### b) Định luật Ohm cho mạch RLC
+
+<Formula>
+
+I = U/Z = U/√(R² + (Z\_L - Z\_C)²)
+
+</Formula>
+
+### c) Độ lệch pha
+
+Góc lệch pha giữa u và i:
+
+<Formula>
+
+tanφ = (Z\_L - Z\_C)/R = (ωL - 1/(ωC))/R
+
+</Formula>
+
+Các trường hợp:
+
+- Z\_L &gt; Z\_C: φ &gt; 0 → u sớm pha hơn i (mạch có tính cảm kháng)
+- Z\_L &lt; Z\_C: φ &lt; 0 → u trễ pha hơn i (mạch có tính dung kháng)
+- Z\_L = Z\_C: φ = 0 → u cùng pha với i (cộng hưởng)
+
+<Callout kind="example">
+
+```text
+     R        L        C
+ ----████----⚉⚉⚉⚉----||----
+      │                │
+      └────── u ───────┘
+```
+
+</Callout>
+
+## 5. Giản đồ vectơ cho mạch RLC
+
+<Callout kind="example">
+
+#### Giản đồ vectơ điện áp:
+
+```text
+Trường hợp Z_L > Z_C:
+       U_L⃗
+        ↑
+        │     U⃗
+   U_R⃗ │    ╱
+ ───────┼──╱──→
+        │╱ φ
+        ↓
+       U_C⃗
+```
+
+</Callout>
+
+Từ giản đồ, ta có:
+
+<Formula>
+
+U² = U\_R² + (U\_L - U\_C)²
+
+</Formula>
+
+## 6. Hiện tượng cộng hưởng điện
+
+### a) Điều kiện cộng hưởng
+
+Cộng hưởng xảy ra khi:
+
+<Formula>
+
+Z\_L = Z\_C → ωL = 1/(ωC)
+
+</Formula>
+
+Tần số cộng hưởng:
+
+<Formula>
+
+f₀ = 1/(2π√(LC))
+
+</Formula>
+
+### b) Đặc điểm khi cộng hưởng
+
+- Tổng trở cực tiểu: Z\_min = R
+- Cường độ dòng điện cực đại: I\_max = U/R
+- u và i cùng pha: φ = 0
+- U\_L = U\_C (có thể rất lớn so với U)
+- Công suất tiêu thụ cực đại
+
+<Callout kind="warning">
+
+### Ứng dụng cộng hưởng:
+
+- Mạch chọn sóng trong radio, tivi
+- Lò tần số cao
+- Mạch lọc tần số
+
+### Tác hại:
+
+Điện áp trên L và C có thể rất lớn, gây hỏng thiết bị
+
+</Callout>
+
+<Callout kind="example">
+
+#### Ví dụ 1:
+
+Mạch RLC nối tiếp có R = 40Ω, L = 0,4/π H, C = 10⁻⁴/π F. Đặt vào hai đầu mạch điện áp u = 120√2cos(100πt) V.
+
+a) Tính tổng trở của mạch
+
+b) Viết biểu thức cường độ dòng điện
+
+c) Tính các điện áp thành phần
+
+<strong>Giải:</strong>
+
+a) Z\_L = ωL = 100π × 0,4/π = 40Ω
+
+Z\_C = 1/(ωC) = 1/(100π × 10⁻⁴/π) = 100Ω
+
+Z = √(R² + (Z\_L - Z\_C)²) = √(40² + (40 - 100)²)
+
+\= √(1600 + 3600) = √5200 = 20√13 Ω
+
+b) I = U/Z = 120/(20√13) = 6/√13 A
+
+tanφ = (Z\_L - Z\_C)/R = (40 - 100)/40 = -1,5
+
+φ = -56,3° = -0,983 rad
+
+i = (6√2/√13)cos(100πt + 0,983) A
+
+c) U\_R = IR = (6/√13) × 40 = 240/√13 V
+
+U\_L = IZ\_L = (6/√13) × 40 = 240/√13 V
+
+U\_C = IZ\_C = (6/√13) × 100 = 600/√13 V
+
+</Callout>
+
+## 7. Phương pháp giải mạch RLC
+
+### a) Phương pháp đại số
+
+1. Tính các giá trị Z\_L, Z\_C
+2. Tính tổng trở Z
+3. Tính I = U/Z
+4. Tính độ lệch pha φ
+5. Viết biểu thức i(t)
+
+### b) Phương pháp vectơ
+
+1. Vẽ giản đồ vectơ
+2. Áp dụng định lý Pythagoras
+3. Sử dụng hệ thức lượng giác
+
+### c) Phương pháp số phức
+
+Biểu diễn các đại lượng dưới dạng số phức:
+
+- Z̅ = R + j(X\_L - X\_C)
+- I̅ = U̅/Z̅
+
+## 8. Bài toán biến thiên theo tần số
+
+<Callout kind="example">
+
+#### Ví dụ 2:
+
+Mạch RLC có R = 100Ω, L = 1/π H, C = 100/π μF. Điện áp hiệu dụng U = 200V.
+
+a) Tìm tần số để I đạt cực đại
+
+b) Tính I\_max
+
+<strong>Giải:</strong>
+
+a) I\_max khi cộng hưởng:
+
+f₀ = 1/(2π√(LC)) = 1/(2π√((1/π) × (10⁻⁴/π)))
+
+\= 1/(2π × 10⁻²/π) = 50 Hz
+
+b) Khi cộng hưởng: Z = R = 100Ω
+
+I\_max = U/R = 200/100 = 2A
+
+</Callout>
+
+## 9. So sánh các loại mạch
+
+<Table>
+<thead>
+<tr>
+<th>Mạch</th>
+<th>Tổng trở</th>
+<th>Độ lệch pha</th>
+<th>Đặc điểm</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Thuần R</td>
+<td>Z = R</td>
+<td>φ = 0</td>
+<td>u, i cùng pha</td>
+</tr>
+<tr>
+<td>Thuần L</td>
+<td>Z = ωL</td>
+<td>φ = π/2</td>
+<td>u sớm pha π/2</td>
+</tr>
+<tr>
+<td>Thuần C</td>
+<td>Z = 1/(ωC)</td>
+<td>φ = -π/2</td>
+<td>u trễ pha π/2</td>
+</tr>
+<tr>
+<td>RLC nối tiếp</td>
+<td>Z = √(R² + (Z\_L - Z\_C)²)</td>
+<td>tanφ = (Z\_L - Z\_C)/R</td>
+<td>Phụ thuộc Z\_L và Z\_C</td>
+</tr>
+</tbody>
+</Table>
+
+## 10. Bài tập tự luyện
+
+<Callout kind="definition">
+
+### Bài 1:
+
+Mạch điện xoay chiều gồm R = 30Ω nối tiếp với cuộn cảm L = 0,3/π H. Điện áp hai đầu mạch u = 120cos(100πt) V. Tính:
+
+a) Tổng trở của mạch
+
+b) Cường độ dòng điện hiệu dụng
+
+c) Độ lệch pha giữa u và i
+
+</Callout>
+
+<Callout kind="definition">
+
+### Bài 2:
+
+Mạch RLC nối tiếp có L = 2/π H, C = 31,8 μF. Tần số f = 50Hz. Biết u và i cùng pha.
+
+a) Tính R
+
+b) Nếu U = 220V, tính công suất tiêu thụ khi R = 100Ω
+
+</Callout>
+
+## 11. Tổng kết
+
+<Callout kind="warning">
+
+### Cần nhớ:
+
+- Mạch R: u, i cùng pha
+- Mạch L: u sớm pha π/2 so với i
+- Mạch C: u trễ pha π/2 so với i
+- Mạch RLC: Độ lệch pha phụ thuộc tỉ số (Z\_L - Z\_C)/R
+- Cộng hưởng khi Z\_L = Z\_C
+
+</Callout>
+
+<Callout kind="related">
+
+### Bài viết liên quan:
+
+- [Đại cương về dòng điện xoay chiều](/ly-thuyet/12/dien-xoay-chieu/bai-1-dai-cuong-dong-dien-xoay-chieu)
+- [Công suất điện xoay chiều](/ly-thuyet/12/dien-xoay-chieu/bai-3-cong-suat-dien-xoay-chieu)
+- [Máy biến áp và truyền tải điện năng](/ly-thuyet/12/dien-xoay-chieu/bai-4-may-bien-ap-truyen-tai-dien-nang)
+
+</Callout>

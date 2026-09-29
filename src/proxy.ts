@@ -13,9 +13,12 @@ export function proxy(request: NextRequest) {
   const token = request.cookies.get(SESSION_COOKIE)?.value;
   const { pathname, search } = request.nextUrl;
 
-  // A download answers 401 JSON itself (its handler checks the session);
-  // a redirect to the login page would be saved as the CSV.
-  if (!token && pathname === "/admin/results/export")
+  // Downloads answer 401 JSON themselves (their handlers check the session);
+  // a redirect to the login page would be saved as the file.
+  if (
+    !token &&
+    (pathname === "/admin/results/export" || pathname === "/settings/export")
+  )
     return NextResponse.next();
 
   if (!token) {

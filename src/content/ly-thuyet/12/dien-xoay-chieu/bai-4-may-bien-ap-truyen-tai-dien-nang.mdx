@@ -1,0 +1,444 @@
+{/* Converted from v1 materials/grade12/dien-xoay-chieu/bai-4-may-bien-ap-truyen-tai-dien-nang.html by scripts/convert-materials.ts (S8-02). */}
+
+Máy biến áp là thiết bị quan trọng nhất trong hệ thống điện, cho phép biến đổi điện áp để truyền tải điện năng hiệu quả đi xa hàng nghìn kilomet.
+
+## 1. Cấu tạo của máy biến áp
+
+### a) Các bộ phận chính
+
+- <strong>Lõi thép:</strong> Gồm nhiều lá thép kỹ thuật điện ghép lại, có sơn cách điện
+- <strong>Cuộn sơ cấp:</strong> N₁ vòng dây, nối với nguồn điện xoay chiều
+- <strong>Cuộn thứ cấp:</strong> N₂ vòng dây, nối với tải tiêu thụ
+
+<Callout kind="example">
+
+```text
+    Cuộn sơ cấp          Cuộn thứ cấp
+    (N₁ vòng)            (N₂ vòng)
+    ╔═══╗  ┌─────────┐  ╔═══╗
+    ║ ○ ║  │ Lõi thép│  ║ ○ ║
+U₁ →║ ○ ║  │         │  ║ ○ ║→ U₂
+    ║ ○ ║  │    ═════│  ║ ○ ║
+    ╚═══╝  └─────────┘  ╚═══╝
+```
+
+</Callout>
+
+### b) Phân loại theo cấu tạo
+
+- <strong>Máy biến áp lõi đóng:</strong> Từ thông khép kín trong lõi thép
+- <strong>Máy biến áp lõi hở:</strong> Có khe hở không khí (ít dùng)
+
+## 2. Nguyên lý hoạt động
+
+### a) Hiện tượng cảm ứng điện từ
+
+Khi đặt điện áp xoay chiều u₁ vào cuộn sơ cấp:
+
+1. Dòng điện i₁ tạo từ thông biến thiên trong lõi thép
+2. Từ thông này xuyên qua cuộn thứ cấp
+3. Xuất hiện suất điện động cảm ứng e₂ trong cuộn thứ cấp
+
+### b) Các phương trình cơ bản
+
+Từ thông qua mỗi vòng dây:
+
+<Formula>
+
+Φ = Φ₀sin(ωt)
+
+</Formula>
+
+Suất điện động trong các cuộn dây:
+
+<Formula>
+
+e₁ = -N₁(dΦ/dt) = N₁ωΦ₀cos(ωt)
+
+</Formula>
+
+<Formula>
+
+e₂ = -N₂(dΦ/dt) = N₂ωΦ₀cos(ωt)
+
+</Formula>
+
+## 3. Máy biến áp lý tưởng
+
+### a) Điều kiện lý tưởng
+
+- Điện trở các cuộn dây r₁ = r₂ = 0
+- Từ thông không bị rò rỉ ra ngoài
+- Không có tổn hao trong lõi thép
+- Hiệu suất H = 100%
+
+### b) Các hệ thức của máy biến áp lý tưởng
+
+<Callout kind="warning">
+
+#### 1. Hệ thức điện áp:
+
+<Formula>
+
+U₂/U₁ = N₂/N₁ = k
+
+</Formula>
+
+#### 2. Hệ thức dòng điện:
+
+<Formula>
+
+I₂/I₁ = N₁/N₂ = 1/k
+
+</Formula>
+
+#### 3. Bảo toàn công suất:
+
+<Formula>
+
+P₁ = P₂ → U₁I₁ = U₂I₂
+
+</Formula>
+
+</Callout>
+
+Trong đó k = N₂/N₁ là tỉ số biến áp:
+
+- k &gt; 1: Máy tăng áp
+- k &lt; 1: Máy hạ áp
+- k = 1: Máy biến áp cách ly
+
+<Callout kind="warning">
+
+<strong>Ghi nhớ:</strong> Tăng áp bao nhiêu lần thì giảm dòng bấy nhiêu lần và ngược lại.
+
+</Callout>
+
+## 4. Máy biến áp thực tế
+
+### a) Các tổn hao trong máy biến áp
+
+1. <strong>Tổn hao đồng:</strong> Do điện trở cuộn dây (I²R)
+2. <strong>Tổn hao sắt:</strong>
+   - Dòng điện xoáy (Foucault)
+   - Từ trễ
+3. <strong>Tổn hao do từ thông rò:</strong> Từ thông không khép kín
+
+### b) Hiệu suất
+
+<Formula>
+
+H = P₂/P₁ = P₂/(P₂ + ΔP) × 100%
+
+</Formula>
+
+Hiệu suất máy biến áp thực tế: 90% - 99%
+
+### c) Biện pháp giảm tổn hao
+
+- Dùng lõi thép kỹ thuật điện (silic)
+- Ghép lõi từ nhiều lá mỏng cách điện
+- Dùng dây đồng tiết diện lớn
+- Thiết kế từ thông khép kín
+
+## 5. Truyền tải điện năng đi xa
+
+### a) Sơ đồ truyền tải
+
+<Callout kind="example">
+
+```text
+Nhà máy điện → MBA tăng áp → Đường dây → MBA hạ áp → Nơi tiêu thụ
+     P              500kV        R,r        220V         P'
+```
+
+</Callout>
+
+### b) Công suất hao phí trên đường dây
+
+Với đường dây có điện trở R:
+
+<Formula>
+
+ΔP = I²R = (P/U)²R = P²R/U²
+
+</Formula>
+
+<Callout kind="warning">
+
+### Kết luận quan trọng:
+
+Công suất hao phí tỉ lệ nghịch với bình phương điện áp truyền tải
+
+→ Tăng U lên n lần thì ΔP giảm n² lần
+
+</Callout>
+
+### c) Hiệu suất truyền tải
+
+<Formula>
+
+H = P'ᴾ = (P - ΔP)/P = 1 - ΔP/P
+
+</Formula>
+
+<Callout kind="example">
+
+#### Ví dụ 1:
+
+Truyền tải công suất P = 10MW đi xa 100km. Điện trở đường dây R = 20Ω.
+
+a) Tính công suất hao phí khi truyền với U = 10kV
+
+b) Muốn ΔP &lt; 2% thì phải truyền với điện áp bao nhiêu?
+
+<strong>Giải:</strong>
+
+a) ΔP = P²R/U² = (10⁷)² × 20/(10⁴)²
+
+\= 10¹⁴ × 20/10⁸ = 2 × 10⁷W = 20MW
+
+Vô lý! Hao phí lớn hơn công suất truyền!
+
+b) Để ΔP &lt; 2%P = 0,2MW = 2 × 10⁵W
+
+U² &gt; P²R/ΔP = (10⁷)² × 20/(2 × 10⁵)
+
+U² &gt; 10¹⁰ → U &gt; 10⁵V = 100kV
+
+Thực tế cần truyền với U ≥ 110kV
+
+</Callout>
+
+## 6. Hệ thống điện quốc gia
+
+### a) Các cấp điện áp
+
+<Table>
+<thead>
+<tr>
+<th>Cấp điện áp</th>
+<th>Giá trị (kV)</th>
+<th>Ứng dụng</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Siêu cao áp</td>
+<td>500, 220</td>
+<td>Truyền tải liên vùng</td>
+</tr>
+<tr>
+<td>Cao áp</td>
+<td>110, 35</td>
+<td>Truyền tải trong vùng</td>
+</tr>
+<tr>
+<td>Trung áp</td>
+<td>22, 10, 6</td>
+<td>Phân phối đến khu vực</td>
+</tr>
+<tr>
+<td>Hạ áp</td>
+<td>0,4 (380/220V)</td>
+<td>Cấp cho người dùng</td>
+</tr>
+</tbody>
+</Table>
+
+### b) Trạm biến áp
+
+- <strong>Trạm tăng áp:</strong> Tại nhà máy điện
+- <strong>Trạm trung gian:</strong> 500/220kV, 220/110kV
+- <strong>Trạm phân phối:</strong> 110/22kV, 22/0,4kV
+
+## 7. Các loại máy biến áp đặc biệt
+
+### a) Máy biến áp tự ngẫu
+
+- Chỉ có một cuộn dây
+- Tiết kiệm vật liệu
+- Không cách ly điện
+- Dùng khi k ≈ 1
+
+### b) Máy biến áp ba pha
+
+- 3 lõi thép nối từ
+- 6 cuộn dây (3 sơ + 3 thứ)
+- Hiệu quả cao hơn 3 máy một pha
+
+### c) Máy biến áp đo lường
+
+- <strong>Biến điện áp (VT):</strong> Hạ áp để đo
+- <strong>Biến dòng điện (CT):</strong> Giảm dòng để đo
+- Bảo vệ thiết bị đo
+
+## 8. Ứng dụng của máy biến áp
+
+<Callout kind="note">
+
+### Trong đời sống:
+
+- <strong>Sạc điện thoại:</strong> 220V → 5V
+- <strong>Lò vi sóng:</strong> 220V → 2000V
+- <strong>Máy hàn:</strong> 220V → 50-80V
+- <strong>Đèn halogen:</strong> 220V → 12V
+
+### Trong công nghiệp:
+
+- <strong>Lò điện:</strong> Điều chỉnh nhiệt độ
+- <strong>Máy X-quang:</strong> Tạo cao áp
+- <strong>Truyền tải điện:</strong> Tăng/hạ áp
+
+</Callout>
+
+## 9. An toàn khi sử dụng máy biến áp
+
+<Callout kind="warning">
+
+### Lưu ý an toàn:
+
+- Không chạm vào cuộn thứ cấp của máy tăng áp
+- Nối đất vỏ máy biến áp
+- Kiểm tra cách điện định kỳ
+- Không quá tải máy biến áp
+- Tránh ngắn mạch cuộn thứ cấp
+
+</Callout>
+
+## 10. Bài toán truyền tải điện năng
+
+<Callout kind="example">
+
+#### Ví dụ 2:
+
+Một nhà máy phát điện công suất 100MW, điện áp 10kV. Điện năng được truyền đi xa bằng đường dây có điện trở tổng cộng R = 10Ω.
+
+a) Tính công suất hao phí nếu không dùng máy biến áp
+
+b) Dùng máy biến áp tăng lên 220kV để truyền tải. Tính:
+
+\- Tỉ số biến áp
+
+\- Công suất hao phí
+
+\- Hiệu suất truyền tải
+
+c) So sánh hai trường hợp
+
+<strong>Giải:</strong>
+
+a) Không dùng MBA: U = 10kV
+
+I = P/U = 10⁸/10⁴ = 10⁴A
+
+ΔP = I²R = (10⁴)² × 10 = 10⁹W = 1000MW (!)
+
+Không thể truyền tải!
+
+b) Dùng MBA tăng lên 220kV:
+
+\- Tỉ số: k = 220/10 = 22
+
+\- I' = P/U' = 10⁸/(220 × 10³) = 455A
+
+\- ΔP' = I'²R = 455² × 10 = 2,07MW
+
+\- H = (P - ΔP')/P = (100 - 2,07)/100 = 97,93%
+
+c) So sánh:
+
+\- Tăng U lên 22 lần
+
+\- ΔP giảm 22² = 484 lần
+
+\- Từ không thể truyền → H = 97,93%
+
+</Callout>
+
+## 11. Tính toán thiết kế đường dây
+
+### a) Chọn điện áp truyền tải
+
+Công thức kinh nghiệm:
+
+<Formula>
+
+U(kV) ≈ 4,34√(L + 16P)
+
+</Formula>
+
+Với L: khoảng cách (km), P: công suất (MW)
+
+### b) Chọn tiết diện dây dẫn
+
+<Formula>
+
+S = ρL/R = I/J
+
+</Formula>
+
+Với J: mật độ dòng cho phép (A/mm²)
+
+## 12. Bài tập tự luyện
+
+<Callout kind="definition">
+
+### Bài 1:
+
+Máy biến áp lý tưởng có N₁ = 1000 vòng, N₂ = 200 vòng. Cuộn sơ cấp nối với điện áp 220V.
+
+a) Tính điện áp cuộn thứ cấp
+
+b) Nối cuộn thứ cấp với R = 10Ω. Tính dòng điện trong các cuộn dây
+
+c) Tính công suất máy biến áp cung cấp cho tải
+
+</Callout>
+
+<Callout kind="definition">
+
+### Bài 2:
+
+Truyền tải công suất 50MW đi xa 200km bằng đường dây có điện trở 0,1Ω/km.
+
+a) Tính điện áp truyền tải để hao phí không quá 5%
+
+b) Với U = 220kV, tính hiệu suất truyền tải
+
+c) Nếu công suất tăng gấp đôi, phải tăng U lên bao nhiêu để giữ nguyên hiệu suất?
+
+</Callout>
+
+## 13. Tổng kết
+
+<Callout kind="warning">
+
+### Những điều cần nhớ:
+
+- MBA hoạt động theo nguyên lý cảm ứng điện từ
+- U₂/U₁ = N₂/N₁ và I₂/I₁ = N₁/N₂
+- Công suất: P₁ = P₂ (máy lý tưởng)
+- Hao phí: ΔP = P²R/U²
+- Tăng U → giảm hao phí theo bình phương
+- Truyền tải điện phải dùng cao áp
+
+</Callout>
+
+<Callout kind="definition">
+
+### Ý nghĩa thực tiễn:
+
+Nhờ máy biến áp, điện năng có thể truyền tải hiệu quả đi xa hàng nghìn km, tạo nên mạng lưới điện quốc gia và quốc tế, góp phần phát triển kinh tế - xã hội.
+
+</Callout>
+
+<Callout kind="related">
+
+### Bài viết liên quan:
+
+- [Đại cương về dòng điện xoay chiều](/ly-thuyet/12/dien-xoay-chieu/bai-1-dai-cuong-dong-dien-xoay-chieu)
+- [Các mạch điện xoay chiều](/ly-thuyet/12/dien-xoay-chieu/bai-2-cac-mach-dien-xoay-chieu)
+- [Công suất điện xoay chiều](/ly-thuyet/12/dien-xoay-chieu/bai-3-cong-suat-dien-xoay-chieu)
+
+</Callout>

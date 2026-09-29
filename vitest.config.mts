@@ -94,6 +94,13 @@ export default defineConfig({
           branches: 95,
           statements: 95,
         },
+        // A student's own settings and data export (S8-04).
+        "src/features/account/domain/**": {
+          lines: 95,
+          functions: 95,
+          branches: 95,
+          statements: 95,
+        },
         "src/features/auth/core/**": {
           lines: 95,
           functions: 95,

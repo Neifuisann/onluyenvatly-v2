@@ -189,6 +189,7 @@ All env vars are validated at boot by `src/lib/env.ts` (Zod). The build fails if
 | `GEMINI_API_KEY`, `GEMINI_MODEL_TEXT`, `GEMINI_MODEL_IMPORT` | server | Models are configurable because free-tier models change; each may list comma-separated fallbacks (09 §2). Optional: without them AI answers `AI_UNAVAILABLE` |
 | `GEMINI_BASE_URL` | server, tests only | E2E Gemini stand-in (`tests/e2e/fake-gemini.ts`) |
 | `CRON_SECRET` | server | Vercel cron auth |
+| `SITE_URL` | server, optional | Public origin for metadata, robots and sitemap (S8-05); defaults to `https://$VERCEL_PROJECT_PRODUCTION_URL` |
 | `AI_DAILY_BUDGET` | server | Hard ceiling on Gemini calls per day over `settings.ai_daily_budget` (0 = no ceiling) |
 
 ## 8. What we are deliberately *not* adding
