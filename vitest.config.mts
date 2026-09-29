@@ -87,6 +87,13 @@ export default defineConfig({
           branches: 95,
           statements: 95,
         },
+        // Gemini retry/fallback/budget rules and the explanation prompt (S7).
+        "src/features/ai/domain/**": {
+          lines: 95,
+          functions: 95,
+          branches: 95,
+          statements: 95,
+        },
         "src/features/auth/core/**": {
           lines: 95,
           functions: 95,

@@ -33,9 +33,16 @@ const tone: Record<Outcome, { icon: typeof Check; box: string; text: string }> =
 /**
  * One reviewed question (07 §4 `ReviewItem`). Server-rendered, and only built
  * once `revealFor` allows it: it carries the answer key and the explanation.
- * Every mark has an icon and words, never color alone.
+ * Every mark has an icon and words, never color alone. `ai` is the AI
+ * explanation (S7-02), shown only when the teacher wrote none.
  */
-export function ReviewItem({ entry }: { entry: ReviewEntry }) {
+export function ReviewItem({
+  entry,
+  ai,
+}: {
+  entry: ReviewEntry;
+  ai?: ReactNode;
+}) {
   const { question: q, item, index, outcome } = entry;
   const { icon: Icon, box, text } = tone[outcome];
   return (
@@ -69,11 +76,13 @@ export function ReviewItem({ entry }: { entry: ReviewEntry }) {
       {q.type === "short" && (
         <ShortReview given={entry.given} expected={entry.expected} />
       )}
-      {q.explanation?.trim() && (
+      {q.explanation?.trim() ? (
         <section className="rounded-md bg-muted p-3 text-sm">
           <h4 className="mb-1 font-medium">{t.explanation}</h4>
           <MathText text={q.explanation} />
         </section>
+      ) : (
+        ai
       )}
     </article>
   );

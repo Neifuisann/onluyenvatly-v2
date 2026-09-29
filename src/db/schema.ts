@@ -15,6 +15,7 @@ import {
   boolean,
   check,
   date,
+  foreignKey,
   index,
   inet,
   integer,
@@ -484,6 +485,76 @@ export const mistakes = pgTable(
       t.status,
       t.updatedAt.desc(),
     ),
+  ],
+).enableRLS();
+
+export const explanationSource = pgEnum("explanation_source", [
+  "ai",
+  "teacher",
+]);
+
+/**
+ * AI explanations, generated once per question content and shared by every
+ * student (ADR-007, S7-02). The key is a hash of the question with its
+ * answer, so an edited question gets a new explanation and a copied one
+ * reuses it. `lesson_id`/`question_id` say where it was first generated.
+ */
+export const questionExplanations = pgTable(
+  "question_explanations",
+  {
+    /** sha256 hex of the normalized question + answer (`ai/domain/explain.ts`). */
+    questionHash: text("question_hash").primaryKey(),
+    lessonId: bigint("lesson_id", { mode: "number" }).references(
+      () => lessons.id,
+      { onDelete: "set null" },
+    ),
+    questionId: text("question_id").notNull(),
+    /** `teacher` once an admin has edited it. */
+    source: explanationSource("source").notNull().default("ai"),
+    /** Gemini model that wrote it; null for teacher text. */
+    model: text("model"),
+    /** `PROMPT_VERSION` it was generated with (09 §5). */
+    promptVersion: text("prompt_version"),
+    /** Markdown-lite + LaTeX, rendered by `MathText`. */
+    contentMd: text("content_md").notNull(),
+    votesUp: integer("votes_up").notNull().default(0),
+    votesDown: integer("votes_down").notNull().default(0),
+    /** Set when an admin edits or approves it: leaves the 👎 queue. */
+    reviewedAt: timestamptz("reviewed_at"),
+    reviewedBy: uuid("reviewed_by").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    createdAt: timestamptz("created_at").notNull().defaultNow(),
+    updatedAt: timestamptz("updated_at").notNull().defaultNow(),
+  },
+  (t) => [
+    index("question_explanations_lesson_idx").on(t.lessonId),
+    // The 👎 queue (S7-03): unreviewed explanations with 3+ down votes.
+    index("question_explanations_flagged_idx")
+      .on(t.votesDown.desc())
+      .where(sql`${t.reviewedAt} is null and ${t.votesDown} >= 3`),
+  ],
+).enableRLS();
+
+/** One vote per student per explanation (05 `voteExplanation`). */
+export const explanationVotes = pgTable(
+  "explanation_votes",
+  {
+    questionHash: text("question_hash").notNull(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    up: boolean("up").notNull(),
+    createdAt: timestamptz("created_at").notNull().defaultNow(),
+  },
+  (t) => [
+    primaryKey({ columns: [t.questionHash, t.userId] }),
+    // Named here: the generated name is longer than Postgres allows (63).
+    foreignKey({
+      name: "explanation_votes_question_hash_fk",
+      columns: [t.questionHash],
+      foreignColumns: [questionExplanations.questionHash],
+    }).onDelete("cascade"),
   ],
 ).enableRLS();
 

@@ -1,6 +1,9 @@
 import { Info } from "lucide-react";
 import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
+import { AiExplanation } from "@/features/ai/components/ai-explanation";
+import { needsAi, questionHash } from "@/features/ai/domain/explain";
+import { getReviewExplanations } from "@/features/ai/queries";
 import { ChoiceItem } from "@/features/attempts/components/result/choice-item";
 import { DeleteAttempt } from "@/features/attempts/components/result/delete-attempt";
 import { GuardTimeline } from "@/features/attempts/components/result/guard-timeline";
@@ -20,6 +23,7 @@ import {
   getLessonWithAnswers,
 } from "@/features/lessons/queries";
 import { getAttemptRatingEvent } from "@/features/rating/queries";
+import { getSettings } from "@/features/settings/queries";
 import { formatDateTime } from "@/lib/dates";
 
 export const metadata: Metadata = {
@@ -31,6 +35,8 @@ export const metadata: Metadata = {
  * `/attempts/[id]/result`: owner or admin (05 §1). The answer key is read
  * and rendered only when the lesson's `revealAnswers` allows it (ADR-004).
  * Admins also get the exam-guard timeline and "Xóa bài làm" (S6-04).
+ * With the review come the stored AI explanations (S7-02): one lookup by
+ * question hash, never before the answers may be shown.
  */
 export default async function AttemptResultPage({
   params,
@@ -74,6 +80,18 @@ export default async function AttemptResultPage({
         new Map(questions.map((q) => [q.id, q])),
       )
     : null;
+  const hashes = entries?.map((e) =>
+    needsAi(e.question) ? questionHash(e.question) : null,
+  );
+  const [explanations, settings] = hashes
+    ? await Promise.all([
+        getReviewExplanations(
+          user.id,
+          hashes.filter((h) => h !== null),
+        ),
+        getSettings(),
+      ])
+    : [null, null];
 
   return (
     <article className="mx-auto flex max-w-2xl flex-col gap-8">
@@ -85,10 +103,27 @@ export default async function AttemptResultPage({
       />
       {entries ? (
         <ReviewList
-          items={entries.map((entry) => ({
-            outcome: entry.outcome,
-            node: <ReviewItem entry={entry} />,
-          }))}
+          items={entries.map((entry, i) => {
+            const hash = hashes?.[i];
+            return {
+              outcome: entry.outcome,
+              node: (
+                <ReviewItem
+                  entry={entry}
+                  ai={
+                    hash && (
+                      <AiExplanation
+                        attemptId={attempt.id}
+                        index={entry.index}
+                        explanation={explanations?.get(hash)}
+                        canAsk={settings?.aiEnabled ?? false}
+                      />
+                    )
+                  }
+                />
+              ),
+            };
+          })}
         />
       ) : (
         <section
