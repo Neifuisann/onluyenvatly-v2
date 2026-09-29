@@ -5,7 +5,10 @@ import { FormField, fieldA11y } from "@/components/form-field";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input, Select } from "@/components/ui/input";
+import { mergeTags } from "@/features/ai/domain/lesson-helpers";
+import { lessonHelpersCopy } from "@/features/ai/messages";
 import { cn } from "@/lib/utils";
+import { generateDescription, suggestTags } from "../../admin-actions";
 import type {
   PoolMode,
   SettingsField,
@@ -14,6 +17,7 @@ import type {
 import type { TypeCounts } from "../../domain/summary";
 import { settingsCopy as t } from "../../messages";
 import { QUESTION_TYPES } from "../../schema";
+import { AiHelper } from "./ai-helper";
 
 type Patch = (patch: Partial<SettingsForm>) => void;
 type ErrorOf = (field: SettingsField) => string | undefined;
@@ -32,6 +36,7 @@ export function SettingsTab({
   onSave,
   pending,
   message,
+  sourceText,
 }: {
   form: SettingsForm;
   onChange: Patch;
@@ -41,6 +46,8 @@ export function SettingsTab({
   onSave: () => void;
   pending: boolean;
   message: { text: string; error: boolean } | undefined;
+  /** The text being edited, for the AI helpers (S7-05). */
+  sourceText: string;
 }) {
   const total = QUESTION_TYPES.reduce((s, q) => s + available[q], 0);
   const text = (
@@ -56,6 +63,16 @@ export function SettingsTab({
       onChange({ [field]: e.target.value }),
     onBlur: () => onTouch(field),
   });
+  // What the AI helpers read: the form's title, grade, chapter and the text.
+  const helperInput = () => {
+    if (!form.title.trim()) return lessonHelpersCopy.noTitle;
+    return {
+      title: form.title.trim(),
+      grade: form.grade ? (Number(form.grade) as 10 | 11 | 12) : null,
+      chapter: form.chapter.trim() || null,
+      sourceText,
+    };
+  };
   const check = (
     field:
       | "shuffleQuestions"
@@ -107,6 +124,20 @@ export function SettingsTab({
             className="min-h-20 w-full rounded-md border border-input bg-surface px-3 py-2 text-base focus-visible:border-ring focus-visible:outline-2 focus-visible:outline-ring/40 aria-invalid:border-danger-text"
           />
         </FormField>
+        <AiHelper
+          id="ai-describe"
+          label={lessonHelpersCopy.describe}
+          run={() => {
+            const input = helperInput();
+            return typeof input === "string"
+              ? input
+              : generateDescription(input);
+          }}
+          onResult={({ description }) => {
+            onChange({ description });
+            return lessonHelpersCopy.described;
+          }}
+        />
         <div className="grid gap-4 sm:grid-cols-3">
           <FormField id="settings-grade" label={t.grade}>
             <Select
@@ -155,6 +186,19 @@ export function SettingsTab({
             {...fieldA11y("settings-tags", errorOf("tags"), t.tagsHint)}
           />
         </FormField>
+        <AiHelper
+          id="ai-tags"
+          label={lessonHelpersCopy.suggestTags}
+          run={() => {
+            const input = helperInput();
+            return typeof input === "string" ? input : suggestTags(input);
+          }}
+          onResult={({ tags }) => {
+            const merged = mergeTags(form.tags, tags);
+            if (merged.added > 0) onChange({ tags: merged.value });
+            return lessonHelpersCopy.tagsAdded(merged.added);
+          }}
+        />
       </Section>
 
       <Section title={t.timing}>

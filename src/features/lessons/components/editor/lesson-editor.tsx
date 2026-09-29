@@ -281,6 +281,7 @@ export function LessonEditor({ lesson }: { lesson: EditorLesson }) {
             onSave={save}
             pending={pending}
             message={message}
+            sourceText={text}
           />
           <CoverPicker lessonId={lesson.id} coverPath={lesson.coverPath} />
         </div>

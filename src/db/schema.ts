@@ -324,6 +324,12 @@ export const attempts = pgTable(
     answers: jsonb("answers").$type<AttemptAnswer[]>().notNull(),
     /** Item indexes flagged for review. */
     flagged: smallint("flagged").array().notNull().default(sql`'{}'`),
+    /**
+     * Practice and review attempts (S7-06): item indexes whose answer was
+     * checked with `checkPracticeAnswer`. Their answers are locked: saves and
+     * the submit keep the checked answer.
+     */
+    checked: smallint("checked").array().notNull().default(sql`'{}'`),
     guardEvents: jsonb("guard_events")
       .$type<GuardEvent[]>()
       .notNull()
@@ -349,6 +355,10 @@ export const attempts = pgTable(
     uniqueIndex("attempts_one_in_progress_uq")
       .on(t.userId, t.lessonId)
       .where(sql`${t.status} = 'in_progress'`),
+    // …and one open personalized practice per student (S7-06).
+    uniqueIndex("attempts_one_open_review_uq")
+      .on(t.userId)
+      .where(sql`${t.status} = 'in_progress' and ${t.lessonId} is null`),
     index("attempts_user_submitted_idx").on(t.userId, t.submittedAt.desc()),
     index("attempts_lesson_submitted_idx")
       .on(t.lessonId, t.submittedAt.desc())
@@ -465,6 +475,11 @@ export const mistakes = pgTable(
       .references(() => lessons.id, { onDelete: "cascade" }),
     /** Stable id inside the lesson. */
     questionId: text("question_id").notNull(),
+    /**
+     * `mcq` | `tf` | `short`, copied from the question so `/review` filters
+     * by type without reading version content (S7-06, backfilled in 0009).
+     */
+    questionType: text("question_type").$type<"mcq" | "tf" | "short">(),
     /** Latest version where it was seen. */
     lessonVersionId: bigint("lesson_version_id", { mode: "number" })
       .notNull()
@@ -484,6 +499,10 @@ export const mistakes = pgTable(
       t.userId,
       t.status,
       t.updatedAt.desc(),
+    ),
+    check(
+      "mistakes_question_type_check",
+      sql`${t.questionType} in ('mcq', 'tf', 'short')`,
     ),
   ],
 ).enableRLS();

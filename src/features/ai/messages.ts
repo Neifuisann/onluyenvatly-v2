@@ -94,3 +94,66 @@ export const adminExplanationsCopy = {
   errorTitle: "Không tải được trang giải thích AI",
   loading: "Đang tải giải thích AI",
 } as const;
+
+/** Editor helpers (S7-05): "Viết mô tả bằng AI", "Gợi ý thẻ". */
+export const lessonHelpersCopy = {
+  describe: "Viết mô tả bằng AI",
+  suggestTags: "Gợi ý thẻ",
+  working: "AI đang viết…",
+  described: "AI đã viết mô tả. Xem lại rồi bấm Lưu cài đặt.",
+  tagsAdded: (n: number) =>
+    n > 0
+      ? `Đã thêm ${n} thẻ gợi ý. Xem lại rồi bấm Lưu cài đặt.`
+      : "AI không gợi ý thêm thẻ nào mới.",
+  noQuestions: "Bài chưa có câu hỏi nào để AI đọc. Soạn nội dung trước.",
+  noTitle: "Nhập tên bài trước.",
+  quota:
+    "Hôm nay đã hết lượt AI (theo giới hạn trong Cài đặt). Thử lại vào ngày mai.",
+  unavailable: "AI đang bận hoặc chưa được cấu hình. Thử lại sau.",
+  incomplete: "AI trả lời chưa trọn vẹn. Thử lại.",
+} as const;
+
+/** `/admin/import` (S7-04): exam file → lesson text → a new draft. */
+export const importCopy = {
+  title: "Nhập đề bằng AI",
+  lead: "Tải lên đề kiểm tra (PDF, Word .docx hoặc ảnh chụp, tối đa 10 MB). AI chuyển đề sang định dạng soạn bài; bạn kiểm tra rồi tạo bài nháp để sửa trong trình soạn.",
+  file: "File đề",
+  fileHint: "PDF, DOCX, PNG, JPG hoặc WEBP; tối đa 10 MB.",
+  lessonTitle: "Tên bài",
+  lessonTitleHint:
+    "Mặc định lấy theo tên file; đổi sau trong Cài đặt cũng được.",
+  start: "Nhập bằng AI",
+  uploading: "Đang tải file lên…",
+  reading: "AI đang đọc đề… Đề dài có thể mất 1–3 phút.",
+  received: (n: number) => `Đã nhận ${n} câu`,
+  doneTitle: "AI đã chuyển xong",
+  summary: (c: { total: number; mcq: number; tf: number; short: number }) =>
+    `${c.total} câu: ${c.mcq} trắc nghiệm, ${c.tf} đúng/sai, ${c.short} trả lời ngắn.`,
+  issues: (n: number) =>
+    n > 0
+      ? `${n} lỗi cần sửa (ví dụ thiếu đáp án). Trình soạn sẽ chỉ ra từng dòng.`
+      : "Không có lỗi định dạng. Hãy đối chiếu nội dung với đề gốc trước khi xuất bản.",
+  figures: (n: number) =>
+    `${n} chỗ có hình AI không chép được, đánh dấu [Hình]: hãy chèn ảnh trong trình soạn.`,
+  output: "Văn bản AI trả về",
+  create: "Tạo bài nháp và mở trình soạn",
+  creating: "Đang tạo bài…",
+  again: "Nhập file khác",
+  // Errors
+  pickFile: "Chọn file đề trước.",
+  tooBig: "File lớn hơn 10 MB. Hãy chia nhỏ hoặc nén lại.",
+  badType: "Chỉ nhận PDF, DOCX, PNG, JPG hoặc WEBP.",
+  badFile:
+    "Không đọc được file này. Hãy lưu lại thành PDF hoặc DOCX rồi thử lại.",
+  emptyFile: "File không có nội dung chữ nào để chuyển.",
+  fileMissing: "Không tìm thấy file vừa tải lên. Hãy tải lại.",
+  uploadFailed: "Chưa tải được file lên. Kiểm tra mạng rồi thử lại.",
+  noStorage: "Kho lưu trữ chưa được cấu hình, chưa nhập đề được.",
+  quota:
+    "Hôm nay đã hết lượt AI (theo giới hạn trong Cài đặt). Thử lại vào ngày mai.",
+  unavailable: "AI đang bận hoặc chưa được cấu hình. Thử lại sau.",
+  stopped:
+    "AI dừng giữa chừng. Phần đã nhận vẫn được giữ: bạn có thể tạo bài nháp rồi soạn tiếp, hoặc thử lại.",
+  nothing: "AI chưa trả về câu hỏi nào. Thử lại, hoặc dùng file rõ nét hơn.",
+  aiOff: "AI đang tắt trong Cài đặt.",
+} as const;

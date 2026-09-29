@@ -1,6 +1,6 @@
 import "server-only";
 import { and, eq, gt, isNull, or, sql } from "drizzle-orm";
-import { db } from "@/db/client";
+import { db, type Tx } from "@/db/client";
 import { attempts, lessons, lessonVersions } from "@/db/schema";
 import { mediaExists } from "@/features/media/service";
 import { writeAudit } from "@/lib/audit";
@@ -245,29 +245,39 @@ export async function deleteLesson(
 }
 
 /** A new, empty draft at the end of the list; the editor takes it from there. */
+/** A new empty draft, last in the teacher's order. */
+export async function insertLesson(
+  tx: Tx,
+  actor: Actor,
+  title: string,
+): Promise<number> {
+  const [last] = await tx
+    .select({ max: sql<number | null>`max(${lessons.sortOrder})` })
+    .from(lessons);
+  const [row] = await tx
+    .insert(lessons)
+    .values({
+      title,
+      status: "draft",
+      config: DEFAULT_LESSON_CONFIG,
+      sortOrder: (last?.max ?? -1) + 1,
+      createdBy: actor.id,
+    })
+    .returning({ id: lessons.id });
+  if (!row) throw new Error("lesson insert returned no row");
+  return row.id;
+}
+
 export async function createLesson(actor: Actor): Promise<{ id: number }> {
   return db.transaction(async (tx) => {
-    const [last] = await tx
-      .select({ max: sql<number | null>`max(${lessons.sortOrder})` })
-      .from(lessons);
-    const [row] = await tx
-      .insert(lessons)
-      .values({
-        title: adminLessonsCopy.newTitle,
-        status: "draft",
-        config: DEFAULT_LESSON_CONFIG,
-        sortOrder: (last?.max ?? -1) + 1,
-        createdBy: actor.id,
-      })
-      .returning({ id: lessons.id });
-    if (!row) throw new Error("lesson insert returned no row");
+    const id = await insertLesson(tx, actor, adminLessonsCopy.newTitle);
     await writeAudit(tx, {
       actorId: actor.id,
       action: "lesson.create",
       targetType: "lesson",
-      targetId: row.id,
+      targetId: id,
     });
-    return { id: row.id };
+    return { id };
   });
 }
 

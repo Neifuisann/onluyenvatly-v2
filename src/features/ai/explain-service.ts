@@ -2,6 +2,7 @@ import "server-only";
 import { and, eq, sql } from "drizzle-orm";
 import { db, type Executor } from "@/db/client";
 import { explanationVotes, questionExplanations } from "@/db/schema";
+import { itemSources } from "@/features/attempts/content";
 import { revealFor } from "@/features/attempts/domain/review";
 import { revealAt } from "@/features/attempts/domain/schedule";
 import { getAttempt } from "@/features/attempts/queries";
@@ -38,7 +39,9 @@ type Target = { question: Question; hash: string; lessonId: number };
  * `{ attemptId, index }` → the question, only if this user may see its
  * answer now: the attempt's owner (or an admin), submitted, and the lesson's
  * `revealAnswers` allows it (ADR-004). Everything else is `NOT_FOUND` /
- * `FORBIDDEN`, so the endpoint can't be used to fish for answers.
+ * `FORBIDDEN`, so the endpoint can't be used to fish for answers. A review
+ * attempt (S7-06) is open once submitted: it was built only from questions
+ * whose answers may be shown, and each item carries its own version.
  */
 async function resolveTarget(
   user: SessionUser,
@@ -50,21 +53,22 @@ async function resolveTarget(
   if (!attempt || (attempt.userId !== user.id && user.role !== "admin"))
     return err("NOT_FOUND");
   const item = attempt.items[index];
-  const { lessonId, lessonVersionId } = attempt;
-  if (!item || !lessonId || !lessonVersionId) return err("NOT_FOUND");
+  if (!item) return err("NOT_FOUND");
   if (attempt.status === "in_progress") return err("FORBIDDEN");
-  const lesson = await getLessonOverview(lessonId, true);
-  const reveal = revealFor(
-    lesson?.revealAnswers ?? "never",
-    lesson ? revealAt(lesson) : null,
-    now,
-    user.role === "admin",
-  );
-  if (reveal.kind !== "shown") return err("FORBIDDEN");
-  const questions = await getLessonWithAnswers(
-    lessonId,
-    item.v ?? lessonVersionId,
-  );
+  const [source] = (await itemSources({ ...attempt, items: [item] })) ?? [];
+  if (!source) return err("NOT_FOUND");
+  if (attempt.lessonId !== null) {
+    const lesson = await getLessonOverview(attempt.lessonId, true);
+    const reveal = revealFor(
+      lesson?.revealAnswers ?? "never",
+      lesson ? revealAt(lesson) : null,
+      now,
+      user.role === "admin",
+    );
+    if (reveal.kind !== "shown") return err("FORBIDDEN");
+  }
+  const { lessonId } = source;
+  const questions = await getLessonWithAnswers(lessonId, source.versionId);
   const question = questions?.find((q) => q.id === item.q);
   if (!question) return err("NOT_FOUND");
   // The teacher's own explanation is shown instead (ADR-007).

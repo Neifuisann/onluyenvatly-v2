@@ -66,17 +66,22 @@ export type ReviewEntry = {
 
 /**
  * One entry per item, in test order.
- * @param byId the version's questions WITH answers; only call after
- *   `revealFor` said "shown".
+ * @param questions WITH answers; only call after `revealFor` said "shown".
+ *   The version's questions by id, or (review attempts, whose items span
+ *   lessons, S7-06) the questions aligned with `items`.
  */
 export function buildReview(
   items: readonly AttemptItem[],
   answers: readonly AttemptAnswer[],
   earned: readonly number[] | null,
-  byId: ReadonlyMap<string, Question>,
+  questions: ReadonlyMap<string, Question> | readonly Question[],
 ): ReviewEntry[] {
   return items.map((item, index) => {
-    const question = byId.get(item.q);
+    const found =
+      questions instanceof Map
+        ? questions.get(item.q)
+        : (questions as readonly Question[])[index];
+    const question = found?.id === item.q ? found : undefined;
     if (!question) throw new Error(`Question ${item.q} missing from version`);
     const given = answers[index] ?? null;
     const mark = earned?.[index] ?? 0;

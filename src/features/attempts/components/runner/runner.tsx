@@ -24,7 +24,13 @@ import {
   restoreFlagged,
   summarize,
 } from "../../domain/runner-state";
-import { previewCopy, saveCopy, runnerCopy as t } from "../../messages";
+import {
+  practiceCopy,
+  previewCopy,
+  saveCopy,
+  runnerCopy as t,
+} from "../../messages";
+import { PracticeProvider, type RunnerPractice } from "./practice";
 import { PreviewProvider, PreviewResult, type RunnerPreview } from "./preview";
 import { QuestionCard } from "./question-card";
 import { QuestionNavigator } from "./question-navigator";
@@ -57,6 +63,12 @@ export type RunnerProps = {
    * autosave, no submit, no exam guard, no attempt.
    */
   preview?: RunnerPreview;
+  /**
+   * Practice mode (S7-06, review attempts): "Kiểm tra" under each question,
+   * checked answers locked. Exit goes to `exitHref`.
+   */
+  practice?: RunnerPractice;
+  exitHref?: string;
 };
 
 type View = "single" | "list";
@@ -65,6 +77,15 @@ const VIEW_KEY = "runner:view";
 /** The test runner (07 §5.2). */
 export function Runner(props: RunnerProps) {
   const count = props.questions.length;
+  let screen = <RunnerScreen {...props} />;
+  if (props.preview)
+    screen = <PreviewProvider value={props.preview}>{screen}</PreviewProvider>;
+  else if (props.practice)
+    screen = (
+      <PracticeProvider attemptId={props.attemptId} practice={props.practice}>
+        {screen}
+      </PracticeProvider>
+    );
   return (
     <RunnerProvider
       initial={() => ({
@@ -72,14 +93,9 @@ export function Runner(props: RunnerProps) {
         flagged: restoreFlagged(props.saved.flagged, count),
         current: 0,
       })}
+      locked={Object.keys(props.practice?.checked ?? {}).map(Number)}
     >
-      {props.preview ? (
-        <PreviewProvider value={props.preview}>
-          <RunnerScreen {...props} />
-        </PreviewProvider>
-      ) : (
-        <RunnerScreen {...props} />
-      )}
+      {screen}
     </RunnerProvider>
   );
 }
@@ -94,6 +110,8 @@ function RunnerScreen({
   startedAt,
   examGuard,
   preview,
+  practice,
+  exitHref,
 }: RunnerProps) {
   const api = useRunnerApi();
   const router = useRouter();
@@ -209,9 +227,11 @@ function RunnerScreen({
         <div className="mx-auto flex h-14 max-w-5xl items-center gap-1 px-2">
           {!preview && (
             <Link
-              href={lessonId ? `/lessons/${lessonId}` : "/dashboard"}
-              aria-label={t.exit}
-              title={t.exit}
+              href={
+                exitHref ?? (lessonId ? `/lessons/${lessonId}` : "/dashboard")
+              }
+              aria-label={practice ? practiceCopy.exit : t.exit}
+              title={practice ? practiceCopy.exit : t.exit}
               className="flex size-11 items-center justify-center rounded-md hover:bg-muted"
             >
               <ArrowLeft aria-hidden className="size-5" />
@@ -280,7 +300,14 @@ function RunnerScreen({
               {previewCopy.badge}
             </span>
           ) : (
-            <SaveIndicator status={save.status} />
+            <>
+              {practice && (
+                <span className="hidden shrink-0 rounded-full border px-2 py-0.5 text-muted-foreground text-xs sm:inline">
+                  {practiceCopy.badge}
+                </span>
+              )}
+              <SaveIndicator status={save.status} />
+            </>
           )}
         </div>
         {examGuard && (

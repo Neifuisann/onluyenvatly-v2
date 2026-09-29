@@ -17,12 +17,20 @@ import {
 } from "@/features/lessons/schema";
 import { rateAttempt } from "@/features/rating/service";
 import { mistakeChanges } from "@/features/review/domain/mistakes";
-import { recordMistakes } from "@/features/review/service";
+import {
+  addChecked,
+  lockChecked,
+  type PracticeFeedback,
+  practiceFeedback,
+  REVIEW_TF_SCORING,
+} from "@/features/review/domain/practice";
+import { type MistakeTarget, recordMistakes } from "@/features/review/service";
 import type { ErrorCode } from "@/lib/messages";
 import { FOREIGN_KEY_VIOLATION, pgErrorCode } from "@/lib/pg-error";
 import { rateLimit } from "@/lib/rate-limit";
 import { err, ok, type Result } from "@/lib/result";
-import { buildItems, questionsForItems } from "./domain/build-items";
+import { itemQuestions, itemSources } from "./content";
+import { buildItems } from "./domain/build-items";
 import {
   DEADLINE_GRACE_MS,
   isPastGrace,
@@ -36,7 +44,11 @@ import {
   revealAt,
   type StartCounts,
 } from "./domain/schedule";
-import type { SaveProgressInput, SubmitAttemptInput } from "./schemas";
+import type {
+  CheckPracticeInput,
+  SaveProgressInput,
+  SubmitAttemptInput,
+} from "./schemas";
 
 /** 06 §4. Tune here only; the integration tests read these values. */
 export const ATTEMPT_LIMITS = {
@@ -162,7 +174,7 @@ export async function saveProgress(
   const [saved] = await db
     .update(attempts)
     .set({
-      answers: input.answers,
+      answers: keepChecked(input.answers),
       flagged: cleanFlags(input.flagged, input.answers.length),
       ...appendGuard(input.guardEvents),
       lastSavedAt: now,
@@ -212,6 +224,8 @@ export async function submitAttempt(
       userId: attempts.userId,
       lessonId: attempts.lessonId,
       lessonVersionId: attempts.lessonVersionId,
+      mode: attempts.mode,
+      items: attempts.items,
       config: lessons.config,
     })
     .from(attempts)
@@ -219,18 +233,20 @@ export async function submitAttempt(
     .where(eq(attempts.id, attemptId))
     .limit(1);
   if (!pre || pre.userId !== userId) return err("NOT_FOUND");
-  // Single-lesson tests; review attempts (items with their own `v`) arrive in S7-06.
-  if (!pre.lessonId || !pre.lessonVersionId) return err("INTERNAL");
-  const { lessonId, lessonVersionId } = pre;
-  const questions = await getLessonWithAnswers(lessonId, lessonVersionId);
-  if (!questions) return err("INTERNAL");
-  const byId = new Map(questions.map((q) => [q.id, q]));
+  // Items are fixed at start, so their questions load before the lock.
+  // A review attempt's items come from several lessons (S7-06).
+  const sources = await itemSources(pre);
+  const questions = sources && (await itemQuestions(pre, sources));
+  if (!sources || !questions) return err("INTERNAL");
+  const { lessonId } = pre;
   const config = LessonConfigSchema.safeParse(pre.config);
   const {
-    tfScoring = "thpt2025",
+    tfScoring = REVIEW_TF_SCORING,
     countsForRating = true,
     timeLimitSec = null,
   } = config.success ? config.data : {};
+  // Practice and review never move the rating (01 Q9).
+  const rated = pre.mode === "test" && lessonId !== null && countsForRating;
 
   return db.transaction(async (tx) => {
     const [a] = await tx
@@ -239,6 +255,7 @@ export async function submitAttempt(
         items: attempts.items,
         answers: attempts.answers,
         flagged: attempts.flagged,
+        checked: attempts.checked,
         score: attempts.score,
         maxScore: attempts.maxScore,
         score10: attempts.score10,
@@ -264,16 +281,13 @@ export async function submitAttempt(
     if (!late && input.answers.length !== a.items.length)
       return err("VALIDATION");
 
-    const answers = late ? a.answers : input.answers;
+    const answers = late
+      ? a.answers
+      : lockChecked(input.answers, a.answers, a.checked);
     const flagged = late
       ? a.flagged
       : cleanFlags(input.flagged, a.items.length);
-    const result = grade(
-      questionsForItems(a.items, byId),
-      a.items,
-      answers,
-      tfScoring,
-    );
+    const result = grade(questions, a.items, answers, tfScoring);
     const taken = timeTakenSec(a.startedAt, a.deadlineAt, now);
     await tx
       .update(attempts)
@@ -293,11 +307,12 @@ export async function submitAttempt(
       .where(eq(attempts.id, attemptId));
     // Denormalized for "Nhiều lượt làm"; the catalog picks it up when its
     // cache refreshes (no per-submit invalidation, 08).
-    await tx
-      .update(lessons)
-      .set({ attemptCount: sql`${lessons.attemptCount} + 1` })
-      .where(eq(lessons.id, lessonId));
-    if (countsForRating)
+    if (lessonId !== null)
+      await tx
+        .update(lessons)
+        .set({ attemptCount: sql`${lessons.attemptCount} + 1` })
+        .where(eq(lessons.id, lessonId));
+    if (rated)
       await rateAttempt(tx, {
         userId,
         attemptId,
@@ -308,15 +323,29 @@ export async function submitAttempt(
         timeLimitSec,
         now,
       });
+    // Keyed by lesson and question: a review attempt spans lessons.
+    const targets = new Map<string, MistakeTarget>();
+    const keys = a.items.map((item, i) => {
+      const source = sources[i] as (typeof sources)[number];
+      const key = `${source.lessonId}:${item.q}`;
+      targets.set(key, {
+        lessonId: source.lessonId,
+        lessonVersionId: source.versionId,
+        questionId: item.q,
+        questionType: (questions[i] as (typeof questions)[number]).type,
+      });
+      return { q: key };
+    });
+    const changes = mistakeChanges(
+      keys,
+      result.marks.map((m) => m.outcome),
+    );
+    const toTargets = (ks: string[]) => ks.flatMap((k) => targets.get(k) ?? []);
     await recordMistakes(tx, {
       userId,
-      lessonId,
-      lessonVersionId,
       attemptId,
-      ...mistakeChanges(
-        a.items,
-        result.marks.map((m) => m.outcome),
-      ),
+      wrong: toTargets(changes.wrong),
+      correct: toTargets(changes.correct),
       now,
     });
     return ok({
@@ -352,6 +381,79 @@ function appendGuard(events: readonly GuardEvent[] | undefined): {
       ) kept
     )`,
   };
+}
+
+/**
+ * The saved answers, except that checked practice answers (S7-06) keep their
+ * stored value: once the key was shown, a save can't change them.
+ */
+function keepChecked(answers: SaveProgressInput["answers"]): SQL {
+  const json = JSON.stringify(answers);
+  return sql`case when cardinality(${attempts.checked}) = 0 then ${json}::jsonb
+    else (
+      select coalesce(jsonb_agg(
+        case when (x.n - 1) = any(${attempts.checked})
+          then ${attempts.answers} -> (x.n::int - 1) else x.e end
+        order by x.n), '[]'::jsonb)
+      from jsonb_array_elements(${json}::jsonb) with ordinality as x(e, n)
+    ) end`;
+}
+
+/**
+ * "Kiểm tra" in a practice or review attempt (05 `checkPracticeAnswer`,
+ * S7-06): grades one item, returns its key and locks the answer. Asking
+ * again for a checked item returns the feedback for the stored answer.
+ * Tests never get feedback before submit (ADR-004).
+ */
+export async function checkPracticeAnswer(
+  userId: string,
+  input: CheckPracticeInput,
+): Promise<Result<PracticeFeedback>> {
+  const [pre] = await db
+    .select({
+      userId: attempts.userId,
+      mode: attempts.mode,
+      status: attempts.status,
+      lessonId: attempts.lessonId,
+      lessonVersionId: attempts.lessonVersionId,
+      items: attempts.items,
+    })
+    .from(attempts)
+    .where(eq(attempts.id, input.attemptId))
+    .limit(1);
+  if (!pre || pre.userId !== userId) return err("NOT_FOUND");
+  if (pre.mode === "test") return err("FORBIDDEN");
+  if (pre.status !== "in_progress") return err("ATTEMPT_CLOSED");
+  const item = pre.items[input.index];
+  if (!item) return err("VALIDATION");
+  const [question] = (await itemQuestions({ ...pre, items: [item] })) ?? [];
+  if (!question) return err("INTERNAL");
+
+  return db.transaction(async (tx) => {
+    const [a] = await tx
+      .select({
+        status: attempts.status,
+        answers: attempts.answers,
+        checked: attempts.checked,
+      })
+      .from(attempts)
+      .where(eq(attempts.id, input.attemptId))
+      .for("update")
+      .limit(1);
+    if (!a || a.status !== "in_progress") return err("ATTEMPT_CLOSED");
+    if (a.checked.includes(input.index))
+      return ok(
+        practiceFeedback(question, item, a.answers[input.index] ?? null),
+      );
+    await tx
+      .update(attempts)
+      .set({
+        answers: sql`jsonb_set(${attempts.answers}, ${`{${input.index}}`}::text[], ${JSON.stringify(input.answer)}::jsonb)`,
+        checked: addChecked(a.checked, input.index),
+      })
+      .where(eq(attempts.id, input.attemptId));
+    return ok(practiceFeedback(question, item, input.answer));
+  });
 }
 
 /** Unique item indexes inside the test, ascending. */

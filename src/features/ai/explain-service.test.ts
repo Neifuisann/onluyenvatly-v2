@@ -20,6 +20,7 @@ import {
   type LessonConfig,
   type Question,
 } from "@/features/lessons/schema";
+import { startReviewPractice } from "@/features/review/practice-service";
 import { resetDb, type TestDb } from "@/test/db";
 import { PROMPT_VERSION, questionHash } from "./domain/explain";
 import {
@@ -256,6 +257,53 @@ describe("explainQuestion", () => {
     );
     expect(again.ok && again.data.kind).toBe("cached");
     expect(client.generateContentStream).toHaveBeenCalledTimes(1);
+  });
+
+  it("explains a question of a submitted review attempt (S7-06)", async () => {
+    const lessonId = await addLesson();
+    const user = await addUser();
+    await take(user, lessonId);
+    const started = await startReviewPractice(
+      user,
+      { chapter: null, type: null, count: 10 },
+      { now: NOW, seed: 1 },
+    );
+    if (!started.ok) throw new Error(started.code);
+    const [row] = await tdb
+      .select({ items: attempts.items, lessonId: attempts.lessonId })
+      .from(attempts)
+      .where(eq(attempts.id, started.data.attemptId));
+    expect(row?.lessonId).toBeNull();
+    const index = row?.items.findIndex((i) => i.q === "q_mcq") ?? -1;
+    const { ai } = fakeAi();
+    // Not before it is submitted…
+    expect(
+      await explainQuestion(
+        user,
+        { attemptId: started.data.attemptId, index },
+        { ai, now: NOW },
+      ),
+    ).toMatchObject({ ok: false, code: "FORBIDDEN" });
+    const done = await submitAttempt(
+      user.id,
+      started.data.attemptId,
+      {
+        answers: row?.items.map(() => null) ?? [],
+        flagged: [],
+        clientSubmitId: randomUUID(),
+      },
+      new Date(NOW.getTime() + 120_000),
+    );
+    expect(done.ok).toBe(true);
+    // …then like any result: stored under the question's own lesson.
+    const result = await explainQuestion(
+      user,
+      { attemptId: started.data.attemptId, index },
+      { ai, now: NOW },
+    );
+    if (!result.ok) throw new Error(result.code);
+    await drain(result.data);
+    expect((await stored()).map((s) => s.lessonId)).toEqual([lessonId]);
   });
 
   it("does not store a truncated answer", async () => {

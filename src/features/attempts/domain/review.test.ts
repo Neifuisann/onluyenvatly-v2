@@ -120,6 +120,14 @@ describe("buildReview", () => {
     expect(entries.map((e) => e.outcome)).toEqual(["blank", "blank", "blank"]);
   });
 
+  it("takes questions aligned with the items (review attempts)", () => {
+    const entries = buildReview(items, ["A"], [1], questions);
+    expect(entries.map((e) => e.question.id)).toEqual(["m", "t", "s"]);
+    expect(() => buildReview([{ q: "t", p: 1 }], [], null, questions)).toThrow(
+      /missing/,
+    );
+  });
+
   it("refuses items whose question is missing", () => {
     expect(() => buildReview([{ q: "x", p: 1 }], [], null, byId)).toThrow(
       /missing/,

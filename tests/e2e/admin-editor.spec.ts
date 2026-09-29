@@ -4,6 +4,7 @@ import { expect, type Page, test } from "@playwright/test";
 import { normalizeV1Questions } from "../../src/features/lessons/domain/legacy.ts";
 import { serializeLesson } from "../../src/features/lessons/domain/serializer.ts";
 import { loginAdminOnce } from "./admin-helpers";
+import { FAKE_DESCRIPTION } from "./fake-gemini";
 import {
   press,
   type StorageState,
@@ -179,6 +180,25 @@ test("settings: invalid combinations are blocked with messages", async ({
       ),
     ).toEqual([]);
   }
+});
+
+test("settings: AI writes a description and suggests tags into the form (S7-05)", async ({
+  page,
+}) => {
+  await openSettings(page);
+  const tags = page.getByLabel("Thẻ", { exact: true });
+  await tags.fill("ôn tập");
+  await page.getByRole("button", { name: "Viết mô tả bằng AI" }).click();
+  await expect(page.getByLabel("Mô tả")).toHaveValue(FAKE_DESCRIPTION);
+  await expect(page.getByText("AI đã viết mô tả.")).toBeVisible();
+  await page.getByRole("button", { name: "Gợi ý thẻ" }).click();
+  // "ôn tập" was already there: only the two new ones are added.
+  await expect(tags).toHaveValue("ôn tập, con lắc lò xo, chu kì");
+  await expect(page.getByText("Đã thêm 2 thẻ gợi ý.")).toBeVisible();
+  // Nothing is saved until "Lưu cài đặt".
+  await page.reload();
+  await page.getByRole("tab", { name: "Cài đặt" }).click();
+  await expect(page.getByLabel("Mô tả")).toHaveValue("");
 });
 
 test("settings: a valid change saves and survives a reload; stats follow live", async ({

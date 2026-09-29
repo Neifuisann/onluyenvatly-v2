@@ -91,6 +91,28 @@ export const aiQuestions = (project: "d" | "m"): Question[] => [
   },
 ];
 
+/** Title prefix of the drafts the AI import spec creates; the seed removes them. */
+export const IMPORTED_TITLE_PREFIX = "E2E – Nhập đề";
+
+/**
+ * S7-06 review journey: three mcq questions whose right option says so, so
+ * the spec can pick it however the practice set shuffles the options.
+ */
+export const REVIEW_RIGHT = "Chọn phương án này";
+export const reviewQuestions = (project: "d" | "m"): Question[] =>
+  [1, 2, 3].map((n) => ({
+    id: `q_review_${n}`,
+    type: "mcq",
+    stem: `Câu ôn tập số ${n} (${project}): $v = ${n},\text{m/s}$`,
+    options: [
+      { text: REVIEW_RIGHT },
+      { text: "Sai một" },
+      { text: "Sai hai" },
+      { text: "Sai ba" },
+    ],
+    answer: 0,
+  }));
+
 /**
  * S7-03 admin explanations: two questions for "Tạo sẵn cho cả bài" and one
  * with the teacher's text. Per project, so each generates its own.
@@ -318,6 +340,25 @@ export const e2eLessons: E2eLesson[] = [
       config: { ...DEFAULT_LESSON_CONFIG, countsForRating: false },
       status: "published",
       questions: aiAdminQuestions(p),
+    }),
+  ),
+  // S7-06 review journey, one per project: no shuffle, so the test's
+  // letters are known; own chapter, unrated, off every list.
+  ...(["d", "m"] as const).map(
+    (p): E2eLesson => ({
+      legacyId: `e2e-review-${p}`,
+      title: `E2E – Ôn tập (${p})`,
+      chapter: `Ôn tập E2E (${p})`,
+      tags: ["e2e-review"],
+      sortOrder: 502,
+      config: {
+        ...DEFAULT_LESSON_CONFIG,
+        countsForRating: false,
+        shuffleQuestions: false,
+        shuffleOptions: false,
+      },
+      status: "published",
+      questions: reviewQuestions(p),
     }),
   ),
   // S6-05 statistics: archived (off the catalog and every student page);

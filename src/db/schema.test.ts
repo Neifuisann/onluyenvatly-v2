@@ -190,13 +190,19 @@ describe("attempts, ratings, mistakes (S3-01)", () => {
       .where(eq(attempts.userId, userId));
     await db.insert(attempts).values(attempt());
     await db.insert(attempts).values(attempt({ status: "submitted" }));
-    // Personalized practice has no lesson (items carry their versions), so it never collides.
+    // Personalized practice has no lesson (items carry their versions): one
+    // open per student next to the open test (S7-06), any number closed.
     const review = attempt({
       lessonId: null,
       lessonVersionId: null,
       mode: "review",
     });
-    await db.insert(attempts).values([review, review]);
+    await db.insert(attempts).values(review);
+    await expect(db.insert(attempts).values(review)).rejects.toThrow();
+    await db.insert(attempts).values([
+      { ...review, status: "submitted" },
+      { ...review, status: "submitted" },
+    ]);
   });
 
   it("keeps answers aligned with items", async () => {
