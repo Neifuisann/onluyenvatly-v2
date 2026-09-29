@@ -191,6 +191,12 @@ async function main() {
           status: s.status,
           passwordHash,
           mustChangePassword: false,
+          // S8-04 settings a spec may have changed.
+          fullName: s.fullName,
+          className: `${s.grade}A1`,
+          leaderboardInitials: false,
+          avatarPath: null,
+          deletionRequestedAt: null,
           updatedAt: new Date(),
         },
       })

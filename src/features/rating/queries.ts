@@ -7,6 +7,7 @@ import { tags } from "@/lib/cache-tags";
 import {
   type LeaderboardFilters,
   MAX_ROWS,
+  publicName,
   type RankedEntry,
   withRanks,
 } from "./domain/leaderboard";
@@ -60,6 +61,7 @@ export async function getLeaderboard(
     .select({
       userId: ratings.userId,
       fullName: users.fullName,
+      initialsOnly: users.leaderboardInitials,
       className: users.className,
       rating: ratings.rating,
       weekDelta,
@@ -84,5 +86,13 @@ export async function getLeaderboard(
       asc(ratings.userId),
     )
     .limit(MAX_ROWS);
-  return withRanks(rows, f.period);
+  // Resolved before caching: a student who chose initials never has their
+  // full name in the shared entry (S8-04).
+  return withRanks(
+    rows.map(({ fullName, initialsOnly, ...row }) => ({
+      ...row,
+      fullName: publicName(fullName, initialsOnly),
+    })),
+    f.period,
+  );
 }

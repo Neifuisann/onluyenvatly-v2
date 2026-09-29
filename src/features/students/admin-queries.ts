@@ -6,6 +6,7 @@ import {
   desc,
   eq,
   gt,
+  isNotNull,
   isNull,
   like,
   type SQL,
@@ -37,6 +38,34 @@ import {
  */
 
 const isStudent = eq(users.role, "student");
+
+/**
+ * Students who asked to delete their account (S8-04, 06 §5), oldest request
+ * first. Served by the partial `users_deletion_requested_idx`.
+ */
+export async function getDeletionRequests(): Promise<
+  Array<{
+    id: string;
+    fullName: string;
+    className: string | null;
+    requestedAt: Date;
+  }>
+> {
+  const rows = await db
+    .select({
+      id: users.id,
+      fullName: users.fullName,
+      className: users.className,
+      requestedAt: users.deletionRequestedAt,
+    })
+    .from(users)
+    .where(and(isStudent, isNotNull(users.deletionRequestedAt)))
+    .orderBy(asc(users.deletionRequestedAt))
+    .limit(BULK_LIMIT);
+  return rows.flatMap((r) =>
+    r.requestedAt ? [{ ...r, requestedAt: r.requestedAt }] : [],
+  );
+}
 
 /** Students waiting for approval: the nav badge, on every admin page. */
 export async function getPendingCount(): Promise<number> {
@@ -154,6 +183,8 @@ export type StudentDetail = {
   createdAt: Date;
   approvedAt: Date | null;
   lastLoginAt: Date | null;
+  /** The student asked to delete the account (S8-04); "Xóa" completes it. */
+  deletionRequestedAt: Date | null;
   rating: { rating: number; peak: number; ratedAttempts: number } | null;
   /** Submitted attempts in all (the list below shows the latest 50). */
   attemptTotal: number;
@@ -176,6 +207,7 @@ export async function getStudentDetail(
       createdAt: users.createdAt,
       approvedAt: users.approvedAt,
       lastLoginAt: users.lastLoginAt,
+      deletionRequestedAt: users.deletionRequestedAt,
       rating: ratings.rating,
       peak: ratings.peak,
       ratedAttempts: ratings.ratedAttempts,

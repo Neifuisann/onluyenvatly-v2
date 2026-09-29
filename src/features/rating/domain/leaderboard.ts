@@ -96,6 +96,19 @@ export function initials(fullName: string): string {
     : `${letter(first)}`;
 }
 
+/**
+ * The name shown on public surfaces (06 §5, S8-04): the full name, or
+ * "N. V. H." when the student chose initials only in their settings.
+ */
+export function publicName(fullName: string, initialsOnly: boolean): string {
+  if (!initialsOnly) return fullName;
+  const words = fullName.normalize("NFC").trim().split(/\s+/).filter(Boolean);
+  if (!words.length) return "?";
+  return words
+    .map((w) => `${Array.from(w)[0]?.toLocaleUpperCase("vi")}.`)
+    .join(" ");
+}
+
 /** `/leaderboard` URL for the filters with `patch` applied; defaults omitted. */
 export function leaderboardHref(
   filters: LeaderboardFilters,

@@ -1,3 +1,4 @@
+import { eq } from "drizzle-orm";
 import { beforeAll, describe, expect, it, vi } from "vitest";
 import { db } from "@/db/client";
 import { ratingEvents, ratings, users } from "@/db/schema";
@@ -129,5 +130,29 @@ describe("getLeaderboard", () => {
       [15, 2],
     ]);
     expect(await getLeaderboard({ grade: 10, period: "week" })).toEqual([]);
+  });
+});
+
+describe("getLeaderboard privacy (S8-04)", () => {
+  it("shows initials only for a student who chose them, with no full name in the entry", async () => {
+    const id = ids.get("Cường") ?? "";
+    await tdb
+      .update(users)
+      .set({ leaderboardInitials: true })
+      .where(eq(users.id, id));
+    try {
+      const rows = await getLeaderboard({ grade: null, period: "all" });
+      const row = rows.find((r) => r.userId === id);
+      expect(row?.fullName).toBe("H. S. C.");
+      expect(JSON.stringify(rows)).not.toContain("Cường");
+      expect(rows.find((r) => r.userId === ids.get("An"))?.fullName).toBe(
+        "Học Sinh An",
+      );
+    } finally {
+      await tdb
+        .update(users)
+        .set({ leaderboardInitials: false })
+        .where(eq(users.id, id));
+    }
   });
 });
