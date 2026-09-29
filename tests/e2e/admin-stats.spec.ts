@@ -211,7 +211,8 @@ test("dashboard: tiles, 30-day chart and hardest questions", async ({
   expect(await number("Học sinh hoạt động (7 ngày)")).toBeGreaterThanOrEqual(5);
   expect(await number("Lượt nộp (7 ngày)")).toBeGreaterThanOrEqual(5);
   expect(await number("Lượt nộp hôm nay")).toBeGreaterThanOrEqual(0);
-  await expect(tile(page, "AI hôm nay")).toHaveText("Chưa bật");
+  // Generations counted today / the budget (AI on by default).
+  await expect(tile(page, "AI hôm nay")).toHaveText(/^\d+\/\d+$/);
 
   const chart = page.getByRole("region", { name: "Lượt nộp bài 30 ngày qua" });
   await expect(chart.getByRole("img")).toHaveAttribute(

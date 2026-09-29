@@ -20,6 +20,14 @@ Dropped from v1: the free-form "chat assist" in the editor (low value, highest t
 - **Global daily budget** (`settings.ai_daily_budget`, default 200 generations/day). A counter row in `rate_limits` (`ai:global:{date}`) is checked before every generation. When exhausted, explain returns `AI_QUOTA` and the UI shows "Hết lượt giải thích AI hôm nay, hãy thử lại vào ngày mai" (no AI explanations left today, try again tomorrow).
 - **Kill switch:** `settings.ai_enabled`.
 
+As built (S7-01): `src/features/ai/gemini.ts` exposes `createAi(deps)` with `generateText()` and `streamText()` (a file import is `contents` with inline data, so there is no separate `generateFromFile()`); `client.ts` wires the real `@google/genai` client, the env models and the gate. Rules (`ai/domain/policy.ts`, pure, gated at 95 %):
+- `GEMINI_MODEL_TEXT` / `GEMINI_MODEL_IMPORT` may list **fallback models**, comma-separated (`gemini-3.8-flash,gemini-3.7-flash,gemini-3.6-flash`). Each free-tier model has its own quota, so a 429 moves straight to the next model; on the last model it retries.
+- 5xx and network errors retry the same model (max 2, backoff 0.5–1 s then 1–2 s, jittered), then move on; 404 (model gone) moves on; other 4xx stop. One deadline covers the whole call (retries, backoff and, for streams, the stream itself): explain 25 s, import 280 s. A stream retries only until its first chunk; after that a failure ends it and its `result` says why.
+- The **gate** runs once per call, before any request: no key or model → `AI_UNAVAILABLE`; `ai_enabled` off → `AI_UNAVAILABLE`; then `reserveAiCall()` (`ai/budget.ts`) increments the `rate_limits` row `ai:global:{Vietnam date}` **only while it is below the budget** (one conditional upsert, safe under parallel calls), else `AI_QUOTA`. The budget is `settings.ai_daily_budget`, capped by the env `AI_DAILY_BUDGET` when that is above 0 (staging safety). A call that fails after the gate stays counted.
+- Every call logs one JSON line `{ evt: "ai", feature, model, ok, reason?, status?, retries, inputTokens, outputTokens, thoughtTokens, ms }`: never the prompt, the output or who asked. A result is `complete` only when the model stopped normally (`STOP`) with non-empty text, so truncated text is never stored.
+- The admin dashboard's "AI hôm nay" tile shows today's counter against the budget (`getAiUsageToday`), or "Đang tắt".
+- E2E points the SDK at a local stand-in with `GEMINI_BASE_URL` (tests only).
+
 ## 3. AI1: explanation prompt (Vietnamese)
 System instruction:
 > Bạn là giáo viên Vật lý THPT tại Việt Nam. Giải thích ngắn gọn, chính xác, đúng chương trình GDPT 2018. Dùng LaTeX trong $...$ cho công thức. Không bịa số liệu. Nếu đề thiếu dữ kiện, nói rõ.

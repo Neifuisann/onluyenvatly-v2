@@ -8,7 +8,9 @@ export const overviewCopy = {
   today: "Lượt nộp hôm nay",
   week: "Lượt nộp (7 ngày)",
   ai: "AI hôm nay",
-  aiOff: "Chưa bật",
+  aiOff: "Đang tắt",
+  /** Generations counted today against the global budget (S7-01). */
+  aiUsage: (used: number, budget: number) => `${used}/${budget}`,
   chartTitle: "Lượt nộp bài 30 ngày qua",
   chartSummary: (total: number, max: number, maxDay: string | null) =>
     maxDay

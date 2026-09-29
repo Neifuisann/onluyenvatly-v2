@@ -1,5 +1,6 @@
 import { ChevronRight } from "lucide-react";
 import Link from "next/link";
+import type { AiUsageToday } from "@/features/ai/budget";
 import { statsHref } from "@/features/lessons/domain/stats";
 import { cn } from "@/lib/utils";
 import { barLayout } from "../domain/chart";
@@ -43,11 +44,13 @@ export function OverviewTiles({
   activeStudents,
   attemptsToday,
   attemptsWeek,
+  ai,
 }: {
   pending: number;
   activeStudents: number;
   attemptsToday: number;
   attemptsWeek: number;
+  ai: AiUsageToday;
 }) {
   return (
     <dl className="grid grid-cols-2 gap-3 lg:grid-cols-5">
@@ -82,9 +85,12 @@ export function OverviewTiles({
       <div className={tileBox}>
         <Tile label={t.week} value={String(attemptsWeek)} />
       </div>
-      {/* S7 adds the AI usage log; nothing is queried until then. */}
       <div className={tileBox}>
-        <Tile label={t.ai} value={t.aiOff} muted />
+        {ai.enabled ? (
+          <Tile label={t.ai} value={t.aiUsage(ai.used, ai.budget)} />
+        ) : (
+          <Tile label={t.ai} value={t.aiOff} muted />
+        )}
       </div>
     </dl>
   );

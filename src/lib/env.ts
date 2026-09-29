@@ -23,9 +23,13 @@ const serverSchema = z.object({
   SUPABASE_URL: z.url().optional(),
   SUPABASE_SERVICE_ROLE_KEY: z.string().min(1).optional(),
   SESSION_PEPPER: z.string().min(32),
-  GEMINI_API_KEY: z.string().min(1).optional(), // required from S7-01
+  // AI (S7-01). Optional like Storage: without a key or model every AI
+  // feature answers AI_UNAVAILABLE. Models may list fallbacks, comma-separated.
+  GEMINI_API_KEY: z.string().min(1).optional(),
   GEMINI_MODEL_TEXT: z.string().min(1).optional(),
   GEMINI_MODEL_IMPORT: z.string().min(1).optional(),
+  // Tests only: E2E's Gemini stand-in (tests/e2e/fake-gemini.ts).
+  GEMINI_BASE_URL: z.url().optional(),
   CRON_SECRET: z.string().min(16).optional(), // required from S9-05
   AI_DAILY_BUDGET: z.coerce.number().int().nonnegative().default(0),
 });
