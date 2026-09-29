@@ -44,6 +44,12 @@ export function AuthScreen({
           className="-z-10 -right-24 -bottom-40 absolute size-[26rem] rounded-full bg-accent/15 blur-3xl"
         />
         <Logo className="text-ink-foreground" />
+        <Mascot
+          pose={pose}
+          size={180}
+          priority
+          className="my-8 animate-pop self-end"
+        />
         <div className="mt-auto max-w-md space-y-8">
           <p className="font-bold font-display text-4xl leading-[1.1] tracking-tight xl:text-5xl">
             {t.headline[0]} <span className="text-accent">{t.headline[1]}</span>
@@ -62,12 +68,6 @@ export function AuthScreen({
             ))}
           </ul>
         </div>
-        <Mascot
-          pose={pose}
-          size={220}
-          priority
-          className="absolute top-24 right-10 animate-pop xl:right-14"
-        />
       </aside>
 
       <div className="flex min-w-0 flex-col">

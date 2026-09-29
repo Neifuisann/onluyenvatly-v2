@@ -94,13 +94,7 @@ function Hero() {
             </Link>
           </div>
         </div>
-        <div className="relative mx-auto w-full max-w-md">
-          <Mascot
-            pose="rocket"
-            size={180}
-            priority
-            className="-bottom-14 -left-6 absolute z-10 w-28 animate-pop sm:-left-14 sm:w-40"
-          />
+        <div className="mx-auto w-full max-w-md">
           <QuestionPreview />
         </div>
       </div>
@@ -155,10 +149,13 @@ function QuestionPreview() {
           );
         })}
       </ul>
-      <p className="flex items-center gap-1.5 text-success-text text-xs">
-        <HardDrive aria-hidden className="size-3.5" />
-        {p.saved}
-      </p>
+      <div className="flex items-center justify-between gap-4">
+        <p className="flex items-center gap-1.5 text-success-text text-xs">
+          <HardDrive aria-hidden className="size-3.5" />
+          {p.saved}
+        </p>
+        <Mascot pose="rocket" size={80} priority className="animate-pop" />
+      </div>
     </figure>
   );
 }

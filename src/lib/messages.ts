@@ -147,7 +147,7 @@ export const onboardingCopy = {
     },
     instant: {
       title: "Chấm điểm ngay khi nộp",
-      body: "Xem đáp án và lời giải chi tiết cho từng câu.",
+      body: "Xem điểm ngay; đáp án và lời giải theo lịch giáo viên công bố.",
     },
     review: {
       title: "Ôn đúng chỗ còn sai",
@@ -169,7 +169,7 @@ export const onboardingCopy = {
     },
     {
       title: "Làm và nộp bài",
-      body: "Bài làm tự lưu. Nộp xong là có điểm và lời giải ngay.",
+      body: "Bài làm tự lưu. Nộp xong là có điểm; lời giải theo lịch giáo viên công bố.",
     },
     {
       title: "Ôn lại câu sai",
@@ -188,7 +188,7 @@ export const notFoundCopy = {
 /** The public landing page (S8-01). Honest: only what the site does today. */
 export const landingCopy = {
   eyebrow: "Vật lý THPT · Lớp 10, 11, 12",
-  lead: "Đề theo cấu trúc thi mới, chấm điểm ngay khi nộp, lời giải chi tiết cho từng câu, và một chỗ riêng để ôn lại những câu bạn còn sai.",
+  lead: "Đề theo cấu trúc thi mới, chấm điểm ngay khi nộp, lời giải khi giáo viên công bố, và một chỗ riêng để ôn lại những câu bạn còn sai.",
   ctaPrimary: "Tạo tài khoản",
   ctaSecondary: "Đăng nhập",
   featuresTitle: "Mọi thứ bạn cần để luyện đề",
@@ -204,7 +204,7 @@ export const landingCopy = {
     },
     {
       title: "Luyện đề",
-      body: "Chọn bài, làm bài, xem điểm và lời giải ngay sau khi nộp.",
+      body: "Chọn bài, làm bài, xem điểm và ôn lại khi đáp án được công bố.",
     },
   ],
   topicsTitle: "Theo các chủ đề của chương trình THPT",

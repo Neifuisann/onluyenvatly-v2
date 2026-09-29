@@ -171,7 +171,7 @@ export function MobileNav({
     );
   }
   return (
-    <ul className="grid grid-cols-5 rounded-[1.75rem] border border-border/70 bg-surface/85 p-1.5 shadow-raised backdrop-blur-xl dark:border-border dark:bg-surface/80">
+    <ul className="grid grid-cols-5 rounded-[1.75rem] border border-border/70 bg-surface/95 p-1.5 shadow-raised backdrop-blur-xl dark:border-border">
       {NAV.student.map((item) => {
         const active = isActive(pathname, item);
         return (

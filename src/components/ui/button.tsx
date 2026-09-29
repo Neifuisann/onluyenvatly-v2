@@ -12,14 +12,14 @@ export const buttonVariants = cva(
     variants: {
       variant: {
         default:
-          "bg-primary text-primary-foreground shadow-card hover:bg-primary/90",
+          "bg-primary text-primary-foreground shadow-card hover:bg-primary-hover",
         secondary:
           "border border-border bg-surface text-foreground shadow-card hover:border-input hover:bg-muted/60",
         soft: "bg-primary-soft text-foreground hover:bg-primary-soft/70",
         ghost: "text-foreground hover:bg-muted",
         ink: "bg-ink-foreground text-ink hover:bg-ink-foreground/90",
         danger:
-          "bg-danger text-danger-foreground shadow-card hover:bg-danger/90",
+          "bg-danger text-danger-foreground shadow-card hover:bg-danger-hover",
         link: "h-auto rounded-sm px-0 text-primary underline-offset-4 hover:underline active:scale-100",
       },
       size: {

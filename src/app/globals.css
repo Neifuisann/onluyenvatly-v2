@@ -25,7 +25,8 @@
   --ring: oklch(0.53 0.1 198);
 
   /* Lagoon teal: actions, links, the selected answer. */
-  --primary: oklch(0.52 0.1 198);
+  --primary: oklch(0.5 0.1 198);
+  --primary-hover: oklch(0.48 0.1 198);
   --primary-foreground: oklch(1 0 0);
   --primary-soft: oklch(0.95 0.032 192);
   /* Navy ink: hero surfaces (continue card, score, landing bands). */
@@ -44,6 +45,7 @@
   --success-soft: oklch(0.955 0.045 152);
   --success-text: oklch(0.45 0.12 152);
   --danger: oklch(0.575 0.2 26);
+  --danger-hover: oklch(0.53 0.2 26);
   --danger-foreground: oklch(0.99 0 0);
   --danger-soft: oklch(0.96 0.03 25);
   --danger-text: oklch(0.5 0.19 26);
@@ -85,6 +87,7 @@
   --ring: oklch(0.8 0.115 190);
 
   --primary: oklch(0.8 0.115 190);
+  --primary-hover: oklch(0.84 0.115 190);
   --primary-foreground: oklch(0.2 0.045 215);
   --primary-soft: oklch(0.3 0.055 205);
   --ink: oklch(0.27 0.06 264);
@@ -101,6 +104,7 @@
   --success-soft: oklch(0.29 0.05 152);
   --success-text: oklch(0.8 0.15 152);
   --danger: oklch(0.7 0.18 26);
+  --danger-hover: oklch(0.75 0.18 26);
   --danger-foreground: oklch(0.16 0.035 26);
   --danger-soft: oklch(0.29 0.06 26);
   --danger-text: oklch(0.77 0.15 26);
@@ -127,6 +131,7 @@
   --color-input: var(--input);
   --color-ring: var(--ring);
   --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
   --color-primary-foreground: var(--primary-foreground);
   --color-primary-soft: var(--primary-soft);
   --color-ink: var(--ink);
@@ -142,6 +147,7 @@
   --color-success-soft: var(--success-soft);
   --color-success-text: var(--success-text);
   --color-danger: var(--danger);
+  --color-danger-hover: var(--danger-hover);
   --color-danger-foreground: var(--danger-foreground);
   --color-danger-soft: var(--danger-soft);
   --color-danger-text: var(--danger-text);
@@ -191,22 +197,18 @@
 
   @keyframes rise {
     from {
-      opacity: 0;
       transform: translateY(8px);
     }
     to {
-      opacity: 1;
       transform: none;
     }
   }
 
   @keyframes pop {
     from {
-      opacity: 0;
       transform: scale(0.94);
     }
     to {
-      opacity: 1;
       transform: none;
     }
   }

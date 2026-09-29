@@ -1,7 +1,7 @@
 # 07 — UI/UX Design System
 
 ## 1. Design principles
-1. **Focus over flash.** Students come here to do a test, not to admire the UI. Drop the purple glassmorphism, particle animations and emoji. Use calm surfaces, strong type and clear hierarchy.
+1. **Focus over flash.** Students (from middle school to college) come here to do a test, not to admire the UI. Calm surfaces, strong type, clear hierarchy and one primary action per screen; the mascot appears only where it has a job.
 2. **Phone first, one hand.** Design at 360×740 first. Primary actions sit in the bottom half of the screen (sticky bottom bar), with touch targets ≥ 44 px.
 3. **Never lose work.** Autosave everywhere, a visible "Đã lưu" (saved) state, and resume after reload.
 4. **Instant feedback.** Optimistic UI for flags and answers; skeletons instead of spinners; pages under 1 s.
@@ -27,38 +27,49 @@ Public: top bar with logo, "Lý thuyết", "Đăng nhập", and a primary "Đăn
 
 ## 3. Visual language
 
+**v2 redesign ("Lagoon", 2026-09-29).** The palette, type and imagery come from the Physics Bunny mascot: navy ink (the hoodie), lagoon teal (the hood lining), sun yellow (the sparkles) and a peach blush. Clean surfaces, one clear primary action per screen, the bunny where it has a job (07 §3.4). Tokens live in `src/app/globals.css`; `pnpm check:contrast` checks every pair below in both themes.
+
 ### 3.1 Color tokens (Tailwind v4 `@theme`, OKLCH; light and dark)
 | Token | Light | Dark | Use |
 |---|---|---|---|
-| `--background` | `oklch(0.985 0.003 250)` (near-white, cool) | `oklch(0.17 0.01 255)` | Page |
-| `--surface` | `oklch(1 0 0)` | `oklch(0.21 0.012 255)` | Cards |
-| `--foreground` | `oklch(0.22 0.02 255)` | `oklch(0.95 0.005 255)` | Text |
-| `--muted-foreground` | `oklch(0.50 0.02 255)` | `oklch(0.72 0.015 255)` | Secondary text (≥ 4.5:1) |
-| `--border` | `oklch(0.91 0.008 255)` | `oklch(0.30 0.012 255)` | |
-| `--primary` | **Blueprint blue** `oklch(0.50 0.19 262)` | `oklch(0.68 0.16 262)` | Main actions, links, selected option |
-| `--accent` | **Amber** `oklch(0.80 0.16 75)` | `oklch(0.80 0.15 75)` | Highlights, streaks, flags |
-| `--success` | `oklch(0.60 0.15 150)` | `oklch(0.72 0.15 150)` | Correct |
-| `--danger` | `oklch(0.58 0.20 27)` | `oklch(0.70 0.18 27)` | Wrong, destructive |
-| `--warning` | `oklch(0.75 0.15 75)` | | Timer < 5 min |
-| Tier colors | Bronze `#B0703C`, Silver `#8A94A6`, Gold `#D4A017`, Platinum `#2BA7B8`, Diamond `#5B7CFA`, Master `#E0457B` | | Badges only |
+| `--background` | `oklch(0.974 0.006 240)` cloud | `oklch(0.165 0.022 262)` navy night | Page |
+| `--panel` | `oklch(0.99 0.003 240)` | `oklch(0.185 0.024 262)` | Desktop content panel, sticky bars |
+| `--surface` | white | `oklch(0.212 0.026 262)` | Cards |
+| `--foreground` | `oklch(0.235 0.045 262)` navy ink | `oklch(0.955 0.007 250)` | Text |
+| `--muted-foreground` | `oklch(0.5 0.03 258)` | `oklch(0.75 0.022 255)` | Secondary text (≥ 4.5:1) |
+| `--primary` | **Lagoon teal** `oklch(0.5 0.1 198)` | `oklch(0.8 0.115 190)` | Actions, links, the selected answer |
+| `--primary-soft` | `oklch(0.95 0.032 192)` | `oklch(0.3 0.055 205)` | Selected fills, active nav, info |
+| `--ink` / `--ink-foreground` / `--ink-muted` | navy `oklch(0.27 0.065 264)` | same | Hero surfaces: continue card, score, landing and auth panels |
+| `--accent` (+ `-soft`, `-text`) | **Sun yellow** `oklch(0.85 0.155 85)` | `oklch(0.85 0.15 85)` | Highlights, flags, progress on ink, badges |
+| `--peach` | `oklch(0.93 0.045 45)` | `oklch(0.32 0.04 40)` | Decorative tints (topic glyphs, bronze rank) |
+| `--success` (+ `-soft`, `-text`) | `oklch(0.64 0.16 150)` | `oklch(0.74 0.16 152)` | Correct |
+| `--danger` (+ `-soft`, `-text`) | `oklch(0.575 0.2 26)` | `oklch(0.7 0.18 26)` | Wrong, destructive |
+| `--warning` (+ `-text`) | `oklch(0.79 0.15 72)` | `oklch(0.82 0.15 75)` | Timer < 5 min |
+| Tier colors | Bronze `#B0703C`, Silver `#8A94A6`, Gold `#D4A017`, Platinum `#2BA7B8`, Diamond `#5B7CFA`, Master `#E0457B` | | Rank rings only; tiers show their emblem (`public/tiers`) |
 
-The theme follows the system setting by default and can be toggled in Settings. Every text/background token pair is checked for ≥ 4.5:1 in CI by a small contrast script.
+Selected-but-not-graded states (an option, Đ/S) always use teal, never green/red. The theme follows the system by default and can be toggled.
+
+Primary and destructive buttons use opaque `--primary-hover` / `--danger-hover` fills, checked against their foregrounds in both themes. Reducing fill opacity can fail contrast on light cards even when the base token passes.
 
 ### 3.2 Typography
-- **Be Vietnam Pro** (400/500/600/700) for UI and content. It's designed for Vietnamese stacked diacritics.
-- **JetBrains Mono** (tabular) for timer, scores, numeric inputs.
-- Scale (rem): 0.8125 caption · 0.875 small · 1 body · 1.125 question stem (mobile) · 1.25 h3 · 1.5 h2 · 2 h1 · 2.75 display (landing only).
-- Question stems use 1.125 rem with line-height 1.7, because formulas and diacritics need air.
-- KaTeX font size is 1.05em relative to the text.
+- **Inter** (variable, Vietnamese subset) for UI and question text; tabular figures (`.num`) for timers, scores and ratings, so numbers never jiggle.
+- **Bricolage Grotesque** (display) for page titles (`.heading-page`), section titles (`.heading-section`), big numbers and the score.
+- **JetBrains Mono** only where code is shown (lesson editor, raw import text, generated passwords); not preloaded.
+- Question stems 1.125 rem (1.1875 rem from `sm`), line-height 1.7; KaTeX at 1.05em.
 
 ### 3.3 Space, shape, depth, motion
-- 4 px spacing grid. Content max width is 720 px for reading and tests, 1200 px for catalog and admin.
-- Radius: 12 px cards, 10 px inputs and buttons, 999 px chips.
-- Shadows: one soft level for cards, one for popovers. No glow effects.
-- Motion: 150–200 ms ease-out for state changes; page transitions via View Transitions where supported; no looping animations. Everything off under `prefers-reduced-motion`.
+- 4 px grid. Reading and tests up to 720–1024 px wide; catalog, dashboard and admin up to 1152 px.
+- Radius: 8 / 12 (inputs, `rounded-md`) / 18 (cards, `rounded-lg`) / 24 (heroes, `rounded-xl`) / 32 px; buttons, chips and segmented controls are pills.
+- Shadows: `shadow-card` (cards), `shadow-raised` (heroes, floating bars, hover), `shadow-popover`. Light mode uses hairline borders plus shadow; dark mode uses borders.
+- Motion: 150–200 ms state changes, a press-in on buttons, `animate-rise`/`animate-pop` on first paint of key blocks, the score ring sweep. Entrance motion uses transforms only so text stays readable throughout. All off under `prefers-reduced-motion` (global rule in `globals.css`).
+- Shell: desktop sidebar on the page background with the active item on a raised pill, content in a rounded panel; phones get a slim blurred top bar and a floating blurred tab bar in the thumb zone.
 
 ### 3.4 Iconography & imagery
-lucide-react, 20 px, stroke 1.75. Lesson covers are optional. Without one, show a generated pattern tile from the chapter color, never the random stock photos v1 uses.
+- lucide-react, 20 px, stroke 1.75 (2–2.25 when active).
+- **The Physics Bunny** (`<Mascot pose>`, WebP in `public/mascot`, built by `scripts/optimize-mascot.ts`, which also writes `mascot-sizes.ts`). Each pose has one job: wave (sign-in), rocket (landing, sign-up), waiting (pending approval), key (passwords), teacher (first-visit welcome, closing CTA), laptop (continue card, empty history), studying (next lesson, lessons), sleeping (test not open / closed), celebrate / ok / keep-going (score ≥ 8 / ≥ 5 / < 5, never blame), all-clear (nothing to review), idea (practice card, hints), podium (leaderboard), broken (errors), space (404), telescope (no results). Plain `<img>` with intrinsic sizes: no image-optimization quota (ADR-006).
+- Brand mark = the bunny's head (`public/brand/mark.webp`); favicon, apple-icon and PWA icons come from `scripts/build-icons.ts`.
+- The static 1200×630 social preview (`src/app/opengraph-image.png`, with an alt-text file) uses the rocket pose and browser-rendered Vietnamese type. Rebuild with `node scripts/build-social-image.ts http://localhost:3100` against the local app. It uses the app's fonts and tokens and adds no runtime image-generation cost.
+- Lesson cards show a **topic glyph** (icon + tint per physics topic, from `lessons/domain/topic.ts`) unless the teacher set a cover; never stock photos.
 
 ## 4. Component inventory
 Built on shadcn/ui (copied into `src/components/ui`) plus app components:
@@ -74,10 +85,10 @@ Built on shadcn/ui (copied into `src/components/ui`) plus app components:
 | `TrueFalseTable` | 4 statement rows × two big toggles `Đúng` / `Sai`, fits in 360 px |
 | `ShortAnswerInput` | Numeric keyboard (`inputmode="decimal"`), accepts `,` and `.`, shows the normalized value |
 | `QuestionNavigator` | Grid of numbers: answered (filled), flagged (amber dot), current (ring); bottom sheet on mobile |
-| `TestTimer` | mm:ss mono, turns warning < 5 min, danger < 1 min, `aria-live="polite"` announcements at 5 and 1 min |
+| `TestTimer` | mm:ss tabular figures, turns warning < 5 min, danger < 1 min, `aria-live="polite"` announcements at 5 and 1 min |
 | `SaveIndicator` | "Đã lưu" / "Đang lưu…" / "Mất kết nối – đã lưu trên máy" |
 | `SubmitDialog` | Lists unanswered and flagged, confirm button |
-| `ScoreHero` | Big score /10, points, time, rating delta with tier badge animation |
+| `ScoreHero` | Navy surface, animated score ring, points, time, rating delta and a mascot reaction; respects reduced motion |
 | `ReviewItem` | Correct/incorrect icon + label, your answer vs correct, teacher explanation, "Giải thích bằng AI" button, 👍/👎 |
 | `RatingChart`, `AccuracyByChapter` | Recharts, lazy-loaded |
 | `LeaderboardTable` | Rank, avatar/initials, name, class, tier, rating, 7-day delta; sticky "me" row |
@@ -85,6 +96,8 @@ Built on shadcn/ui (copied into `src/components/ui`) plus app components:
 | Admin: `DataTable` (TanStack Table), `LessonEditor` (CodeMirror 6 + live preview), `ImageDropzone`, `StatsBar` | S5-01: the lesson list is a plain server-filtered table (`LessonTable`), no TanStack: ~170 rows need no client sorting or paging. Reorder by dragging the handle (pointer events, so touch works too) or ↑/↓ on the focused handle, announced in a live region; only on the unfiltered list |
 
 ## 5. Key screens (mobile wireframes)
+
+The wireframes below describe the information hierarchy. The Lagoon redesign adds a first-visit three-step guide until the student's first completed test, a featured next lesson when no test is in progress, a focused runner with a floating mobile action bar, and matching answer controls on the result screen. Sign-up shows registration → teacher approval → practice; copy makes answer-release timing explicit. Auth artwork stays in document flow so short desktop windows cannot overlap it with the value list. Admin pages use the shared shell and compact tables, with the approval queue emphasized on the overview and keyboard-operable segmented editor tabs.
 
 ### 5.1 Dashboard
 ```
