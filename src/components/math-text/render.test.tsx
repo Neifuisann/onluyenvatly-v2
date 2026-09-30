@@ -5,7 +5,7 @@ import { normalizeV1Questions } from "@/features/lessons/domain/legacy";
 import type { Question } from "@/features/lessons/schema";
 import { renderMathText, renderTex } from "./render";
 
-vi.mock("@/lib/env", () => ({
+vi.mock("@/lib/env.client", () => ({
   clientEnv: { NEXT_PUBLIC_MEDIA_BASE_URL: "https://media.test/m" },
 }));
 

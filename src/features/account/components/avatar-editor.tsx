@@ -9,7 +9,7 @@ import {
   removeMyAvatar,
   saveMyAvatar,
 } from "../actions";
-import { AVATAR_SIDE, MAX_AVATAR_BYTES } from "../domain/account";
+import { AVATAR_SIDE, MAX_AVATAR_BYTES } from "../domain/avatar-limits";
 import { accountCopy as t } from "../messages";
 
 type Status = { tone: "ok" | "error"; text: string } | null;

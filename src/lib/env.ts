@@ -63,8 +63,4 @@ export function parseEnv(source: Record<string, string | undefined>) {
   return result.data;
 }
 
-// NEXT_PUBLIC_* must be referenced literally so Next can inline them in client bundles.
-export const clientEnv: ClientEnv = clientSchema.parse({
-  NEXT_PUBLIC_MEDIA_BASE_URL:
-    process.env.NEXT_PUBLIC_MEDIA_BASE_URL || undefined,
-});
+export { clientEnv } from "./env.client";

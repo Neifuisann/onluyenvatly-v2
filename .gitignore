@@ -51,3 +51,7 @@ next-env.d.ts
 
 # local PGlite database (pnpm db:local)
 /.pglite/
+
+# Private Lighthouse reports and local dependency cache
+/.lighthouseci/
+/.pnpm-store/

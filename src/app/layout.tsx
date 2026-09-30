@@ -17,6 +17,7 @@ const display = Bricolage_Grotesque({
   variable: "--font-bricolage",
   subsets: ["vietnamese", "latin"],
   display: "swap",
+  preload: false,
 });
 
 /** Code only (the admin lesson editor), so it is not preloaded on every page. */

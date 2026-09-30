@@ -13,11 +13,8 @@ import {
   type Outcome,
 } from "../../grading/domain/grade.ts";
 import { identityOrder } from "../../lessons/domain/public-question.ts";
-import {
-  QUESTION_TYPES,
-  type Question,
-  type QuestionType,
-} from "../../lessons/schema.ts";
+import { QUESTION_TYPES } from "../../lessons/domain/question-types.ts";
+import type { Question, QuestionType } from "../../lessons/schema.ts";
 
 /** Set sizes offered on `/review` (R5: 10–30 questions). */
 export const REVIEW_SIZES = [10, 20, 30] as const;

@@ -9,7 +9,7 @@ import { serializeLesson } from "../../domain/serializer";
 import type { Question } from "../../schema";
 import { PreviewMathText, StaticTex, texKey } from "./preview-math";
 
-vi.mock("@/lib/env", () => ({
+vi.mock("@/lib/env.client", () => ({
   clientEnv: { NEXT_PUBLIC_MEDIA_BASE_URL: "https://media.test/m" },
 }));
 // The action is only called by TexProvider, which these tests don't use.

@@ -4,7 +4,7 @@ import { Sparkles, Square } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { pregenerateExplanations } from "../../admin-actions";
-import { PREGEN_INTERVAL_MS } from "../../domain/pregenerate";
+import { PREGEN_INTERVAL_MS } from "../../domain/pregenerate-limits";
 import { adminExplanationsCopy as t } from "../../messages";
 
 type Run =
