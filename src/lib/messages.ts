@@ -247,6 +247,14 @@ export const landingCopy = {
   },
 } as const;
 
+/** `/gallery` (S8-03): v1's handouts. */
+export const galleryCopy = {
+  title: "Thư viện ảnh",
+  lead: "Phiếu tóm tắt kiến thức Vật lý để xem nhanh hoặc lưu về máy. Chạm vào ảnh để xem cỡ lớn.",
+  item: (n: number) => `Phiếu kiến thức ${n}`,
+  opensNewTab: "(mở ảnh cỡ lớn trong thẻ mới)",
+} as const;
+
 /** Frame of the public pages (header and footer). */
 export const publicCopy = {
   footer: "Ôn Luyện Vật Lý · Luyện đề Vật lý THPT",

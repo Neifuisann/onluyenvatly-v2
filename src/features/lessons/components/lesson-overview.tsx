@@ -21,6 +21,7 @@ import {
   overviewCopy as t,
 } from "../messages";
 import type { LessonOverview } from "../queries";
+import { ShareLinkButton } from "./share-link-button";
 import { TopicGlyph } from "./topic-glyph";
 
 const TYPES = ["mcq", "tf", "short"] as const;
@@ -116,6 +117,9 @@ export function LessonOverviewContent({
               </li>
             ))}
           </ul>
+        )}
+        {lesson.status === "published" && (
+          <ShareLinkButton lessonId={lesson.id} title={lesson.title} />
         )}
       </header>
 

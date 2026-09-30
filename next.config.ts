@@ -9,6 +9,10 @@ const nextConfig: NextConfig = {
   // Enables `"use cache"`, `cacheTag` and `cacheLife` (ADR-005).
   cacheComponents: true,
   poweredByHeader: false,
+  // Link-preview bots get metadata in <head> instead of streamed (S8-03).
+  // Next's default list plus Zalo, which most of our students share on.
+  htmlLimitedBots:
+    /[\w-]+-Google|Google-[\w-]+|Chrome-Lighthouse|Slurp|DuckDuckBot|baiduspider|yandex|sogou|bitlybot|tumblr|vkShare|quora link preview|redditbot|ia_archiver|Bingbot|BingPreview|applebot|facebookexternalhit|facebookcatalog|Twitterbot|LinkedInBot|Slackbot|Discordbot|WhatsApp|SkypeUriPreview|Yeti|googleweblight|Zalo/i,
   async redirects() {
     // v1 bookmarks (05 §1, S8-05): permanent, so browsers remember them.
     return [...LEGACY_REDIRECTS, ...materialRedirects(catalog)].map((r) => ({

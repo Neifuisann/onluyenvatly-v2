@@ -8,5 +8,6 @@ import { allTopics } from "@/features/materials/domain/materials";
 export const PUBLIC_PATHS: readonly string[] = [
   "/",
   "/ly-thuyet",
+  "/gallery",
   ...allTopics(catalog).map((r) => r.href),
 ];
