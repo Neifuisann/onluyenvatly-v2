@@ -305,13 +305,6 @@ export async function submitAttempt(
         ...appendGuard(input.guardEvents),
       })
       .where(eq(attempts.id, attemptId));
-    // Denormalized for "Nhiều lượt làm"; the catalog picks it up when its
-    // cache refreshes (no per-submit invalidation, 08).
-    if (lessonId !== null)
-      await tx
-        .update(lessons)
-        .set({ attemptCount: sql`${lessons.attemptCount} + 1` })
-        .where(eq(lessons.id, lessonId));
     if (rated)
       await rateAttempt(tx, {
         userId,
@@ -348,6 +341,14 @@ export async function submitAttempt(
       correct: toTargets(changes.correct),
       now,
     });
+    // S9-01: this is the one shared row in a class-wide submit burst. Lock
+    // it last so rating/mistake writes do not serialize behind that lock.
+    // It remains atomic with grading and increments only on first submit.
+    if (lessonId !== null)
+      await tx
+        .update(lessons)
+        .set({ attemptCount: sql`${lessons.attemptCount} + 1` })
+        .where(eq(lessons.id, lessonId));
     return ok({
       attemptId,
       score: result.score,

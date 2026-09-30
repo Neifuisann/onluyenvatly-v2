@@ -4,6 +4,17 @@ on:
   push:
     branches: [main]
   pull_request:
+  workflow_dispatch:
+    inputs:
+      preview_url:
+        description: Staging preview origin for S9 load rehearsal
+        required: true
+        type: string
+      users:
+        description: Concurrent synthetic students
+        type: choice
+        options: ["100", "300"]
+        default: "100"
 
 concurrency:
   group: ci-${{ github.ref }}
@@ -20,6 +31,7 @@ env:
 
 jobs:
   check:
+    if: github.event_name != 'workflow_dispatch'
     name: Lint, types, unit, build
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -84,3 +96,45 @@ jobs:
           name: playwright-report
           path: playwright-report
           retention-days: 7
+
+  load-rehearsal:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    env:
+      LOAD_DATABASE_URL: ${{ secrets.NEON_DATABASE_URL }}
+      SESSION_PEPPER: ${{ secrets.LOAD_SESSION_PEPPER }}
+      BASE_URL: ${{ inputs.preview_url }}
+      VUS: ${{ inputs.users }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Validate deployed staging app
+        run: |
+          node --input-type=module -e 'const u=new URL(process.env.BASE_URL);if(u.protocol!=="https:"||!/^onluyenvatly-v2-[a-z0-9-]+\.vercel\.app$/.test(u.hostname)||u.username||u.password||u.pathname!=="/"||u.search||u.hash)process.exit(1);const r=await fetch(new URL("/api/health",u));const h=await r.json();if(!r.ok||h.status!=="ok"||h.env!=="preview"||h.commit!==process.env.GITHUB_SHA.slice(0,7))process.exit(1)'
+      - name: Create isolated synthetic fixtures
+        run: |
+          host=$(node -e 'console.log(new URL(process.env.LOAD_DATABASE_URL).hostname)')
+          node scripts/load-fixture.ts --users "$VUS" --staging-host "$host"
+      - name: Five-minute load rehearsal
+        run: |
+          docker run --rm -v "$PWD:/work" -w /work -e BASE_URL -e VUS -e TARGET=staging \
+            grafana/k6:1.6.1 run --quiet --summary-export=/work/tmp/load-summary.json tests/load/test-day.js
+      - name: Verify all saved answers, scores and ratings
+        if: always()
+        run: |
+          host=$(node -e 'console.log(new URL(process.env.LOAD_DATABASE_URL).hostname)')
+          node scripts/load-fixture.ts --verify --users "$VUS" --staging-host "$host"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: load-evidence-${{ inputs.users }}
+          path: |
+            tmp/load-summary.json
+            tmp/load-verification.json
+          retention-days: 30
