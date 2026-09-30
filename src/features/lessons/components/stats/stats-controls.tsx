@@ -72,7 +72,7 @@ export function SortToggle({
   return (
     <nav
       aria-label={t.sortLabel}
-      className="flex gap-1 rounded-lg bg-muted p-1"
+      className="flex w-fit rounded-full bg-muted p-1"
     >
       {STATS_SORTS.map((sort) => {
         const active = params.sort === sort;
@@ -84,7 +84,7 @@ export function SortToggle({
             scroll={false}
             aria-current={active ? "page" : undefined}
             className={cn(
-              "flex min-h-9 items-center rounded-md px-3 font-medium text-sm",
+              "flex h-9 items-center rounded-full px-3.5 font-medium text-sm transition-[background-color,color,box-shadow] duration-150",
               active
                 ? "bg-surface text-foreground shadow-card"
                 : "text-muted-foreground hover:text-foreground",

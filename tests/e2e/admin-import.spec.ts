@@ -4,7 +4,7 @@ import { loginAdminOnce } from "./admin-helpers";
 import { FAKE_GEMINI_URL } from "./fake-gemini";
 import { FAKE_STORAGE_URL } from "./fake-storage";
 import { IMPORTED_TITLE_PREFIX } from "./fixtures/lessons";
-import type { StorageState } from "./runner-helpers";
+import { emulateScheme, type StorageState } from "./runner-helpers";
 
 /**
  * S7-04 AI import against the Storage and Gemini stand-ins: a PDF goes
@@ -26,7 +26,7 @@ test.use({
 
 async function expectAccessible(page: Page) {
   for (const scheme of ["light", "dark"] as const) {
-    await page.emulateMedia({ colorScheme: scheme, reducedMotion: "reduce" });
+    await emulateScheme(page, scheme);
     const axe = await new AxeBuilder({ page }).analyze();
     expect(
       axe.violations.filter((v) =>
@@ -102,6 +102,8 @@ test("a PDF becomes a draft lesson through the AI, flagged where the key is miss
   ).toBeVisible();
   // The fence is gone and the missing key is flagged on its line.
   await expect(page.locator(".cm-content")).not.toContainText("```");
-  // (The issue list sits in the preview pane on phones; the bar shows everywhere.)
-  await expect(page.getByText(/^Nội dung còn 1 lỗi./)).toBeVisible();
+  // (The issue list sits in the preview pane on phones; step 1's note shows everywhere.)
+  await expect(
+    page.getByText(/^Nội dung còn 1 lỗi\. Sửa hết lỗi/),
+  ).toBeVisible();
 });

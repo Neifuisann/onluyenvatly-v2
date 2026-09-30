@@ -119,6 +119,9 @@ export const importCopy = {
   lead: "Tải lên đề kiểm tra (PDF, Word .docx hoặc ảnh chụp, tối đa 10 MB). AI chuyển đề sang định dạng soạn bài; bạn kiểm tra rồi tạo bài nháp để sửa trong trình soạn.",
   file: "File đề",
   fileHint: "PDF, DOCX, PNG, JPG hoặc WEBP; tối đa 10 MB.",
+  dropHint: "Chọn file hoặc kéo thả vào đây",
+  stepsLabel: "Các bước nhập đề",
+  steps: ["Tải file đề", "AI chuyển đề", "Sửa trong trình soạn"],
   lessonTitle: "Tên bài",
   lessonTitleHint:
     "Mặc định lấy theo tên file; đổi sau trong Cài đặt cũng được.",

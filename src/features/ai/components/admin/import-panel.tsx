@@ -170,18 +170,30 @@ export function ImportPanel({ aiEnabled }: { aiEnabled: boolean }) {
           e.preventDefault();
           void start();
         }}
-        className="flex flex-col gap-4 rounded-lg border border-border/70 bg-surface p-5 shadow-card dark:border-border"
+        className="flex flex-col gap-5 rounded-lg border border-border/70 bg-surface p-5 shadow-card sm:p-6 dark:border-border"
       >
         <FormField id="import-file" label={t.file} hint={t.fileHint}>
-          <input
-            ref={fileRef}
-            {...fieldA11y("import-file", undefined, t.fileHint)}
-            type="file"
-            accept={ACCEPT}
-            disabled={busy}
-            onChange={(e) => pick(e.target.files?.[0] ?? null)}
-            className="min-h-11 w-full rounded-md border border-input bg-surface px-3 py-2 text-sm file:mr-3 file:rounded file:border-0 file:bg-muted file:px-3 file:py-1.5 file:font-medium file:text-foreground"
-          />
+          {/* The native input covers the zone: click and drop both reach it. */}
+          <div className="relative flex min-h-36 flex-col items-center justify-center gap-2 rounded-lg border-2 border-input border-dashed bg-muted/30 px-4 py-6 text-center transition-colors focus-within:border-primary focus-within:bg-primary-soft hover:border-primary/60 hover:bg-primary-soft/60 has-disabled:opacity-60">
+            <span
+              aria-hidden
+              className="flex size-11 items-center justify-center rounded-full bg-primary-soft text-primary"
+            >
+              <FileUp className="size-5" strokeWidth={2} />
+            </span>
+            <span className="font-semibold text-sm">
+              {file ? file.name : t.dropHint}
+            </span>
+            <input
+              ref={fileRef}
+              {...fieldA11y("import-file", undefined, t.fileHint)}
+              type="file"
+              accept={ACCEPT}
+              disabled={busy}
+              onChange={(e) => pick(e.target.files?.[0] ?? null)}
+              className="absolute inset-0 size-full cursor-pointer opacity-0 disabled:cursor-not-allowed"
+            />
+          </div>
         </FormField>
         <FormField
           id="import-title"
@@ -228,9 +240,9 @@ export function ImportPanel({ aiEnabled }: { aiEnabled: boolean }) {
       {hasText && (
         <div className="flex flex-col gap-3">
           {!busy && (
-            <div className="flex flex-col gap-1 rounded-lg border border-border/70 bg-surface p-5 shadow-card dark:border-border text-sm">
+            <div className="flex flex-col gap-1 rounded-lg border border-success/40 bg-success-soft/60 p-5 text-sm shadow-card sm:p-6">
               {phase === "done" && (
-                <h2 className="font-semibold text-base">{t.doneTitle}</h2>
+                <h2 className="heading-section mb-1">{t.doneTitle}</h2>
               )}
               <p>
                 {t.summary({

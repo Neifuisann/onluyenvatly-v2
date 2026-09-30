@@ -2,6 +2,19 @@
 export const overviewCopy = {
   title: "Tổng quan",
   lead: "Hoạt động của học sinh, cập nhật tối đa 5 phút một lần.",
+  greetingLead: (name: string) =>
+    `Chào ${name}. Hoạt động của học sinh, cập nhật tối đa 5 phút một lần.`,
+  heroPendingLabel: "Cần xử lý",
+  heroPending: (n: number) => `${n} học sinh đang chờ duyệt`,
+  heroPendingBody: "Duyệt tài khoản để các em bắt đầu luyện đề.",
+  heroPendingCta: "Duyệt ngay",
+  heroTodayLabel: "Hôm nay",
+  heroToday: (n: number) =>
+    n
+      ? `${n.toLocaleString("vi-VN")} lượt nộp bài hôm nay`
+      : "Chưa có lượt nộp hôm nay",
+  heroTodayBody: "Không có tài khoản nào chờ duyệt.",
+  heroTodayCta: "Xem kết quả",
   pending: "Chờ duyệt",
   pendingLink: (n: number) => `Chờ duyệt: ${n} học sinh, mở hàng đợi`,
   active: "Học sinh hoạt động (7 ngày)",

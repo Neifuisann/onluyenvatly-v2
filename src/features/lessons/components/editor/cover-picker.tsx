@@ -1,6 +1,6 @@
 "use client";
 
-import { ImagePlus, Trash2 } from "lucide-react";
+import { Image as ImageIcon, ImagePlus, Trash2 } from "lucide-react";
 import { useRef, useState, useTransition } from "react";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -55,25 +55,38 @@ export function CoverPicker({
   return (
     <section
       aria-labelledby="cover-title"
-      className="mx-auto mt-6 flex max-w-3xl flex-col gap-3 rounded-lg border border-border/70 bg-surface p-5 shadow-card dark:border-border"
+      className="flex flex-col gap-4 rounded-lg border border-border/70 bg-surface p-5 shadow-card sm:p-6 dark:border-border"
     >
-      <h2 id="cover-title" className="font-semibold">
-        {t.cover}
-      </h2>
-      <p className="text-muted-foreground text-sm">{t.coverHint}</p>
+      <div className="space-y-1">
+        <h2
+          id="cover-title"
+          className="flex items-center gap-2.5 heading-section"
+        >
+          <span
+            aria-hidden
+            className="flex size-9 items-center justify-center rounded-full bg-primary-soft text-primary"
+          >
+            <ImageIcon className="size-[1.125rem]" strokeWidth={2} />
+          </span>
+          {t.cover}
+        </h2>
+        <p className="text-muted-foreground text-sm">{t.coverHint}</p>
+      </div>
       {coverPath ? (
         src ? (
           // biome-ignore lint/performance/noImgElement: lesson media skips next/image (ADR-006)
           <img
             src={src}
             alt={t.coverAlt}
-            className="h-32 w-full max-w-sm rounded-md border object-cover"
+            className="aspect-[16/7] w-full max-w-md rounded-lg border object-cover"
           />
         ) : (
           <p className="text-sm">{t.coverNoPreview}</p>
         )
       ) : (
-        <p className="text-muted-foreground text-sm">{t.coverNone}</p>
+        <p className="flex aspect-[16/7] w-full max-w-md items-center justify-center rounded-lg border border-dashed px-4 text-center text-muted-foreground text-sm">
+          {t.coverNone}
+        </p>
       )}
       <div className="flex flex-wrap gap-2">
         <Button

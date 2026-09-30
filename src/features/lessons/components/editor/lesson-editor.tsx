@@ -1,18 +1,29 @@
 "use client";
 
-import { ArrowLeft, ChartColumn } from "lucide-react";
-import Link from "next/link";
 import {
-  type KeyboardEvent,
+  ArrowLeft,
+  ArrowRight,
+  ChartColumn,
+  Check,
+  Play,
+  Save,
+  Send,
+} from "lucide-react";
+import { useSearchParams } from "next/navigation";
+import {
+  useCallback,
   useDeferredValue,
   useEffect,
   useMemo,
-  useRef,
   useState,
   useTransition,
 } from "react";
+import { PageHeader } from "@/components/page-header";
+import { Alert } from "@/components/ui/alert";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { saveSettings } from "../../admin-actions";
+import { editorStats } from "../../domain/editor-stats";
 import { parseLessonText } from "../../domain/parser";
 import {
   fromSettingsForm,
@@ -23,18 +34,20 @@ import {
 } from "../../domain/settings-form";
 import { countByType } from "../../domain/summary";
 import {
-  adminLessonsCopy,
+  publishCopy,
   settingsCopy,
   statsCopy,
   editorCopy as t,
 } from "../../messages";
 import type { LessonConfig, Question } from "../../schema";
-import { ContentTab } from "./content-tab";
+import { LessonStatusBadge } from "../admin/lesson-status-badge";
+import { ContentStep } from "./content-step";
 import { CoverPicker } from "./cover-picker";
 import { questionTexts, TexProvider } from "./preview-math";
 import { PreviewTab } from "./preview-tab";
-import { PublishBar } from "./publish-bar";
-import { SettingsTab } from "./settings-tab";
+import { type EditorMessage, usePublishActions } from "./publish-actions";
+import { PublishPanel } from "./publish-panel";
+import { SettingsStep } from "./settings-step";
 
 export type EditorLesson = {
   id: number;
@@ -49,25 +62,20 @@ export type EditorLesson = {
   hasPublished: boolean;
 };
 
-const statusClass = {
-  draft: "bg-muted text-muted-foreground",
-  published: "bg-success/15 text-success-text",
-  archived: "bg-warning/25 text-foreground",
-} as const;
-
-const TABS = ["content", "settings", "preview"] as const;
-type Tab = (typeof TABS)[number];
+type Step = "content" | "settings";
 
 /**
- * `/admin/lessons/[id]/edit` (07 §5.6). Holds the text and the settings
- * being edited. The text is parsed on a deferred copy so typing stays smooth
- * on long lessons; the settings are validated on every change against the
- * live content, so the stats bar follows them. Saving and publishing the
- * text: `PublishBar` (S5-04).
+ * `/admin/lessons/[id]/edit[?step=settings]` (07 §5.6), the v1 flow made
+ * consistent: step 1 "Soạn nội dung" (question cards left, text right) →
+ * "Tiếp tục" saves the draft → step 2 "Cài đặt & xuất bản" → "Xuất bản".
+ * The step lives in the URL (history entries, so Back returns to step 1);
+ * both steps stay mounted so the editor keeps its undo history. "Làm thử"
+ * opens the real runner on the text being edited.
  */
 export function LessonEditor({ lesson }: { lesson: EditorLesson }) {
-  const [tab, setTab] = useState<Tab>("content");
-  const tabRefs = useRef(new Map<Tab, HTMLButtonElement>());
+  const params = useSearchParams();
+  const step: Step = params.get("step") === "settings" ? "settings" : "content";
+  const [trying, setTrying] = useState(false);
 
   const [text, setText] = useState(lesson.sourceText);
   const deferred = useDeferredValue(text);
@@ -97,14 +105,18 @@ export function LessonEditor({ lesson }: { lesson: EditorLesson }) {
   const [touched, setTouched] = useState(new Set<SettingsField>());
   const [tried, setTried] = useState(false);
   const [serverErrors, setServerErrors] = useState<Record<string, string>>({});
-  const [message, setMessage] = useState<{ text: string; error: boolean }>();
-  const [pending, startTransition] = useTransition();
+  const [message, setMessage] = useState<EditorMessage>();
+  const [settingsPending, startSettings] = useTransition();
   const settings = useMemo(
     () => fromSettingsForm(form, available),
     [form, available],
   );
-  // The stats bar follows valid settings, else the saved ones.
-  const statsConfig = settings.ok ? settings.config : lesson.config;
+  // Stats follow valid settings, else the saved ones.
+  const liveConfig = settings.ok ? settings.config : lesson.config;
+  const stats = useMemo(
+    () => editorStats(parsed.questions, liveConfig),
+    [parsed.questions, liveConfig],
+  );
 
   const errorOf = (field: SettingsField) =>
     serverErrors[field] ??
@@ -122,23 +134,23 @@ export function LessonEditor({ lesson }: { lesson: EditorLesson }) {
     );
   };
 
-  const save = () => {
+  /** Saves the settings form; resolves whether they are saved. */
+  const saveSettingsNow = async (): Promise<boolean> => {
     setTried(true);
     if (!settings.ok) {
       setMessage({ text: settingsCopy.invalid, error: true });
-      return;
+      return false;
     }
     const sent = form;
-    startTransition(async () => {
-      const result = await saveSettings({ id: lesson.id, form: sent });
-      if (result.ok) {
-        setSavedForm(sent);
-        setMessage({ text: settingsCopy.saved, error: false });
-      } else {
-        setServerErrors(result.fieldErrors ?? {});
-        setMessage({ text: result.message, error: true });
-      }
-    });
+    const result = await saveSettings({ id: lesson.id, form: sent });
+    if (result.ok) {
+      setSavedForm(sent);
+      setMessage({ text: settingsCopy.saved, error: false });
+      return true;
+    }
+    setServerErrors(result.fieldErrors ?? {});
+    setMessage({ text: result.message, error: true });
+    return false;
   };
 
   const settingsDirty = JSON.stringify(form) !== JSON.stringify(savedForm);
@@ -146,6 +158,25 @@ export function LessonEditor({ lesson }: { lesson: EditorLesson }) {
   const dirty = textDirty || settingsDirty;
   // From the deferred parse; the server checks the text again on publish.
   const errors = parsed.issues.filter((i) => i.severity === "error").length;
+
+  const onMessage = useCallback(
+    (m: EditorMessage | undefined) => setMessage(m),
+    [],
+  );
+  const actions = usePublishActions({
+    lessonId: lesson.id,
+    status: lesson.status,
+    text,
+    textDirty,
+    settingsDirty,
+    hasDraft: lesson.hasDraft,
+    hasPublished: lesson.hasPublished,
+    errors,
+    beforePublish: () =>
+      settingsDirty ? saveSettingsNow() : Promise.resolve(true),
+    onMessage,
+  });
+  const pending = actions.pending || settingsPending;
 
   // Unsaved work: let the browser ask before leaving.
   useEffect(() => {
@@ -155,153 +186,290 @@ export function LessonEditor({ lesson }: { lesson: EditorLesson }) {
     return () => window.removeEventListener("beforeunload", warn);
   }, [dirty]);
 
-  // ARIA tabs: arrows move between tabs, focus follows selection.
-  const onTabKey = (e: KeyboardEvent) => {
-    const step = e.key === "ArrowRight" ? 1 : e.key === "ArrowLeft" ? -1 : 0;
-    if (!step) return;
-    e.preventDefault();
-    const next =
-      TABS[(TABS.indexOf(tab) + step + TABS.length) % TABS.length] ?? tab;
-    setTab(next);
-    tabRefs.current.get(next)?.focus();
+  const goStep = (next: Step) => {
+    setTrying(false);
+    if (next === step) return;
+    const url = new URL(window.location.href);
+    if (next === "settings") url.searchParams.set("step", "settings");
+    else url.searchParams.delete("step");
+    window.history.pushState(null, "", url);
+    window.scrollTo({ top: 0 });
   };
 
+  const primary =
+    step === "content"
+      ? {
+          label: t.continue,
+          icon: ArrowRight,
+          disabled: pending,
+          onClick: () => actions.saveThen(() => goStep("settings")),
+          describedBy: undefined,
+        }
+      : {
+          label: publishCopy.publish,
+          icon: Send,
+          disabled: !actions.canPublish,
+          onClick: () => {
+            if (settings.ok) return actions.askPublish();
+            // Show every field's message rather than a dead button.
+            setTried(true);
+            setMessage({ text: settingsCopy.invalid, error: true });
+          },
+          describedBy: actions.canPublish ? undefined : "publish-checklist",
+        };
+  const secondary =
+    step === "content"
+      ? {
+          label: pending ? publishCopy.saving : publishCopy.saveDraft,
+          icon: Save,
+          disabled: !actions.canSave,
+          onClick: actions.save,
+          title: publishCopy.shortcut,
+        }
+      : {
+          label: t.backToContent,
+          icon: ArrowLeft,
+          disabled: false,
+          onClick: () => goStep("content"),
+          title: undefined,
+        };
+  const buttons = (className?: string) => (
+    <>
+      <Button
+        type="button"
+        variant="secondary"
+        onClick={secondary.onClick}
+        disabled={secondary.disabled}
+        title={secondary.title}
+        className={className}
+      >
+        <secondary.icon aria-hidden />
+        {secondary.label}
+      </Button>
+      <Button
+        type="button"
+        onClick={primary.onClick}
+        disabled={primary.disabled}
+        aria-describedby={primary.describedBy}
+        className={className}
+      >
+        {step === "settings" && <primary.icon aria-hidden />}
+        {primary.label}
+        {step === "content" && <primary.icon aria-hidden />}
+      </Button>
+    </>
+  );
+
   return (
-    <div className="mx-auto flex max-w-7xl flex-col gap-4">
-      <header className="flex flex-col gap-2">
-        <Link
-          href="/admin/lessons"
-          prefetch={false}
-          className="flex w-fit items-center gap-1 text-muted-foreground text-sm hover:underline"
-        >
-          <ArrowLeft aria-hidden className="size-4" />
-          {t.back}
-        </Link>
-        <div className="flex flex-wrap items-center gap-2">
-          <h1 className="heading-page">{lesson.meta.title}</h1>
+    <div className="mx-auto flex max-w-[90rem] flex-col gap-4 pb-24 lg:pb-0">
+      <PageHeader
+        back={{ href: "/admin/lessons", label: t.back, native: true }}
+        title={lesson.meta.title}
+        badges={<LessonStatusBadge status={lesson.status} />}
+        lead={
+          lesson.status === "published"
+            ? lesson.hasDraft
+              ? t.draftSource
+              : t.publishedSource
+            : undefined
+        }
+        actions={
+          // A plain link, so leaving with unsaved work still asks first.
+          <a
+            href={`/admin/lessons/${lesson.id}/stats`}
+            className={buttonVariants({ variant: "ghost", size: "sm" })}
+          >
+            <ChartColumn aria-hidden />
+            {statsCopy.link}
+          </a>
+        }
+      />
+
+      <div className="z-20 -mx-4 flex flex-wrap items-center gap-2 border-border/60 border-y bg-background/90 px-4 py-2.5 backdrop-blur-xl sm:-mx-6 sm:px-6 lg:sticky lg:top-3 lg:-mx-10 lg:rounded-t-xl lg:border-t-0 lg:bg-panel/90 lg:px-10">
+        {trying ? (
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={() => setTrying(false)}
+          >
+            <ArrowLeft aria-hidden />
+            {t.tryClose}
+          </Button>
+        ) : (
+          <Stepper step={step} onStep={goStep} />
+        )}
+        <div className="ml-auto flex items-center gap-2">
           <span
             className={cn(
-              "rounded-full px-2 py-0.5 font-medium text-xs",
-              statusClass[lesson.status],
+              "inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 font-semibold text-xs",
+              dirty
+                ? "bg-accent-soft text-accent-text"
+                : "text-muted-foreground",
             )}
           >
-            {adminLessonsCopy.statuses[lesson.status]}
+            {dirty ? (
+              <span aria-hidden className="size-1.5 rounded-full bg-accent" />
+            ) : (
+              <Check aria-hidden className="size-3.5" />
+            )}
+            {dirty ? t.unsaved : t.saved}
           </span>
-          {dirty && (
-            <span className="rounded-full border px-2 py-0.5 text-muted-foreground text-xs">
-              {t.unsaved}
-            </span>
-          )}
-        </div>
-        {lesson.status === "published" && (
-          <p className="text-muted-foreground text-sm">
-            {lesson.hasDraft ? t.draftSource : t.publishedSource}
-          </p>
-        )}
-        <PublishBar
-          lessonId={lesson.id}
-          status={lesson.status}
-          text={text}
-          textDirty={textDirty}
-          settingsDirty={settingsDirty}
-          hasDraft={lesson.hasDraft}
-          hasPublished={lesson.hasPublished}
-          errors={errors}
-        />
-      </header>
-
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div
-          role="tablist"
-          aria-label={t.tabsLabel}
-          className="flex max-w-full gap-1 overflow-x-auto rounded-full bg-muted p-1"
-        >
-          {TABS.map((id) => (
-            <button
-              key={id}
-              ref={(el) => {
-                if (el) tabRefs.current.set(id, el);
-              }}
+          {!trying && (
+            <Button
               type="button"
-              role="tab"
-              id={`tab-${id}`}
-              aria-selected={tab === id}
-              aria-controls={`panel-${id}`}
-              tabIndex={tab === id ? 0 : -1}
-              onClick={() => setTab(id)}
-              onKeyDown={onTabKey}
-              className={cn(
-                "min-h-11 shrink-0 rounded-full px-4 py-2 font-semibold text-sm transition-colors",
-                tab === id
-                  ? "bg-surface text-foreground shadow-card"
-                  : "text-muted-foreground hover:text-foreground",
-              )}
+              variant="ghost"
+              size="sm"
+              onClick={() => setTrying(true)}
             >
-              {t.tabs[id]}
-            </button>
-          ))}
+              <Play aria-hidden />
+              <span className="max-sm:sr-only">{t.tryOpen}</span>
+            </Button>
+          )}
+          <div className="hidden items-center gap-2 lg:flex">{buttons()}</div>
         </div>
-        {/* A page of its own, not a tab. A plain link, so leaving with unsaved
-          work still triggers the browser's "leave page?" prompt. */}
-        <a
-          href={`/admin/lessons/${lesson.id}/stats`}
-          className="flex min-h-11 shrink-0 items-center gap-1.5 rounded-full px-3 font-medium text-muted-foreground text-sm hover:bg-muted hover:text-foreground"
-        >
-          <ChartColumn aria-hidden className="size-4" />
-          {statsCopy.link}
-        </a>
       </div>
-      {/* Content and settings stay mounted so the editor keeps its undo history. */}
+
+      {/* Alert is a live region itself (status, or alert for errors). */}
+      {message && (
+        <Alert variant={message.error ? "danger" : "success"}>
+          {message.text}
+        </Alert>
+      )}
+
+      {/* Both steps stay mounted so the editor keeps its undo history. */}
       <TexProvider texts={texts}>
-        <div
-          role="tabpanel"
-          id="panel-content"
-          aria-labelledby="tab-content"
-          hidden={tab !== "content"}
+        <section
+          aria-label={t.steps.content}
+          hidden={step !== "content" || trying}
         >
-          <ContentTab
+          <ContentStep
             initialText={lesson.sourceText}
             onTextChange={setText}
             parsed={parsed}
-            config={statsConfig}
+            config={liveConfig}
           />
-        </div>
-        <div
-          role="tabpanel"
-          id="panel-settings"
-          aria-labelledby="tab-settings"
-          hidden={tab !== "settings"}
+        </section>
+        <section
+          aria-label={t.steps.settings}
+          hidden={step !== "settings" || trying}
+          className="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_21rem]"
         >
-          <SettingsTab
-            form={form}
-            onChange={onChange}
-            errorOf={errorOf}
-            onTouch={(field) => setTouched((s) => new Set([...s, field]))}
-            available={available}
-            onSave={save}
-            pending={pending}
-            message={message}
-            sourceText={text}
-          />
-          <CoverPicker lessonId={lesson.id} coverPath={lesson.coverPath} />
-        </div>
-        <div
-          role="tabpanel"
-          id="panel-preview"
-          aria-labelledby="tab-preview"
-          hidden={tab !== "preview"}
-        >
-          {/* Mounted only while open: each visit is a fresh try on the latest text. */}
-          {tab === "preview" && (
+          <div className="flex min-w-0 flex-col gap-5">
+            <SettingsStep
+              form={form}
+              onChange={onChange}
+              errorOf={errorOf}
+              onTouch={(field) => setTouched((s) => new Set([...s, field]))}
+              available={available}
+              onSave={() => {
+                setMessage(undefined);
+                startSettings(async () => {
+                  await saveSettingsNow();
+                });
+              }}
+              sourceText={text}
+            />
+            <CoverPicker lessonId={lesson.id} coverPath={lesson.coverPath} />
+          </div>
+          <div className="lg:sticky lg:top-[5.25rem]">
+            <PublishPanel
+              status={lesson.status}
+              hasDraft={lesson.hasDraft}
+              hasPublished={lesson.hasPublished}
+              stats={stats}
+              config={liveConfig}
+              errors={errors}
+              settingsValid={settings.ok}
+              settingsDirty={settingsDirty}
+              formError={errorOf("form")}
+              pending={pending}
+              onFixContent={() => goStep("content")}
+              onUnpublish={actions.unpublish}
+              onDiscard={actions.askDiscard}
+            />
+          </div>
+        </section>
+        {/* Mounted only while open: each visit is a fresh try on the latest text. */}
+        {trying && (
+          <section aria-label={t.tryTitle} className="flex flex-col gap-3">
+            <h2 className="heading-section">{t.tryTitle}</h2>
             <PreviewTab
               title={form.title || lesson.meta.title}
               questions={parsed.questions}
-              config={settings.ok ? settings.config : lesson.config}
+              config={liveConfig}
               errors={errors}
             />
-          )}
-        </div>
+          </section>
+        )}
       </TexProvider>
+
+      {/* Phones: the step's two actions in the thumb zone (07 §1). */}
+      {!trying && (
+        <div className="fixed inset-x-3 bottom-[max(0.75rem,env(safe-area-inset-bottom))] z-30 mx-auto grid max-w-md grid-cols-2 gap-2 rounded-[1.75rem] border border-border/70 bg-surface/95 p-2 shadow-raised backdrop-blur-xl lg:hidden dark:border-border">
+          {buttons("w-full px-3")}
+        </div>
+      )}
+      {actions.dialogs}
     </div>
+  );
+}
+
+/** "① Soạn nội dung — ② Cài đặt & xuất bản"; each step is a button. */
+function Stepper({
+  step,
+  onStep,
+}: {
+  step: Step;
+  onStep: (step: Step) => void;
+}) {
+  const steps: Step[] = ["content", "settings"];
+  return (
+    <ol aria-label={t.stepsLabel} className="flex items-center gap-1">
+      {steps.map((s, i) => {
+        const current = s === step;
+        const done = i < steps.indexOf(step);
+        return (
+          <li key={s} className="flex items-center gap-1">
+            {i > 0 && (
+              <span
+                aria-hidden
+                className={cn(
+                  "h-0.5 w-5 rounded-full sm:w-8",
+                  done || current ? "bg-primary" : "bg-border",
+                )}
+              />
+            )}
+            <button
+              type="button"
+              onClick={() => onStep(s)}
+              aria-current={current ? "step" : undefined}
+              className={cn(
+                "flex min-h-11 items-center gap-2 rounded-full py-1 pr-3.5 pl-1.5 font-semibold text-sm transition-colors",
+                current
+                  ? "bg-primary-soft text-foreground"
+                  : "text-muted-foreground hover:bg-muted hover:text-foreground",
+              )}
+            >
+              <span
+                aria-hidden
+                className={cn(
+                  "num flex size-7 items-center justify-center rounded-full font-bold font-display text-xs",
+                  current || done
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-muted text-muted-foreground",
+                )}
+              >
+                {done ? <Check className="size-4" strokeWidth={3} /> : i + 1}
+              </span>
+              <span className="sr-only">{t.stepNumber(i + 1)}: </span>
+              <span className={cn(!current && "max-sm:sr-only")}>
+                {t.steps[s]}
+              </span>
+            </button>
+          </li>
+        );
+      })}
+    </ol>
   );
 }

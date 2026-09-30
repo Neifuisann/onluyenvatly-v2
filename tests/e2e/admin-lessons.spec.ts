@@ -1,7 +1,7 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, type Page, test } from "@playwright/test";
 import { loginAdminOnce } from "./admin-helpers";
-import type { StorageState } from "./runner-helpers";
+import { emulateScheme, type StorageState } from "./runner-helpers";
 
 /**
  * S5-01 `/admin/lessons`: filters, reorder (keyboard and pointer drag),
@@ -23,6 +23,8 @@ test.use({
 const SOURCE = "E2E – Bản nháp kín";
 const COPY = `${SOURCE} (bản sao)`;
 
+const PAGE_SIZE = 20;
+
 async function titles(page: Page) {
   // The title links (each row also links its statistics, S6-05).
   const links = page.locator('main tbody tr a[href$="/edit"]');
@@ -30,13 +32,37 @@ async function titles(page: Page) {
   return links.allTextContents();
 }
 
-test("lists every status with search and status filters, accessible in light and dark", async ({
+/** Opens the page of the unfiltered list that shows `title`; its offset. */
+async function openPageWith(page: Page, title: string) {
+  for (let n = 1; n <= 50; n++) {
+    await page.goto(n > 1 ? `/admin/lessons?page=${n}` : "/admin/lessons");
+    if ((await titles(page)).includes(title)) return (n - 1) * PAGE_SIZE;
+    const next = page.getByRole("link", { name: "Trang sau" });
+    if ((await next.count()) === 0) break;
+  }
+  throw new Error(`“${title}” is not listed`);
+}
+
+test("lists every status with search, status filters and pages, accessible in light and dark", async ({
   page,
 }) => {
   await page.goto("/admin/lessons");
   await expect(page.getByRole("heading", { name: "Bài tập" })).toBeVisible();
   const rows = page.locator("main tbody tr");
-  await expect(rows.filter({ hasText: SOURCE }).first()).toBeVisible();
+  await expect(rows.first()).toBeVisible();
+  expect(await rows.count()).toBeLessThanOrEqual(PAGE_SIZE);
+  const pager = page.getByRole("navigation", { name: "Phân trang" });
+  if ((await pager.count()) > 0) {
+    await expect(pager.getByRole("link", { name: "Trang 1" })).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
+    await pager.getByRole("link", { name: "Trang 2" }).click();
+    await expect(page).toHaveURL(/\/admin\/lessons\?page=2$/);
+    await expect(rows.first()).toBeVisible();
+  }
+
+  await page.goto("/admin/lessons?status=archived");
   await expect(rows.filter({ hasText: "E2E – Đã lưu trữ" })).toBeVisible();
 
   await page.getByRole("link", { name: "Nháp", exact: true }).click();
@@ -58,7 +84,7 @@ test("lists every status with search and status filters, accessible in light and
   const width = await page.evaluate(() => document.documentElement.scrollWidth);
   expect(width).toBeLessThanOrEqual(page.viewportSize()?.width ?? 0);
   for (const scheme of ["light", "dark"] as const) {
-    await page.emulateMedia({ colorScheme: scheme, reducedMotion: "reduce" });
+    await emulateScheme(page, scheme);
     const axe = await new AxeBuilder({ page }).analyze();
     expect(
       axe.violations.filter((v) =>
@@ -89,8 +115,9 @@ test("duplicate, reorder (keys and drag), archive, restore and delete", async ({
     .click();
   await expect(status).toHaveText("Đã tạo bản sao (nháp).");
 
-  // The copy sits right below its source in the manual order.
-  await page.goto("/admin/lessons");
+  // The copy sits right below its source in the manual order (same page:
+  // the seeded source is never the last row of a page).
+  const offset = await openPageWith(page, SOURCE);
   let list = await titles(page);
   const source = list.indexOf(SOURCE);
   expect(list[source + 1]).toBe(COPY);
@@ -99,7 +126,7 @@ test("duplicate, reorder (keys and drag), archive, restore and delete", async ({
   await page
     .getByRole("button", { name: `Kéo để sắp xếp “${COPY}”` })
     .press("ArrowUp");
-  await expect(status).toContainText(`tới vị trí ${source + 1}/`);
+  await expect(status).toContainText(`tới vị trí ${offset + source + 1}/`);
   await page.reload();
   list = await titles(page);
   expect(list.slice(source, source + 2)).toEqual([COPY, SOURCE]);
@@ -119,7 +146,7 @@ test("duplicate, reorder (keys and drag), archive, restore and delete", async ({
     steps: 8,
   });
   await page.mouse.up();
-  await expect(status).toContainText(`tới vị trí ${source + 2}/`);
+  await expect(status).toContainText(`tới vị trí ${offset + source + 2}/`);
   await page.reload();
   list = await titles(page);
   expect(list.slice(source, source + 2)).toEqual([SOURCE, COPY]);
@@ -143,15 +170,21 @@ test("duplicate, reorder (keys and drag), archive, restore and delete", async ({
   await page.reload();
   expect(await titles(page)).not.toContain(COPY);
 
-  // "Tạo bài mới" opens the editor on a new empty draft, last in the list.
+  // "Tạo bài mới" opens step 1 of the editor on a new empty draft, last in
+  // the list (an out-of-range page shows the last one).
   await page.getByRole("button", { name: "Tạo bài mới" }).click();
   await expect(page).toHaveURL(/\/admin\/lessons\/\d+\/edit$/);
   const id = page.url().match(/lessons\/(\d+)\/edit/)?.[1];
   await expect(
     page.getByRole("heading", { name: "Bài tập mới" }),
   ).toBeVisible();
-  await expect(page.getByText("Chưa có câu hỏi")).toBeVisible();
-  await page.goto("/admin/lessons");
+  await expect(
+    page.getByRole("heading", { name: "Chưa có câu hỏi", exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: /Bước 1: Soạn nội dung/ }),
+  ).toHaveAttribute("aria-current", "step");
+  await page.goto("/admin/lessons?page=999");
   const created = page.locator("main tbody tr").last();
   await expect(
     created.getByRole("link", { name: "Bài tập mới", exact: true }),

@@ -1,8 +1,7 @@
-import { ArrowLeft, ChartColumn } from "lucide-react";
 import type { Metadata } from "next";
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { EmptyState } from "@/components/empty-state";
+import { PageHeader } from "@/components/page-header";
 import { requireAdmin } from "@/features/auth/guards";
 import { QuestionStatsCard } from "@/features/lessons/components/stats/question-stats-card";
 import {
@@ -60,18 +59,11 @@ export default async function LessonStatsPage({
 
   return (
     <div className="mx-auto flex max-w-4xl flex-col gap-6">
-      <header className="flex flex-col gap-2">
-        <Link
-          href={`/admin/lessons/${lesson.id}/edit`}
-          prefetch={false}
-          className="flex w-fit items-center gap-1 text-muted-foreground text-sm hover:underline"
-        >
-          <ArrowLeft aria-hidden className="size-4" />
-          {t.back}
-        </Link>
-        <h1 className="break-words heading-page">{t.title(lesson.title)}</h1>
-        <p className="text-muted-foreground">{t.lead}</p>
-      </header>
+      <PageHeader
+        back={{ href: `/admin/lessons/${lesson.id}/edit`, label: t.back }}
+        title={t.title(lesson.title)}
+        lead={t.lead}
+      />
 
       {chosen && versions.length > 0 && (
         <VersionPicker
@@ -116,7 +108,7 @@ export default async function LessonStatsPage({
         </>
       ) : (
         <EmptyState
-          icon={ChartColumn}
+          mascot="graph"
           title={t.emptyTitle}
           description={t.emptyBody}
         />

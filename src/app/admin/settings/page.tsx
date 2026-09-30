@@ -1,5 +1,6 @@
 import { Info } from "lucide-react";
 import type { Metadata } from "next";
+import { PageHeader, SectionCard } from "@/components/page-header";
 import { requireAdmin } from "@/features/auth/guards";
 import { getAdmins } from "@/features/settings/admin-queries";
 import { AdminList } from "@/features/settings/components/admin-list";
@@ -19,32 +20,24 @@ export default async function AdminSettingsPage() {
   const user = await requireAdmin();
   const [settings, admins] = await Promise.all([getSettings(), getAdmins()]);
   return (
-    <div className="mx-auto flex max-w-3xl flex-col gap-6">
-      <header className="space-y-2">
-        <h1 className="heading-page">{t.title}</h1>
-        <p className="text-muted-foreground">{t.lead}</p>
-      </header>
+    <div className="mx-auto flex max-w-4xl flex-col gap-6">
+      <PageHeader title={t.title} lead={t.lead} />
 
-      <section
-        aria-labelledby="settings-general"
-        className="flex flex-col gap-4 rounded-lg border border-border/70 bg-surface p-5 shadow-card dark:border-border"
+      <SectionCard
+        id="settings-general"
+        title={t.generalSection}
+        lead={t.generalLead}
       >
-        <div className="space-y-1">
-          <h2 id="settings-general" className="font-semibold">
-            {t.generalSection}
-          </h2>
-          <p className="text-muted-foreground text-sm">{t.generalLead}</p>
-        </div>
         <SettingsForm initial={settings} />
         <p className="flex items-start gap-2 text-muted-foreground text-xs">
           <Info aria-hidden className="mt-0.5 size-4 shrink-0" />
           {t.notInScope}
         </p>
-      </section>
+      </SectionCard>
 
       <section aria-labelledby="settings-admins" className="space-y-3">
         <div className="space-y-1">
-          <h2 id="settings-admins" className="font-semibold">
+          <h2 id="settings-admins" className="heading-section">
             {t.adminsSection}
           </h2>
           <p className="text-muted-foreground text-sm">{t.adminsLead}</p>
@@ -52,18 +45,13 @@ export default async function AdminSettingsPage() {
         <AdminList rows={admins} currentId={user.id} />
       </section>
 
-      <section
-        aria-labelledby="settings-create-admin"
-        className="flex flex-col gap-4 rounded-lg border border-border/70 bg-surface p-5 shadow-card dark:border-border"
+      <SectionCard
+        id="settings-create-admin"
+        title={t.createSection}
+        lead={t.createLead}
       >
-        <div className="space-y-1">
-          <h2 id="settings-create-admin" className="font-semibold">
-            {t.createSection}
-          </h2>
-          <p className="text-muted-foreground text-sm">{t.createLead}</p>
-        </div>
         <CreateAdminForm />
-      </section>
+      </SectionCard>
     </div>
   );
 }

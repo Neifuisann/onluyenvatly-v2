@@ -3,6 +3,7 @@ import { expect, type Page, test } from "@playwright/test";
 import { loginAdminOnce } from "./admin-helpers";
 import { E2E_PASSWORD, e2eStudent } from "./fixtures/users";
 import {
+  emulateScheme,
   press,
   type StorageState,
   singleView,
@@ -86,9 +87,6 @@ test("journey 7: publish a new version; the old attempt keeps the old one", asyn
   await cm.click();
   await editor.keyboard.press("ControlOrMeta+A");
   await editor.keyboard.insertText(V2_WITH_ERROR);
-  const publish = editor.getByRole("button", { name: "Xuất bản", exact: true });
-  await expect(publish).toBeDisabled();
-  await expect(editor.getByText(/Nội dung còn 1 lỗi/)).toBeVisible();
   // A draft saves with its error and survives a reload; students see nothing yet.
   await editor.getByRole("button", { name: "Lưu nháp" }).click();
   await expect(
@@ -98,23 +96,42 @@ test("journey 7: publish a new version; the old attempt keeps the old one", asyn
   await editor.reload();
   await expect(editor.getByText("Đang sửa bản nháp")).toBeVisible();
   await expect(cm).toContainText("Đơn vị đo biên độ là");
+
+  // Step 2 blocks "Xuất bản" while the text has an error and links back.
+  await editor.getByRole("button", { name: "Tiếp tục" }).click();
+  await expect(editor).toHaveURL(/\/edit\?step=settings$/);
+  const publish = editor.getByRole("button", { name: "Xuất bản", exact: true });
   await expect(publish).toBeDisabled();
+  await expect(
+    editor.getByText("Nội dung còn 1 lỗi", { exact: true }),
+  ).toBeVisible();
+  await editor.getByRole("button", { name: "Sửa ở bước 1" }).click();
+  await expect(editor).toHaveURL(/\/edit$/);
   if (phone) await editor.getByText("Xem trước", { exact: true }).click();
   await editor.getByRole("button", { name: /^Dòng 1, cột 1/ }).click();
   await expect(editor.locator(".cm-activeLine")).toContainText("Câu 1:");
   await editor.keyboard.press("ArrowDown");
   await editor.keyboard.type("*");
+  // "Tiếp tục" saves the fixed draft first.
+  await editor.getByRole("button", { name: "Tiếp tục" }).click();
+  await expect(
+    editor.getByRole("status").filter({ hasText: "Đã lưu bản nháp." }),
+  ).toBeVisible();
   await expect(publish).toBeEnabled();
   await publish.click();
   const dialog = editor.getByRole("dialog", { name: "Xuất bản bài tập?" });
   await expect(dialog).toContainText("vẫn được chấm theo nội dung cũ");
   await dialog.getByRole("button", { name: "Xuất bản", exact: true }).click();
+  // The full message: step 2's settings note also says "…bài đã xuất bản."
+  // (hasText ignores case).
   await expect(
-    editor.getByRole("status").filter({ hasText: "Đã xuất bản." }),
+    editor.getByRole("status").filter({
+      hasText: "Đã xuất bản. Học sinh thấy nội dung mới ngay.",
+    }),
   ).toBeVisible();
   await expect(editor.getByText("Chưa lưu")).toHaveCount(0);
   for (const scheme of ["light", "dark"] as const) {
-    await editor.emulateMedia({ colorScheme: scheme, reducedMotion: "reduce" });
+    await emulateScheme(editor, scheme);
     const axe = await new AxeBuilder({ page: editor }).analyze();
     expect(
       axe.violations.filter((v) =>

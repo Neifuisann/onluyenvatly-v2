@@ -1,9 +1,11 @@
-import { BookOpen, MessageSquareText } from "lucide-react";
+import { BookOpen } from "lucide-react";
 import type { Metadata } from "next";
 import Form from "next/form";
 import Link from "next/link";
 import { z } from "zod";
 import { EmptyState } from "@/components/empty-state";
+import { PageHeader } from "@/components/page-header";
+import { SegmentedNav } from "@/components/segmented-nav";
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -18,7 +20,6 @@ import { PregeneratePanel } from "@/features/ai/components/admin/pregenerate-pan
 import { adminExplanationsCopy as t } from "@/features/ai/messages";
 import { requireAdmin } from "@/features/auth/guards";
 import { getSettings } from "@/features/settings/queries";
-import { cn } from "@/lib/utils";
 
 export const metadata: Metadata = { title: t.title };
 
@@ -59,33 +60,22 @@ export default async function AdminExplanationsPage({
   ] as const;
 
   return (
-    <div className="mx-auto flex max-w-3xl flex-col gap-6">
-      <header className="space-y-2">
-        <h1 className="heading-page">{t.title}</h1>
-        <p className="text-muted-foreground">{t.lead}</p>
-      </header>
-      <nav aria-label={t.tabsLabel} className="flex flex-wrap gap-2">
-        {tabs.map((tab) => (
-          <Link
-            key={tab.id}
-            href={tab.href}
-            prefetch={false}
-            aria-current={view === tab.id ? "page" : undefined}
-            className={cn(
-              "inline-flex h-10 items-center rounded-full border bg-surface px-4 font-medium text-sm transition-colors duration-150 hover:border-primary/60",
-              view === tab.id &&
-                "border-primary bg-primary text-primary-foreground hover:border-primary",
-            )}
-          >
-            {tab.label}
-          </Link>
-        ))}
-      </nav>
+    <div className="mx-auto flex max-w-4xl flex-col gap-6">
+      <PageHeader title={t.title} lead={t.lead} />
+      <SegmentedNav
+        label={t.tabsLabel}
+        items={tabs.map((tab) => ({
+          key: tab.id,
+          href: tab.href,
+          label: tab.label,
+          active: view === tab.id,
+        }))}
+      />
 
       {view === "flagged" ? (
         flagged.length === 0 ? (
           <EmptyState
-            icon={MessageSquareText}
+            mascot="all-clear"
             title={t.flaggedEmpty}
             description={t.flaggedEmptyHint}
           />
@@ -94,7 +84,7 @@ export default async function AdminExplanationsPage({
             {flagged.map((e) => (
               <li
                 key={e.hash}
-                className="flex flex-col gap-3 rounded-lg border border-border/70 bg-surface p-5 shadow-card dark:border-border"
+                className="flex flex-col gap-3 rounded-lg border border-border/70 bg-surface p-5 shadow-card sm:p-6 dark:border-border"
               >
                 <p className="flex flex-wrap items-center justify-between gap-2 text-sm">
                   <span className="font-medium">
@@ -123,7 +113,7 @@ export default async function AdminExplanationsPage({
             scroll={false}
             aria-label={t.pickerLabel}
             key={params.lesson ?? "none"}
-            className="flex flex-col gap-3 rounded-lg border border-border/70 bg-surface p-5 shadow-card dark:border-border sm:flex-row sm:items-end"
+            className="flex flex-col gap-3 rounded-lg border border-border/70 bg-surface p-5 shadow-card sm:flex-row sm:items-end sm:p-6 dark:border-border"
           >
             <div className="grid flex-1 gap-1.5">
               <Label htmlFor="explanations-lesson">{t.lesson}</Label>

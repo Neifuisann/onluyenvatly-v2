@@ -22,9 +22,13 @@ export type AdminLessonRow = {
   updatedAt: Date;
 };
 
-/** Every lesson not deleted, in the teacher's order (~170 rows, no paging). */
+/**
+ * Every matching lesson not deleted, in the teacher's order. ~170 small rows:
+ * the page slices them in memory (`paginate`), because reordering one page
+ * sends the full id order back.
+ */
 export async function getAdminLessons(
-  f: AdminListFilters,
+  f: Pick<AdminListFilters, "q" | "status">,
 ): Promise<AdminLessonRow[]> {
   return db
     .select({

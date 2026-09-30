@@ -1,10 +1,9 @@
 import { Search } from "lucide-react";
 import Form from "next/form";
-import Link from "next/link";
+import { SegmentedNav } from "@/components/segmented-nav";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { cn } from "@/lib/utils";
 import {
   type AdminListFilters,
   adminListHref,
@@ -14,16 +13,19 @@ import { adminLessonsCopy as t } from "../../messages";
 
 const STATUSES = [null, ...LESSON_STATUSES] as const;
 
-/** Search (GET form) and status chips; the URL is the only state. */
+/**
+ * Pill search (GET form) and a segmented status switch, the same shapes as
+ * the student catalog (07 §5.5); the URL is the only state.
+ */
 export function AdminListFilterBar({ filters }: { filters: AdminListFilters }) {
   return (
-    <div className="flex flex-col gap-3">
+    <div className="flex flex-col gap-3 md:flex-row md:items-center">
       <Form
         action="/admin/lessons"
         prefetch={false}
         scroll={false}
         role="search"
-        className="flex gap-2"
+        className="relative min-w-0 flex-1"
       >
         {filters.status && (
           <input type="hidden" name="status" value={filters.status} />
@@ -31,53 +33,41 @@ export function AdminListFilterBar({ filters }: { filters: AdminListFilters }) {
         <Label htmlFor="admin-lessons-q" className="sr-only">
           {t.searchLabel}
         </Label>
-        <div className="relative flex-1">
-          <Search
-            aria-hidden
-            className="pointer-events-none absolute top-1/2 left-3 size-5 -translate-y-1/2 text-muted-foreground"
-            strokeWidth={1.75}
-          />
-          <Input
-            // Remount on navigation so the field shows the URL's value.
-            key={filters.q ?? ""}
-            id="admin-lessons-q"
-            name="q"
-            type="search"
-            enterKeyHint="search"
-            autoComplete="off"
-            maxLength={80}
-            defaultValue={filters.q ?? ""}
-            placeholder={t.searchPlaceholder}
-            className="pl-10"
-          />
-        </div>
-        <Button type="submit" variant="secondary">
+        <Search
+          aria-hidden
+          className="pointer-events-none absolute top-1/2 left-4 size-5 -translate-y-1/2 text-muted-foreground"
+          strokeWidth={2}
+        />
+        <Input
+          // Remount on navigation so the field shows the URL's value.
+          key={filters.q ?? ""}
+          id="admin-lessons-q"
+          name="q"
+          type="search"
+          enterKeyHint="search"
+          autoComplete="off"
+          maxLength={80}
+          defaultValue={filters.q ?? ""}
+          placeholder={t.searchPlaceholder}
+          className="rounded-full pr-20 pl-11 shadow-card [&::-webkit-search-cancel-button]:hidden"
+        />
+        <Button
+          type="submit"
+          size="sm"
+          className="absolute top-1/2 right-1.5 -translate-y-1/2 active:-translate-y-1/2 active:scale-100"
+        >
           {t.searchSubmit}
         </Button>
       </Form>
-      <ul aria-label={t.statusGroup} className="flex flex-wrap gap-1.5">
-        {STATUSES.map((s) => {
-          const active = filters.status === s;
-          return (
-            <li key={s ?? "all"}>
-              <Link
-                href={adminListHref(filters, { status: s })}
-                prefetch={false}
-                scroll={false}
-                aria-current={active ? "page" : undefined}
-                className={cn(
-                  "inline-flex h-9 items-center rounded-full border px-3.5 text-sm transition-colors",
-                  active
-                    ? "border-primary bg-primary text-primary-foreground"
-                    : "bg-surface hover:bg-muted",
-                )}
-              >
-                {s ? t.statuses[s] : t.statusAll}
-              </Link>
-            </li>
-          );
-        })}
-      </ul>
+      <SegmentedNav
+        label={t.statusGroup}
+        items={STATUSES.map((s) => ({
+          key: s ?? "all",
+          href: adminListHref(filters, { status: s }),
+          label: s ? t.statuses[s] : t.statusAll,
+          active: filters.status === s,
+        }))}
+      />
     </div>
   );
 }

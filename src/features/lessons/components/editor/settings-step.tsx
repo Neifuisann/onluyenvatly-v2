@@ -1,9 +1,16 @@
 "use client";
 
+import {
+  Calculator,
+  Clock,
+  FileText,
+  type LucideIcon,
+  Send,
+  Shuffle,
+} from "lucide-react";
 import type * as React from "react";
 import { FormField, fieldA11y } from "@/components/form-field";
 import { Alert } from "@/components/ui/alert";
-import { Button } from "@/components/ui/button";
 import { Input, Select } from "@/components/ui/input";
 import { mergeTags } from "@/features/ai/domain/lesson-helpers";
 import { lessonHelpersCopy } from "@/features/ai/messages";
@@ -22,20 +29,21 @@ import { AiHelper } from "./ai-helper";
 type Patch = (patch: Partial<SettingsForm>) => void;
 type ErrorOf = (field: SettingsField) => string | undefined;
 
+/** The form's id: "Lưu cài đặt" in the publish panel submits it. */
+export const SETTINGS_FORM_ID = "lesson-settings";
+
 /**
- * "Cài đặt" tab (S5-03): metadata and `LessonConfig`. Controlled by the
+ * Step 2's form (S5-03): metadata and `LessonConfig`. Controlled by the
  * editor, which validates with `fromSettingsForm` on every change and shows
  * a field's message once it was touched or a save was tried.
  */
-export function SettingsTab({
+export function SettingsStep({
   form,
   onChange,
   errorOf,
   onTouch,
   available,
   onSave,
-  pending,
-  message,
   sourceText,
 }: {
   form: SettingsForm;
@@ -44,8 +52,6 @@ export function SettingsTab({
   onTouch: (field: SettingsField) => void;
   available: TypeCounts;
   onSave: () => void;
-  pending: boolean;
-  message: { text: string; error: boolean } | undefined;
   /** The text being edited, for the AI helpers (S7-05). */
   sourceText: string;
 }) {
@@ -73,36 +79,50 @@ export function SettingsTab({
       sourceText,
     };
   };
-  const check = (
+  const toggle = (
     field:
       | "shuffleQuestions"
       | "shuffleOptions"
       | "countsForRating"
       | "examGuard",
+    hint?: string,
   ) => (
-    <label className="flex min-h-11 items-center gap-3 text-sm">
+    <label className={rowClass}>
       <input
         type="checkbox"
         name={field}
         checked={form[field]}
         onChange={(e) => onChange({ [field]: e.target.checked })}
-        className="size-5 accent-primary"
+        aria-describedby={hint ? `settings-${field}-hint` : undefined}
+        className="mt-0.5 size-5 shrink-0 accent-primary"
       />
-      {t[field]}
+      <span className="min-w-0">
+        <span className="block font-medium">{t[field]}</span>
+        {hint && (
+          <span
+            id={`settings-${field}-hint`}
+            aria-hidden
+            className="mt-0.5 block text-muted-foreground text-sm"
+          >
+            {hint}
+          </span>
+        )}
+      </span>
     </label>
   );
 
   return (
     <form
+      id={SETTINGS_FORM_ID}
       noValidate
       onSubmit={(e) => {
         e.preventDefault();
         onSave();
       }}
-      className="mx-auto flex max-w-3xl flex-col gap-6"
+      className="flex min-w-0 flex-col gap-5"
     >
       <Alert>{t.liveNote}</Alert>
-      <Section title={t.info}>
+      <Section id="settings-info" icon={FileText} title={t.info}>
         <FormField id="settings-title" label={t.title} error={errorOf("title")}>
           <Input {...text("title")} maxLength={200} required />
         </FormField>
@@ -201,7 +221,7 @@ export function SettingsTab({
         />
       </Section>
 
-      <Section title={t.timing}>
+      <Section id="settings-timing" icon={Clock} title={t.timing}>
         <div className="grid gap-4 sm:grid-cols-2">
           <FormField
             id="settings-timeLimitMin"
@@ -250,16 +270,16 @@ export function SettingsTab({
               t.startsAtHint,
             )}
             type="datetime-local"
+            className="sm:max-w-xs"
           />
         </FormField>
       </Section>
 
-      <Section title={t.questions}>
-        {check("shuffleQuestions")}
-        <p className="-mt-3 text-muted-foreground text-sm">
-          {t.shuffleQuestionsHint}
-        </p>
-        {check("shuffleOptions")}
+      <Section id="settings-questions" icon={Shuffle} title={t.questions}>
+        <div className="grid gap-2">
+          {toggle("shuffleQuestions", t.shuffleQuestionsHint)}
+          {toggle("shuffleOptions")}
+        </div>
         <Choice
           name="poolMode"
           legend={t.pool}
@@ -303,7 +323,7 @@ export function SettingsTab({
         )}
       </Section>
 
-      <Section title={t.scoring}>
+      <Section id="settings-scoring" icon={Calculator} title={t.scoring}>
         <Choice
           name="pointsMode"
           legend={t.scoring}
@@ -344,7 +364,7 @@ export function SettingsTab({
         />
       </Section>
 
-      <Section title={t.after}>
+      <Section id="settings-after" icon={Send} title={t.after}>
         <Choice
           name="revealAnswers"
           legend={t.revealAnswers}
@@ -354,39 +374,44 @@ export function SettingsTab({
           )}
           onChange={(revealAnswers) => onChange({ revealAnswers })}
         />
-        {check("countsForRating")}
-        {check("examGuard")}
-      </Section>
-
-      <div className="sticky bottom-0 z-10 -mx-4 flex flex-col gap-2 border-t bg-background/95 px-4 py-3 backdrop-blur sm:mx-0 sm:rounded-lg sm:border">
-        {message && (
-          <Alert variant={message.error ? "danger" : "success"}>
-            {message.text}
-          </Alert>
-        )}
-        {errorOf("form") && (
-          <p className="text-danger-text text-sm">{errorOf("form")}</p>
-        )}
-        <div className="flex justify-end">
-          <Button type="submit" disabled={pending}>
-            {pending ? t.saving : t.save}
-          </Button>
+        <div className="grid gap-2">
+          {toggle("countsForRating")}
+          {toggle("examGuard")}
         </div>
-      </div>
+      </Section>
     </form>
   );
 }
 
+/** A large tappable row for a checkbox or radio (07 §4, like the review page). */
+const rowClass =
+  "flex min-h-12 cursor-pointer items-start gap-3 rounded-md border border-border/80 bg-surface px-3.5 py-3 text-sm transition-[border-color,background-color] duration-150 hover:border-primary/50 has-checked:border-primary has-checked:bg-primary-soft has-focus-visible:outline-2 has-focus-visible:outline-ring dark:border-border";
+
 function Section({
+  id,
+  icon: Icon,
   title,
   children,
 }: {
+  id: string;
+  icon: LucideIcon;
   title: string;
   children: React.ReactNode;
 }) {
   return (
-    <section className="flex flex-col gap-4 rounded-lg border border-border/70 bg-surface p-5 shadow-card dark:border-border">
-      <h2 className="font-semibold">{title}</h2>
+    <section
+      aria-labelledby={id}
+      className="flex flex-col gap-4 rounded-lg border border-border/70 bg-surface p-5 shadow-card sm:p-6 dark:border-border"
+    >
+      <h2 id={id} className="flex items-center gap-2.5 heading-section">
+        <span
+          aria-hidden
+          className="flex size-9 items-center justify-center rounded-full bg-primary-soft text-primary"
+        >
+          <Icon className="size-[1.125rem]" strokeWidth={2} />
+        </span>
+        {title}
+      </h2>
       {children}
     </section>
   );
@@ -412,17 +437,17 @@ function Choice<V extends string>({
   const errorId = `settings-${name}-error`;
   return (
     <fieldset
-      className="grid gap-1"
+      className="grid gap-2"
       aria-describedby={error ? errorId : undefined}
       aria-invalid={error ? true : undefined}
     >
       <legend
-        className={cn("mb-1 font-medium text-sm", hideLegend && "sr-only")}
+        className={cn("mb-2 font-semibold text-sm", hideLegend && "sr-only")}
       >
         {legend}
       </legend>
       {options.map(([v, label]) => (
-        <label key={v} className="flex min-h-11 items-center gap-3 text-sm">
+        <label key={v} className={cn(rowClass, "items-center")}>
           <input
             type="radio"
             name={name}

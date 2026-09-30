@@ -33,7 +33,7 @@ export function ResultsFilterBar({
         aria-label={t.filtersLabel}
         // Remount on navigation so the fields show the values in the URL.
         key={JSON.stringify({ ...filters, page: 1 })}
-        className="grid gap-3 rounded-lg border border-border/70 bg-surface p-5 shadow-card dark:border-border sm:grid-cols-2 lg:grid-cols-[2fr_2fr_1fr_1fr]"
+        className="grid gap-3 rounded-lg border border-border/70 bg-surface p-5 shadow-card sm:grid-cols-2 sm:p-6 lg:grid-cols-[2fr_2fr_1fr_1fr] dark:border-border"
       >
         <div className="grid gap-1.5">
           <Label htmlFor="results-lesson">{t.lesson}</Label>

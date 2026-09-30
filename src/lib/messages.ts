@@ -140,6 +140,14 @@ export const shellCopy = {
   accountMenu: "Tài khoản",
 } as const;
 
+/** Numbered pages (`Pagination`). */
+export const paginationCopy = {
+  label: "Phân trang",
+  previous: "Trang trước",
+  next: "Trang sau",
+  page: (n: number) => `Trang ${n}`,
+} as const;
+
 /** Sign-in/sign-up frame and the first-run welcome (07 §2, onboarding). */
 export const onboardingCopy = {
   headline: ["Luyện đề Vật lý,", "hiểu tới đâu chắc tới đó."],

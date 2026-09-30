@@ -7,41 +7,67 @@ import {
   moveItem,
   parseAdminListParams,
   ReorderSchema,
+  withPageOrder,
 } from "./admin-list";
 
+const none = { q: null, status: null, page: 1 } as const;
+
 describe("parseAdminListParams", () => {
-  it("reads q and status", () => {
+  it("reads q, status and page", () => {
     expect(
-      parseAdminListParams({ q: "  dao   động ", status: "draft" }),
-    ).toEqual({ q: "dao động", status: "draft" });
+      parseAdminListParams({ q: "  dao   động ", status: "draft", page: "3" }),
+    ).toEqual({ q: "dao động", status: "draft", page: 3 });
   });
 
   it("falls back on invalid values", () => {
     expect(
-      parseAdminListParams({ q: "x".repeat(81), status: "deleted" }),
-    ).toEqual({ q: null, status: null });
+      parseAdminListParams({
+        q: "x".repeat(81),
+        status: "deleted",
+        page: "-2",
+      }),
+    ).toEqual(none);
     expect(parseAdminListParams({ q: ["a", "b"], status: [] })).toEqual({
+      ...none,
       q: "a",
-      status: null,
     });
-    expect(parseAdminListParams({})).toEqual({ q: null, status: null });
+    expect(parseAdminListParams({ page: "abc" })).toEqual(none);
+    expect(parseAdminListParams({})).toEqual(none);
   });
 });
 
 describe("adminListHref", () => {
   it("leaves defaults out", () => {
-    expect(adminListHref({ q: null, status: null })).toBe("/admin/lessons");
-    expect(
-      adminListHref({ q: "sóng", status: null }, { status: "archived" }),
-    ).toBe("/admin/lessons?q=s%C3%B3ng&status=archived");
+    expect(adminListHref(none)).toBe("/admin/lessons");
+    expect(adminListHref({ ...none, q: "sóng" }, { status: "archived" })).toBe(
+      "/admin/lessons?q=s%C3%B3ng&status=archived",
+    );
+  });
+
+  it("keeps the page only when asked; a new filter starts on page 1", () => {
+    const f = { ...none, status: "draft", page: 3 } as const;
+    expect(adminListHref(f, { page: 4 })).toBe(
+      "/admin/lessons?status=draft&page=4",
+    );
+    expect(adminListHref(f, { status: null })).toBe("/admin/lessons");
+    expect(adminListHref(f, { page: 1 })).toBe("/admin/lessons?status=draft");
+  });
+});
+
+describe("withPageOrder", () => {
+  it("replaces one page's slice of the full order", () => {
+    expect(withPageOrder([1, 2, 3, 4, 5, 6], 2, [4, 3])).toEqual([
+      1, 2, 4, 3, 5, 6,
+    ]);
+    expect(withPageOrder([1, 2, 3, 4, 5], 4, [5])).toEqual([1, 2, 3, 4, 5]);
   });
 });
 
 describe("canReorder", () => {
   it("only on the unfiltered list", () => {
-    expect(canReorder({ q: null, status: null })).toBe(true);
-    expect(canReorder({ q: "a", status: null })).toBe(false);
-    expect(canReorder({ q: null, status: "draft" })).toBe(false);
+    expect(canReorder(none)).toBe(true);
+    expect(canReorder({ ...none, q: "a" })).toBe(false);
+    expect(canReorder({ ...none, status: "draft" })).toBe(false);
   });
 });
 
