@@ -102,6 +102,8 @@ test("a PDF becomes a draft lesson through the AI, flagged where the key is miss
   ).toBeVisible();
   // The fence is gone and the missing key is flagged on its line.
   await expect(page.locator(".cm-content")).not.toContainText("```");
-  // (The issue list sits in the preview pane on phones; the bar shows everywhere.)
-  await expect(page.getByText(/^Nội dung còn 1 lỗi./)).toBeVisible();
+  // (The issue list sits in the preview pane on phones; step 1's note shows everywhere.)
+  await expect(
+    page.getByText(/^Nội dung còn 1 lỗi\. Sửa hết lỗi/),
+  ).toBeVisible();
 });

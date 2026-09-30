@@ -1,7 +1,7 @@
-import { ClipboardList, SearchX } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { EmptyState } from "@/components/empty-state";
+import { PageHeader } from "@/components/page-header";
 import { buttonVariants } from "@/components/ui/button";
 import {
   getResultLessons,
@@ -35,11 +35,8 @@ export default async function AdminResultsPage({
   ]);
   const filtered = hasFilters(filters);
   return (
-    <div className="mx-auto flex max-w-4xl flex-col gap-6">
-      <header className="space-y-2">
-        <h1 className="heading-page">{t.title}</h1>
-        <p className="text-muted-foreground">{t.lead}</p>
-      </header>
+    <div className="mx-auto flex max-w-5xl flex-col gap-6">
+      <PageHeader title={t.title} lead={t.lead} />
       <ResultsFilterBar filters={filters} lessons={lessons} />
       {rows.length > 0 ? (
         <>
@@ -68,7 +65,7 @@ export default async function AdminResultsPage({
         </>
       ) : (
         <EmptyState
-          icon={filtered ? SearchX : ClipboardList}
+          mascot={filtered ? "telescope" : "laptop"}
           title={filtered ? t.noMatchTitle : t.emptyTitle}
           description={filtered ? t.noMatchBody : t.emptyBody}
           action={

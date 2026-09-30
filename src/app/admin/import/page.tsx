@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import { Mascot } from "@/components/mascot";
+import { PageHeader } from "@/components/page-header";
 import { ImportPanel } from "@/features/ai/components/admin/import-panel";
 import { importCopy as t } from "@/features/ai/messages";
 import { requireAdmin } from "@/features/auth/guards";
@@ -14,11 +16,27 @@ export default async function AdminImportPage() {
   await requireAdmin();
   const settings = await getSettings();
   return (
-    <div className="mx-auto flex max-w-3xl flex-col gap-6">
-      <header className="space-y-2">
-        <h1 className="heading-page">{t.title}</h1>
-        <p className="text-muted-foreground">{t.lead}</p>
-      </header>
+    <div className="mx-auto flex max-w-4xl flex-col gap-6">
+      <div className="flex items-end gap-6">
+        <PageHeader title={t.title} lead={t.lead} className="flex-1" />
+        <Mascot pose="laptop" size={120} className="hidden shrink-0 md:block" />
+      </div>
+      <ol
+        aria-label={t.stepsLabel}
+        className="grid gap-2 text-sm sm:grid-cols-3"
+      >
+        {t.steps.map((step, i) => (
+          <li
+            key={step}
+            className="flex items-center gap-2.5 rounded-full bg-muted px-2 py-1.5 font-medium"
+          >
+            <span className="num flex size-7 shrink-0 items-center justify-center rounded-full bg-primary font-bold font-display text-primary-foreground text-xs">
+              {i + 1}
+            </span>
+            {step}
+          </li>
+        ))}
+      </ol>
       <ImportPanel aiEnabled={settings.aiEnabled} />
     </div>
   );

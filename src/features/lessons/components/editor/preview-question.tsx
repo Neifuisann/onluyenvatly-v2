@@ -1,6 +1,13 @@
 "use client";
 
-import { CircleAlert, CircleCheck } from "lucide-react";
+import {
+  Check,
+  CircleAlert,
+  CircleCheck,
+  Lightbulb,
+  PenLine,
+  X,
+} from "lucide-react";
 import { QuestionImage } from "@/components/math-text/question-image";
 import { formatScore } from "@/lib/dates";
 import { cn } from "@/lib/utils";
@@ -11,8 +18,9 @@ import { PreviewMathText } from "./preview-math";
 const LETTERS = ["A", "B", "C", "D", "E", "F"] as const;
 
 /**
- * One parsed question in the editor preview, with its key and explanation
- * (the teacher's view; 07 §5.6). The header jumps to the question's line.
+ * One parsed question in the editor preview, drawn like the student's
+ * question card plus its key and explanation (the teacher's view; 07 §5.6).
+ * The header jumps to the question's line in the editor.
  */
 export function PreviewQuestion({
   question: q,
@@ -28,16 +36,19 @@ export function PreviewQuestion({
   onGoTo: () => void;
 }) {
   const Icon = hasIssue ? CircleAlert : CircleCheck;
+  const heading = t.questionHeading(
+    index + 1,
+    questionTypeLabels[q.type],
+    formatScore(points),
+  );
   return (
     <article
-      aria-label={t.questionHeading(
-        index + 1,
-        questionTypeLabels[q.type],
-        formatScore(points),
-      )}
+      aria-label={heading}
       className={cn(
-        "flex flex-col gap-3 rounded-lg border border-l-4 bg-surface p-4 shadow-card",
-        hasIssue ? "border-l-danger" : "border-l-success",
+        "flex flex-col gap-4 rounded-xl border bg-surface p-4 shadow-card sm:p-5",
+        hasIssue
+          ? "border-danger/50 dark:border-danger/50"
+          : "border-border/70 dark:border-border",
       )}
     >
       <header>
@@ -45,28 +56,30 @@ export function PreviewQuestion({
           type="button"
           onClick={onGoTo}
           aria-label={t.goToQuestion(index + 1)}
-          className="flex items-center gap-1.5 rounded-md font-semibold text-sm hover:underline"
+          className="group -m-1.5 flex w-[calc(100%+0.75rem)] flex-wrap items-center gap-2 rounded-lg p-1.5 text-left text-muted-foreground text-sm transition-colors hover:bg-muted/60"
         >
-          <Icon
-            aria-hidden
+          <span className="num rounded-full bg-ink px-3 py-1 font-bold font-display text-ink-foreground text-sm">
+            {t.questionLabel(index + 1)}
+          </span>
+          <span className="font-medium">{questionTypeLabels[q.type]}</span>
+          <span aria-hidden>·</span>
+          <span className="num">{formatScore(points)}đ</span>
+          <span
             className={cn(
-              "size-4",
+              "ml-auto inline-flex items-center gap-1 font-semibold text-xs",
               hasIssue ? "text-danger-text" : "text-success-text",
             )}
+          >
+            <Icon aria-hidden className="size-4" />
+            {hasIssue && t.questionHasIssue}
+          </span>
+          <PenLine
+            aria-hidden
+            className="size-4 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100"
           />
-          {t.questionHeading(
-            index + 1,
-            questionTypeLabels[q.type],
-            formatScore(points),
-          )}
-          {hasIssue && (
-            <span className="font-normal text-danger-text">
-              · {t.questionHasIssue}
-            </span>
-          )}
         </button>
       </header>
-      <div className="break-words">
+      <div className="break-words text-[1.0625rem] leading-relaxed">
         <PreviewMathText text={q.stem} />
         {q.image && <QuestionImage media={q.image} />}
       </div>
@@ -79,26 +92,30 @@ export function PreviewQuestion({
               <li
                 key={letter}
                 className={cn(
-                  "flex items-start gap-3 rounded-md border px-3 py-2.5",
-                  key && "border-success bg-success/10",
+                  "flex items-start gap-3 rounded-lg border-2 px-3 py-2.5",
+                  key
+                    ? "border-success/60 bg-success-soft"
+                    : "border-border/70 dark:border-border",
                 )}
               >
                 <span
                   aria-hidden
                   className={cn(
-                    "mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-full border font-semibold text-sm",
-                    key && "border-success bg-success text-success-foreground",
+                    "flex size-8 shrink-0 items-center justify-center rounded-full font-bold font-display text-sm",
+                    key
+                      ? "bg-success text-success-foreground"
+                      : "bg-muted text-muted-foreground",
                   )}
                 >
-                  {letter}
+                  {key ? <Check className="size-4" strokeWidth={3} /> : letter}
                 </span>
                 <span className="sr-only">{letter}.</span>
-                <span className="min-w-0 flex-1 break-words pt-0.5">
+                <span className="min-w-0 flex-1 break-words pt-1">
                   <PreviewMathText text={o.text} />
                   {o.image && <QuestionImage media={o.image} />}
                 </span>
                 {key && (
-                  <span className="shrink-0 pt-1 font-medium text-success-text text-xs">
+                  <span className="shrink-0 pt-1.5 font-semibold text-success-text text-xs">
                     {t.correct}
                   </span>
                 )}
@@ -108,22 +125,29 @@ export function PreviewQuestion({
         </ul>
       )}
       {q.type === "tf" && (
-        <ul className="grid gap-1.5 text-sm">
+        <ul className="grid gap-2">
           {q.statements.map((s, i) => {
             const letter = String.fromCharCode(97 + i);
+            const StatementIcon = s.answer ? Check : X;
             return (
               <li
                 key={letter}
-                className="flex items-start gap-2 border-b pb-1.5 last:border-b-0"
+                className="flex items-start gap-3 rounded-lg border border-border/70 px-3 py-2.5 dark:border-border"
               >
-                <span className="font-medium">{letter})</span>
-                <PreviewMathText text={s.text} className="min-w-0 flex-1" />
+                <span className="pt-0.5 font-bold font-display">{letter})</span>
+                <PreviewMathText
+                  text={s.text}
+                  className="min-w-0 flex-1 pt-0.5"
+                />
                 <span
                   className={cn(
-                    "shrink-0 font-semibold",
-                    s.answer ? "text-success-text" : "text-danger-text",
+                    "inline-flex shrink-0 items-center gap-1 rounded-full px-2.5 py-1 font-semibold text-xs",
+                    s.answer
+                      ? "bg-success-soft text-success-text"
+                      : "bg-danger-soft text-danger-text",
                   )}
                 >
+                  <StatementIcon aria-hidden className="size-3.5" />
                   {s.answer ? t.true : t.false}
                 </span>
               </li>
@@ -132,22 +156,26 @@ export function PreviewQuestion({
         </ul>
       )}
       {q.type === "short" && (
-        <p className="text-sm">
-          <span className="text-muted-foreground">{t.shortAnswer}: </span>
-          <span className="font-medium num">
+        <p className="flex flex-wrap items-center gap-x-2 gap-y-1 rounded-lg bg-success-soft px-3.5 py-2.5 text-sm">
+          <span className="font-medium text-success-text">
+            {t.shortAnswer}:
+          </span>
+          <span className="num font-bold font-display text-base">
             {q.answer.replace(".", ",") || "—"}
           </span>
           {q.tolerance !== undefined && q.tolerance > 0 && (
             <span className="text-muted-foreground">
-              {" "}
               ({t.tolerance(String(q.tolerance).replace(".", ","))})
             </span>
           )}
         </p>
       )}
       {q.explanation?.trim() && (
-        <section className="rounded-md bg-muted p-3 text-sm">
-          <h4 className="mb-1 font-medium">{t.explanation}</h4>
+        <section className="rounded-lg bg-muted/70 p-3.5 text-sm">
+          <h3 className="mb-1 flex items-center gap-1.5 font-semibold">
+            <Lightbulb aria-hidden className="size-4 text-accent-text" />
+            {t.explanation}
+          </h3>
           <PreviewMathText text={q.explanation} />
         </section>
       )}

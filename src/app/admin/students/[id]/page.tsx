@@ -1,7 +1,6 @@
-import { ArrowLeft } from "lucide-react";
 import type { Metadata } from "next";
-import Link from "next/link";
 import { notFound } from "next/navigation";
+import { PageHeader, SectionCard } from "@/components/page-header";
 import { requireAdmin } from "@/features/auth/guards";
 import {
   getGrantableLessons,
@@ -40,54 +39,33 @@ export default async function AdminStudentPage({
 
   return (
     <div className="mx-auto flex max-w-4xl flex-col gap-6">
-      <div className="flex flex-col gap-3">
-        <Link
-          href="/admin/students?view=all"
-          prefetch={false}
-          className="inline-flex min-h-11 w-fit items-center gap-1.5 text-muted-foreground text-sm hover:text-foreground"
-        >
-          <ArrowLeft aria-hidden className="size-4" />
-          {t.back}
-        </Link>
-        <div className="flex flex-wrap items-center gap-3">
-          <h1 className="break-words heading-page">{student.fullName}</h1>
-          <StatusBadge status={student.status} />
-        </div>
-      </div>
+      <PageHeader
+        back={{ href: "/admin/students?view=all", label: t.back }}
+        title={student.fullName}
+        badges={<StatusBadge status={student.status} />}
+      />
 
       <StudentProfile student={student} />
 
-      <section
-        aria-labelledby="student-actions"
-        className="rounded-lg border border-border/70 bg-surface p-5 shadow-card dark:border-border"
-      >
-        <h2 id="student-actions" className="mb-3 font-semibold">
-          {t.actionsSection}
-        </h2>
+      <SectionCard id="student-actions" title={t.actionsSection}>
         <StudentActions
           id={student.id}
           fullName={student.fullName}
           status={student.status}
           attemptTotal={student.attemptTotal}
         />
-      </section>
+      </SectionCard>
 
-      <section
-        aria-labelledby="student-grants"
-        className="rounded-lg border border-border/70 bg-surface p-5 shadow-card dark:border-border"
-      >
-        <h2 id="student-grants" className="mb-3 font-semibold">
-          {t.grantSection}
-        </h2>
+      <SectionCard id="student-grants" title={t.grantSection}>
         <GrantAttempts
           userId={student.id}
           lessons={lessons}
           overrides={overrides}
         />
-      </section>
+      </SectionCard>
 
       <section aria-labelledby="student-sessions" className="space-y-3">
-        <h2 id="student-sessions" className="font-semibold">
+        <h2 id="student-sessions" className="heading-section">
           {t.sessionsSection}
         </h2>
         {sessions.length ? (
@@ -98,7 +76,7 @@ export default async function AdminStudentPage({
       </section>
 
       <section aria-labelledby="student-attempts" className="space-y-3">
-        <h2 id="student-attempts" className="font-semibold">
+        <h2 id="student-attempts" className="heading-section">
           {t.attemptsSection}
         </h2>
         {attempts.length ? (

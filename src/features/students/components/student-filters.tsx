@@ -1,10 +1,9 @@
 import { Search } from "lucide-react";
 import Form from "next/form";
-import Link from "next/link";
+import { SegmentedNav } from "@/components/segmented-nav";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { cn } from "@/lib/utils";
 import {
   STUDENT_GRADES,
   STUDENT_STATUSES,
@@ -13,15 +12,7 @@ import {
 } from "../domain/list";
 import { studentsCopy as t } from "../messages";
 
-const chip = (active: boolean) =>
-  cn(
-    "inline-flex h-9 items-center rounded-full border px-3.5 text-sm transition-colors",
-    active
-      ? "border-primary bg-primary text-primary-foreground"
-      : "bg-surface hover:bg-muted",
-  );
-
-/** Search (GET form), status and grade chips of the "Tất cả" tab. */
+/** Pill search (GET form), status and grade switches of the "Tất cả" tab. */
 export function StudentFilterBar({ filters }: { filters: StudentListFilters }) {
   return (
     <div className="flex flex-col gap-3">
@@ -30,7 +21,7 @@ export function StudentFilterBar({ filters }: { filters: StudentListFilters }) {
         prefetch={false}
         scroll={false}
         role="search"
-        className="flex gap-2"
+        className="relative"
       >
         <input type="hidden" name="view" value="all" />
         {filters.status && (
@@ -42,60 +33,52 @@ export function StudentFilterBar({ filters }: { filters: StudentListFilters }) {
         <Label htmlFor="admin-students-q" className="sr-only">
           {t.searchLabel}
         </Label>
-        <div className="relative flex-1">
-          <Search
-            aria-hidden
-            className="pointer-events-none absolute top-1/2 left-3 size-5 -translate-y-1/2 text-muted-foreground"
-            strokeWidth={1.75}
-          />
-          <Input
-            // Remount on navigation so the field shows the value in the URL.
-            key={filters.q ?? ""}
-            id="admin-students-q"
-            name="q"
-            type="search"
-            enterKeyHint="search"
-            autoComplete="off"
-            maxLength={80}
-            defaultValue={filters.q ?? ""}
-            placeholder={t.searchPlaceholder}
-            className="pl-10"
-          />
-        </div>
-        <Button type="submit" variant="secondary">
+        <Search
+          aria-hidden
+          className="pointer-events-none absolute top-1/2 left-4 size-5 -translate-y-1/2 text-muted-foreground"
+          strokeWidth={2}
+        />
+        <Input
+          // Remount on navigation so the field shows the value in the URL.
+          key={filters.q ?? ""}
+          id="admin-students-q"
+          name="q"
+          type="search"
+          enterKeyHint="search"
+          autoComplete="off"
+          maxLength={80}
+          defaultValue={filters.q ?? ""}
+          placeholder={t.searchPlaceholder}
+          className="rounded-full pr-20 pl-11 shadow-card [&::-webkit-search-cancel-button]:hidden"
+        />
+        <Button
+          type="submit"
+          size="sm"
+          className="absolute top-1/2 right-1.5 -translate-y-1/2 active:-translate-y-1/2 active:scale-100"
+        >
           {t.searchSubmit}
         </Button>
       </Form>
-      <ul aria-label={t.statusGroup} className="flex flex-wrap gap-1.5">
-        {[null, ...STUDENT_STATUSES].map((s) => (
-          <li key={s ?? "all"}>
-            <Link
-              href={studentsHref(filters, { status: s })}
-              prefetch={false}
-              scroll={false}
-              aria-current={filters.status === s ? "page" : undefined}
-              className={chip(filters.status === s)}
-            >
-              {s ? t.statuses[s] : t.filterAll}
-            </Link>
-          </li>
-        ))}
-      </ul>
-      <ul aria-label={t.gradeGroup} className="flex flex-wrap gap-1.5">
-        {[null, ...STUDENT_GRADES].map((g) => (
-          <li key={g ?? "all"}>
-            <Link
-              href={studentsHref(filters, { grade: g })}
-              prefetch={false}
-              scroll={false}
-              aria-current={filters.grade === g ? "page" : undefined}
-              className={chip(filters.grade === g)}
-            >
-              {g ? t.grade(g) : t.filterAll}
-            </Link>
-          </li>
-        ))}
-      </ul>
+      <div className="flex flex-wrap items-center gap-2">
+        <SegmentedNav
+          label={t.statusGroup}
+          items={[null, ...STUDENT_STATUSES].map((s) => ({
+            key: s ?? "all",
+            href: studentsHref(filters, { status: s }),
+            label: s ? t.statuses[s] : t.filterAll,
+            active: filters.status === s,
+          }))}
+        />
+        <SegmentedNav
+          label={t.gradeGroup}
+          items={[null, ...STUDENT_GRADES].map((g) => ({
+            key: String(g ?? "all"),
+            href: studentsHref(filters, { grade: g }),
+            label: g ? t.grade(g) : t.filterAll,
+            active: filters.grade === g,
+          }))}
+        />
+      </div>
     </div>
   );
 }

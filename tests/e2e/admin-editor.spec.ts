@@ -136,7 +136,9 @@ async function openSettings(page: Page) {
   // Reloading with unsaved changes asks first; accept like a teacher would.
   page.on("dialog", (d) => d.accept());
   await openDraftEditor(page);
-  await page.getByRole("tab", { name: "Cài đặt" }).click();
+  // Step 1 → "Tiếp tục" (nothing changed, so nothing is saved) → step 2.
+  await page.getByRole("button", { name: "Tiếp tục" }).click();
+  await expect(page).toHaveURL(/\/edit\?step=settings$/);
   await expect(page.getByLabel("Tên bài")).toHaveValue("E2E – Bản nháp kín");
 }
 
@@ -165,9 +167,8 @@ test("settings: invalid combinations are blocked with messages", async ({
     "aria-invalid",
     "true",
   );
-  // Nothing was sent: a reload shows the saved settings.
+  // Nothing was sent: a reload (the step is in the URL) shows the saved settings.
   await page.reload();
-  await page.getByRole("tab", { name: "Cài đặt" }).click();
   await expect(page.getByLabel("Ngay sau khi nộp")).toBeChecked();
   await expect(page.getByLabel("Tắt: làm tất cả các câu")).toBeChecked();
 
@@ -197,7 +198,6 @@ test("settings: AI writes a description and suggests tags into the form (S7-05)"
   await expect(page.getByText("Đã thêm 2 thẻ gợi ý.")).toBeVisible();
   // Nothing is saved until "Lưu cài đặt".
   await page.reload();
-  await page.getByRole("tab", { name: "Cài đặt" }).click();
   await expect(page.getByLabel("Mô tả")).toHaveValue("");
 });
 
@@ -209,10 +209,10 @@ test("settings: a valid change saves and survives a reload; stats follow live", 
   // Live: the stats bar follows valid settings before they are saved.
   await page.getByLabel("Chia đều tổng điểm của từng loại").check();
   await page.getByLabel("Tổng điểm trắc nghiệm").fill("2,5");
-  await page.getByRole("tab", { name: "Nội dung" }).click();
+  await page.getByRole("button", { name: "Quay lại nội dung" }).click();
   if (isPhone(page)) await page.getByText("Xem trước", { exact: true }).click();
   await expect(page.getByText(/^Tổng: 1 câu/)).toHaveText(/· 2,5đ$/);
-  await page.getByRole("tab", { name: "Cài đặt" }).click();
+  await page.getByRole("button", { name: "Tiếp tục" }).click();
   await page.getByLabel(/^Theo điểm của từng câu/).check();
 
   // Saved: only fields no other spec reads, restored at the end.
@@ -223,7 +223,6 @@ test("settings: a valid change saves and survives a reload; stats follow live", 
   await expect(saved).toBeVisible();
   await expect(page.getByText("Chưa lưu")).toHaveCount(0);
   await page.reload();
-  await page.getByRole("tab", { name: "Cài đặt" }).click();
   await expect(page.getByLabel("Thời gian làm bài (phút)")).toHaveValue("50");
   await expect(page.getByLabel("Theo tỉ lệ số ý đúng")).toBeChecked();
 
@@ -250,8 +249,8 @@ test("Làm thử: the real runner in preview mode, keys shown, nothing saved", a
   });
   await openDraftEditor(page);
   await paste(page, TRY_TEXT);
-  await page.getByRole("tab", { name: "Làm thử" }).click();
-  const panel = page.getByRole("tabpanel", { name: "Làm thử" });
+  await page.getByRole("button", { name: "Làm thử" }).click();
+  const panel = page.getByRole("region", { name: "Làm thử như học sinh" });
   await expect(panel).toContainText("Xem trước · không lưu bài làm");
   await singleView(page);
 

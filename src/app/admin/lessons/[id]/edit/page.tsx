@@ -11,7 +11,7 @@ import {
   QuestionSchema,
 } from "@/features/lessons/schema";
 
-export const metadata: Metadata = { title: editorCopy.tabs.content };
+export const metadata: Metadata = { title: editorCopy.metaTitle };
 
 export default async function EditLessonPage({
   params,

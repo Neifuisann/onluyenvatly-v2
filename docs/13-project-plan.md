@@ -363,6 +363,8 @@ Decisions made while building (recorded in 04/05/07): items carry their points (
 | S8-06 | ⏸ UI work | Accessibility pass belongs with the redesign |
 | S8-07 | ⏸ UI work | States and copy audit belongs with the redesign |
 
+**Teacher redesign (2026-09-30, `feat/S8-01-admin-redesign`, part of the S8-01 UI work):** the Lagoon theme now covers every admin page (07 §5.6–5.7): shared `PageHeader`/`SectionCard`, `SegmentedNav` for link-based switches, page-level empty states with the bunny, and a navy hero plus icon tiles on `/admin`. `/admin/lessons` is paginated (20 per page, numbered `Pagination`, `?page=`); reordering still sends the whole order (`withPageOrder`, ↑/↓ crosses page edges). The lesson editor follows v1's two-step flow: "Tạo bài mới" → step 1 "Soạn nội dung" (question cards left, text right) → "Tiếp tục" saves the draft → step 2 "Cài đặt & xuất bản" (`?step=settings`, settings form + publish panel) → "Xuất bản", which saves changed settings first. Verified: lint, types, 1,117 unit tests, contrast, production build, and every admin E2E spec plus authz, auth, lessons, dashboard and public-design on a local production build (desktop and 360 px). Open: `/admin/audit` ("Nhật ký") is in the nav but has no page yet.
+
 ---
 
 ### Sprint 9: Hardening & rehearsal

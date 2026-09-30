@@ -1,7 +1,7 @@
-import { SearchX, UserCheck, Users } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { EmptyState } from "@/components/empty-state";
+import { PageHeader } from "@/components/page-header";
 import { buttonVariants } from "@/components/ui/button";
 import { requireAdmin } from "@/features/auth/guards";
 import {
@@ -37,10 +37,7 @@ export default async function AdminStudentsPage({
   const pendingCount = await getPendingCount();
   return (
     <div className="mx-auto flex max-w-4xl flex-col gap-6">
-      <header className="space-y-2">
-        <h1 className="heading-page">{t.title}</h1>
-        <p className="text-muted-foreground">{t.lead}</p>
-      </header>
+      <PageHeader title={t.title} lead={t.lead} />
       <StudentsTabs filters={filters} pendingCount={pendingCount} />
       {filters.view === "pending" ? <PendingView /> : <AllView f={filters} />}
     </div>
@@ -52,7 +49,7 @@ async function PendingView() {
   if (rows.length === 0)
     return (
       <EmptyState
-        icon={UserCheck}
+        mascot="all-clear"
         title={t.pendingEmptyTitle}
         description={t.pendingEmptyBody}
       />
@@ -111,7 +108,7 @@ async function AllView({ f }: { f: StudentListFilters }) {
         </>
       ) : (
         <EmptyState
-          icon={filtered ? SearchX : Users}
+          mascot={filtered ? "telescope" : "studying"}
           title={filtered ? t.noMatchTitle : t.emptyTitle}
           description={filtered ? t.noMatchBody : t.emptyBody}
           action={

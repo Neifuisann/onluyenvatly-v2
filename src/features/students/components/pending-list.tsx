@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { Avatar } from "@/components/app-shell/user-menu";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
@@ -54,7 +55,7 @@ export function PendingList({ rows }: { rows: readonly PendingRow[] }) {
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="flex flex-wrap items-center gap-2 rounded-lg border border-border/70 bg-surface shadow-card dark:border-border px-3 py-2">
+      <div className="z-10 flex flex-wrap items-center gap-2 rounded-full border border-border/70 bg-surface/95 py-1.5 pr-1.5 pl-4 shadow-raised backdrop-blur-xl max-sm:rounded-lg max-sm:p-2 lg:sticky lg:top-3 dark:border-border">
         <label className="flex min-h-11 w-full cursor-pointer items-center gap-3 text-sm sm:w-auto sm:flex-1">
           <input
             ref={allRef}
@@ -100,7 +101,7 @@ export function PendingList({ rows }: { rows: readonly PendingRow[] }) {
       <output
         aria-live="polite"
         className={cn(
-          "min-h-5 text-sm",
+          "min-h-5 text-sm empty:hidden",
           message?.error ? "text-danger-text" : "text-muted-foreground",
         )}
       >
@@ -109,25 +110,29 @@ export function PendingList({ rows }: { rows: readonly PendingRow[] }) {
 
       <ul
         aria-label={t.pendingListLabel}
-        className="divide-y rounded-lg border border-border/70 bg-surface shadow-card dark:border-border"
+        className="divide-y divide-border/70 overflow-hidden rounded-lg border border-border/70 bg-surface shadow-card dark:divide-border dark:border-border"
       >
         {rows.map((r) => (
           <li key={r.id}>
             <label
               className={cn(
-                "flex min-h-14 cursor-pointer items-start gap-3 px-4 py-3 transition-colors hover:bg-muted",
-                selected.has(r.id) && "bg-primary-soft",
+                "flex min-h-14 cursor-pointer items-center gap-3 px-4 py-3 transition-colors hover:bg-muted/50",
+                selected.has(r.id) && "bg-primary-soft hover:bg-primary-soft",
               )}
             >
               <input
                 type="checkbox"
                 aria-label={t.selectStudent(r.fullName)}
-                className="mt-0.5 size-5 shrink-0 accent-primary"
+                className="size-5 shrink-0 accent-primary"
                 checked={selected.has(r.id)}
                 onChange={(e) => toggle(r.id, e.target.checked)}
               />
+              <Avatar
+                name={r.fullName}
+                className="size-10 bg-accent-soft text-accent-text"
+              />
               <span className="min-w-0 flex-1">
-                <span className="block break-words font-medium">
+                <span className="block break-words font-semibold">
                   {r.fullName}
                 </span>
                 <span className="mt-1 block text-muted-foreground text-xs">

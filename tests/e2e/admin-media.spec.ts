@@ -146,7 +146,8 @@ test("cover: upload, show, remove", async ({ page }, info) => {
   test.skip(info.project.name !== "chromium", "writes the shared draft");
   page.on("dialog", (d) => d.accept());
   await openDraftEditor(page);
-  await page.getByRole("tab", { name: "Cài đặt" }).click();
+  await page.getByRole("button", { name: "Tiếp tục" }).click();
+  await expect(page).toHaveURL(/\/edit\?step=settings$/);
   const cover = page.getByRole("region", { name: "Ảnh bìa" });
   // A retry after an interrupted run finds the cover still set: clear it.
   const leftover = cover.getByRole("button", { name: "Bỏ ảnh bìa" });
@@ -179,9 +180,8 @@ test("cover: upload, show, remove", async ({ page }, info) => {
   const upload = (await uploaded(page, decodeURIComponent(path))) as Upload;
   expect(upload.contentType).toBe("image/webp");
 
-  // It survives a reload (saved at once, like the settings).
+  // It survives a reload (saved at once, like the settings); the step is in the URL.
   await page.reload();
-  await page.getByRole("tab", { name: "Cài đặt" }).click();
   await expect(
     page.getByRole("img", { name: "Ảnh bìa hiện tại" }),
   ).toHaveAttribute("src", new RegExp(`${upload.path}$`));
