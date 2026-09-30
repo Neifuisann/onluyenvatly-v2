@@ -9,5 +9,7 @@ export const PUBLIC_PATHS: readonly string[] = [
   "/",
   "/ly-thuyet",
   "/gallery",
+  "/privacy",
+  "/terms",
   ...allTopics(catalog).map((r) => r.href),
 ];

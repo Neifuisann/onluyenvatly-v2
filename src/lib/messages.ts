@@ -80,6 +80,10 @@ export const authCopy = {
   registerSubmit: "Đăng ký",
   registerPending: "Đang gửi…",
   haveAccount: "Đã có tài khoản?",
+  agreePrefix: "Khi đăng ký, bạn đồng ý với",
+  agreeTerms: "Điều khoản sử dụng",
+  agreeAnd: "và",
+  agreePrivacy: "Quyền riêng tư",
   loginLink: "Đăng nhập",
   pendingTitle: "Đã gửi đăng ký",
   pendingBody:
@@ -191,6 +195,15 @@ export const onboardingCopy = {
   welcomeCta: "Chọn bài đầu tiên",
 } as const;
 
+/** Error boundaries without a feature of their own (root, global, public). */
+export const stateCopy = {
+  errorTitle: "Có lỗi xảy ra",
+  errorBody:
+    "Trang chưa tải được, có thể do mất kết nối. Bạn thử lại sau giây lát nhé.",
+  retry: "Thử lại",
+  home: "Về trang chủ",
+} as const;
+
 export const notFoundCopy = {
   title: "Không tìm thấy trang",
   body: "Trang này không tồn tại hoặc đã được chuyển đi. Mình quay về trang chủ nhé.",
@@ -260,6 +273,7 @@ export const galleryCopy = {
 export const publicCopy = {
   footer: "Ôn Luyện Vật Lý · Luyện đề Vật lý THPT",
   footerNav: "Trang công khai",
+  updated: (date: string) => `Cập nhật ${date}`,
   footerLinks: {
     theory: "Lý thuyết",
     gallery: "Thư viện ảnh",
