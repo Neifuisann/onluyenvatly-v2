@@ -121,8 +121,12 @@ test("journey 7: publish a new version; the old attempt keeps the old one", asyn
   const dialog = editor.getByRole("dialog", { name: "Xuất bản bài tập?" });
   await expect(dialog).toContainText("vẫn được chấm theo nội dung cũ");
   await dialog.getByRole("button", { name: "Xuất bản", exact: true }).click();
+  // The full message: step 2's settings note also says "…bài đã xuất bản."
+  // (hasText ignores case).
   await expect(
-    editor.getByRole("status").filter({ hasText: "Đã xuất bản." }),
+    editor.getByRole("status").filter({
+      hasText: "Đã xuất bản. Học sinh thấy nội dung mới ngay.",
+    }),
   ).toBeVisible();
   await expect(editor.getByText("Chưa lưu")).toHaveCount(0);
   for (const scheme of ["light", "dark"] as const) {
