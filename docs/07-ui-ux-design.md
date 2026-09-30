@@ -55,6 +55,9 @@ Primary and destructive buttons use opaque `--primary-hover` / `--danger-hover` 
 - **Inter** (variable, Vietnamese subset) for UI and question text; tabular figures (`.num`) for timers, scores and ratings, so numbers never jiggle.
 - **Bricolage Grotesque** (display) for page titles (`.heading-page`), section titles (`.heading-section`), big numbers and the score.
 - **JetBrains Mono** only where code is shown (lesson editor, raw import text, generated passwords); not preloaded.
+- Landing and auth slogans use two explicit lines with 1.35 line-height to keep Vietnamese accents clear. Auth feature descriptions use the panel's full width; the login introduction stays on one line, with compact copy on phones. Lesson-card question counts and durations stay intact, with whole labels wrapping when the card is narrow instead of truncating.
+- Registration uses a compact auth frame and a two-column field grid with 44 px controls, so the initial form fits common phone and laptop viewports. The mobile form omits the large decorative mascot; validation errors and smaller windows can still scroll naturally to keep every field reachable.
+  - Production previews: [desktop (1366×768)](reviews/text-layout/register-desktop.png), [phone (360×740)](reviews/text-layout/register-mobile.png).
 - Question stems 1.125 rem (1.1875 rem from `sm`), line-height 1.7; KaTeX at 1.05em.
 
 ### 3.3 Space, shape, depth, motion

@@ -9,6 +9,7 @@ export default function RegisterPage() {
   return (
     <AuthScreen
       pose="rocket"
+      compact
       steps={1}
       title={authCopy.registerTitle}
       lead={authCopy.registerLead}

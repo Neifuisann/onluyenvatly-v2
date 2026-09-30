@@ -61,19 +61,29 @@ export function LessonCard({
             </p>
           )}
         </div>
-        <div className="mt-auto flex items-center gap-x-4 gap-y-1 border-border/70 border-t pt-3 text-muted-foreground text-sm">
-          <span className="inline-flex items-center gap-1.5">
-            <ListChecks aria-hidden className="size-4" strokeWidth={1.75} />
-            {catalogCopy.questions(lesson.questionCount)}
-          </span>
-          <span className="inline-flex min-w-0 items-center gap-1.5">
-            <Clock aria-hidden className="size-4 shrink-0" strokeWidth={1.75} />
-            <span className="truncate">
-              {lesson.timeLimitSec
-                ? formatDuration(lesson.timeLimitSec)
-                : catalogCopy.noTimeLimit}
+        <div className="mt-auto flex items-start gap-3 border-border/70 border-t pt-3 text-muted-foreground text-sm">
+          <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-4 gap-y-2">
+            <span className="inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap">
+              <ListChecks
+                aria-hidden
+                className="size-4 shrink-0"
+                strokeWidth={1.75}
+              />
+              {catalogCopy.questions(lesson.questionCount)}
             </span>
-          </span>
+            <span className="inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap">
+              <Clock
+                aria-hidden
+                className="size-4 shrink-0"
+                strokeWidth={1.75}
+              />
+              <span>
+                {lesson.timeLimitSec
+                  ? formatDuration(lesson.timeLimitSec)
+                  : catalogCopy.noTimeLimit}
+              </span>
+            </span>
+          </div>
           <ArrowUpRight
             aria-hidden
             className="ml-auto size-5 shrink-0 text-muted-foreground/60 transition-[color,transform] duration-200 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 group-hover:text-primary"

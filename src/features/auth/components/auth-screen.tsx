@@ -22,19 +22,29 @@ export function AuthScreen({
   pose,
   title,
   lead,
+  compactLead,
+  compact = false,
   steps,
   children,
 }: {
   pose: MascotPose;
   title: string;
   lead?: React.ReactNode;
+  compactLead?: string;
+  /** Fit the longer registration form in a typical laptop viewport. */
+  compact?: boolean;
   /** Registration progress: 1 = sign up, 2 = teacher approves, 3 = practise. */
   steps?: 1 | 2;
   children: React.ReactNode;
 }) {
   return (
     <div className="grid min-h-dvh flex-1 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,1fr)]">
-      <aside className="relative isolate m-3 hidden flex-col overflow-hidden rounded-2xl bg-ink p-10 text-ink-foreground lg:flex xl:p-14">
+      <aside
+        className={cn(
+          "relative isolate m-3 hidden flex-col overflow-hidden rounded-2xl bg-ink p-6 text-ink-foreground lg:flex",
+          !compact && "xl:p-10 2xl:p-14",
+        )}
+      >
         <span
           aria-hidden
           className="-z-10 -top-32 -left-24 absolute size-[28rem] rounded-full bg-primary/35 blur-3xl"
@@ -46,23 +56,26 @@ export function AuthScreen({
         <Logo className="text-ink-foreground" />
         <Mascot
           pose={pose}
-          size={180}
+          size={compact ? 120 : 180}
           priority
-          className="my-8 animate-pop self-end"
+          className={cn("animate-pop self-end", compact ? "my-4" : "my-8")}
         />
-        <div className="mt-auto max-w-md space-y-8">
-          <p className="font-bold font-display text-4xl leading-[1.1] tracking-tight xl:text-5xl">
-            {t.headline[0]} <span className="text-accent">{t.headline[1]}</span>
+        <div className={cn("mt-auto", compact ? "space-y-6" : "space-y-8")}>
+          <p className="font-bold font-display text-3xl leading-[1.35] tracking-tight xl:text-4xl 2xl:text-[2.5rem]">
+            <span className="block">{t.headline[0]}</span>
+            <span className="block text-accent">{t.headline[1]}</span>
           </p>
-          <ul className="grid gap-4">
+          <ul className={cn("grid", compact ? "gap-3" : "gap-4")}>
             {VALUES.map(({ icon: Icon, title: vt, body }) => (
               <li key={vt} className="flex gap-3.5">
                 <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-ink-foreground/10 text-accent">
                   <Icon aria-hidden className="size-5" strokeWidth={2} />
                 </span>
-                <span>
+                <span className="min-w-0">
                   <span className="block font-semibold">{vt}</span>
-                  <span className="block text-ink-muted text-sm">{body}</span>
+                  <span className="block text-ink-muted text-[0.8125rem] leading-relaxed xl:text-sm">
+                    {body}
+                  </span>
                 </span>
               </li>
             ))}
@@ -71,24 +84,56 @@ export function AuthScreen({
       </aside>
 
       <div className="flex min-w-0 flex-col">
-        <header className="flex h-16 items-center justify-between px-4 sm:px-6">
+        <header
+          className={cn(
+            "flex shrink-0 items-center justify-between px-4 sm:px-6",
+            compact ? "h-14" : "h-16",
+          )}
+        >
           <Logo narrow className="lg:invisible" />
           <ThemeToggle />
         </header>
         <main
           id="main"
-          className="mx-auto flex w-full max-w-md flex-1 flex-col justify-center px-5 pt-2 pb-12"
+          className={cn(
+            "mx-auto flex w-full max-w-xl flex-1 flex-col justify-center px-5 pt-2",
+            compact ? "pb-4" : "pb-12",
+          )}
         >
           <Mascot
             pose={pose}
             size={120}
             priority
-            className="mb-4 animate-pop self-center lg:hidden"
+            className={cn(
+              "mb-4 animate-pop self-center lg:hidden",
+              compact && "hidden",
+            )}
           />
-          {steps && <Steps current={steps} />}
-          <div className="mb-7 space-y-2 text-center lg:text-left">
+          {steps && <Steps current={steps} compact={compact} />}
+          <div
+            className={cn(
+              "space-y-2 text-center lg:text-left",
+              compact ? "mb-4" : "mb-7",
+            )}
+          >
             <h1 className="heading-page">{title}</h1>
-            {lead && <p className="text-muted-foreground">{lead}</p>}
+            {lead && (
+              <p
+                className={cn(
+                  "text-muted-foreground text-sm",
+                  !compact && "sm:text-base",
+                )}
+              >
+                {compactLead ? (
+                  <>
+                    <span className="sm:hidden">{compactLead}</span>
+                    <span className="hidden sm:inline">{lead}</span>
+                  </>
+                ) : (
+                  lead
+                )}
+              </p>
+            )}
           </div>
           {children}
         </main>
@@ -98,11 +143,14 @@ export function AuthScreen({
 }
 
 /** Where a new student is in "đăng ký → giáo viên duyệt → luyện đề". */
-function Steps({ current }: { current: 1 | 2 }) {
+function Steps({ current, compact }: { current: 1 | 2; compact: boolean }) {
   return (
     <ol
       aria-label={t.stepsLabel}
-      className="mb-6 flex items-center justify-center gap-2 lg:justify-start"
+      className={cn(
+        "flex items-center justify-center gap-2 lg:justify-start",
+        compact ? "mb-3" : "mb-6",
+      )}
     >
       {t.steps.map((label, i) => {
         const n = i + 1;

@@ -20,9 +20,19 @@ export function RegisterForm() {
   const v = failed?.values ?? {};
 
   return (
-    <form ref={formRef} action={action} noValidate className="grid gap-4">
+    <form
+      ref={formRef}
+      action={action}
+      noValidate
+      className="grid grid-cols-2 gap-x-3 gap-y-2.5 [&_[data-slot=input]]:h-11 [&_[data-slot=select]]:h-11"
+    >
       {failed && !failed.fieldErrors && (
-        <Alert variant="danger" tabIndex={-1} data-form-error>
+        <Alert
+          variant="danger"
+          tabIndex={-1}
+          data-form-error
+          className="col-span-2"
+        >
           {failed.message}
         </Alert>
       )}
@@ -60,35 +70,33 @@ export function RegisterForm() {
           defaultValue={v.dateOfBirth ?? ""}
         />
       </FormField>
-      <div className="grid grid-cols-2 gap-3">
-        <FormField id="grade" label={authCopy.grade} error={fe.grade}>
-          <Select
-            {...fieldA11y("grade", fe.grade)}
-            name="grade"
-            defaultValue={v.grade ?? ""}
-          >
-            <option value="">{authCopy.gradeNone}</option>
-            <option value="10">10</option>
-            <option value="11">11</option>
-            <option value="12">12</option>
-          </Select>
-        </FormField>
-        <FormField
-          id="className"
-          label={authCopy.className}
-          hint={authCopy.classNameHint}
-          error={fe.className}
+      <FormField id="grade" label={authCopy.grade} error={fe.grade}>
+        <Select
+          {...fieldA11y("grade", fe.grade)}
+          name="grade"
+          defaultValue={v.grade ?? ""}
         >
-          <Input
-            {...fieldA11y("className", fe.className, authCopy.classNameHint)}
-            name="className"
-            autoCapitalize="characters"
-            placeholder="12A1"
-            maxLength={20}
-            defaultValue={v.className ?? ""}
-          />
-        </FormField>
-      </div>
+          <option value="">{authCopy.gradeNone}</option>
+          <option value="10">10</option>
+          <option value="11">11</option>
+          <option value="12">12</option>
+        </Select>
+      </FormField>
+      <FormField
+        id="className"
+        label={authCopy.className}
+        hint={authCopy.classNameHint}
+        error={fe.className}
+      >
+        <Input
+          {...fieldA11y("className", fe.className, authCopy.classNameHint)}
+          name="className"
+          autoCapitalize="characters"
+          placeholder="12A1"
+          maxLength={20}
+          defaultValue={v.className ?? ""}
+        />
+      </FormField>
       <FormField
         id="password"
         label={authCopy.newPassword}
@@ -106,12 +114,13 @@ export function RegisterForm() {
       <Button
         type="submit"
         size="lg"
+        className="col-span-2"
         disabled={pending}
         aria-disabled={pending}
       >
         {pending ? authCopy.registerPending : authCopy.registerSubmit}
       </Button>
-      <p className="text-center text-muted-foreground text-xs">
+      <p className="col-span-2 text-center text-muted-foreground text-xs">
         {authCopy.agreePrefix}{" "}
         <Link
           href="/terms"
@@ -130,7 +139,7 @@ export function RegisterForm() {
         </Link>
         .
       </p>
-      <p className="text-center text-muted-foreground text-sm">
+      <p className="col-span-2 text-center text-muted-foreground text-sm">
         {authCopy.haveAccount}{" "}
         <Link
           href="/login"

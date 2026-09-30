@@ -13,6 +13,7 @@ export default function LoginPage() {
       pose="wave"
       title={authCopy.loginTitle}
       lead={authCopy.loginLead}
+      compactLead={authCopy.loginLeadCompact}
     >
       {/* useSearchParams (for ?next=) needs a boundary to keep the shell static. */}
       <Suspense fallback={<FormSkeleton />}>

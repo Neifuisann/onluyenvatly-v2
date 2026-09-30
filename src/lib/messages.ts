@@ -57,6 +57,7 @@ export const fieldMessages = {
 export const authCopy = {
   loginTitle: "Đăng nhập",
   loginLead: "Chào mừng bạn quay lại. Đăng nhập để tiếp tục luyện đề.",
+  loginLeadCompact: "Đăng nhập để tiếp tục luyện đề.",
   identifier: "Số điện thoại",
   identifierHint: "Giáo viên có thể dùng tên đăng nhập.",
   password: "Mật khẩu",
@@ -66,8 +67,7 @@ export const authCopy = {
   noAccount: "Chưa có tài khoản?",
   registerLink: "Đăng ký",
   registerTitle: "Đăng ký tài khoản",
-  registerLead:
-    "Điền thông tin của bạn. Giáo viên sẽ duyệt tài khoản trước khi bạn đăng nhập.",
+  registerLead: "Tài khoản cần giáo viên duyệt trước khi đăng nhập.",
   fullName: "Họ và tên",
   phone: "Số điện thoại",
   dateOfBirth: "Ngày sinh",
