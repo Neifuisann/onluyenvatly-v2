@@ -3,6 +3,7 @@ import { expect, type Page, test } from "@playwright/test";
 import { REVIEW_RIGHT } from "./fixtures/lessons";
 import { E2E_PASSWORD, e2eStudent, projectStudentKey } from "./fixtures/users";
 import {
+  emulateScheme,
   openTest,
   press,
   type StorageState,
@@ -46,7 +47,7 @@ const project = (name: string) => (name === "mobile" ? "m" : "d");
 
 async function expectAccessible(page: Page) {
   for (const scheme of ["light", "dark"] as const) {
-    await page.emulateMedia({ colorScheme: scheme, reducedMotion: "reduce" });
+    await emulateScheme(page, scheme);
     const axe = await new AxeBuilder({ page }).analyze();
     expect(
       axe.violations.filter((v) =>

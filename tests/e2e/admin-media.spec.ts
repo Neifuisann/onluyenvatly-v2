@@ -2,7 +2,7 @@ import AxeBuilder from "@axe-core/playwright";
 import { expect, type Page, test } from "@playwright/test";
 import { loginAdminOnce } from "./admin-helpers";
 import { FAKE_STORAGE_URL } from "./fake-storage";
-import type { StorageState } from "./runner-helpers";
+import { emulateScheme, type StorageState } from "./runner-helpers";
 
 /**
  * S5-05 against the Storage stand-in (fake-storage.ts): a pasted 5 MB PNG
@@ -187,7 +187,7 @@ test("cover: upload, show, remove", async ({ page }, info) => {
   ).toHaveAttribute("src", new RegExp(`${upload.path}$`));
 
   for (const scheme of ["light", "dark"] as const) {
-    await page.emulateMedia({ colorScheme: scheme, reducedMotion: "reduce" });
+    await emulateScheme(page, scheme);
     const axe = await new AxeBuilder({ page }).analyze();
     expect(
       axe.violations.filter((v) =>

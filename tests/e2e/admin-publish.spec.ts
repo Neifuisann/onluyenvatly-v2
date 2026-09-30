@@ -3,6 +3,7 @@ import { expect, type Page, test } from "@playwright/test";
 import { loginAdminOnce } from "./admin-helpers";
 import { E2E_PASSWORD, e2eStudent } from "./fixtures/users";
 import {
+  emulateScheme,
   press,
   type StorageState,
   singleView,
@@ -130,7 +131,7 @@ test("journey 7: publish a new version; the old attempt keeps the old one", asyn
   ).toBeVisible();
   await expect(editor.getByText("Chưa lưu")).toHaveCount(0);
   for (const scheme of ["light", "dark"] as const) {
-    await editor.emulateMedia({ colorScheme: scheme, reducedMotion: "reduce" });
+    await emulateScheme(editor, scheme);
     const axe = await new AxeBuilder({ page: editor }).analyze();
     expect(
       axe.violations.filter((v) =>

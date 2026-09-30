@@ -1,7 +1,6 @@
 "use client";
 
 import { Monitor, Moon, Sun } from "lucide-react";
-import { useEffect } from "react";
 import { shellCopy } from "@/lib/messages";
 import {
   nextThemePref,
@@ -38,16 +37,8 @@ function apply(pref: ThemePref) {
  * `data-theme-pref` (set before paint), so server and client markup match.
  */
 export function ThemeToggle({ className }: { className?: string }) {
-  // Follow OS changes while in "system" mode.
-  useEffect(() => {
-    const mq = matchMedia("(prefers-color-scheme: dark)");
-    const onChange = () => {
-      if (currentPref() === "system") apply("system");
-    };
-    mq.addEventListener("change", onChange);
-    return () => mq.removeEventListener("change", onChange);
-  }, []);
-
+  // OS changes in "system" mode are followed by the head script
+  // (`themeScript`), on pages without this toggle too.
   function toggle(e: React.MouseEvent<HTMLButtonElement>) {
     const next = nextThemePref(currentPref());
     try {

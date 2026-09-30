@@ -82,3 +82,19 @@ export async function attachShot(page: Page, info: TestInfo, name: string) {
   await page.screenshot({ path, scale: "css" });
   await info.attach(name, { path, contentType: "image/png" });
 }
+
+/**
+ * Switches the color scheme for an axe scan on the page as it is. The app
+ * toggles `.dark` on <html> from a `matchMedia` listener, so the class can
+ * flip after `emulateMedia` resolves; scanning then mixes colors from both
+ * themes (seen on CI as 1.05 contrast). Waits for the class to match first.
+ * Not needed right before a `goto`/`reload`: the head script sets it.
+ */
+export async function emulateScheme(
+  page: Page,
+  scheme: "light" | "dark",
+): Promise<void> {
+  await page.emulateMedia({ colorScheme: scheme, reducedMotion: "reduce" });
+  const html = expect(page.locator("html"));
+  await (scheme === "dark" ? html : html.not).toHaveClass(/(^|\s)dark(\s|$)/);
+}

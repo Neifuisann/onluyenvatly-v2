@@ -6,6 +6,7 @@ import { serializeLesson } from "../../src/features/lessons/domain/serializer.ts
 import { loginAdminOnce } from "./admin-helpers";
 import { FAKE_DESCRIPTION } from "./fake-gemini";
 import {
+  emulateScheme,
   press,
   type StorageState,
   singleView,
@@ -91,7 +92,7 @@ test("an error links to its line; fixing it updates preview and stats", async ({
   await expect(page.locator("main article").nth(1)).toContainText("0,63");
 
   for (const scheme of ["light", "dark"] as const) {
-    await page.emulateMedia({ colorScheme: scheme, reducedMotion: "reduce" });
+    await emulateScheme(page, scheme);
     const axe = await new AxeBuilder({ page }).analyze();
     expect(
       axe.violations.filter((v) =>
@@ -173,7 +174,7 @@ test("settings: invalid combinations are blocked with messages", async ({
   await expect(page.getByLabel("Tắt: làm tất cả các câu")).toBeChecked();
 
   for (const scheme of ["light", "dark"] as const) {
-    await page.emulateMedia({ colorScheme: scheme, reducedMotion: "reduce" });
+    await emulateScheme(page, scheme);
     const axe = await new AxeBuilder({ page }).analyze();
     expect(
       axe.violations.filter((v) =>
@@ -270,7 +271,7 @@ test("Làm thử: the real runner in preview mode, keys shown, nothing saved", a
   await expect(panel.getByText("Trả lời đúng")).toBeVisible();
 
   for (const scheme of ["light", "dark"] as const) {
-    await page.emulateMedia({ colorScheme: scheme, reducedMotion: "reduce" });
+    await emulateScheme(page, scheme);
     const axe = await new AxeBuilder({ page }).analyze();
     expect(
       axe.violations.filter((v) =>

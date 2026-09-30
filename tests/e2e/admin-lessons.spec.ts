@@ -1,7 +1,7 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, type Page, test } from "@playwright/test";
 import { loginAdminOnce } from "./admin-helpers";
-import type { StorageState } from "./runner-helpers";
+import { emulateScheme, type StorageState } from "./runner-helpers";
 
 /**
  * S5-01 `/admin/lessons`: filters, reorder (keyboard and pointer drag),
@@ -84,7 +84,7 @@ test("lists every status with search, status filters and pages, accessible in li
   const width = await page.evaluate(() => document.documentElement.scrollWidth);
   expect(width).toBeLessThanOrEqual(page.viewportSize()?.width ?? 0);
   for (const scheme of ["light", "dark"] as const) {
-    await page.emulateMedia({ colorScheme: scheme, reducedMotion: "reduce" });
+    await emulateScheme(page, scheme);
     const axe = await new AxeBuilder({ page }).analyze();
     expect(
       axe.violations.filter((v) =>
