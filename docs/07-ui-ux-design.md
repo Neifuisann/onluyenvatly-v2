@@ -61,7 +61,7 @@ Primary and destructive buttons use opaque `--primary-hover` / `--danger-hover` 
 - 4 px grid. Reading and tests up to 720–1024 px wide; catalog, dashboard and admin up to 1152 px.
 - Radius: 8 / 12 (inputs, `rounded-md`) / 18 (cards, `rounded-lg`) / 24 (heroes, `rounded-xl`) / 32 px; buttons, chips and segmented controls are pills.
 - Shadows: `shadow-card` (cards), `shadow-raised` (heroes, floating bars, hover), `shadow-popover`. Light mode uses hairline borders plus shadow; dark mode uses borders.
-- Motion: 150–200 ms state changes, a press-in on buttons, `animate-rise`/`animate-pop` on first paint of key blocks, the score ring sweep. Entrance motion uses transforms only so text stays readable throughout. All off under `prefers-reduced-motion` (global rule in `globals.css`).
+- Motion: 150–200 ms state changes, a press-in on buttons, `animate-rise`/`animate-pop` on first paint of key blocks, the score ring sweep. Entrance motion uses transforms only so text stays readable throughout. All off under `prefers-reduced-motion` (global rule in `globals.css`: durations and delays 0s, not 0.01ms, so a theme switch never holds the old color for a frame).
 - Shell: desktop sidebar on the page background with the active item on a raised pill, content in a rounded panel; phones get a slim blurred top bar and a floating blurred tab bar in the thumb zone.
 
 ### 3.4 Iconography & imagery
@@ -252,4 +252,4 @@ The admin area uses the same Lagoon language as the student side. Every page sta
 ## 8. Design deliverables per sprint
 - Sprint 1: tokens + typography + AppShell + auth screens in Storybook-less "/dev/ui" page (a hidden route that lists components; free and no extra tooling).
 - Sprint 3: runner and result screens tested with 3 students on real phones (hallway test, 15 min each).
-- Sprint 8: accessibility pass (axe in Playwright + manual keyboard and TalkBack check).
+- Sprint 8: accessibility pass (axe in Playwright + manual keyboard and TalkBack check). As built: `tests/e2e/a11y.ts` `expectAccessible` (both themes, serious/critical, no sideways scroll) on every page spec; skip links on the app shell and public pages; the TalkBack check is still manual.

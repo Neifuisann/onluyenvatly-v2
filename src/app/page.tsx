@@ -149,7 +149,7 @@ function QuestionPreview() {
           <HardDrive aria-hidden className="size-3.5" />
           {p.saved}
         </p>
-        <Mascot pose="rocket" size={80} priority className="animate-pop" />
+        <Mascot pose="rocket" size={80} className="animate-pop" />
       </div>
     </figure>
   );

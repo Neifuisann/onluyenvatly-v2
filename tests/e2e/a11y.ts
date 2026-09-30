@@ -15,7 +15,9 @@ export async function expectAccessible(page: Page): Promise<void> {
         .filter((v) => v.impact === "serious" || v.impact === "critical")
         .map((v) => ({
           id: v.id,
-          nodes: v.nodes.map((n) => n.target.join(" ")),
+          nodes: v.nodes.map(
+            (n) => `${n.target.join(" ")}: ${n.any[0]?.message ?? ""}`,
+          ),
         })),
       scheme,
     ).toEqual([]);

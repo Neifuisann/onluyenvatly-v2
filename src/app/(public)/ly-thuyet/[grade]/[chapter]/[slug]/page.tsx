@@ -3,11 +3,9 @@ import { ArrowLeft, ArrowRight, ChevronRight } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Suspense } from "react";
 import { Mascot } from "@/components/mascot";
 import { buttonVariants } from "@/components/ui/button";
 import { cardClass } from "@/components/ui/card";
-import { Skeleton } from "@/components/ui/skeleton";
 import { catalog } from "@/content/ly-thuyet/catalog";
 import {
   findTopic,
@@ -36,15 +34,11 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   };
 }
 
-export default function TheoryTopicPage({ params }: Props) {
-  return (
-    <Suspense fallback={<TopicSkeleton />}>
-      <Topic params={params} />
-    </Suspense>
-  );
-}
-
-async function Topic({ params }: { params: Props["params"] }) {
+/**
+ * Every real topic is prerendered, so params are awaited here rather than
+ * inside a Suspense boundary: an unknown path then answers a real 404.
+ */
+export default async function TheoryTopicPage({ params }: Props) {
   const hit = findTopic(catalog, await params);
   if (!hit) notFound();
   const { grade, chapter, topic, previous, next } = hit;
@@ -178,16 +172,5 @@ function PagerLink({
       </span>
       <span className="font-semibold">{children}</span>
     </Link>
-  );
-}
-
-function TopicSkeleton() {
-  return (
-    <div className="mx-auto max-w-3xl space-y-6 px-4 py-8 sm:px-6 sm:py-12">
-      <Skeleton className="h-5 w-48" />
-      <Skeleton className="h-10 w-3/4" />
-      <Skeleton className="h-40 w-full" />
-      <Skeleton className="h-64 w-full" />
-    </div>
   );
 }

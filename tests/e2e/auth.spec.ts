@@ -1,4 +1,5 @@
 import { expect, type Page, test } from "@playwright/test";
+import { expectAccessible } from "./a11y";
 import { E2E_PASSWORD, e2eAdmin, e2eStudent } from "./fixtures/users";
 
 /**
@@ -82,6 +83,8 @@ test("register shows field errors and keeps what was typed", async ({
   ).toBeVisible();
   await expect(page.getByLabel("Họ và tên")).toHaveValue("Trần Thị B");
   await expect(page.getByLabel("Số điện thoại")).toBeFocused();
+  // S8-06: the form with its errors showing, in both themes.
+  await expectAccessible(page);
 });
 
 test("a registered phone cannot register again", async ({ page }) => {

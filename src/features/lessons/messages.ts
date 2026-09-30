@@ -240,6 +240,9 @@ export const editorCopy = {
   notFoundTitle: "Không tìm thấy bài tập",
   notFoundBody: "Bài đã bị xóa hoặc đường dẫn không đúng.",
   loading: "Đang tải trình soạn bài",
+  errorTitle: "Không mở được trình soạn bài",
+  errorBody:
+    "Có thể do mất kết nối. Bản nháp đã lưu vẫn còn nguyên, bạn thử tải lại nhé.",
 } as const;
 
 /** The editor's "Cài đặt" tab (S5-03). */

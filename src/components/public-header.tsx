@@ -9,6 +9,12 @@ import { cn } from "@/lib/utils";
 export function PublicHeader() {
   return (
     <header className="sticky top-0 z-30 border-border/60 border-b bg-background/80 backdrop-blur-xl">
+      <a
+        href="#main"
+        className="sr-only z-50 rounded-full bg-primary px-4 py-2 text-primary-foreground focus:not-sr-only focus:fixed focus:top-2 focus:left-2"
+      >
+        {shellCopy.skipToContent}
+      </a>
       <div className="mx-auto flex h-16 max-w-6xl items-center gap-2 px-4 sm:px-6">
         <Logo narrow />
         <nav

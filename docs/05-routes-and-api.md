@@ -1,4 +1,4 @@
-# 05 — Routes, Server Actions & Route Handlers
+| `/privacy`, `/terms` | Static | Short Vietnamese policy pages. As built: `src/content/policies.ts` (numbered sections, update date; only what the site does, 06 §5), `PolicyPage`, linked from the public footer and under the registration button, in the sitemap |# 05 — Routes, Server Actions & Route Handlers
 
 Conventions:
 - **Pages** read data through `features/*/queries.ts` (`import 'server-only'`).
