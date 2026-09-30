@@ -316,3 +316,167 @@
     overflow-y: hidden;
   }
 }
+
+/* Theory pages (S8-02): the converted MDX, styled through its data-* hooks
+   (features/materials/components/mdx.tsx). Reading width, 1.7 line height. */
+@layer components {
+  .theory-content {
+    font-size: 1.0625rem;
+    line-height: 1.7;
+    overflow-wrap: anywhere;
+  }
+
+  .theory-content > * + * {
+    margin-top: 1rem;
+  }
+
+  .theory-content h2 {
+    margin-top: 2.5rem;
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 1.5rem;
+    line-height: 1.2;
+    letter-spacing: -0.015em;
+  }
+
+  .theory-content h3 {
+    margin-top: 1.75rem;
+    font-family: var(--font-display);
+    font-weight: 650;
+    font-size: 1.1875rem;
+    line-height: 1.3;
+  }
+
+  .theory-content h4 {
+    margin-top: 1.25rem;
+    font-weight: 650;
+  }
+
+  .theory-content [data-callout] h3:first-child,
+  .theory-content [data-callout] h4:first-child {
+    margin-top: 0;
+  }
+
+  .theory-content :is(ul, ol) {
+    padding-left: 1.5rem;
+  }
+
+  .theory-content ul {
+    list-style: disc;
+  }
+
+  .theory-content ol {
+    list-style: decimal;
+  }
+
+  .theory-content li + li {
+    margin-top: 0.25rem;
+  }
+
+  .theory-content li::marker {
+    color: var(--muted-foreground);
+  }
+
+  .theory-content a {
+    color: var(--primary);
+    font-weight: 500;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+
+  .theory-content a[data-external] span {
+    color: var(--muted-foreground);
+    font-size: 0.8125rem;
+    font-weight: 400;
+  }
+
+  .theory-content strong {
+    font-weight: 650;
+  }
+
+  .theory-content img {
+    max-width: 100%;
+    height: auto;
+    border-radius: 0.75rem;
+  }
+
+  .theory-content [data-callout],
+  .theory-content [data-formula] {
+    border-radius: 1.125rem;
+    border: 1px solid var(--border);
+    border-left-width: 4px;
+    padding: 1rem 1.125rem;
+    background: var(--surface);
+  }
+
+  .theory-content [data-callout] > * + *,
+  .theory-content [data-formula] > * + * {
+    margin-top: 0.75rem;
+  }
+
+  .theory-content [data-callout] [data-callout] {
+    background: var(--background);
+  }
+
+  .theory-content [data-callout="definition"] {
+    border-left-color: var(--primary);
+    background: var(--primary-soft);
+  }
+
+  .theory-content [data-callout="example"],
+  .theory-content [data-callout="practice"] {
+    border-left-color: var(--accent);
+  }
+
+  .theory-content [data-callout="note"],
+  .theory-content [data-callout="related"] {
+    border-left-color: var(--muted-foreground);
+  }
+
+  .theory-content [data-callout="warning"] {
+    border-left-color: var(--warning);
+  }
+
+  .theory-content [data-callout="solution"] {
+    border-left-color: var(--success);
+  }
+
+  .theory-content [data-formula] {
+    border-left-color: var(--primary);
+  }
+
+  .theory-content .katex {
+    font-size: 1.05em;
+  }
+
+  /* Long display formulas and wide tables scroll on their own at 360 px. */
+  .theory-content .katex-display {
+    max-width: 100%;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding: 0.25rem 0;
+  }
+
+  .theory-content [data-table] {
+    max-width: 100%;
+    overflow-x: auto;
+  }
+
+  .theory-content table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.9375rem;
+  }
+
+  .theory-content :is(th, td) {
+    border: 1px solid var(--border);
+    padding: 0.5rem 0.75rem;
+    text-align: left;
+    vertical-align: top;
+  }
+
+  .theory-content th {
+    background: var(--muted);
+    font-weight: 650;
+  }
+}

@@ -44,7 +44,13 @@ export function Formula({ children }: { children: React.ReactNode }) {
 /** Tables sit in a labelled region so a wide one can scroll on its own. */
 export function Table({ children }: { children: React.ReactNode }) {
   return (
-    <section data-table aria-label={t.table}>
+    <section
+      data-table
+      aria-label={t.table}
+      // A table wider than the screen scrolls, so it must take focus (axe).
+      // biome-ignore lint/a11y/noNoninteractiveTabindex: scroll container
+      tabIndex={0}
+    >
       <table>{children}</table>
     </section>
   );

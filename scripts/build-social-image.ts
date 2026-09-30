@@ -5,7 +5,11 @@
  */
 import { writeFile } from "node:fs/promises";
 import { chromium } from "@playwright/test";
-import { landingCopy, onboardingCopy } from "../src/lib/messages.ts";
+import {
+  landingCopy,
+  onboardingCopy,
+  publicCopy,
+} from "../src/lib/messages.ts";
 
 const browser = await chromium.launch();
 try {
@@ -56,7 +60,7 @@ try {
     {
       eyebrow: landingCopy.eyebrow,
       headline: onboardingCopy.headline,
-      footer: landingCopy.footer,
+      footer: publicCopy.footer,
     },
   );
   await page.evaluate(async () => {
@@ -73,7 +77,7 @@ try {
   });
   await writeFile(
     "src/app/opengraph-image.alt.txt",
-    `${landingCopy.footer}. ${onboardingCopy.headline.join(" ")}\n`,
+    `${publicCopy.footer}. ${onboardingCopy.headline.join(" ")}\n`,
   );
 } finally {
   await browser.close();

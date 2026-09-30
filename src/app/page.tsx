@@ -9,8 +9,8 @@ import {
   Trophy,
 } from "lucide-react";
 import Link from "next/link";
-import { LogoMark } from "@/components/logo";
 import { Mascot, type MascotPose } from "@/components/mascot";
+import { PublicFooter } from "@/components/public-footer";
 import { PublicHeader } from "@/components/public-header";
 import { buttonVariants } from "@/components/ui/button";
 import { cardClass } from "@/components/ui/card";
@@ -45,12 +45,7 @@ export default function Home() {
         <Topics />
         <Closing />
       </main>
-      <footer className="border-border/60 border-t">
-        <div className="mx-auto flex max-w-6xl items-center gap-3 px-4 py-8 text-muted-foreground text-sm sm:px-6">
-          <LogoMark className="size-8" />
-          {t.footer}
-        </div>
-      </footer>
+      <PublicFooter />
     </>
   );
 }

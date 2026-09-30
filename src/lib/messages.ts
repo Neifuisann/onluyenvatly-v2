@@ -245,5 +245,16 @@ export const landingCopy = {
     saved: "Đã lưu",
     timer: "32:15",
   },
+} as const;
+
+/** Frame of the public pages (header and footer). */
+export const publicCopy = {
   footer: "Ôn Luyện Vật Lý · Luyện đề Vật lý THPT",
+  footerNav: "Trang công khai",
+  footerLinks: {
+    theory: "Lý thuyết",
+    gallery: "Thư viện ảnh",
+    privacy: "Quyền riêng tư",
+    terms: "Điều khoản",
+  },
 } as const;
