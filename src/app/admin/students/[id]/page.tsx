@@ -18,6 +18,7 @@ import { StudentProfile } from "@/features/students/components/student-profile";
 import { StudentSessions } from "@/features/students/components/student-sessions";
 import { StudentIdSchema } from "@/features/students/domain/input";
 import { studentsCopy as t } from "@/features/students/messages";
+import { formatDateTime } from "@/lib/dates";
 
 export const metadata: Metadata = { title: t.title };
 
@@ -42,7 +43,21 @@ export default async function AdminStudentPage({
       <PageHeader
         back={{ href: "/admin/students?view=all", label: t.back }}
         title={student.fullName}
-        badges={<StatusBadge status={student.status} />}
+        badges={
+          <>
+            <StatusBadge status={student.status} />
+            {student.deletionRequestedAt && (
+              <span className="inline-flex rounded-full bg-danger-soft px-3 py-1 font-semibold text-danger-text text-sm">
+                {t.deletionBadge}
+              </span>
+            )}
+          </>
+        }
+        lead={
+          student.deletionRequestedAt
+            ? t.deletionAt(formatDateTime(student.deletionRequestedAt))
+            : undefined
+        }
       />
 
       <StudentProfile student={student} />

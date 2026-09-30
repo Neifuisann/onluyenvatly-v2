@@ -138,6 +138,7 @@ export const shellCopy = {
   roleStudent: "Học sinh",
   roleAdmin: "Giáo viên",
   accountMenu: "Tài khoản",
+  accountSettings: "Cài đặt tài khoản",
 } as const;
 
 /** Numbered pages (`Pagination`). */

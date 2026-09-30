@@ -36,6 +36,7 @@ const STUDENT_PAGES = [
   "/review",
   "/leaderboard",
   "/profile",
+  "/settings",
 ];
 /** AI import (S7-04): a same-origin POST, so only the session decides. */
 const IMPORT_BODY = { path: `2026/10/${UUID}.pdf` };

@@ -1,10 +1,11 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { EmptyState } from "@/components/empty-state";
-import { PageHeader } from "@/components/page-header";
+import { PageHeader, SectionCard } from "@/components/page-header";
 import { buttonVariants } from "@/components/ui/button";
 import { requireAdmin } from "@/features/auth/guards";
 import {
+  getDeletionRequests,
   getPendingCount,
   getPendingStudents,
   getStudents,
@@ -38,9 +39,50 @@ export default async function AdminStudentsPage({
   return (
     <div className="mx-auto flex max-w-4xl flex-col gap-6">
       <PageHeader title={t.title} lead={t.lead} />
+      <DeletionRequests />
       <StudentsTabs filters={filters} pendingCount={pendingCount} />
       {filters.view === "pending" ? <PendingView /> : <AllView f={filters} />}
     </div>
+  );
+}
+
+/**
+ * Students who asked to be deleted (S8-04), oldest first; the teacher opens
+ * each one and uses "Xóa học sinh" there. Hidden when there are none (one
+ * lookup on a partial index).
+ */
+async function DeletionRequests() {
+  const rows = await getDeletionRequests();
+  if (rows.length === 0) return null;
+  return (
+    <SectionCard
+      id="deletion-requests"
+      title={t.deletionTitle(rows.length)}
+      lead={t.deletionLead}
+      className="border-danger/40 dark:border-danger/40"
+    >
+      <ul className="divide-y divide-border">
+        {rows.map((r) => (
+          <li key={r.id} className="py-2 first:pt-0 last:pb-0">
+            <Link
+              href={`/admin/students/${r.id}`}
+              prefetch={false}
+              className="flex min-h-11 flex-wrap items-center gap-x-3 rounded-md px-2 hover:bg-muted"
+            >
+              <span className="font-semibold">{r.fullName}</span>
+              {r.className && (
+                <span className="text-muted-foreground text-sm">
+                  {r.className}
+                </span>
+              )}
+              <span className="ml-auto text-muted-foreground text-sm">
+                {t.deletionAt(formatDateTime(r.requestedAt))}
+              </span>
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </SectionCard>
   );
 }
 
