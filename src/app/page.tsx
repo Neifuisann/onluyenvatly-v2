@@ -60,7 +60,7 @@ function Hero() {
       <div className="mx-auto grid max-w-6xl items-center gap-12 px-4 pt-12 pb-16 sm:px-6 sm:pt-20 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)] lg:pb-24">
         <div className="animate-rise space-y-6 text-center lg:text-left">
           <p className="eyebrow text-primary">{t.eyebrow}</p>
-          <h1 className="font-bold font-display text-[2.5rem] leading-[1.05] tracking-tight sm:text-6xl">
+          <h1 className="font-bold font-display text-[1.625rem] leading-[1.35] tracking-tight min-[400px]:text-3xl sm:text-[2.5rem] xl:text-[2.75rem]">
             <span className="block">{onboardingCopy.headline[0]}</span>
             <span className="block text-primary">
               {onboardingCopy.headline[1]}
