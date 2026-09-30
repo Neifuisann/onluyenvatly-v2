@@ -111,6 +111,25 @@ export function RegisterForm() {
       >
         {pending ? authCopy.registerPending : authCopy.registerSubmit}
       </Button>
+      <p className="text-center text-muted-foreground text-xs">
+        {authCopy.agreePrefix}{" "}
+        <Link
+          href="/terms"
+          prefetch={false}
+          className="font-medium text-primary underline underline-offset-4"
+        >
+          {authCopy.agreeTerms}
+        </Link>{" "}
+        {authCopy.agreeAnd}{" "}
+        <Link
+          href="/privacy"
+          prefetch={false}
+          className="font-medium text-primary underline underline-offset-4"
+        >
+          {authCopy.agreePrivacy}
+        </Link>
+        .
+      </p>
       <p className="text-center text-muted-foreground text-sm">
         {authCopy.haveAccount}{" "}
         <Link

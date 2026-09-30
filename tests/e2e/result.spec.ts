@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { expectAccessible } from "./a11y";
 import { ANSWER_MARKER } from "./fixtures/lessons";
 import { E2E_PASSWORD, e2eAdmin } from "./fixtures/users";
 import {
@@ -74,6 +75,8 @@ for (const { key, message } of [
       ).toHaveCount(0);
     await expect(choices.getByRole("button")).toHaveCount(0);
     await expect(page.getByRole("link", { name: "Làm lại" })).toBeVisible();
+    // S8-06: the result screen, review hidden, in both themes.
+    await expectAccessible(page);
     await page.waitForLoadState("networkidle");
     expect(bodies.length).toBeGreaterThan(0);
     for (const body of bodies) {

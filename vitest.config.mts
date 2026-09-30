@@ -101,6 +101,13 @@ export default defineConfig({
           branches: 95,
           statements: 95,
         },
+        // `/admin/audit` paging, filters and target links (M11).
+        "src/features/audit/domain/**": {
+          lines: 95,
+          functions: 95,
+          branches: 95,
+          statements: 95,
+        },
         "src/features/auth/core/**": {
           lines: 95,
           functions: 95,

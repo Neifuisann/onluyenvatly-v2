@@ -61,7 +61,7 @@ Primary and destructive buttons use opaque `--primary-hover` / `--danger-hover` 
 - 4 px grid. Reading and tests up to 720–1024 px wide; catalog, dashboard and admin up to 1152 px.
 - Radius: 8 / 12 (inputs, `rounded-md`) / 18 (cards, `rounded-lg`) / 24 (heroes, `rounded-xl`) / 32 px; buttons, chips and segmented controls are pills.
 - Shadows: `shadow-card` (cards), `shadow-raised` (heroes, floating bars, hover), `shadow-popover`. Light mode uses hairline borders plus shadow; dark mode uses borders.
-- Motion: 150–200 ms state changes, a press-in on buttons, `animate-rise`/`animate-pop` on first paint of key blocks, the score ring sweep. Entrance motion uses transforms only so text stays readable throughout. All off under `prefers-reduced-motion` (global rule in `globals.css`).
+- Motion: 150–200 ms state changes, a press-in on buttons, `animate-rise`/`animate-pop` on first paint of key blocks, the score ring sweep. Entrance motion uses transforms only so text stays readable throughout. All off under `prefers-reduced-motion` (global rule in `globals.css`: durations and delays 0s, not 0.01ms, so a theme switch never holds the old color for a frame).
 - Shell: desktop sidebar on the page background with the active item on a raised pill, content in a rounded panel; phones get a slim blurred top bar and a floating blurred tab bar in the thumb zone.
 
 ### 3.4 Iconography & imagery
@@ -237,6 +237,7 @@ As built (S5-03): "Cài đặt" is a second ARIA tab (←/→ between tabs; both
 The admin area uses the same Lagoon language as the student side. Every page starts with `PageHeader` (optional back link, display title with status chips, lead, actions on the right); settings blocks and panels are `SectionCard`s. Link-based switches (lesson status, student view/status/grade, explanation views, stats sort) are one muted pill track with the current choice raised (`SegmentedNav`, like the catalog's grade switch). Page-level empty states show the bunny (telescope for no matches, all-clear for an empty queue, graph for stats without attempts).
 - `/admin`: greeting lead, a navy hero with the approval queue ("5 học sinh đang chờ duyệt" → "Duyệt ngay", waiting bunny) or today's submissions (graph bunny), icon tiles, the 30-day chart (today's bar in sun yellow) and the hardest questions with a rate bar.
 - `/admin/lessons`: pill search, status switch, a table of 20 rows per page with topic glyphs, status badges (dot + text), and numbered pages (`Pagination`: first, last, current ± 1, "…" for longer runs; "Trang trước/sau" become arrows on phones). The unfiltered list stays reorderable per page.
+- `/admin/audit` ("Nhật ký"): an area switch, then one card list like the results (initials avatar, the action in bold with its time, the actor and role, the target as a link plus the recorded ids/counts as small mono chips) and numbered pages; the sleeping bunny when the log is empty, the telescope for an empty area.
 - Students, results and pending rows carry initials avatars; result scores are tinted pills by the result screen's bands (≥ 8 / ≥ 5 / below). The AI import uses a drop zone and a three-step strip.
 
 ## 6. Content & tone (Vietnamese UI copy)
@@ -251,4 +252,4 @@ The admin area uses the same Lagoon language as the student side. Every page sta
 ## 8. Design deliverables per sprint
 - Sprint 1: tokens + typography + AppShell + auth screens in Storybook-less "/dev/ui" page (a hidden route that lists components; free and no extra tooling).
 - Sprint 3: runner and result screens tested with 3 students on real phones (hallway test, 15 min each).
-- Sprint 8: accessibility pass (axe in Playwright + manual keyboard and TalkBack check).
+- Sprint 8: accessibility pass (axe in Playwright + manual keyboard and TalkBack check). As built: `tests/e2e/a11y.ts` `expectAccessible` (both themes, serious/critical, no sideways scroll) on every page spec; skip links on the app shell and public pages; the TalkBack check is still manual.

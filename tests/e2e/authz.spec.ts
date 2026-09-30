@@ -25,6 +25,8 @@ const ADMIN_PAGES = [
   "/admin/explanations",
   "/admin/explanations?lesson=1",
   "/admin/import",
+  "/admin/audit",
+  "/admin/audit?area=students&page=2",
 ];
 /** A download: answers JSON, never a redirect (S6-04). */
 const EXPORT = "/admin/results/export?q=an";
@@ -34,6 +36,7 @@ const STUDENT_PAGES = [
   "/review",
   "/leaderboard",
   "/profile",
+  "/settings",
 ];
 /** AI import (S7-04): a same-origin POST, so only the session decides. */
 const IMPORT_BODY = { path: `2026/10/${UUID}.pdf` };

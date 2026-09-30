@@ -1,6 +1,11 @@
 /** Vietnamese copy for `/admin/students` and its detail page (S6-01/02). */
 
 export const studentsCopy = {
+  deletionTitle: (n: number) => `Yêu cầu xóa tài khoản (${n})`,
+  deletionLead:
+    "Học sinh tự gửi yêu cầu trong Cài đặt. Mở từng em để xóa, hoặc bỏ qua nếu em đã hủy.",
+  deletionAt: (when: string) => `Gửi lúc ${when}`,
+  deletionBadge: "Đã yêu cầu xóa tài khoản",
   title: "Học sinh",
   lead: "Duyệt tài khoản mới và quản lý học sinh.",
   loading: "Đang tải danh sách học sinh",

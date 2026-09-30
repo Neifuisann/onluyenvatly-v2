@@ -208,6 +208,22 @@ export const e2eStudents = [
     status: "active",
     grade: 12,
   },
+  // S8-04 settings spec, one per Playwright project (grade 10, off the
+  // leaderboard spec's board). The seed resets profile, privacy and deletion.
+  {
+    key: "account",
+    phone: "0900000026",
+    fullName: "Học Sinh Cài Đặt",
+    status: "active",
+    grade: 10,
+  },
+  {
+    key: "account2",
+    phone: "0900000027",
+    fullName: "Học Sinh Cài Đặt Hai",
+    status: "active",
+    grade: 10,
+  },
   {
     key: "pending",
     phone: "0900000004",
@@ -235,7 +251,8 @@ export function projectStudentKey(
     | "access"
     | "remove"
     | "results"
-    | "review",
+    | "review"
+    | "account",
   project: string,
 ): E2eStudentKey {
   return project === "mobile" ? (`${base}2` as E2eStudentKey) : base;

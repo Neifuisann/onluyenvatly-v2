@@ -1,0 +1,1 @@
+CREATE INDEX "audit_log_area_created_idx" ON "audit_log" USING btree (split_part("action", '.', 1),"created_at" DESC NULLS FIRST,"id" DESC NULLS FIRST);

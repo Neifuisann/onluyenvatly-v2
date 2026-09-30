@@ -2,6 +2,7 @@ import {
   ChevronsUpDown,
   LogOut,
   MonitorSmartphone,
+  Settings,
   Shield,
 } from "lucide-react";
 import Link from "next/link";
@@ -96,6 +97,10 @@ export function UserMenu({
             {variant === "admin" ? shellCopy.toStudentView : shellCopy.toAdmin}
           </Link>
         )}
+        <Link href="/settings" prefetch={false} className={item}>
+          <Settings aria-hidden className="size-5" strokeWidth={1.75} />
+          {shellCopy.accountSettings}
+        </Link>
         <form action={logout}>
           <button type="submit" className={item}>
             <LogOut aria-hidden className="size-5" strokeWidth={1.75} />

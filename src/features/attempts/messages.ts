@@ -79,6 +79,8 @@ export const saveCopy = {
 /** `/attempts/[id]/result` (07 §5.4). */
 export const resultCopy = {
   title: "Kết quả bài làm",
+  loading: "Đang tải kết quả bài làm",
+  errorTitle: "Không tải được kết quả bài làm",
   outOf: "/ 10",
   scoreLabel: "Điểm",
   correct: (n: number, total: number) => `${n}/${total} câu đúng`,

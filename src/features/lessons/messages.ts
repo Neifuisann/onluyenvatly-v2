@@ -240,6 +240,9 @@ export const editorCopy = {
   notFoundTitle: "Không tìm thấy bài tập",
   notFoundBody: "Bài đã bị xóa hoặc đường dẫn không đúng.",
   loading: "Đang tải trình soạn bài",
+  errorTitle: "Không mở được trình soạn bài",
+  errorBody:
+    "Có thể do mất kết nối. Bản nháp đã lưu vẫn còn nguyên, bạn thử tải lại nhé.",
 } as const;
 
 /** The editor's "Cài đặt" tab (S5-03). */
@@ -453,4 +456,30 @@ export const statsCopy = {
   errorTitle: "Không tải được thống kê",
   loading: "Đang tải thống kê",
   percent: (x: number) => `${Math.round(x * 100)}%`,
+} as const;
+
+/** Public share page `/share/lessons/[id]` and its preview image (S8-03). */
+export const shareCopy = {
+  eyebrow: "Đề luyện tập Vật lý",
+  facts: "Thông tin bài",
+  questions: "Số câu",
+  duration: "Thời gian",
+  noLimit: "Không giới hạn",
+  previewTitle: (n: number) =>
+    n > 1 ? `Xem trước ${n} câu đầu` : "Xem trước đề bài",
+  previewLead: "Đáp án và lời giải chỉ hiện sau khi nộp bài.",
+  noPreview:
+    "Bài này không có câu xem trước: đề thi và bài theo lịch chỉ mở khi bắt đầu làm.",
+  question: (n: number) => `Câu ${n}`,
+  shortHint: "Học sinh tự điền đáp số.",
+  ctaTitle: "Làm trọn bài này",
+  ctaBody:
+    "Đăng nhập để làm bài, được chấm điểm ngay khi nộp và ôn lại câu sai.",
+  ctaStart: "Làm bài",
+  ctaRegister: "Tạo tài khoản",
+  imageAlt: (title: string) => `Đề Vật lý: ${title}`,
+  imageQuestions: (n: number) => `${n} câu`,
+  shareButton: "Chia sẻ",
+  copied: "Đã sao chép liên kết chia sẻ.",
+  copyFailed: "Không sao chép được, bạn tự sao chép liên kết này:",
 } as const;

@@ -119,13 +119,9 @@ describe("LEGACY_REDIRECTS (05 §1)", () => {
   });
 
   it("points every rule at a route that exists", () => {
-    // Planned public pages (05 §1) that the UI work hasn't built yet.
-    const pending = ["/ly-thuyet"];
     for (const { destination } of LEGACY_REDIRECTS) {
       const path = destination.replace(/:\w+\*?/g, "x");
-      expect(routeExists(path) || pending.includes(path), destination).toBe(
-        true,
-      );
+      expect(routeExists(path), destination).toBe(true);
     }
   });
 

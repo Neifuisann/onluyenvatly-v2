@@ -1,7 +1,9 @@
+import { Settings } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { EmptyState } from "@/components/empty-state";
 import { buttonVariants } from "@/components/ui/button";
+import { accountCopy } from "@/features/account/messages";
 import { requireStudent } from "@/features/auth/guards";
 import {
   AccuracyBars,
@@ -76,6 +78,18 @@ export default async function ProfilePage({
             className="ml-auto hidden animate-pop sm:block"
           />
         )}
+        <Link
+          href="/settings"
+          prefetch={false}
+          aria-label={accountCopy.openSettings}
+          className={buttonVariants({
+            variant: "ghost",
+            size: "icon",
+            className: summary.rating === null ? "ml-auto" : "ml-auto sm:ml-0",
+          })}
+        >
+          <Settings aria-hidden />
+        </Link>
       </header>
 
       <section aria-label={t.overview}>

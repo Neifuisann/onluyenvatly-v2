@@ -80,6 +80,10 @@ export const authCopy = {
   registerSubmit: "Đăng ký",
   registerPending: "Đang gửi…",
   haveAccount: "Đã có tài khoản?",
+  agreePrefix: "Khi đăng ký, bạn đồng ý với",
+  agreeTerms: "Điều khoản sử dụng",
+  agreeAnd: "và",
+  agreePrivacy: "Quyền riêng tư",
   loginLink: "Đăng nhập",
   pendingTitle: "Đã gửi đăng ký",
   pendingBody:
@@ -138,6 +142,7 @@ export const shellCopy = {
   roleStudent: "Học sinh",
   roleAdmin: "Giáo viên",
   accountMenu: "Tài khoản",
+  accountSettings: "Cài đặt tài khoản",
 } as const;
 
 /** Numbered pages (`Pagination`). */
@@ -188,6 +193,15 @@ export const onboardingCopy = {
     },
   ],
   welcomeCta: "Chọn bài đầu tiên",
+} as const;
+
+/** Error boundaries without a feature of their own (root, global, public). */
+export const stateCopy = {
+  errorTitle: "Có lỗi xảy ra",
+  errorBody:
+    "Trang chưa tải được, có thể do mất kết nối. Bạn thử lại sau giây lát nhé.",
+  retry: "Thử lại",
+  home: "Về trang chủ",
 } as const;
 
 export const notFoundCopy = {
@@ -245,5 +259,25 @@ export const landingCopy = {
     saved: "Đã lưu",
     timer: "32:15",
   },
+} as const;
+
+/** `/gallery` (S8-03): v1's handouts. */
+export const galleryCopy = {
+  title: "Thư viện ảnh",
+  lead: "Phiếu tóm tắt kiến thức Vật lý để xem nhanh hoặc lưu về máy. Chạm vào ảnh để xem cỡ lớn.",
+  item: (n: number) => `Phiếu kiến thức ${n}`,
+  opensNewTab: "(mở ảnh cỡ lớn trong thẻ mới)",
+} as const;
+
+/** Frame of the public pages (header and footer). */
+export const publicCopy = {
   footer: "Ôn Luyện Vật Lý · Luyện đề Vật lý THPT",
+  footerNav: "Trang công khai",
+  updated: (date: string) => `Cập nhật ${date}`,
+  footerLinks: {
+    theory: "Lý thuyết",
+    gallery: "Thư viện ảnh",
+    privacy: "Quyền riêng tư",
+    terms: "Điều khoản",
+  },
 } as const;
