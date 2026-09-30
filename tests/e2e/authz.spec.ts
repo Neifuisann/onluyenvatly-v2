@@ -25,6 +25,8 @@ const ADMIN_PAGES = [
   "/admin/explanations",
   "/admin/explanations?lesson=1",
   "/admin/import",
+  "/admin/audit",
+  "/admin/audit?area=students&page=2",
 ];
 /** A download: answers JSON, never a redirect (S6-04). */
 const EXPORT = "/admin/results/export?q=an";

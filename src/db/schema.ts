@@ -158,7 +158,18 @@ export const auditLog = pgTable(
     data: jsonb("data"),
     createdAt: timestamptz("created_at").notNull().defaultNow(),
   },
-  (t) => [index("audit_log_created_at_idx").on(t.createdAt)],
+  (t) => [
+    index("audit_log_created_at_idx").on(t.createdAt),
+    // `/admin/audit?area=` newest first (migration 0011): the area is the
+    // action's prefix, the same expression as `features/audit/queries.ts`.
+    // NULLS FIRST is what a plain `ORDER BY … DESC` means, so the unfiltered
+    // read (the index above, scanned backward) uses the same ORDER BY.
+    index("audit_log_area_created_idx").on(
+      sql`split_part(${t.action}, '.', 1)`,
+      t.createdAt.desc().nullsFirst(),
+      t.id.desc().nullsFirst(),
+    ),
+  ],
 ).enableRLS();
 
 export const lessonStatus = pgEnum("lesson_status", [
