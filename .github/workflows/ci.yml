@@ -123,7 +123,7 @@ jobs:
           node scripts/load-fixture.ts --users "$VUS" --staging-host "$host"
       - name: Five-minute load rehearsal
         run: |
-          docker run --rm -v "$PWD:/work" -w /work -e BASE_URL -e VUS -e TARGET=staging \
+          docker run --rm --user "$(id -u):$(id -g)" -v "$PWD:/work" -w /work -e BASE_URL -e VUS -e TARGET=staging \
             grafana/k6:1.6.1 run --quiet --summary-export=/work/tmp/load-summary.json tests/load/test-day.js
       - name: Verify all saved answers, scores and ratings
         if: always()
