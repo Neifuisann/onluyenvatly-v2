@@ -7,6 +7,7 @@ import {
   quotaWarnings,
 } from "../src/features/operations/domain/quotas.ts";
 import { vnDateKey } from "../src/lib/dates.ts";
+import { pgErrorCode } from "../src/lib/pg-error.ts";
 
 const url = process.env.DATABASE_URL_DIRECT;
 if (!url) throw new Error("Set DATABASE_URL_DIRECT.");
@@ -83,9 +84,13 @@ try {
       storageSource: snapshot.storageSource,
     }),
   );
-} catch {
+} catch (error) {
+  const code = pgErrorCode(error);
   console.error(
-    "Quota snapshot failed. Check the database configuration privately.",
+    JSON.stringify({
+      evt: "quota_snapshot_failure",
+      code: code && /^[A-Z0-9_]{2,40}$/.test(code) ? code : "UNKNOWN",
+    }),
   );
   process.exitCode = 1;
 } finally {
