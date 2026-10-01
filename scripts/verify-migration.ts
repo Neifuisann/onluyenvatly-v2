@@ -215,6 +215,11 @@ try {
                 Number(event.after) !== Number(row.new_rating))
             )
               fail("rating history values mismatch");
+            if (
+              event &&
+              event.user_id !== userMap.get(String(row.student_id))?.id
+            )
+              fail("rating history ownership mismatch");
           }
           const expectedRatings = new Map<string, number>();
           for (const r of ratings) {

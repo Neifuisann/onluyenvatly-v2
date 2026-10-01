@@ -123,6 +123,7 @@ it("preserves native pilot attempts and rebases their rating on the copied v1 sn
       lessonId: version.lessonId,
       lessonVersionId: version.id,
       status: "submitted",
+      counterRecorded: true,
       items: [{ q: "q_1", p: 1 }],
       answers: ["A"],
       earned: [1],

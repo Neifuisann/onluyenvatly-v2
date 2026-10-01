@@ -218,6 +218,7 @@ export async function migrateHistory<Q extends PgQueryResultHKT>(
         lessonVersionId: baseVersion,
         mode: row.mode === "practice" ? "practice" : "test",
         status: "submitted",
+        counterRecorded: true,
         items: normalized.map((i) => ({
           q: i.question.id,
           p: i.points,
@@ -452,6 +453,9 @@ export async function migrateHistory<Q extends PgQueryResultHKT>(
   }
   await db.execute(
     sql`update lessons l set attempt_count = (select count(*)::int from attempts a where a.lesson_id = l.id and a.status = 'submitted') where l.legacy_id is not null`,
+  );
+  await db.execute(
+    sql`update attempts a set counter_recorded = true from lessons l where a.lesson_id = l.id and l.legacy_id is not null and a.status = 'submitted'`,
   );
   return report;
 }

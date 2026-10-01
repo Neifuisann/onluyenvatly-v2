@@ -79,6 +79,7 @@ const v2Client = postgres(v2Url, {
 const db = drizzle({ client: v2Client, schema });
 
 class DryRunRollback extends Error {}
+let databaseCommitted = false;
 
 try {
   await v1.begin(
@@ -89,12 +90,14 @@ try {
           V1Row[]
         >`select * from students order by created_at nulls first, id`,
         lessons: await sourceTx<V1Row[]>`select * from lessons order by id`,
+        // v1 writes ISO UTC into timestamp-without-time-zone columns. Cast
+        // explicitly so a Windows/Asia-Bangkok client cannot shift history 7h.
         history: await sourceTx<
           V1Row[]
-        >`select * from rating_history order by "timestamp", id`,
+        >`select id, student_id, lesson_id, previous_rating, rating_change, new_rating, performance, "timestamp" at time zone 'UTC' as timestamp from rating_history order by "timestamp", id`,
         ratings: await sourceTx<
           V1Row[]
-        >`select * from ratings order by student_id`,
+        >`select student_id, rating, last_updated at time zone 'UTC' as last_updated from ratings order by student_id`,
       };
       console.log(
         `v1: ${source.students.length} students, ${source.lessons.length} lessons`,
@@ -143,6 +146,7 @@ try {
           phase = "commit";
           if (dryRun) throw new DryRunRollback();
         });
+        databaseCommitted = !dryRun;
       } catch (e) {
         if (!(e instanceof DryRunRollback)) throw e;
       } finally {
@@ -200,9 +204,17 @@ try {
       if (errors > 0 || media.failed.length > 0) process.exitCode = 2;
     },
   );
-} catch {
+} catch (error) {
+  const code =
+    error &&
+    typeof error === "object" &&
+    "code" in error &&
+    typeof error.code === "string" &&
+    /^[A-Z0-9_]{1,40}$/.test(error.code)
+      ? error.code
+      : "MIGRATION_FAILED";
   console.error(
-    "Migration failed and database changes were rolled back. Inspect configuration and source compatibility privately.",
+    JSON.stringify({ evt: "migration_failure", code, databaseCommitted }),
   );
   process.exitCode = 1;
 } finally {

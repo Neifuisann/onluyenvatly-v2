@@ -34,6 +34,7 @@ const blank = (value: unknown) =>
   value === null ||
   value === undefined ||
   value === "" ||
+  value === "No answer" ||
   value === "Chưa trả lời";
 function choice(value: unknown, options: unknown[]): number | null {
   if (blank(value)) return null;

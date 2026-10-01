@@ -104,4 +104,13 @@ describe("legacy result preservation", () => {
       normalizeLegacyResult([{ ...row, userAnswer: "unknown" }], [current], id),
     ).toThrow("unresolved result choice");
   });
+  it("recognizes the v1 runner's literal blank-answer marker", () => {
+    expect(
+      normalizeLegacyResult(
+        [{ ...row, userAnswer: "No answer" }],
+        [current],
+        id,
+      )[0]?.answer,
+    ).toBeNull();
+  });
 });
