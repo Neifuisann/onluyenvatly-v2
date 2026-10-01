@@ -9,7 +9,8 @@ submit handlers, and result page. A completion counter prevents missing requests
 or script exceptions from producing a false pass. There is one iteration per
 student, a 60-second staggered start, saves every five seconds and a ten-second
 submit burst at five minutes. Thresholds: zero failed checks, HTTP failure rate
-below 0.1%, endpoint p95 below 800 ms, start below 300 ms and submit below 500 ms.
+below 0.1%, and server-time (`server_ms`, below) p95 below 800 ms per endpoint,
+start below 300 ms and submit below 500 ms.
 
 Fixtures use an isolated local database, or an explicitly named Neon staging
 host. Never point the app or fixture command at production. Each fixture run
@@ -72,6 +73,49 @@ zero HTTP failures, exact answers/scores and 300 rating events/rows. Latency
 failed: start p95 785.03 ms, runner 831.01 ms, save 353.65 ms, submit 4.02 s,
 result 2.79 s. Both summary and count artifacts were uploaded successfully.
 
+Deployed `c3035a2` (lesson counter moved out of the submit transaction),
+run `36804546442`, 300 students: 300/300, exact verification, zero HTTP
+failures; submit p95 425.6 ms passed. Start 750 ms and result 1.39 s failed.
+
+### Server time, not runner distance (2026-10-01)
+
+GitHub-hosted runners are in the Americas (westus, westus3, mexicocentral in
+these runs); the functions run in `sin1`. A save, which is one guarded UPDATE,
+never took less than 190–280 ms on the client, so client durations were mostly
+distance. `tests/load/test-day.js` now takes each VU's fastest `/api/health`
+time to first byte as its baseline (same region, one `select 1`) and records
+`server_ms` = time to first byte − baseline per endpoint. The 08 §1 and 11 §5
+budgets gate on `server_ms`: start < 300 ms, submit < 500 ms, everything else
+< 800 ms. Client durations stay in the summary. Runner and result stream after
+the cached PPR shell, so their `server_ms` is the shell, and their data reads
+are traced separately (`PERFORMANCE_DIAGNOSTICS=1`, preview only, operation
+name and duration only).
+
+| Run (deployed) | Completed | DB verification | start | runner | save | submit | result |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| `81f5310`, 100, run `36809754754` | 100/100 | exact | **747** | 33 | 60 | 140 | 197 |
+| `212d27c`, 300, run `36810735769` | 300/300 | exact | **539** | 51 | 57 | 137 | 190 |
+
+`server_ms` p95 in ms; zero failed checks and zero HTTP failures in both runs.
+Client p95 from the US runner at 300 students: start 758, runner 827, save 271,
+submit 348, result 1,378 ms.
+
+Start is the only failed gate, and our code is not where the time goes. In
+the 300-student run, function logs put the session check at p95 10 ms and the
+start service (rate limit, open attempt, counts, insert) at p95 64 ms. The
+request itself never took less than 390 ms. Save and submit are route
+handlers with no such floor (median 11 and 64 ms). The floor appears only on
+the Server Action POST to the PPR lesson page, which is the platform's PPR
+action path. Locally (no PPR resume) the same start took p95 19.6 ms. The fix is
+to post the start form to a route handler like save and submit, with a
+redirect back for errors when JavaScript is off. That changes the start
+button's UX and its E2E specs, so it is left as a follow-up rather than
+folded into this PR.
+
+The submit route no longer fails a committed grade when the post-commit
+counter write fails: it logs the error code and the daily flush repairs the
+counter.
+
 ## S9-02: performance
 
 The bundle checker includes shared framework and entry chunks at gzip size.
@@ -80,6 +124,20 @@ constant stopped importing Node cryptography polyfills and Zod. Public media,
 avatar limits and question-type constants likewise have browser-safe modules.
 The root error controls load on demand. The runner is 171.7 KB against 180 KB;
 14 of 34 routes still exceed their budgets, including student catalog/overview.
+
+Local production build of the current head (2026-10-01): 9 of 34 routes over
+budget, all student pages at 157–168 KB against 150 KB (lesson overview 167.9,
+result 166.2, settings 163.9, review 159.3, register 158.8, change-password
+158.4, login 158.1, profile 157.7, `/ly-thuyet` 157.2). The dashboard and catalog
+pass at about 144 KB. Every failing route carries the same 8.4 KB chunk, which is
+`tailwind-merge`, reached through `cn()` in 25 client components. A client-only
+`cn` without merging would bring login, profile and `/ly-thuyet` under budget,
+but it changes class-conflict resolution and needs a visual pass, so it is not
+in this PR.
+
+Deployed three-run mobile Lighthouse (CI run `36806327017`, `fecc62c`): `/`
+performance 100, LCP 1.69 s; `/lessons` 89, LCP 3.67 s; runner 95, LCP 2.77 s
+(target 1.8 s). CLS is zero on all three.
 
 Initial mobile Lighthouse on the local production build: performance 85,
 accessibility 100, LCP 4.14 s, CLS 0. This is a failure of the performance target.
@@ -138,6 +196,11 @@ dropped. Explicit SDK data-collection settings disable personal data. No DSN
 is configured, so receipt of a real alert is still unverified. UptimeRobot and
 Vercel usage alerts also require external account configuration.
 
+The quota alert path is verified: the manual `quota` rehearsal (CI run
+`36803828406`) read the production snapshot and opened the test alert issue
+#21 ("Daily quota budget alert", test alert, no budget exceeded). The snapshot
+was 148 MB of database, 1,287 attempts that day and no AI calls.
+
 ## S9-06: legacy history
 
 Implementation includes paged, read-only source snapshots, transactional
@@ -151,16 +214,41 @@ suite and coverage gates pass with 1,163 tests.
 A read-only census found old sparse results and missing embedded answer keys.
 Those records are reported as skips rather than reconstructed. The first
 local full dry run lost its source connection after a host interruption;
-the target rolled back to zero migrated users. A retry is running. No real
-data migration acceptance is claimed yet.
+the target rolled back to zero migrated users.
+
+The retry completed on 2026-10-01 into an isolated local Postgres
+(`localhost:54331`), with v1 read-only. Counts only:
+
+| Entity | v1 | v2 | Skipped |
+| --- | --- | --- | --- |
+| Students → users | 292 | 292 | 0 |
+| Lessons | 172 | 171 | 1 (`quiz_game` placeholder) |
+| Questions | 5,234 | 5,234 | 0 errors, 4 warnings (empty true/false lead-ins) |
+| Results → attempts | 24,268 | 23,914 | 354 |
+| Rating history → events | | 23,471 | |
+| Ratings | | 273 | |
+| Historical versions | | 433 new, 611 valid in total | |
+| Mistakes rebuilt | | 101,599 | |
+
+Skips are reported, never reconstructed: 235 results whose answer key no
+longer resolves, 32 unresolved choices, 23 invalid embedded questions, 7
+invalid scores, 55 belonging to students who were not migrated and 2 whose lesson
+was not migrated. `verify-migration.ts` reported `automatedOk: true` with no
+failures (counts, recorded answers and marks, version schemas, ratings and
+history, 20 sampled students, tied leaderboard rows). Its three manual gates
+remain open: controlled-account password checks, teacher review and the media
+copy. The rehearsal into the v2 production project (`migrate.yml`, mode
+`rehearsal`, production environment approval) has not been run.
 
 ## Remaining live acceptance
 
-- S9-01: deployed staging load runs and database verification.
-- S9-02: deployed mobile Lighthouse, authenticated route budgets, Vercel cache logs.
-- S9-03: preview ZAP baseline and zero unresolved high findings.
-- S9-04: encrypted R2 backup and restore into an isolated Neon branch.
-- S9-05: Sentry/UptimeRobot/quota/usage alerts received by the owner.
-- S9-06: full real-data rehearsal, controlled-account password checks and teacher review.
+| Task | Status | Open |
+| --- | --- | --- |
+| S9-01 | 🟡 100 and 300 deployed, exact DB verification, all but one server-time gate pass | Start server time (PPR action floor ~390 ms; move start to a route handler) |
+| S9-02 | 🟡 Runner within budget, `/` Lighthouse passes | Several student routes over 150 KB; `/lessons` and runner LCP; Vercel cache-log review |
+| S9-03 | ✅ Zero high findings (audit, ZAP baseline, gitleaks, boundary checks) | Review the seven ZAP warning categories |
+| S9-04 | 🟡 Workflows and a local encrypted round trip pass | R2, age and restore-target secrets in GitHub, then the live drill into Neon |
+| S9-05 | 🟡 Cron maintenance live, quota test alert received (#21) | Sentry DSN, UptimeRobot monitor, Vercel usage alerts |
+| S9-06 | 🟡 Full real-data rehearsal locally, automated verification green | Production-project rehearsal, password checks, media copy, teacher review |
 
 M6 is not launch-ready until these gates have evidence.
