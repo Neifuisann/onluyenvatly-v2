@@ -16,6 +16,7 @@ import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
 import * as schema from "../src/db/schema.ts";
 import { copyAll } from "./lib/media-copy.ts";
+import { type HistoryReport, migrateHistory } from "./lib/migrate-history.ts";
 import {
   type LessonReport,
   type MediaJob,
@@ -80,87 +81,130 @@ const db = drizzle({ client: v2Client, schema });
 class DryRunRollback extends Error {}
 
 try {
-  const source = await v1.begin("read only", async (tx) => ({
-    students: await tx<
-      V1Row[]
-    >`select * from students order by created_at nulls first, id`,
-    lessons: await tx<V1Row[]>`select * from lessons order by id`,
-  }));
-  console.log(
-    `v1: ${source.students.length} students, ${source.lessons.length} lessons`,
-  );
+  await v1.begin(
+    "isolation level repeatable read read only",
+    async (sourceTx) => {
+      const source = {
+        students: await sourceTx<
+          V1Row[]
+        >`select * from students order by created_at nulls first, id`,
+        lessons: await sourceTx<V1Row[]>`select * from lessons order by id`,
+        history: await sourceTx<
+          V1Row[]
+        >`select * from rating_history order by "timestamp", id`,
+        ratings: await sourceTx<
+          V1Row[]
+        >`select * from ratings order by student_id`,
+      };
+      console.log(
+        `v1: ${source.students.length} students, ${source.lessons.length} lessons`,
+      );
 
-  let users: UserReport | undefined;
-  let lessons: LessonReport | undefined;
-  let jobs: MediaJob[] = [];
-  // One round trip per row: against a remote DB this takes minutes, so show
-  // that it's alive. Everything is one transaction; Ctrl-C leaves no partial data.
-  let phase = "users";
-  const tick = setInterval(() => {
-    const s = Math.round((Date.now() - startedAt.getTime()) / 1000);
-    console.log(`  … ${phase} (${s} s)`);
-  }, 10_000);
-  try {
-    await db.transaction(async (tx) => {
-      console.log("Migrating users…");
-      users = await migrateUsers(tx, source.students);
-      phase = "lessons";
-      console.log("Migrating lessons…");
-      const out = await migrateLessons(tx, source.lessons);
-      lessons = out.report;
-      jobs = out.media;
-      phase = "commit";
-      if (dryRun) throw new DryRunRollback();
-    });
-  } catch (e) {
-    if (!(e instanceof DryRunRollback)) throw e;
-  } finally {
-    clearInterval(tick);
-  }
-  if (!users || !lessons) throw new Error("migration produced no report");
-
-  const media: MediaReport = {
-    copied: 0,
-    existing: 0,
-    failed: [],
-    skipped: skipMedia,
-  };
-  if (!skipMedia && storage && jobs.length > 0) {
-    console.log(`Copying ${jobs.length} images…`);
-    for (const r of await copyAll(jobs, storage)) {
-      if (r.status === "failed") {
-        media.failed.push({ path: r.path, error: r.error });
-        continue;
+      let users: UserReport | undefined;
+      let lessons: LessonReport | undefined;
+      let jobs: MediaJob[] = [];
+      let history: HistoryReport | undefined;
+      // One round trip per row: against a remote DB this takes minutes, so show
+      // that it's alive. Everything is one transaction; Ctrl-C leaves no partial data.
+      let phase = "users";
+      const tick = setInterval(() => {
+        const s = Math.round((Date.now() - startedAt.getTime()) / 1000);
+        console.log(`  … ${phase} (${s} s)`);
+      }, 10_000);
+      try {
+        await db.transaction(async (tx) => {
+          console.log("Migrating users…");
+          users = await migrateUsers(tx, source.students);
+          phase = "lessons";
+          console.log("Migrating lessons…");
+          const out = await migrateLessons(tx, source.lessons);
+          lessons = out.report;
+          jobs = out.media;
+          phase = "results, rating history and mistakes";
+          // Bounded result pages under one read-only source snapshot. No PII is
+          // persisted to disk, logs or artifacts; only the count report is written.
+          async function* resultPages() {
+            let after = "";
+            for (;;) {
+              const rows = await sourceTx<
+                V1Row[]
+              >`select * from results where id > ${after} order by id limit 200`;
+              if (!rows.length) break;
+              yield rows;
+              after = String(rows.at(-1)?.id);
+            }
+          }
+          history = await migrateHistory(
+            tx,
+            resultPages(),
+            source.history,
+            source.ratings,
+          );
+          phase = "commit";
+          if (dryRun) throw new DryRunRollback();
+        });
+      } catch (e) {
+        if (!(e instanceof DryRunRollback)) throw e;
+      } finally {
+        clearInterval(tick);
       }
-      media[r.status === "copied" ? "copied" : "existing"] += 1;
-      await db
-        .insert(schema.media)
-        .values({ path: r.path, bytes: r.bytes })
-        .onConflictDoNothing({ target: schema.media.path });
-    }
-  }
+      if (!users || !lessons) throw new Error("migration produced no report");
 
-  const report = renderReport({
-    startedAt,
-    dryRun,
-    target,
-    users,
-    lessons,
-    media,
-  });
-  await mkdir("tmp", { recursive: true });
-  await writeFile("tmp/migration-report.md", report);
-  const errors = lessons.problems.filter((p) => p.severity === "error").length;
-  console.log(
-    [
-      `users: +${users.inserted} ~${users.updated} skipped ${users.skipped.length}`,
-      `lessons: +${lessons.inserted} ~${lessons.updated} kept ${lessons.keptV2Content.length} skipped ${lessons.skipped.length}`,
-      `questions: ${lessons.questionsMigrated}/${lessons.questionsV1} (errors ${errors})`,
-      `media: copied ${media.copied}, existing ${media.existing}, failed ${media.failed.length}`,
-      "report: tmp/migration-report.md",
-    ].join("\n"),
+      const media: MediaReport = {
+        copied: 0,
+        existing: 0,
+        failed: [],
+        skipped: skipMedia,
+      };
+      if (!skipMedia && storage && jobs.length > 0) {
+        console.log(`Copying ${jobs.length} images…`);
+        for (const r of await copyAll(jobs, storage)) {
+          if (r.status === "failed") {
+            media.failed.push({ path: r.path, error: r.error });
+            continue;
+          }
+          media[r.status === "copied" ? "copied" : "existing"] += 1;
+          await db
+            .insert(schema.media)
+            .values({ path: r.path, bytes: r.bytes })
+            .onConflictDoNothing({ target: schema.media.path });
+        }
+      }
+
+      const report = renderReport({
+        startedAt,
+        dryRun,
+        target,
+        users,
+        lessons,
+        media,
+      });
+      await mkdir("tmp", { recursive: true });
+      await writeFile("tmp/migration-report.md", report);
+      await writeFile(
+        "tmp/migration-history-report.json",
+        JSON.stringify(history, null, 2),
+      );
+      const errors = lessons.problems.filter(
+        (p) => p.severity === "error",
+      ).length;
+      console.log(
+        [
+          `users: +${users.inserted} ~${users.updated} skipped ${users.skipped.length}`,
+          `lessons: +${lessons.inserted} ~${lessons.updated} kept ${lessons.keptV2Content.length} skipped ${lessons.skipped.length}`,
+          `questions: ${lessons.questionsMigrated}/${lessons.questionsV1} (errors ${errors})`,
+          `media: copied ${media.copied}, existing ${media.existing}, failed ${media.failed.length}`,
+          "report: tmp/migration-report.md",
+        ].join("\n"),
+      );
+      if (errors > 0 || media.failed.length > 0) process.exitCode = 2;
+    },
   );
-  if (errors > 0 || media.failed.length > 0) process.exitCode = 2;
+} catch {
+  console.error(
+    "Migration failed and database changes were rolled back. Inspect configuration and source compatibility privately.",
+  );
+  process.exitCode = 1;
 } finally {
   await v1.end();
   await v2Client.end();

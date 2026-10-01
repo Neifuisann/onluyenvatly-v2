@@ -92,6 +92,13 @@
       "when": 1790812671737,
       "tag": "0012_private_retention",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1790814374073,
+      "tag": "0013_legacy_history",
+      "breakpoints": true
     }
   ]
 }

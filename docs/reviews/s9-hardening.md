@@ -67,6 +67,11 @@ Submit p95 356.5 ms passed; start 873.01 ms, runner 988.34 ms and result
 The Docker runner now writes artifacts as the runner user so summary files
 are readable by artifact upload.
 
+Deployed `44f2bc8`, run `36796895052`: 300/300 completed, 16,959 checks,
+zero HTTP failures, exact answers/scores and 300 rating events/rows. Latency
+failed: start p95 785.03 ms, runner 831.01 ms, save 353.65 ms, submit 4.02 s,
+result 2.79 s. Both summary and count artifacts were uploaded successfully.
+
 ## S9-02: performance
 
 The bundle checker includes shared framework and entry chunks at gzip size.
@@ -82,6 +87,11 @@ Display-font preloading has since been reduced; fresh measurements are pending.
 LHCI supplies three-run median assertions; Windows CLI cleanup errors prevented
 its standard collector finishing, so the initial report used Lighthouse's API
 with a Playwright-owned browser. No deployed cache-log acceptance yet.
+
+Deployed mobile Lighthouse 13.5: performance 93, accessibility 100, LCP
+1.506 s, CLS zero, TBT 116.5 ms and static response 59 ms. LCP/CLS pass this
+single measurement, but the performance score and three-run/authenticated
+route acceptance remain open.
 
 ## S9-03: security
 
@@ -127,6 +137,22 @@ user data, requests, cookies, headers, bodies, SQL, content and breadcrumbs are
 dropped. Explicit SDK data-collection settings disable personal data. No DSN
 is configured, so receipt of a real alert is still unverified. UptimeRobot and
 Vercel usage alerts also require external account configuration.
+
+## S9-06: legacy history
+
+Implementation includes paged, read-only source snapshots, transactional
+attempt upserts, immutable historical versions, rating-history identifiers,
+unambiguous event links, native pilot rating replay and chronological mistakes.
+The verifier compares source counts and recorded answers/marks, all version
+schemas and safe projections, ratings/history, 20 student samples and tied
+leaderboard rows. Eight focused migration/normalization tests pass; the full
+suite and coverage gates pass with 1,163 tests.
+
+A read-only census found old sparse results and missing embedded answer keys.
+Those records are reported as skips rather than reconstructed. The first
+local full dry run lost its source connection after a host interruption;
+the target rolled back to zero migrated users. A retry is running. No real
+data migration acceptance is claimed yet.
 
 ## Remaining live acceptance
 

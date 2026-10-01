@@ -265,6 +265,8 @@ export const lessonVersions = pgTable(
       .notNull()
       .references(() => lessons.id, { onDelete: "cascade" }),
     version: integer("version").notNull(),
+    /** Content-addressed migration snapshot; null for native editor versions. */
+    legacyHash: text("legacy_hash"),
     /** Editor text format (04 §3.3). */
     sourceText: text("source_text").notNull(),
     /** `Question[]` (04 §3.1). */
@@ -276,6 +278,7 @@ export const lessonVersions = pgTable(
   },
   (t) => [
     unique("lesson_versions_lesson_version_uq").on(t.lessonId, t.version),
+    unique("lesson_versions_legacy_hash_uq").on(t.lessonId, t.legacyHash),
   ],
 ).enableRLS();
 
@@ -423,6 +426,7 @@ export const ratingEvents = pgTable(
     id: bigint("id", { mode: "number" })
       .primaryKey()
       .generatedAlwaysAsIdentity(),
+    legacyHistoryId: text("legacy_history_id").unique(),
     userId: uuid("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),

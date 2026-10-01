@@ -14,6 +14,15 @@ on:
         type: choice
         options: [staging, production]
         default: staging
+      mode:
+        description: Schema only or complete legacy data rehearsal
+        type: choice
+        options: [schema, rehearsal]
+        default: schema
+      dry_run:
+        description: Roll back rehearsal data writes
+        type: boolean
+        default: true
 
 concurrency:
   group: migrate-${{ github.event.inputs.target || 'staging' }}
@@ -26,7 +35,7 @@ jobs:
   migrate:
     name: drizzle-kit migrate (${{ github.event.inputs.target || 'staging' }})
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 60
     environment: ${{ github.event.inputs.target || 'staging' }}
     steps:
       - uses: actions/checkout@v4
@@ -43,3 +52,23 @@ jobs:
       - run: pnpm db:migrate
         env:
           DATABASE_URL_DIRECT: ${{ (github.event.inputs.target || 'staging') == 'production' && secrets.DATABASE_URL_DIRECT || secrets.NEON_DATABASE_URL }}
+      - name: Rehearse legacy users, lessons and history
+        if: inputs.mode == 'rehearsal'
+        run: node scripts/migrate-legacy.ts --skip-media ${{ inputs.dry_run && '--dry-run' || '' }}
+        env:
+          V1_DATABASE_URL: ${{ secrets.V1_DATABASE_URL }}
+          DATABASE_URL_DIRECT: ${{ inputs.target == 'production' && secrets.DATABASE_URL_DIRECT || secrets.NEON_DATABASE_URL }}
+      - name: Verify source comparisons
+        if: inputs.mode == 'rehearsal' && !inputs.dry_run
+        run: node scripts/verify-migration.ts
+        env:
+          V1_DATABASE_URL: ${{ secrets.V1_DATABASE_URL }}
+          DATABASE_URL_DIRECT: ${{ inputs.target == 'production' && secrets.DATABASE_URL_DIRECT || secrets.NEON_DATABASE_URL }}
+      - uses: actions/upload-artifact@v4
+        if: always() && inputs.mode == 'rehearsal'
+        with:
+          name: migration-counts
+          path: |
+            tmp/migration-history-report.json
+            tmp/migration-verification.json
+          retention-days: 30
