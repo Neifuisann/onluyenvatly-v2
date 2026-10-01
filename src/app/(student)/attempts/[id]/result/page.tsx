@@ -22,12 +22,11 @@ import {
 } from "@/features/attempts/domain/review";
 import { revealAt } from "@/features/attempts/domain/schedule";
 import { resultCopy, reviewCopy } from "@/features/attempts/messages";
-import { getAttempt } from "@/features/attempts/queries";
+import { getAttemptForResult } from "@/features/attempts/queries";
 import { AttemptIdSchema } from "@/features/attempts/schemas";
 import { requireStudent } from "@/features/auth/guards";
 import { withOptionOrder } from "@/features/lessons/domain/public-question";
 import { getLessonOverview } from "@/features/lessons/queries";
-import { getAttemptRatingEvent } from "@/features/rating/queries";
 import { reviewCopy as practiceCopy } from "@/features/review/messages";
 import { getSettings } from "@/features/settings/queries";
 import { formatDateTime } from "@/lib/dates";
@@ -50,7 +49,8 @@ export default async function AttemptResultPage({
   const user = await requireStudent();
   const parsed = AttemptIdSchema.safeParse((await params).id);
   if (!parsed.success) notFound();
-  const attempt = await getAttempt(parsed.data);
+  const result = await getAttemptForResult(parsed.data);
+  const attempt = result?.attempt;
   if (!attempt || (attempt.userId !== user.id && user.role !== "admin"))
     notFound();
   if (attempt.status === "in_progress") {
@@ -58,9 +58,9 @@ export default async function AttemptResultPage({
     notFound();
   }
   const { lessonId } = attempt;
-  const [lesson, rating, sources] = await Promise.all([
+  const rating = result?.rating ?? null;
+  const [lesson, sources] = await Promise.all([
     lessonId ? getLessonOverview(lessonId, true) : null,
-    getAttemptRatingEvent(attempt.id),
     itemSources(attempt),
   ]);
   // Personalized practice (S7-06) is built only from questions whose answers

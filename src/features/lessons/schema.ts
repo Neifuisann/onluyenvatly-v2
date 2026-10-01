@@ -6,8 +6,10 @@
  * type stripping, so no path aliases here.
  */
 import { z } from "zod";
+import type { QUESTION_TYPES } from "./domain/question-types.ts";
 
-export const QUESTION_TYPES = ["mcq", "tf", "short"] as const;
+export { QUESTION_TYPES } from "./domain/question-types.ts";
+
 export type QuestionType = (typeof QUESTION_TYPES)[number];
 
 /** "q_" + a short id, stable across edits of the same question (v1 ids like `q_1` are kept). */

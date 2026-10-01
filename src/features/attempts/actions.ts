@@ -9,6 +9,7 @@ import {
   REVIEW_SIZES,
 } from "@/features/review/domain/practice";
 import { startReviewPractice as startReview } from "@/features/review/practice-service";
+import { measureOperation } from "@/lib/performance.server";
 import { rateLimit } from "@/lib/rate-limit";
 import { getRequestMeta } from "@/lib/request";
 import { err, type FormState, type Result } from "@/lib/result";
@@ -29,13 +30,15 @@ export async function startAttempt(
   _prev: FormState,
   formData: FormData,
 ): Promise<FormState> {
-  const user = await requireStudent();
+  const user = await measureOperation("attempt.start.auth", requireStudent);
   const parsed = StartAttemptSchema.safeParse({
     lessonId: formData.get("lessonId"),
   });
   if (!parsed.success) return err("VALIDATION");
   const { ip } = await getRequestMeta();
-  const result = await startOrResume(user, parsed.data.lessonId, { ip });
+  const result = await measureOperation("attempt.start", () =>
+    startOrResume(user, parsed.data.lessonId, { ip }),
+  );
   if (!result.ok) return result;
   // No cache tags: nothing shared changes until the attempt is submitted.
   redirect(`/attempts/${result.data.attemptId}`);

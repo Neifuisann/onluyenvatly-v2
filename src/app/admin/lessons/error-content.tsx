@@ -1,0 +1,20 @@
+"use client";
+
+import { ErrorState } from "@/components/error-state";
+import { Button } from "@/components/ui/button";
+import { adminLessonsCopy, catalogCopy } from "@/features/lessons/messages";
+
+export default function AdminLessonsError({
+  retry,
+}: {
+  error: Error & { digest?: string };
+  retry: () => void;
+}) {
+  return (
+    <ErrorState
+      title={adminLessonsCopy.errorTitle}
+      description={catalogCopy.errorBody}
+      action={<Button onClick={retry}>{catalogCopy.retry}</Button>}
+    />
+  );
+}

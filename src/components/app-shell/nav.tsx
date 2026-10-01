@@ -1,5 +1,3 @@
-"use client";
-
 import {
   BookOpen,
   ClipboardList,
@@ -15,10 +13,9 @@ import {
   User,
   Users,
 } from "lucide-react";
-import Link from "next/link";
-import { usePathname } from "next/navigation";
 import { shellCopy } from "@/lib/messages";
 import { cn } from "@/lib/utils";
+import { NavLink } from "./nav-link";
 
 export type ShellVariant = "student" | "admin";
 
@@ -81,11 +78,6 @@ function itemLabel(item: NavItem, count: number | undefined) {
   return count ? `${item.label}${shellCopy.navBadge(count)}` : undefined;
 }
 
-function isActive(pathname: string, item: NavItem) {
-  if (item.exact) return pathname === item.href;
-  return pathname === item.href || pathname.startsWith(`${item.href}/`);
-}
-
 /** Vertical list for the desktop sidebar: the current page sits on a raised pill. */
 export function SidebarNav({
   variant,
@@ -94,35 +86,29 @@ export function SidebarNav({
   variant: ShellVariant;
   badges?: NavBadges | undefined;
 }) {
-  const pathname = usePathname();
   return (
     <ul className="flex flex-col gap-0.5">
       {NAV[variant].map((item) => {
-        const active = isActive(pathname, item);
         return (
           <li key={item.href}>
-            <Link
+            <NavLink
               href={item.href}
-              aria-label={itemLabel(item, badges?.[item.href])}
-              aria-current={active ? "page" : undefined}
+              exact={item.exact}
+              label={itemLabel(item, badges?.[item.href])}
               className={cn(
                 "group flex min-h-11 items-center gap-3 rounded-md px-3 font-medium text-[0.9375rem] transition-[background-color,color,box-shadow] duration-150",
-                active
-                  ? "bg-surface text-foreground shadow-card dark:bg-muted"
-                  : "text-muted-foreground hover:bg-surface/70 hover:text-foreground dark:hover:bg-muted/60",
+                "text-muted-foreground hover:bg-surface/70 hover:text-foreground dark:hover:bg-muted/60",
               )}
+              selectedClassName="group flex min-h-11 items-center gap-3 rounded-md bg-surface px-3 font-medium text-[0.9375rem] text-foreground shadow-card transition-[background-color,color,box-shadow] duration-150 dark:bg-muted"
             >
               <item.icon
                 aria-hidden
-                className={cn(
-                  "size-5 transition-colors",
-                  active ? "text-primary" : "group-hover:text-foreground",
-                )}
-                strokeWidth={active ? 2.25 : 1.75}
+                className="size-5 transition-colors group-aria-[current=page]:text-primary group-aria-[current=page]:[stroke-width:2.25]"
+                strokeWidth={1.75}
               />
               {item.label}
               <Badge count={badges?.[item.href]} />
-            </Link>
+            </NavLink>
           </li>
         );
       })}
@@ -141,29 +127,26 @@ export function MobileNav({
   variant: ShellVariant;
   badges?: NavBadges | undefined;
 }) {
-  const pathname = usePathname();
   if (variant === "admin") {
     return (
       <ul className="flex gap-1 overflow-x-auto px-2 pb-2 [scrollbar-width:none]">
         {NAV.admin.map((item) => {
-          const active = isActive(pathname, item);
           return (
             <li key={item.href} className="shrink-0">
-              <Link
+              <NavLink
                 href={item.href}
-                aria-label={itemLabel(item, badges?.[item.href])}
-                aria-current={active ? "page" : undefined}
+                exact={item.exact}
+                label={itemLabel(item, badges?.[item.href])}
                 className={cn(
                   "flex min-h-11 items-center gap-2 rounded-full px-3.5 text-sm transition-colors",
-                  active
-                    ? "bg-foreground font-semibold text-background"
-                    : "text-muted-foreground hover:bg-muted",
+                  "text-muted-foreground hover:bg-muted",
                 )}
+                selectedClassName="flex min-h-11 items-center gap-2 rounded-full bg-foreground px-3.5 font-semibold text-background text-sm transition-colors"
               >
                 <item.icon aria-hidden className="size-4" strokeWidth={2} />
                 {item.label}
                 <Badge count={badges?.[item.href]} />
-              </Link>
+              </NavLink>
             </li>
           );
         })}
@@ -173,27 +156,24 @@ export function MobileNav({
   return (
     <ul className="grid grid-cols-5 rounded-[1.75rem] border border-border/70 bg-surface/95 p-1.5 shadow-raised backdrop-blur-xl dark:border-border">
       {NAV.student.map((item) => {
-        const active = isActive(pathname, item);
         return (
           <li key={item.href}>
-            <Link
+            <NavLink
               href={item.href}
-              aria-label={itemLabel(item, badges?.[item.href])}
-              aria-current={active ? "page" : undefined}
+              label={itemLabel(item, badges?.[item.href])}
               className={cn(
                 "flex min-h-14 flex-col items-center justify-center gap-0.5 rounded-[1.375rem] text-[0.6875rem] transition-colors duration-150",
-                active
-                  ? "bg-primary-soft font-semibold text-foreground"
-                  : "text-muted-foreground active:bg-muted",
+                "text-muted-foreground active:bg-muted",
               )}
+              selectedClassName="group flex min-h-14 flex-col items-center justify-center gap-0.5 rounded-[1.375rem] bg-primary-soft font-semibold text-[0.6875rem] text-foreground transition-colors duration-150"
             >
               <item.icon
                 aria-hidden
-                className={cn("size-[1.375rem]", active && "text-primary")}
-                strokeWidth={active ? 2.25 : 1.75}
+                className="size-[1.375rem] group-aria-[current=page]:text-primary group-aria-[current=page]:[stroke-width:2.25]"
+                strokeWidth={1.75}
               />
               {item.label}
-            </Link>
+            </NavLink>
           </li>
         );
       })}

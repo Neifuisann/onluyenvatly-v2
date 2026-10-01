@@ -83,7 +83,7 @@ Test data: `pnpm seed --profile e2e` (`scripts/seed.ts`, local databases only; i
 `tests/load/test-day.js`:
 - Pre-create 300 load-test users and 1 lesson (28 questions, 5-minute limit) in **staging**.
 - Stages: ramp to 100 VUs over 60 s → each VU logs in (cookie), loads the runner page, `POST save` every 5 s with random answers, then all submit in a 10 s window → load the result page.
-- Thresholds: `http_req_failed < 0.1%`, `p(95) < 800ms` per endpoint tag, 0 checks failing on "score is present".
+- Thresholds: `http_req_failed < 0.1%`, 0 failed checks (exact score, answer-free runner), every student completes, and `server_ms` p95 < 800 ms per endpoint tag (start < 300 ms, submit < 500 ms, 08 §1). `server_ms` is time to first byte minus the VU's fastest `/api/health` (same region, one `select 1`), because GitHub runners sit 150–300 ms from `sin1`; client durations are kept in the summary for comparison.
 - Repeat at 300 VUs (stretch).
 - Afterwards: verify in the DB that 100 (or 300) attempts are submitted with scores, and that ratings and rating events count match.
 - Quota note: one 300-VU run uses about 30k invocations, which is fine. Don't run it daily.

@@ -265,6 +265,8 @@ export const lessonVersions = pgTable(
       .notNull()
       .references(() => lessons.id, { onDelete: "cascade" }),
     version: integer("version").notNull(),
+    /** Content-addressed migration snapshot; null for native editor versions. */
+    legacyHash: text("legacy_hash"),
     /** Editor text format (04 §3.3). */
     sourceText: text("source_text").notNull(),
     /** `Question[]` (04 §3.1). */
@@ -276,6 +278,7 @@ export const lessonVersions = pgTable(
   },
   (t) => [
     unique("lesson_versions_lesson_version_uq").on(t.lessonId, t.version),
+    unique("lesson_versions_legacy_hash_uq").on(t.lessonId, t.legacyHash),
   ],
 ).enableRLS();
 
@@ -368,6 +371,8 @@ export const attempts = pgTable(
     lastSavedAt: timestamptz("last_saved_at"),
     /** Idempotency key of the submit that closed the attempt. */
     clientSubmitId: uuid("client_submit_id"),
+    /** Idempotent analytics update after grading has committed (S9-01). */
+    counterRecorded: boolean("counter_recorded").notNull().default(false),
     ip: inet("ip"),
   },
   (t) => [
@@ -391,6 +396,16 @@ export const attempts = pgTable(
     index("attempts_expiry_idx")
       .on(t.status, t.deadlineAt)
       .where(sql`${t.status} = 'in_progress'`),
+    index("attempts_private_retention_idx")
+      .on(t.startedAt)
+      .where(
+        sql`${t.ip} is not null or jsonb_array_length(${t.guardEvents}) > 0`,
+      ),
+    index("attempts_pending_counter_idx")
+      .on(t.lessonId)
+      .where(
+        sql`${t.status} = 'submitted' and ${t.lessonId} is not null and not ${t.counterRecorded}`,
+      ),
     check(
       "attempts_answers_aligned",
       sql`jsonb_array_length(${t.answers}) = jsonb_array_length(${t.items})`,
@@ -418,6 +433,7 @@ export const ratingEvents = pgTable(
     id: bigint("id", { mode: "number" })
       .primaryKey()
       .generatedAlwaysAsIdentity(),
+    legacyHistoryId: text("legacy_history_id").unique(),
     userId: uuid("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),

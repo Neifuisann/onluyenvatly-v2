@@ -1,22 +1,14 @@
 "use client";
 
-import { ErrorState } from "@/components/error-state";
-import { Button } from "@/components/ui/button";
-import { stateCopy as t } from "@/lib/messages";
+import { type ComponentProps, lazy, Suspense } from "react";
 
-export default function ShareError({
-  retry,
-}: {
-  error: Error & { digest?: string };
-  retry: () => void;
-}) {
+const ErrorContent = lazy(() => import("./error-content"));
+
+/** Recovery controls are downloaded only when this boundary renders. */
+export default function RouteError(props: ComponentProps<typeof ErrorContent>) {
   return (
-    <div className="px-4 py-8">
-      <ErrorState
-        title={t.errorTitle}
-        description={t.errorBody}
-        action={<Button onClick={retry}>{t.retry}</Button>}
-      />
-    </div>
+    <Suspense fallback={null}>
+      <ErrorContent {...props} />
+    </Suspense>
   );
 }

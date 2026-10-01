@@ -34,6 +34,20 @@ describe("buildCsp", () => {
     expect(directive(csp, "connect-src")).toContain("https://x.supabase.co");
     expect(directive(csp, "script-src")).not.toContain("supabase");
   });
+
+  it("allows the configured telemetry host only for connections", () => {
+    const csp = buildCsp({
+      isDev: false,
+      telemetryOrigin: "https://o1.ingest.sentry.io",
+    });
+    expect(directive(csp, "connect-src")).toContain(
+      "https://o1.ingest.sentry.io",
+    );
+    for (const name of ["script-src", "img-src", "frame-src"]) {
+      expect(directive(csp, name) ?? "").not.toContain("sentry.io");
+    }
+    expect(csp).not.toContain("*.sentry.io");
+  });
 });
 
 describe("securityHeaders", () => {

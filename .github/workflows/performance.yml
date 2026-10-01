@@ -1,0 +1,46 @@
+name: Browser performance rehearsal
+on:
+  workflow_call:
+    inputs:
+      preview_url:
+        type: string
+        required: true
+permissions:
+  contents: read
+jobs:
+  measure:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      LOAD_DATABASE_URL: ${{ secrets.NEON_DATABASE_URL }}
+      SESSION_PEPPER: ${{ secrets.LOAD_SESSION_PEPPER }}
+      BASE_URL: ${{ inputs.preview_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec playwright install --with-deps chromium
+      - name: Validate staging commit and create private fixtures
+        run: |
+          node --input-type=module -e 'const u=new URL(process.env.BASE_URL);if(u.protocol!=="https:"||!/^onluyenvatly-v2-[a-z0-9-]+\.vercel\.app$/.test(u.hostname)||u.username||u.password||u.pathname!=="/"||u.search||u.hash)process.exit(1);const r=await fetch(new URL("/api/health",u));const h=await r.json();if(!r.ok||h.env!=="preview"||h.commit!==process.env.GITHUB_SHA.slice(0,7))process.exit(1)'
+          host=$(node -e 'console.log(new URL(process.env.LOAD_DATABASE_URL).hostname)')
+          node scripts/load-fixture.ts --users 1 --performance --staging-host "$host"
+      - name: Measure downloads and three mobile Lighthouse runs per route
+        run: node scripts/measure-performance.ts
+      - name: Verify recorded answers, ratings and counter
+        if: always()
+        run: |
+          host=$(node -e 'console.log(new URL(process.env.LOAD_DATABASE_URL).hostname)')
+          node scripts/load-fixture.ts --verify --users 1 --staging-host "$host"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: performance-metrics
+          path: |
+            tmp/performance-report.json
+            tmp/load-verification.json
+          retention-days: 30

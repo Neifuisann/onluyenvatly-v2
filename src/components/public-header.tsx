@@ -33,11 +33,16 @@ export function PublicHeader() {
           </Link>
           <Link
             href="/login"
+            prefetch={false}
             className={buttonVariants({ variant: "ghost", size: "sm" })}
           >
             {shellCopy.login}
           </Link>
-          <Link href="/register" className={buttonVariants({ size: "sm" })}>
+          <Link
+            href="/register"
+            prefetch={false}
+            className={buttonVariants({ size: "sm" })}
+          >
             {shellCopy.register}
           </Link>
           <ThemeToggle />

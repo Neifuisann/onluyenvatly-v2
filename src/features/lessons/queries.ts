@@ -4,6 +4,7 @@ import { cacheLife, cacheTag } from "next/cache";
 import { db } from "@/db/client";
 import { lessons, lessonVersions } from "@/db/schema";
 import { tags } from "@/lib/cache-tags";
+import { measureOperation } from "@/lib/performance.server";
 import { type CatalogFilters, PAGE_SIZE, searchTerms } from "./domain/catalog";
 import {
   type PublicQuestion,
@@ -27,6 +28,30 @@ export type CatalogItem = {
 };
 
 export type Catalog = { items: CatalogItem[]; total: number };
+
+/** Shared start metadata, invalidated by every status/config/publish mutation. */
+export async function getLessonForStarting(id: number) {
+  "use cache";
+  cacheTag(tags.lesson(id));
+  cacheLife("minutes");
+  return getFreshLessonForStarting(id);
+}
+
+/** Only the rare publish/insert FK race bypasses the shared metadata cache. */
+export async function getFreshLessonForStarting(id: number) {
+  return measureOperation("lesson.metadata.miss", async () => {
+    const [lesson] = await db
+      .select({
+        status: lessons.status,
+        versionId: lessons.currentVersionId,
+        config: lessons.config,
+      })
+      .from(lessons)
+      .where(eq(lessons.id, id))
+      .limit(1);
+    return lesson ?? null;
+  });
+}
 
 const cardColumns = {
   id: lessons.id,

@@ -1,12 +1,10 @@
 import { timingSafeEqual } from "node:crypto";
-import { cleanupImports } from "@/features/ai/import-service";
+import { runDailyMaintenance } from "@/features/operations/service";
 import { env } from "@/lib/env.server";
 
 /**
  * `GET /api/cron/daily` (05 §3), called by Vercel Cron with
- * `Authorization: Bearer ${CRON_SECRET}`. For now it only removes AI import
- * files older than a day (S7-04, 09 §4); S9-05 adds the rest of the daily
- * chores (expiry sweep, pruning, keep-alive, quota snapshot).
+ * `Authorization: Bearer ${CRON_SECRET}`. Counts only; no personal data.
  */
 export async function GET(req: Request) {
   const secret = env.CRON_SECRET;
@@ -23,10 +21,11 @@ export async function GET(req: Request) {
       { status: 401 },
     );
 
-  const imports = await cleanupImports();
-  console.info(JSON.stringify({ evt: "cron", job: "daily", imports }));
+  const counts = await runDailyMaintenance();
+  const ok = counts.failed === 0 && counts.pending === 0;
+  console.info(JSON.stringify({ evt: "cron", job: "daily", ok, ...counts }));
   return Response.json(
-    { ok: true, imports },
-    { headers: { "Cache-Control": "no-store" } },
+    { ok, ...counts },
+    { status: ok ? 200 : 503, headers: { "Cache-Control": "no-store" } },
   );
 }

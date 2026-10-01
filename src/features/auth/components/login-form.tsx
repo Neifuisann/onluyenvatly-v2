@@ -69,6 +69,7 @@ export function LoginForm() {
         {authCopy.noAccount}{" "}
         <Link
           href="/register"
+          prefetch={false}
           className="font-medium text-primary underline-offset-4 hover:underline"
         >
           {authCopy.registerLink}

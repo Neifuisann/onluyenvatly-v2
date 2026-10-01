@@ -1,4 +1,5 @@
 import createMDX from "@next/mdx";
+import { withSentryConfig } from "@sentry/nextjs/config";
 import type { NextConfig } from "next";
 import { catalog } from "./src/content/ly-thuyet/catalog";
 import { materialRedirects } from "./src/features/materials/domain/materials";
@@ -27,6 +28,7 @@ const nextConfig: NextConfig = {
         headers: securityHeaders({
           isDev: process.env.NODE_ENV !== "production",
           mediaOrigin: originOf(process.env.NEXT_PUBLIC_MEDIA_BASE_URL),
+          telemetryOrigin: originOf(process.env.NEXT_PUBLIC_SENTRY_DSN),
         }),
       },
       // Private areas stay out of search results even if a link leaks (08 §5).
@@ -55,4 +57,7 @@ const withMDX = createMDX({
   },
 });
 
-export default withMDX(nextConfig);
+export default withSentryConfig(withMDX(nextConfig), {
+  silent: true,
+  sourcemaps: { disable: true },
+});

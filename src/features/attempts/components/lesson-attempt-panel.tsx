@@ -106,6 +106,7 @@ export async function LessonAttemptPanel({
               size: "lg",
               className: "h-13 w-full text-base",
             })}
+            prefetch={false}
           >
             {t.continue}
             <ArrowRight aria-hidden />

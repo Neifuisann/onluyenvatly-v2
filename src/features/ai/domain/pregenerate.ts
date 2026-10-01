@@ -11,8 +11,7 @@ import { MAX_EXPLANATION_CHARS, needsAi, questionHash } from "./explain.ts";
  * lite model, and students keep asking meanwhile, so the browser leaves
  * headroom: one question per call, a call every 6 s.
  */
-export const PREGEN_PER_MINUTE = 10;
-export const PREGEN_INTERVAL_MS = 60_000 / PREGEN_PER_MINUTE;
+export { PREGEN_INTERVAL_MS, PREGEN_PER_MINUTE } from "./pregenerate-limits.ts";
 
 export type ExplanationPlanRow = {
   /** 1-based, in the teacher's order. */

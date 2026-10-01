@@ -1,0 +1,49 @@
+name: Security baseline
+on:
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      preview_url:
+        description: Explicit staging preview URL for passive ZAP scan
+        required: true
+        type: string
+permissions:
+  contents: read
+jobs:
+  dependencies:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm audit --audit-level high
+  zap:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate preview origin
+        env:
+          PREVIEW_URL: ${{ inputs.preview_url }}
+        run: |
+          node --input-type=module -e 'const u=new URL(process.env.PREVIEW_URL);if(u.protocol!=="https:"||!/^onluyenvatly-v2-[a-z0-9-]+\.vercel\.app$/.test(u.hostname)||u.username||u.password||u.pathname!=="/"||u.search||u.hash)process.exit(1);const r=await fetch(new URL("/api/health",u));const h=await r.json();if(!r.ok||h.status!=="ok"||h.env!=="preview")process.exit(1)'
+      - name: Passive scan (no active attack)
+        env:
+          PREVIEW_URL: ${{ inputs.preview_url }}
+        run: |
+          mkdir -p tmp/zap && chmod 777 tmp/zap
+          # Warnings remain in the report; baseline FAIL rules fail the job.
+          docker run --rm -v "$PWD/tmp/zap:/zap/wrk:rw" ghcr.io/zaproxy/zaproxy:stable zap-baseline.py -t "$PREVIEW_URL" -J report.json -r report.html -I
+          node scripts/check-zap.ts tmp/zap/report.json
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: zap-baseline
+          path: tmp/zap
+          retention-days: 14

@@ -1,7 +1,9 @@
 "use client";
 
 import "./globals.css";
+import { useEffect } from "react";
 import { stateCopy as t } from "@/lib/messages";
+import { reportClientError } from "@/lib/monitoring-bootstrap";
 
 /**
  * The root layout itself failed: its own document with the app CSS. The
@@ -9,11 +11,13 @@ import { stateCopy as t } from "@/lib/messages";
  * tokens in the system font.
  */
 export default function GlobalError({
+  error,
   retry,
 }: {
   error: Error & { digest?: string };
   retry: () => void;
 }) {
+  useEffect(() => reportClientError(error), [error]);
   return (
     <html lang="vi">
       <body className="flex min-h-dvh flex-col items-center justify-center gap-4 px-5 text-center">

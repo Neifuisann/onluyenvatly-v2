@@ -21,6 +21,7 @@ export default function RegisterPendingPage() {
       <Link
         href="/login"
         className={buttonVariants({ size: "lg", className: "w-full" })}
+        prefetch={false}
       >
         {authCopy.pendingBack}
       </Link>

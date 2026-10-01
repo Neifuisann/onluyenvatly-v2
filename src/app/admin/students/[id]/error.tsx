@@ -1,21 +1,14 @@
 "use client";
 
-import { ErrorState } from "@/components/error-state";
-import { Button } from "@/components/ui/button";
-import { catalogCopy } from "@/features/lessons/messages";
-import { studentsCopy } from "@/features/students/messages";
+import { type ComponentProps, lazy, Suspense } from "react";
 
-export default function AdminStudentError({
-  retry,
-}: {
-  error: Error & { digest?: string };
-  retry: () => void;
-}) {
+const ErrorContent = lazy(() => import("./error-content"));
+
+/** Recovery controls are downloaded only when this boundary renders. */
+export default function RouteError(props: ComponentProps<typeof ErrorContent>) {
   return (
-    <ErrorState
-      title={studentsCopy.detailErrorTitle}
-      description={catalogCopy.errorBody}
-      action={<Button onClick={retry}>{catalogCopy.retry}</Button>}
-    />
+    <Suspense fallback={null}>
+      <ErrorContent {...props} />
+    </Suspense>
   );
 }

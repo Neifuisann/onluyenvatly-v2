@@ -13,9 +13,14 @@ export type HeaderOptions = {
   isDev: boolean;
   /** Supabase Storage/media origin, e.g. https://xyz.supabase.co */
   mediaOrigin?: string | null;
+  telemetryOrigin?: string | null;
 };
 
-export function buildCsp({ isDev, mediaOrigin }: HeaderOptions): string {
+export function buildCsp({
+  isDev,
+  mediaOrigin,
+  telemetryOrigin,
+}: HeaderOptions): string {
   const media = mediaOrigin ? ` ${mediaOrigin}` : "";
   const directives = [
     "default-src 'self'",
@@ -23,7 +28,7 @@ export function buildCsp({ isDev, mediaOrigin }: HeaderOptions): string {
     "style-src 'self' 'unsafe-inline'",
     `img-src 'self' data: blob:${media}`,
     "font-src 'self'",
-    `connect-src 'self'${media}`,
+    `connect-src 'self'${media}${telemetryOrigin ? ` ${telemetryOrigin}` : ""}`,
     "media-src 'self'",
     "object-src 'none'",
     "base-uri 'self'",

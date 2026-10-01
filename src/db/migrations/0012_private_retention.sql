@@ -1,0 +1,1 @@
+CREATE INDEX "attempts_private_retention_idx" ON "attempts" USING btree ("started_at") WHERE "attempts"."ip" is not null or jsonb_array_length("attempts"."guard_events") > 0;

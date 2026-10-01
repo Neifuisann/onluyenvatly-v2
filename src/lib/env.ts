@@ -37,10 +37,13 @@ const serverSchema = z.object({
   // Tests only: E2E's Gemini stand-in (tests/e2e/fake-gemini.ts).
   GEMINI_BASE_URL: z.url().optional(),
   CRON_SECRET: z.string().min(16).optional(), // required from S9-05
+  SENTRY_DSN: z.url().optional(),
+  PERFORMANCE_DIAGNOSTICS: z.enum(["0", "1"]).default("0"),
   AI_DAILY_BUDGET: z.coerce.number().int().nonnegative().default(0),
 });
 
 const clientSchema = z.object({
+  NEXT_PUBLIC_SENTRY_DSN: z.url().optional(),
   // Public URL of the `media` bucket; images show as their path until set.
   NEXT_PUBLIC_MEDIA_BASE_URL: z.url().optional(),
 });
@@ -63,8 +66,4 @@ export function parseEnv(source: Record<string, string | undefined>) {
   return result.data;
 }
 
-// NEXT_PUBLIC_* must be referenced literally so Next can inline them in client bundles.
-export const clientEnv: ClientEnv = clientSchema.parse({
-  NEXT_PUBLIC_MEDIA_BASE_URL:
-    process.env.NEXT_PUBLIC_MEDIA_BASE_URL || undefined,
-});
+export { clientEnv } from "./env.client";

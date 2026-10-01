@@ -1,9 +1,5 @@
-"use client";
-
 import { Search, SlidersHorizontal } from "lucide-react";
-import Form from "next/form";
 import Link from "next/link";
-import { useEffect, useRef } from "react";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Input, Select } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -17,6 +13,7 @@ import {
 } from "../domain/catalog";
 import { catalogCopy as t } from "../messages";
 import type { CatalogFacets } from "../queries";
+import { CatalogForm } from "./catalog-form";
 
 const GRADES = [null, 10, 11, 12] as const;
 
@@ -32,44 +29,11 @@ export function FilterBar({
   filters: CatalogFilters;
   facets: CatalogFacets;
 }) {
-  const formRef = useRef<HTMLFormElement>(null);
-  const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
-  useEffect(() => () => clearTimeout(timer.current), []);
-  // Sync back/forward navigation without remounting the focused search input.
-  useEffect(() => {
-    clearTimeout(timer.current);
-    const values = {
-      q: filters.q ?? "",
-      chapter: filters.chapter ?? "",
-      tag: filters.tag ?? "",
-      sort: filters.sort === "order" ? "" : filters.sort,
-    };
-    for (const [name, value] of Object.entries(values)) {
-      const field = formRef.current?.elements.namedItem(name);
-      if (
-        field instanceof HTMLInputElement ||
-        field instanceof HTMLSelectElement
-      )
-        field.value = value;
-    }
-  }, [filters.q, filters.chapter, filters.tag, filters.sort]);
-
-  const submit = (delay = 0) => {
-    clearTimeout(timer.current);
-    timer.current = setTimeout(() => formRef.current?.requestSubmit(), delay);
-  };
   const extraFilters = [filters.chapter, filters.tag].filter(Boolean).length;
 
   return (
     <div className="sticky top-14 z-20 -mx-4 bg-background/85 px-4 py-3 backdrop-blur-xl sm:-mx-6 sm:px-6 lg:top-3 lg:-mx-10 lg:bg-panel/85 lg:px-10">
-      <Form
-        ref={formRef}
-        action="/lessons"
-        prefetch={false}
-        scroll={false}
-        role="search"
-        className="flex flex-col gap-3"
-      >
+      <CatalogForm filters={filters}>
         {filters.grade && (
           <input type="hidden" name="grade" value={filters.grade} />
         )}
@@ -91,7 +55,6 @@ export function FilterBar({
             maxLength={80}
             defaultValue={filters.q ?? ""}
             placeholder={t.searchPlaceholder}
-            onChange={() => submit(400)}
             className="rounded-full pr-20 pl-11 shadow-card [&::-webkit-search-cancel-button]:hidden"
           />
           <Button
@@ -155,7 +118,6 @@ export function FilterBar({
                   id="catalog-chapter"
                   name="chapter"
                   defaultValue={filters.chapter ?? ""}
-                  onChange={() => submit()}
                 >
                   <option value="">{t.chapterAll}</option>
                   {facets.chapters.map((c) => (
@@ -171,7 +133,6 @@ export function FilterBar({
                   id="catalog-tag"
                   name="tag"
                   defaultValue={filters.tag ?? ""}
-                  onChange={() => submit()}
                 >
                   <option value="">{t.tagAll}</option>
                   {facets.tags.map((tag) => (
@@ -187,7 +148,6 @@ export function FilterBar({
                   id="catalog-sort"
                   name="sort"
                   defaultValue={filters.sort === "order" ? "" : filters.sort}
-                  onChange={() => submit()}
                 >
                   {CATALOG_SORTS.map((s) => (
                     <option key={s} value={s === "order" ? "" : s}>
@@ -210,7 +170,7 @@ export function FilterBar({
             </div>
           </details>
         </div>
-      </Form>
+      </CatalogForm>
     </div>
   );
 }

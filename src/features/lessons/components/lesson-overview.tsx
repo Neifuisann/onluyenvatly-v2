@@ -73,6 +73,7 @@ export function LessonOverviewContent({
       <Link
         href="/lessons"
         className="-ml-2 inline-flex min-h-11 lg:col-start-1 w-fit items-center gap-1 rounded-full pr-3 pl-1.5 font-medium text-muted-foreground text-sm transition-colors hover:bg-muted hover:text-foreground"
+        prefetch={false}
       >
         <ChevronLeft aria-hidden className="size-5" />
         {t.back}

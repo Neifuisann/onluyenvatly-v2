@@ -92,6 +92,7 @@ export function UserMenu({
           <Link
             href={variant === "admin" ? "/dashboard" : "/admin"}
             className={item}
+            prefetch={false}
           >
             <Shield aria-hidden className="size-5" strokeWidth={1.75} />
             {variant === "admin" ? shellCopy.toStudentView : shellCopy.toAdmin}

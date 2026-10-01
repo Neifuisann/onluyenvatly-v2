@@ -85,6 +85,27 @@
       "when": 1790752196123,
       "tag": "0011_audit_area_index",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1790812671737,
+      "tag": "0012_private_retention",
+      "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1790814374073,
+      "tag": "0013_legacy_history",
+      "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1790817900249,
+      "tag": "0014_attempt_counters",
+      "breakpoints": true
     }
   ]
 }

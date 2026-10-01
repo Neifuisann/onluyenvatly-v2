@@ -8,7 +8,6 @@ import {
   THEME_STORAGE_KEY,
   type ThemePref,
 } from "@/lib/theme";
-import { cn } from "@/lib/utils";
 
 const labels: Record<ThemePref, string> = {
   system: shellCopy.themeSystem,
@@ -57,25 +56,22 @@ export function ThemeToggle({ className }: { className?: string }) {
       onClick={toggle}
       aria-label={shellCopy.themeToggle}
       title={shellCopy.themeToggle}
-      className={cn(
-        "inline-flex size-11 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground",
-        className,
-      )}
+      className={`inline-flex size-11 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground ${className ?? ""}`}
     >
       <Monitor
         aria-hidden
         strokeWidth={1.75}
-        className={cn(icon, "in-data-[theme-pref=system]:block")}
+        className={`${icon} in-data-[theme-pref=system]:block`}
       />
       <Sun
         aria-hidden
         strokeWidth={1.75}
-        className={cn(icon, "in-data-[theme-pref=light]:block")}
+        className={`${icon} in-data-[theme-pref=light]:block`}
       />
       <Moon
         aria-hidden
         strokeWidth={1.75}
-        className={cn(icon, "in-data-[theme-pref=dark]:block")}
+        className={`${icon} in-data-[theme-pref=dark]:block`}
       />
     </button>
   );

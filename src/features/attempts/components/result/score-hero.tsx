@@ -168,6 +168,7 @@ export function ScoreHero({
             buttonVariants({ size: "lg" }),
             !hasReview && "col-span-2",
           )}
+          prefetch={false}
         >
           <RotateCcw aria-hidden />
           {attempt.lessonId ? t.retake : t.backToReview}

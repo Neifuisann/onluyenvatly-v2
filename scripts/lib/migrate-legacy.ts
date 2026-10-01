@@ -7,7 +7,8 @@
  * Takes plain v1 rows and a v2 Drizzle handle (postgres-js in the CLI, PGlite
  * in tests). Imports src files by relative path (Node type stripping).
  */
-import { and, eq, sql } from "drizzle-orm";
+import { createHash } from "node:crypto";
+import { eq, sql } from "drizzle-orm";
 import type { PgDatabase, PgQueryResultHKT } from "drizzle-orm/pg-core";
 import * as schema from "../../src/db/schema.ts";
 import { normalizePhone } from "../../src/features/auth/core/phone.ts";
@@ -267,6 +268,8 @@ export async function migrateLessons<Q extends PgQueryResultHKT>(
               id: lessonVersions.id,
               version: lessonVersions.version,
               createdBy: lessonVersions.createdBy,
+              legacyHash: lessonVersions.legacyHash,
+              questions: lessonVersions.questions,
             })
             .from(lessonVersions)
             .where(eq(lessonVersions.lessonId, existing.id))
@@ -275,7 +278,10 @@ export async function migrateLessons<Q extends PgQueryResultHKT>(
       if (
         existing &&
         (existing.draftVersionId !== null ||
-          versions.some((v) => v.version > 1 || v.createdBy !== null))
+          versions.some(
+            (v) =>
+              (v.version > 1 && v.legacyHash === null) || v.createdBy !== null,
+          ))
       )
         return "kept" as const;
 
@@ -297,22 +303,31 @@ export async function migrateLessons<Q extends PgQueryResultHKT>(
 
       if (questions.length > 0) {
         const content = { sourceText: serializeLesson(questions), questions };
-        const v1 = versions.find((v) => v.version === 1);
-        let versionId = v1?.id;
-        if (versionId !== undefined)
+        const hash = createHash("sha256")
+          .update(JSON.stringify(questions))
+          .digest("hex");
+        const matching = versions.find(
+          (v) =>
+            v.legacyHash === hash ||
+            JSON.stringify(v.questions) === JSON.stringify(questions),
+        );
+        let versionId = matching?.id;
+        if (matching && matching.legacyHash === null) {
           await tx
             .update(lessonVersions)
-            .set(content)
-            .where(
-              and(
-                eq(lessonVersions.id, versionId),
-                eq(lessonVersions.lessonId, lesson.id),
-              ),
-            );
-        else {
+            .set({ legacyHash: hash })
+            .where(eq(lessonVersions.id, matching.id));
+        }
+        // Never rewrite content: a pilot or historical attempt may reference it.
+        if (versionId === undefined) {
           const [inserted] = await tx
             .insert(lessonVersions)
-            .values({ lessonId: lesson.id, version: 1, ...content })
+            .values({
+              lessonId: lesson.id,
+              version: Math.max(0, ...versions.map((v) => v.version)) + 1,
+              legacyHash: hash,
+              ...content,
+            })
             .returning({ id: lessonVersions.id });
           versionId = inserted?.id;
         }

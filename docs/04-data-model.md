@@ -89,7 +89,7 @@ Edited on `/admin/settings` (S6-03, `updateSettings`): only the keys whose value
 | config | jsonb not null | `LessonConfig`, see §3.2 |
 | question_count | smallint | Denormalized from the current version, after pool selection |
 | type_counts | jsonb | `{mcq:18, tf:4, short:6}` for cards |
-| attempt_count | int default 0 | Denormalized, updated on submit |
+| attempt_count | int default 0 | Denormalized; S9-01 records it after the grading transaction in an atomic, retry-safe statement. Daily maintenance repairs interrupted recording |
 | search_text | text generated | `lesson_search_text(title, description, tags)` = `lower(immutable_unaccent(concat_ws(' ', title, description, array_to_string(tags, ' '))))`. Both helpers are `IMMUTABLE` SQL functions created in migration `0002_lessons` (with a pinned `search_path` so they work whether the extensions live in `public` or Supabase's `extensions` schema) |
 | created_by | uuid FK | |
 | created_at, updated_at, published_at | timestamptz | |

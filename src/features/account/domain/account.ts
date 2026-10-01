@@ -6,6 +6,9 @@ import {
   gradeField,
 } from "@/features/auth/schemas";
 import { fieldMessages } from "@/lib/messages";
+import { AVATAR_SIDE, MAX_AVATAR_BYTES } from "./avatar-limits";
+
+export { AVATAR_SIDE, MAX_AVATAR_BYTES } from "./avatar-limits";
 
 /**
  * A student's own settings (S8-04, 05 §1 `/settings`): profile, privacy,
@@ -57,8 +60,6 @@ export function changedKeys<T extends Record<string, unknown>>(
 // ------------------------------------------------------------------ avatar
 
 /** The browser crops and resizes to a WebP square before uploading. */
-export const AVATAR_SIDE = 256;
-export const MAX_AVATAR_BYTES = 150 * 1024;
 
 export const AvatarUploadSchema = z.strictObject({
   contentType: z.literal("image/webp"),

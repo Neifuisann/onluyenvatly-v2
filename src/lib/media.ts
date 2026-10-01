@@ -1,4 +1,4 @@
-import { clientEnv } from "./env";
+import { clientEnv } from "./env.client";
 
 /**
  * Public URL of an object in the Storage `media` bucket (ADR-006), or null

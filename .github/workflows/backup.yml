@@ -1,0 +1,65 @@
+name: Encrypted backup
+on:
+  schedule:
+    - cron: "0 19 * * *"
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: encrypted-backup
+  cancel-in-progress: false
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      DATABASE_URL_DIRECT: ${{ secrets.DATABASE_URL_DIRECT }}
+      AGE_RECIPIENT: ${{ secrets.AGE_RECIPIENT }}
+      R2_ENDPOINT: ${{ secrets.R2_ENDPOINT }}
+      R2_BUCKET: ${{ secrets.R2_BUCKET }}
+      AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+      AWS_DEFAULT_REGION: auto
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Configure IPv4 session connection
+        run: node scripts/configure-ci-database.ts
+        env:
+          SUPABASE_SESSION_POOLER_HOST: ${{ vars.SUPABASE_SESSION_POOLER_HOST }}
+      - name: Install encryption tool
+        run: sudo apt-get update -qq && sudo apt-get install -y age
+      - name: Dump, encrypt and upload
+        shell: bash
+        run: |
+          set -euo pipefail
+          umask 077
+          for name in DATABASE_URL_DIRECT AGE_RECIPIENT R2_ENDPOINT R2_BUCKET AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY; do
+            if [ -z "${!name}" ]; then echo "Missing backup setting: $name"; exit 1; fi
+          done
+          trap 'rm -f "$RUNNER_TEMP/ovl.dump" "$RUNNER_TEMP/ovl.dump.age"' EXIT
+          # PG17 client supports both Supabase PG17 and older PostgreSQL servers.
+          docker run --rm -e DATABASE_URL_DIRECT -v "$RUNNER_TEMP:/backup" postgres:17 \
+            sh -c 'pg_dump --dbname="$DATABASE_URL_DIRECT" --format=custom --schema=public --schema=drizzle --no-owner --no-privileges --file=/backup/ovl.dump'
+          age --recipient "$AGE_RECIPIENT" --output "$RUNNER_TEMP/ovl.dump.age" "$RUNNER_TEMP/ovl.dump"
+          day=$(date -u +%F)
+          aws --endpoint-url "$R2_ENDPOINT" s3 cp "$RUNNER_TEMP/ovl.dump.age" "s3://$R2_BUCKET/ovl-v2/daily/$day.dump.age" --only-show-errors
+          if [ "$(date -u +%d)" = 01 ]; then
+            month=$(date -u +%Y-%m)
+            aws --endpoint-url "$R2_ENDPOINT" s3 cp "$RUNNER_TEMP/ovl.dump.age" "s3://$R2_BUCKET/ovl-v2/monthly/$month.dump.age" --only-show-errors
+          fi
+      - name: Prune after successful upload
+        shell: bash
+        run: |
+          set -euo pipefail
+          aws --endpoint-url "$R2_ENDPOINT" s3api list-objects-v2 --bucket "$R2_BUCKET" --prefix ovl-v2/ > "$RUNNER_TEMP/inventory.json"
+          node scripts/prune-backups.ts "$RUNNER_TEMP/inventory.json" "$RUNNER_TEMP/delete.json"
+          if node -e 'process.exit(JSON.parse(require("fs").readFileSync(process.argv[1])).Objects.length ? 0 : 1)' "$RUNNER_TEMP/delete.json"; then
+            aws --endpoint-url "$R2_ENDPOINT" s3api delete-objects --bucket "$R2_BUCKET" --delete "file://$RUNNER_TEMP/delete.json" > "$RUNNER_TEMP/delete-result.json"
+            node -e 'if(JSON.parse(require("fs").readFileSync(process.argv[1])).Errors?.length)process.exit(1)' "$RUNNER_TEMP/delete-result.json"
+          fi
