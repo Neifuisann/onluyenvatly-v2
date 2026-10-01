@@ -2,7 +2,8 @@ import "server-only";
 import { and, desc, eq } from "drizzle-orm";
 import { cache } from "react";
 import { db } from "@/db/client";
-import { attemptOverrides, attempts } from "@/db/schema";
+import { attemptOverrides, attempts, ratingEvents } from "@/db/schema";
+import { measureOperation } from "@/lib/performance.server";
 
 /**
  * Per-user reads (05 §4, kind R): never shared-cached. A student has at most
@@ -44,34 +45,56 @@ export async function getMyExtraAttempts(userId: string, lessonId: number) {
  * One attempt for its runner or result page. Callers check ownership
  * (`userId`) before showing anything. Deduped per request.
  */
+const attemptColumns = {
+  id: attempts.id,
+  userId: attempts.userId,
+  lessonId: attempts.lessonId,
+  lessonVersionId: attempts.lessonVersionId,
+  mode: attempts.mode,
+  status: attempts.status,
+  items: attempts.items,
+  answers: attempts.answers,
+  flagged: attempts.flagged,
+  checked: attempts.checked,
+  guardEvents: attempts.guardEvents,
+  earned: attempts.earned,
+  score: attempts.score,
+  maxScore: attempts.maxScore,
+  score10: attempts.score10,
+  startedAt: attempts.startedAt,
+  deadlineAt: attempts.deadlineAt,
+  submittedAt: attempts.submittedAt,
+  timeTakenSec: attempts.timeTakenSec,
+};
+
 export const getAttempt = cache(async (id: string) => {
   const [row] = await db
-    .select({
-      id: attempts.id,
-      userId: attempts.userId,
-      lessonId: attempts.lessonId,
-      lessonVersionId: attempts.lessonVersionId,
-      mode: attempts.mode,
-      status: attempts.status,
-      items: attempts.items,
-      answers: attempts.answers,
-      flagged: attempts.flagged,
-      checked: attempts.checked,
-      guardEvents: attempts.guardEvents,
-      earned: attempts.earned,
-      score: attempts.score,
-      maxScore: attempts.maxScore,
-      score10: attempts.score10,
-      startedAt: attempts.startedAt,
-      deadlineAt: attempts.deadlineAt,
-      submittedAt: attempts.submittedAt,
-      timeTakenSec: attempts.timeTakenSec,
-    })
+    .select(attemptColumns)
     .from(attempts)
     .where(eq(attempts.id, id))
     .limit(1);
   return row ?? null;
 });
+
+/** S9-01: one indexed read for the result and its optional rating change. */
+export const getAttemptForResult = cache((id: string) =>
+  measureOperation("attempt.result.read", async () => {
+    const [row] = await db
+      .select({
+        attempt: attemptColumns,
+        rating: {
+          before: ratingEvents.before,
+          delta: ratingEvents.delta,
+          after: ratingEvents.after,
+        },
+      })
+      .from(attempts)
+      .leftJoin(ratingEvents, eq(ratingEvents.attemptId, attempts.id))
+      .where(eq(attempts.id, id))
+      .limit(1);
+    return row ?? null;
+  }),
+);
 
 /**
  * A migrated v1 result (`/result/:id` bookmarks, S8-05) by its unique

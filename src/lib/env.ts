@@ -38,6 +38,7 @@ const serverSchema = z.object({
   GEMINI_BASE_URL: z.url().optional(),
   CRON_SECRET: z.string().min(16).optional(), // required from S9-05
   SENTRY_DSN: z.url().optional(),
+  PERFORMANCE_DIAGNOSTICS: z.enum(["0", "1"]).default("0"),
   AI_DAILY_BUDGET: z.coerce.number().int().nonnegative().default(0),
 });
 
