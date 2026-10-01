@@ -30,7 +30,7 @@ export async function startAttempt(
   _prev: FormState,
   formData: FormData,
 ): Promise<FormState> {
-  const user = await requireStudent();
+  const user = await measureOperation("attempt.start.auth", requireStudent);
   const parsed = StartAttemptSchema.safeParse({
     lessonId: formData.get("lessonId"),
   });

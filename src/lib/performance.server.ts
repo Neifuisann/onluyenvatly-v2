@@ -3,6 +3,7 @@ import { env } from "./env.server";
 
 type Operation =
   | "attempt.start"
+  | "attempt.start.auth"
   | "attempt.result.read"
   | "lesson.metadata.miss";
 
