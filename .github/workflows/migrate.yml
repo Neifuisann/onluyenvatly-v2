@@ -17,7 +17,7 @@ on:
       mode:
         description: Schema only or complete legacy data rehearsal
         type: choice
-        options: [schema, rehearsal]
+        options: [schema, rehearsal, verify]
         default: schema
       dry_run:
         description: Roll back rehearsal data writes
@@ -56,18 +56,19 @@ jobs:
       # DATABASE_URL_DIRECT (Supabase session pooler :5432, since the
       # db.<ref>.supabase.co host is IPv6-only and runners have no IPv6).
       - run: pnpm db:migrate
+        if: inputs.mode != 'verify'
       - name: Rehearse legacy users, lessons and history
         if: inputs.mode == 'rehearsal'
         run: node scripts/migrate-legacy.ts --skip-media ${{ inputs.dry_run && '--dry-run' || '' }}
         env:
           V1_DATABASE_URL: ${{ secrets.V1_DATABASE_URL }}
       - name: Verify source comparisons
-        if: inputs.mode == 'rehearsal' && !inputs.dry_run
+        if: inputs.mode == 'verify' || (inputs.mode == 'rehearsal' && !inputs.dry_run)
         run: node scripts/verify-migration.ts
         env:
           V1_DATABASE_URL: ${{ secrets.V1_DATABASE_URL }}
       - uses: actions/upload-artifact@v4
-        if: always() && inputs.mode == 'rehearsal'
+        if: always() && (inputs.mode == 'rehearsal' || inputs.mode == 'verify')
         with:
           name: migration-counts
           path: |

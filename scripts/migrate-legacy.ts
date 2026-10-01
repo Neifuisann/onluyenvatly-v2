@@ -15,6 +15,7 @@ import { parseArgs } from "node:util";
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
 import * as schema from "../src/db/schema.ts";
+import { databaseIdentity } from "./lib/database-identity.ts";
 import { copyAll } from "./lib/media-copy.ts";
 import { type HistoryReport, migrateHistory } from "./lib/migrate-history.ts";
 import {
@@ -45,10 +46,8 @@ if (!v1Url || !v2Url) {
   );
   process.exit(1);
 }
-if (new URL(v1Url).host === new URL(v2Url).host) {
-  console.error(
-    "V1_DATABASE_URL and the v2 URL point at the same host. Refusing.",
-  );
+if (databaseIdentity(v1Url) === databaseIdentity(v2Url)) {
+  console.error("Source and target identify the same database. Refusing.");
   process.exit(1);
 }
 const storage =

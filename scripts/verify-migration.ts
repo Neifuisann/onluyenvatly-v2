@@ -9,10 +9,12 @@ import { normalizeLegacyResult } from "../src/features/lessons/domain/legacy-res
 import { toPublicQuestion } from "../src/features/lessons/domain/public-question.ts";
 import { QuestionsSchema } from "../src/features/lessons/schema.ts";
 import { replayRatings } from "../src/features/rating/domain/rating.ts";
+import { pgErrorCode } from "../src/lib/pg-error.ts";
+import { databaseIdentity } from "./lib/database-identity.ts";
 
 const v1Url = process.env.V1_DATABASE_URL;
 const v2Url = process.env.DATABASE_URL_DIRECT ?? process.env.DATABASE_URL;
-if (!v1Url || !v2Url || new URL(v1Url).hostname === new URL(v2Url).hostname)
+if (!v1Url || !v2Url || databaseIdentity(v1Url) === databaseIdentity(v2Url))
   throw new Error("Set distinct source and target database URLs.");
 const source = postgres(v1Url, { max: 1, prepare: false });
 const target = postgres(v2Url, { max: 1, prepare: false });
@@ -350,9 +352,13 @@ try {
       );
     },
   );
-} catch {
+} catch (error) {
+  const code = pgErrorCode(error);
   console.error(
-    "Migration verification failed. Inspect schema and source compatibility privately.",
+    JSON.stringify({
+      evt: "migration_verification_failure",
+      code: code && /^[A-Z0-9_]{2,40}$/.test(code) ? code : "UNKNOWN",
+    }),
   );
   process.exitCode = 1;
 } finally {
