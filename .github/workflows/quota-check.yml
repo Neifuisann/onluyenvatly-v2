@@ -8,6 +8,11 @@ on:
         description: Send a synthetic quota alert
         type: boolean
         default: false
+  workflow_call:
+    inputs:
+      test_alert:
+        type: boolean
+        default: false
 permissions:
   contents: read
   issues: write
