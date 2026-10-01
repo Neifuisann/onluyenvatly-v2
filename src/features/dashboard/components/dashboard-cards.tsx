@@ -96,6 +96,7 @@ export function ContinueCard({
           <Link
             href={`/attempts/${attemptId}`}
             className={buttonVariants({ variant: "ink", size: "lg" })}
+            prefetch={false}
           >
             {t.continue}
             <ArrowRight aria-hidden />
@@ -315,6 +316,7 @@ function Tile({
         cardClass,
         "group flex min-h-32 flex-col justify-between gap-4 p-5 transition-[transform,box-shadow,border-color] duration-200 hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-raised",
       )}
+      prefetch={false}
     >
       <span
         className={cn(

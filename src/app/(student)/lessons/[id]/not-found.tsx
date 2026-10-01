@@ -13,6 +13,7 @@ export default function NotFound() {
         <Link
           href="/lessons"
           className={buttonVariants({ variant: "secondary" })}
+          prefetch={false}
         >
           {t.back}
         </Link>

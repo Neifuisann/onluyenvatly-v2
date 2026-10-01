@@ -1,20 +1,14 @@
 "use client";
 
-import { ErrorState } from "@/components/error-state";
-import { Button } from "@/components/ui/button";
-import { profileCopy as t } from "@/features/profile/messages";
+import { type ComponentProps, lazy, Suspense } from "react";
 
-export default function ProfileError({
-  retry,
-}: {
-  error: Error & { digest?: string };
-  retry: () => void;
-}) {
+const ErrorContent = lazy(() => import("./error-content"));
+
+/** Recovery controls are downloaded only when this boundary renders. */
+export default function RouteError(props: ComponentProps<typeof ErrorContent>) {
   return (
-    <ErrorState
-      title={t.errorTitle}
-      description={t.errorBody}
-      action={<Button onClick={retry}>{t.retry}</Button>}
-    />
+    <Suspense fallback={null}>
+      <ErrorContent {...props} />
+    </Suspense>
   );
 }

@@ -17,6 +17,7 @@ import {
 const { values } = parseArgs({
   options: {
     verify: { type: "boolean", default: false },
+    performance: { type: "boolean", default: false },
     users: { type: "string", default: "300" },
     "staging-host": { type: "string" },
   },
@@ -130,7 +131,10 @@ try {
         .values({
           title: "Kiểm tra tải S9",
           status: "published",
-          config: { ...DEFAULT_LESSON_CONFIG, timeLimitSec: 300 },
+          config: {
+            ...DEFAULT_LESSON_CONFIG,
+            timeLimitSec: values.performance ? 3600 : 300,
+          },
           questionCount: 28,
           typeCounts: { mcq: 28 },
         })

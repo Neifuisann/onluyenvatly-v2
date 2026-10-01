@@ -18,7 +18,7 @@ on:
       mode:
         description: Manual Sprint 9 validation
         type: choice
-        options: [load, quota]
+        options: [load, quota, performance]
         default: load
 
 concurrency:
@@ -153,3 +153,10 @@ jobs:
     secrets: inherit
     with:
       test_alert: true
+
+  performance-rehearsal:
+    if: github.event_name == 'workflow_dispatch' && inputs.mode == 'performance'
+    uses: ./.github/workflows/performance.yml
+    secrets: inherit
+    with:
+      preview_url: ${{ inputs.preview_url }}

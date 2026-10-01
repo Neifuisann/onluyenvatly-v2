@@ -185,7 +185,11 @@ export default async function ProfilePage({
             title={t.historyEmptyTitle}
             description={t.historyEmptyBody}
             action={
-              <Link href="/lessons" className={buttonVariants()}>
+              <Link
+                href="/lessons"
+                className={buttonVariants()}
+                prefetch={false}
+              >
                 {t.findLesson}
               </Link>
             }

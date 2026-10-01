@@ -15,7 +15,11 @@ export function NotFoundContent() {
         <h1 className="heading-page">{t.title}</h1>
         <p className="text-muted-foreground">{t.body}</p>
       </div>
-      <Link href="/" className={buttonVariants({ size: "lg" })}>
+      <Link
+        href="/"
+        className={buttonVariants({ size: "lg" })}
+        prefetch={false}
+      >
         {t.home}
       </Link>
     </div>

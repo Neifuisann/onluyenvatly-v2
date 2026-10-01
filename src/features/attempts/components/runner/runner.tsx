@@ -233,6 +233,7 @@ function RunnerScreen({
               aria-label={practice ? practiceCopy.exit : t.exit}
               title={practice ? practiceCopy.exit : t.exit}
               className="flex size-11 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+              prefetch={false}
             >
               <X aria-hidden className="size-5" />
             </Link>

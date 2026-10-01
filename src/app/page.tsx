@@ -72,6 +72,7 @@ function Hero() {
           <div className="flex flex-col justify-center gap-3 sm:flex-row lg:justify-start">
             <Link
               href="/register"
+              prefetch={false}
               className={buttonVariants({ size: "lg", className: "h-13 px-7" })}
             >
               {t.ctaPrimary}
@@ -79,6 +80,7 @@ function Hero() {
             </Link>
             <Link
               href="/login"
+              prefetch={false}
               className={buttonVariants({
                 variant: "secondary",
                 size: "lg",
@@ -280,6 +282,7 @@ function Closing() {
         </div>
         <Link
           href="/register"
+          prefetch={false}
           className={buttonVariants({
             variant: "ink",
             size: "lg",

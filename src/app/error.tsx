@@ -1,7 +1,15 @@
 "use client";
 
-import dynamic from "next/dynamic";
+import { type ComponentProps, lazy, Suspense } from "react";
 
 /** Last boundary for pages without their own (landing, auth, public). */
-const RootError = dynamic(() => import("@/components/root-error-content"));
-export default RootError;
+const RootError = lazy(() => import("@/components/root-error-content"));
+export default function RootErrorBoundary(
+  props: ComponentProps<typeof RootError>,
+) {
+  return (
+    <Suspense fallback={null}>
+      <RootError {...props} />
+    </Suspense>
+  );
+}

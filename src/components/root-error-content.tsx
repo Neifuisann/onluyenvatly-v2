@@ -24,7 +24,11 @@ export default function RootError({
         action={
           <div className="flex flex-wrap justify-center gap-2">
             <Button onClick={retry}>{t.retry}</Button>
-            <Link href="/" className={buttonVariants({ variant: "ghost" })}>
+            <Link
+              href="/"
+              className={buttonVariants({ variant: "ghost" })}
+              prefetch={false}
+            >
               {t.home}
             </Link>
           </div>

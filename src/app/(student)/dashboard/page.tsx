@@ -127,6 +127,7 @@ export default async function DashboardPage() {
               <Link
                 href="/lessons"
                 className={buttonVariants({ variant: "secondary" })}
+                prefetch={false}
               >
                 {t.seeAll}
               </Link>

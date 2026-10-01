@@ -32,6 +32,7 @@ export function Logo({
   return (
     <Link
       href={href}
+      prefetch={false}
       className={cn(
         "inline-flex min-h-11 items-center gap-2.5 rounded-md text-foreground",
         className,

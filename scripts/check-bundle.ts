@@ -43,9 +43,9 @@ for (const path of await walk(".next/server/app")) {
         : 150;
     const chunks = new Set([
       ...root.rootMainFiles,
-      ...Object.entries(manifest.entryJSFiles)
-        .filter(([entry]) => !entry.includes("opengraph-image"))
-        .flatMap(([, files]) => files),
+      // Generated metadata entries can share chunks with hydrated controls.
+      // Browser measurements confirmed these chunks load on ordinary pages.
+      ...Object.values(manifest.entryJSFiles).flat(),
     ]);
     let bytes = 0;
     for (const chunk of chunks) {

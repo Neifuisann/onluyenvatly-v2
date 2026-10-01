@@ -1,26 +1,14 @@
 "use client";
 
-import { ErrorState } from "@/components/error-state";
-import { Button } from "@/components/ui/button";
-import { runnerCopy as t } from "@/features/attempts/messages";
+import { type ComponentProps, lazy, Suspense } from "react";
 
-/**
- * A failed load (DB down, timeout) is not a missing attempt: offer a retry
- * instead of a 404. Unsynced answers wait in localStorage meanwhile.
- */
-export default function AttemptError({
-  retry,
-}: {
-  error: Error & { digest?: string };
-  retry: () => void;
-}) {
+const ErrorContent = lazy(() => import("./error-content"));
+
+/** Recovery controls are downloaded only when this boundary renders. */
+export default function RouteError(props: ComponentProps<typeof ErrorContent>) {
   return (
-    <main className="mx-auto w-full max-w-5xl px-4 py-8">
-      <ErrorState
-        title={t.errorTitle}
-        description={t.errorBody}
-        action={<Button onClick={retry}>{t.retry}</Button>}
-      />
-    </main>
+    <Suspense fallback={null}>
+      <ErrorContent {...props} />
+    </Suspense>
   );
 }

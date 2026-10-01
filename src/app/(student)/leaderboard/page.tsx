@@ -42,6 +42,7 @@ export default async function LeaderboardPage({
           <Link
             href="/lessons"
             className={buttonVariants({ variant: "secondary", size: "sm" })}
+            prefetch={false}
           >
             {t.findLesson}
           </Link>
@@ -55,7 +56,7 @@ export default async function LeaderboardPage({
           title={week ? t.emptyWeekTitle : t.emptyAllTitle}
           description={week ? t.emptyWeekBody : t.emptyAllBody}
           action={
-            <Link href="/lessons" className={buttonVariants()}>
+            <Link href="/lessons" className={buttonVariants()} prefetch={false}>
               {t.findLesson}
             </Link>
           }
