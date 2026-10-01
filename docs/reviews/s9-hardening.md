@@ -237,8 +237,16 @@ was not migrated. `verify-migration.ts` reported `automatedOk: true` with no
 failures (counts, recorded answers and marks, version schemas, ratings and
 history, 20 sampled students, tied leaderboard rows). Its three manual gates
 remain open: controlled-account password checks, teacher review and the media
-copy. The rehearsal into the v2 production project (`migrate.yml`, mode
-`rehearsal`, production environment approval) has not been run.
+copy.
+
+The same rehearsal then ran into the v2 production project through
+`migrate.yml` (mode `rehearsal`, writes on, production environment):
+run `36803938521` on `b2945fd` applied the schema and imported the same
+counts (23,914 attempts, 433 historical versions, 23,471 events, 273 ratings,
+101,599 mistakes). Its verify step refused to run because both URLs were
+Supabase shared-pooler hosts. `6a3e958` tells projects apart by the pooler
+user, and the verify-only run `36806966248` against production reported
+`automatedOk: true` with no failures and the same counts (604 valid versions).
 
 ## Remaining live acceptance
 
@@ -249,6 +257,6 @@ copy. The rehearsal into the v2 production project (`migrate.yml`, mode
 | S9-03 | ✅ Zero high findings (audit, ZAP baseline, gitleaks, boundary checks) | Review the seven ZAP warning categories |
 | S9-04 | 🟡 Workflows and a local encrypted round trip pass | R2, age and restore-target secrets in GitHub, then the live drill into Neon |
 | S9-05 | 🟡 Cron maintenance live, quota test alert received (#21) | Sentry DSN, UptimeRobot monitor, Vercel usage alerts |
-| S9-06 | 🟡 Full real-data rehearsal locally, automated verification green | Production-project rehearsal, password checks, media copy, teacher review |
+| S9-06 | 🟡 Full real-data rehearsal into the v2 production project, automated verification green | Controlled-account password checks, media copy, teacher review |
 
 M6 is not launch-ready until these gates have evidence.
