@@ -5,6 +5,10 @@ import { sessionConnection } from "./lib/session-connection.ts";
 const input = process.env.DATABASE_URL_DIRECT;
 if (!input || !process.env.GITHUB_ENV)
   throw new Error("CI database configuration is missing.");
+const neonRegion = /\.([a-z]{2}-[a-z]+-\d)\.(?:aws|azure)\.neon\.tech$/.exec(
+  new URL(input).hostname,
+);
+if (neonRegion) console.log(`Staging database region: ${neonRegion[1]}`);
 const connection = sessionConnection(
   input,
   process.env.SUPABASE_SESSION_POOLER_HOST,
