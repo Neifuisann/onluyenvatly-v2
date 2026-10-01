@@ -350,7 +350,15 @@ export async function submitAttempt(
       late,
     });
   });
-  if (outcome.ok && lessonId !== null) await recordAttemptCount(attemptId);
+  // The grade has committed: a lost counter write must not fail the submit.
+  // The daily flush (`flushAttemptCounters`) repairs it.
+  if (outcome.ok && lessonId !== null)
+    await recordAttemptCount(attemptId).catch((error: unknown) => {
+      console.error(
+        "submit: counter deferred:",
+        pgErrorCode(error) ?? "unknown",
+      );
+    });
   return outcome;
 }
 

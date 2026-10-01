@@ -440,15 +440,19 @@ describe("submitAttempt", () => {
     expect((await row(id))?.timeTakenSec).toBe(60);
   });
 
-  it("recovers a post-commit counter interruption without grading or rating twice", async () => {
+  it("returns the grade despite a post-commit counter interruption, then repairs it once", async () => {
     const { id, lessonId } = await started();
     const failure = vi
       .spyOn(tdb, "execute")
       .mockRejectedValueOnce(new Error("Synthetic counter interruption"));
-    await expect(
-      submitAttempt(student.id, id, right, at(1000)),
-    ).rejects.toThrow("Synthetic counter interruption");
+    const quiet = vi.spyOn(console, "error").mockImplementation(() => {});
+    expect(await submitAttempt(student.id, id, right, at(1000))).toMatchObject({
+      ok: true,
+      data: { score: 1.75, alreadySubmitted: false },
+    });
     failure.mockRestore();
+    expect(quiet).toHaveBeenCalledWith("submit: counter deferred:", "unknown");
+    quiet.mockRestore();
     expect(await row(id)).toMatchObject({
       status: "submitted",
       score: 1.75,
