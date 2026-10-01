@@ -60,6 +60,13 @@ GitHub and Vercel authentication were restored. CI has a manual deployed staging
 rehearsal with synthetic fixtures and count-only artifacts. Its preview health
 check must match the tested commit. Session manifests never become artifacts.
 
+Deployed preview `a145c57`, GitHub run `36793518236`: 100/100 completed,
+5,638 checks passed, zero HTTP failures and exact database verification.
+Submit p95 356.5 ms passed; start 873.01 ms, runner 988.34 ms and result
+1.98 s failed. Save p95 was 315.13 ms. This is not a passing load acceptance.
+The Docker runner now writes artifacts as the runner user so summary files
+are readable by artifact upload.
+
 ## S9-02: performance
 
 The bundle checker includes shared framework and entry chunks at gzip size.
@@ -78,11 +85,16 @@ with a Playwright-owned browser. No deployed cache-log acceptance yet.
 
 ## S9-03: security
 
-Production dependency audit: zero vulnerabilities. Five new checks pass for
+Full dependency audit: zero high/critical findings, one moderate finding in
+Drizzle's development-only esbuild dependency. LHCI's old Lighthouse/ZIP
+extractor was replaced through pinned overrides. Three new checks pass for
 transitive client/server boundaries, secret environment access and backup
 retention. Existing authz tests discover every admin action; the E2E matrix
 covers student/visitor routes and answer-safe runner traffic. Full suite and ZAP
-evidence will be recorded after validation. ZAP refuses an unreachable or
+suite passes (1,154 tests). Deployed ZAP baseline: zero high risks, seven warning
+categories, retained in `tmp/zap/report.json` for review. Gitleaks 8.30.1 found
+no secrets in the branch history or staged security changes.
+ZAP refuses an unreachable or
 protected preview and fails on high risks; warning reports remain visible.
 
 ## S9-04: backup and restore
@@ -92,8 +104,29 @@ then pruning to 30 daily and 12 monthly dated copies. Retention tests pass.
 The restore workflow refuses production/shared staging hosts and nonempty
 targets, decrypts the newest daily copy, restores transactionally without
 owners/privileges and verifies counts, submitted-answer alignment, published
-version links, Zod questions and RLS. Local round trip and live R2/Neon drill
-remain pending. R2/age/isolated restore credentials are not configured in GitHub.
+version links, Zod questions and RLS. A local age-encrypted round trip passed:
+decrypted bytes matched the source dump; isolated Postgres restore had 1,306
+users, seven lessons/versions, 1,306 attempts, 1,287 rating events and 27,027
+mistakes, with zero sanity violations. The drill skips only the public-schema
+creation entry because fresh Postgres already supplies that schema.
+Live R2/Neon acceptance remains pending: R2/age/isolated restore credentials
+are not configured in GitHub.
+
+## S9-05: maintenance and monitoring
+
+Daily maintenance grades overdue attempts using their last saved answers and
+the existing idempotent submit transaction, removes expired sessions and rate
+limits, protects every referenced lesson version, trims old IP/guard metadata,
+and cleans imports. Integration tests cover retries and retention boundaries.
+Migration `0012` supports private-data retention. Quota checks report database,
+storage and configured AI usage, warning at 60 percent through a GitHub issue.
+
+Sentry SDK 11 is optional on server and browser. Event/span sanitizers retain
+only generic error information, safe stack filenames and trace identifiers;
+user data, requests, cookies, headers, bodies, SQL, content and breadcrumbs are
+dropped. Explicit SDK data-collection settings disable personal data. No DSN
+is configured, so receipt of a real alert is still unverified. UptimeRobot and
+Vercel usage alerts also require external account configuration.
 
 ## Remaining live acceptance
 

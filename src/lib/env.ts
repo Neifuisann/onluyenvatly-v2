@@ -37,10 +37,12 @@ const serverSchema = z.object({
   // Tests only: E2E's Gemini stand-in (tests/e2e/fake-gemini.ts).
   GEMINI_BASE_URL: z.url().optional(),
   CRON_SECRET: z.string().min(16).optional(), // required from S9-05
+  SENTRY_DSN: z.url().optional(),
   AI_DAILY_BUDGET: z.coerce.number().int().nonnegative().default(0),
 });
 
 const clientSchema = z.object({
+  NEXT_PUBLIC_SENTRY_DSN: z.url().optional(),
   // Public URL of the `media` bucket; images show as their path until set.
   NEXT_PUBLIC_MEDIA_BASE_URL: z.url().optional(),
 });

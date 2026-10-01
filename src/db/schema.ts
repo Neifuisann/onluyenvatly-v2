@@ -391,6 +391,11 @@ export const attempts = pgTable(
     index("attempts_expiry_idx")
       .on(t.status, t.deadlineAt)
       .where(sql`${t.status} = 'in_progress'`),
+    index("attempts_private_retention_idx")
+      .on(t.startedAt)
+      .where(
+        sql`${t.ip} is not null or jsonb_array_length(${t.guardEvents}) > 0`,
+      ),
     check(
       "attempts_answers_aligned",
       sql`jsonb_array_length(${t.answers}) = jsonb_array_length(${t.items})`,
