@@ -371,6 +371,8 @@ export const attempts = pgTable(
     lastSavedAt: timestamptz("last_saved_at"),
     /** Idempotency key of the submit that closed the attempt. */
     clientSubmitId: uuid("client_submit_id"),
+    /** Idempotent analytics update after grading has committed (S9-01). */
+    counterRecorded: boolean("counter_recorded").notNull().default(false),
     ip: inet("ip"),
   },
   (t) => [
@@ -398,6 +400,11 @@ export const attempts = pgTable(
       .on(t.startedAt)
       .where(
         sql`${t.ip} is not null or jsonb_array_length(${t.guardEvents}) > 0`,
+      ),
+    index("attempts_pending_counter_idx")
+      .on(t.lessonId)
+      .where(
+        sql`${t.status} = 'submitted' and ${t.lessonId} is not null and not ${t.counterRecorded}`,
       ),
     check(
       "attempts_answers_aligned",

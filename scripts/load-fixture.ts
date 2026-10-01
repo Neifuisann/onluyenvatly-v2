@@ -67,9 +67,14 @@ try {
       .select()
       .from(schema.ratings)
       .where(inArray(schema.ratings.userId, ids));
+    const [lesson] = await db
+      .select({ attemptCount: schema.lessons.attemptCount })
+      .from(schema.lessons)
+      .where(eq(schema.lessons.id, manifest.lessonId));
     const failures = rows.filter(
       (a) =>
         a.status !== "submitted" ||
+        !a.counterRecorded ||
         a.score !== 7 ||
         a.score10 !== 2.5 ||
         a.maxScore !== 28 ||
@@ -82,6 +87,7 @@ try {
       failures.length === 0 &&
       events.length === count &&
       ratings.length === count &&
+      lesson?.attemptCount === count &&
       rows.every((a) =>
         events.some((e) => e.attemptId === a.id && e.userId === a.userId),
       ) &&
@@ -97,6 +103,7 @@ try {
       invalid: failures.length,
       ratingEvents: events.length,
       ratings: ratings.length,
+      lessonAttemptCount: lesson?.attemptCount ?? null,
     };
     await writeFile(
       "tmp/load-verification.json",

@@ -10,7 +10,11 @@ import {
 } from "@/db/schema";
 import { grade } from "@/features/grading/domain/grade";
 import { toCents } from "@/features/grading/domain/points";
-import { getLessonWithAnswers } from "@/features/lessons/queries";
+import {
+  getFreshLessonForStarting,
+  getLessonForStarting,
+  getLessonWithAnswers,
+} from "@/features/lessons/queries";
 import {
   type LessonConfig,
   LessonConfigSchema,
@@ -30,6 +34,7 @@ import { FOREIGN_KEY_VIOLATION, pgErrorCode } from "@/lib/pg-error";
 import { rateLimit } from "@/lib/rate-limit";
 import { err, ok, type Result } from "@/lib/result";
 import { itemQuestions, itemSources } from "./content";
+import { recordAttemptCount } from "./counter-service";
 import { buildItems } from "./domain/build-items";
 import {
   DEADLINE_GRACE_MS,
@@ -88,7 +93,7 @@ export async function startAttempt(
     // A publish deleted the version between our read and the insert (S5-04
     // retires unused versions): start again on the new one.
     if (pgErrorCode(error) !== FOREIGN_KEY_VIOLATION) throw error;
-    return startOnce(user, lessonId, ctx);
+    return startOnce(user, lessonId, ctx, true);
   }
 }
 
@@ -96,16 +101,11 @@ async function startOnce(
   user: AttemptActor,
   lessonId: number,
   { ip, now, seed }: Required<StartContext>,
+  fresh = false,
 ): Promise<Result<{ attemptId: string; resumed: boolean }>> {
-  const [lesson] = await db
-    .select({
-      status: lessons.status,
-      versionId: lessons.currentVersionId,
-      config: lessons.config,
-    })
-    .from(lessons)
-    .where(eq(lessons.id, lessonId))
-    .limit(1);
+  const lesson = await (fresh
+    ? getFreshLessonForStarting(lessonId)
+    : getLessonForStarting(lessonId));
   // Admins may try unpublished lessons that have a version (06 §2).
   if (
     !lesson?.versionId ||
@@ -248,7 +248,7 @@ export async function submitAttempt(
   // Practice and review never move the rating (01 Q9).
   const rated = pre.mode === "test" && lessonId !== null && countsForRating;
 
-  return db.transaction(async (tx) => {
+  const outcome = await db.transaction(async (tx) => {
     const [a] = await tx
       .select({
         status: attempts.status,
@@ -341,14 +341,6 @@ export async function submitAttempt(
       correct: toTargets(changes.correct),
       now,
     });
-    // S9-01: this is the one shared row in a class-wide submit burst. Lock
-    // it last so rating/mistake writes do not serialize behind that lock.
-    // It remains atomic with grading and increments only on first submit.
-    if (lessonId !== null)
-      await tx
-        .update(lessons)
-        .set({ attemptCount: sql`${lessons.attemptCount} + 1` })
-        .where(eq(lessons.id, lessonId));
     return ok({
       attemptId,
       score: result.score,
@@ -358,6 +350,8 @@ export async function submitAttempt(
       late,
     });
   });
+  if (outcome.ok && lessonId !== null) await recordAttemptCount(attemptId);
+  return outcome;
 }
 
 /**

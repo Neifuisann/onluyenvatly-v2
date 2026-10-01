@@ -42,6 +42,7 @@ export async function deleteAttempt(
         userId: attempts.userId,
         lessonId: attempts.lessonId,
         status: attempts.status,
+        counterRecorded: attempts.counterRecorded,
       })
       .from(attempts)
       .where(eq(attempts.id, id))
@@ -101,7 +102,7 @@ export async function deleteAttempt(
       } else await tx.delete(ratings).where(eq(ratings.userId, userId));
     }
 
-    if (status === "submitted" && lessonId !== null)
+    if (status === "submitted" && lessonId !== null && attempt.counterRecorded)
       await tx
         .update(lessons)
         .set({ attemptCount: sql`greatest(${lessons.attemptCount} - 1, 0)` })

@@ -4,6 +4,7 @@ import { and, asc, eq, isNotNull, lt, or, sql } from "drizzle-orm";
 import { db } from "@/db/client";
 import { attempts, lessonVersions, rateLimits, sessions } from "@/db/schema";
 import { cleanupImports } from "@/features/ai/import-service";
+import { flushAttemptCounters } from "@/features/attempts/counter-service";
 import { submitAttempt } from "@/features/attempts/service";
 import { retentionCutoffs } from "./domain/retention";
 
@@ -36,6 +37,7 @@ export async function runDailyMaintenance(now = new Date()) {
     if (result.ok) submitted++;
     else failed++;
   }
+  const counters = await flushAttemptCounters();
   const expiredSessions = await db
     .delete(sessions)
     .where(lt(sessions.expiresAt, now))
@@ -80,6 +82,7 @@ export async function runDailyMaintenance(now = new Date()) {
   await db.execute(sql`select 1`);
   return {
     submitted,
+    counters,
     failed,
     pending: pending?.count ?? 0,
     sessions: expiredSessions.length,
