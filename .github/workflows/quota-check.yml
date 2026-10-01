@@ -31,9 +31,13 @@ jobs:
           node-version-file: .nvmrc
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - name: Read quota snapshot
+      - name: Configure IPv4 session connection
+        run: node scripts/configure-ci-database.ts
         env:
           DATABASE_URL_DIRECT: ${{ secrets.DATABASE_URL_DIRECT }}
+          SUPABASE_SESSION_POOLER_HOST: ${{ vars.SUPABASE_SESSION_POOLER_HOST }}
+      - name: Read quota snapshot
+        env:
           QUOTA_AI_DAILY_LIMIT: ${{ vars.QUOTA_AI_DAILY_LIMIT }}
           TEST_ALERT: ${{ inputs.test_alert }}
         run: |

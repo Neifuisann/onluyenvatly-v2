@@ -28,6 +28,10 @@ jobs:
           node-version-file: .nvmrc
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      - name: Configure IPv4 session connection
+        run: node scripts/configure-ci-database.ts
+        env:
+          SUPABASE_SESSION_POOLER_HOST: ${{ vars.SUPABASE_SESSION_POOLER_HOST }}
       - name: Install encryption tool
         run: sudo apt-get update -qq && sudo apt-get install -y age
       - name: Dump, encrypt and upload
