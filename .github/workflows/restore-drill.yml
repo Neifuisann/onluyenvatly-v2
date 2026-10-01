@@ -1,0 +1,58 @@
+name: Restore drill
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: restore-drill
+  cancel-in-progress: false
+jobs:
+  restore:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      RESTORE_DATABASE_URL: ${{ secrets.RESTORE_DATABASE_URL }}
+      DATABASE_URL_DIRECT: ${{ secrets.DATABASE_URL_DIRECT }}
+      NEON_DATABASE_URL: ${{ secrets.NEON_DATABASE_URL }}
+      NEON_DATABASE_URL_POOLED: ${{ secrets.NEON_DATABASE_URL_POOLED }}
+      AGE_IDENTITY: ${{ secrets.AGE_IDENTITY }}
+      R2_ENDPOINT: ${{ secrets.R2_ENDPOINT }}
+      R2_BUCKET: ${{ secrets.R2_BUCKET }}
+      AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+      AWS_DEFAULT_REGION: auto
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: sudo apt-get update -qq && sudo apt-get install -y age
+      - name: Reject shared or nonempty targets
+        run: node scripts/verify-database.ts --assert-empty
+      - name: Download, decrypt and restore latest daily backup
+        shell: bash
+        run: |
+          set -euo pipefail
+          umask 077
+          for name in RESTORE_DATABASE_URL AGE_IDENTITY R2_ENDPOINT R2_BUCKET AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY; do
+            if [ -z "${!name}" ]; then echo "Missing restore setting: $name"; exit 1; fi
+          done
+          trap 'rm -f "$RUNNER_TEMP/identity" "$RUNNER_TEMP/restore.dump" "$RUNNER_TEMP/restore.dump.age"' EXIT
+          aws --endpoint-url "$R2_ENDPOINT" s3api list-objects-v2 --bucket "$R2_BUCKET" --prefix ovl-v2/daily/ > "$RUNNER_TEMP/inventory.json"
+          key=$(node -e 'const a=JSON.parse(require("fs").readFileSync(process.argv[1]));const k=(a.Contents||[]).map(o=>o.Key).filter(k=>/^ovl-v2\/daily\/\d{4}-\d{2}-\d{2}\.dump\.age$/.test(k)).sort().at(-1);if(!k)process.exit(1);console.log(k)' "$RUNNER_TEMP/inventory.json")
+          aws --endpoint-url "$R2_ENDPOINT" s3 cp "s3://$R2_BUCKET/$key" "$RUNNER_TEMP/restore.dump.age" --only-show-errors
+          printf '%s\n' "$AGE_IDENTITY" > "$RUNNER_TEMP/identity"
+          age --decrypt --identity "$RUNNER_TEMP/identity" --output "$RUNNER_TEMP/restore.dump" "$RUNNER_TEMP/restore.dump.age"
+          # Extensions are dependencies of the scoped dump, not included by pg_dump --schema.
+          docker run --rm -e RESTORE_DATABASE_URL -v "$RUNNER_TEMP:/backup" postgres:17 \
+            sh -c 'psql "$RESTORE_DATABASE_URL" -v ON_ERROR_STOP=1 -c "create extension if not exists unaccent; create extension if not exists pg_trgm;" && pg_restore --list /backup/restore.dump | sed "/ SCHEMA - public /d" > /backup/restore.list && pg_restore --dbname="$RESTORE_DATABASE_URL" --use-list=/backup/restore.list --no-owner --no-privileges --exit-on-error --single-transaction /backup/restore.dump'
+      - name: Verify restored data
+        run: node scripts/verify-database.ts
+      - uses: actions/upload-artifact@v4
+        with:
+          name: restore-counts
+          path: tmp/restore-verification.json
+          retention-days: 30
