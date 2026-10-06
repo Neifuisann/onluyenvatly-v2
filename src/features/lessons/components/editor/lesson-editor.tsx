@@ -519,7 +519,7 @@ function Stepper({
                 {done ? <Check className="size-4" strokeWidth={3} /> : i + 1}
               </span>
               <span className="sr-only">{t.stepNumber(i + 1)}: </span>
-              <span className={cn(!current && "max-sm:sr-only")}>
+              <span className={cn(!current && "max-xl:sr-only")}>
                 {t.steps[s]}
               </span>
             </button>

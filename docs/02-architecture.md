@@ -144,8 +144,9 @@ onluyenvatly-v2/
 │  │  │  ├─ lessons/  lessons/[id]/
 │  │  │  ├─ attempts/[id]/  attempts/[id]/result/
 │  │  │  ├─ review/  leaderboard/  profile/  settings/
-│  │  ├─ admin/                ← layout calls requireAdmin()
-│  │  │  ├─ page.tsx (dashboard) lessons/ lessons/[id]/edit students/ results/ settings/
+│  │  ├─ admin/
+│  │  │  ├─ (shell)/           ← layout calls requireAdmin(): (overview) lessons/ students/ results/ settings/ …
+│  │  │  ├─ (workspace)/       ← full-screen, no shell; pages call requireAdmin(): lessons/[id]/edit
 │  │  ├─ api/
 │  │  │  ├─ ai/import/route.ts        (streaming)
 │  │  │  ├─ attempts/[id]/beacon/route.ts

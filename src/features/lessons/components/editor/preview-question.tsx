@@ -213,7 +213,6 @@ function LetterBadge({
       type="button"
       onClick={onClick}
       aria-label={label}
-      aria-pressed={isKey}
       title={label}
       className={cn(
         className,
