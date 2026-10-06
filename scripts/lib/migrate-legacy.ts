@@ -189,6 +189,30 @@ function coverJob(
     : { job: null, problem: `cover not migrated: ${src.slice(0, 80)}` };
 }
 
+/**
+ * Every image the v1 lessons use (question figures and covers), keyed by v2
+ * path. Pure, so the media copy can run on its own without touching rows
+ * (`scripts/copy-legacy-media.ts`).
+ */
+export function legacyMediaJobs(
+  v1Lessons: readonly V1Row[],
+  mapMedia: MediaMapper = defaultV1MediaPath,
+): MediaJob[] {
+  const media = new Map<string, MediaJob>();
+  for (const row of v1Lessons) {
+    const legacyId = str(row.id);
+    if (V1_NON_LESSON_IDS.has(legacyId)) continue;
+    for (const url of normalizeV1Questions(row.questions, mapMedia).mediaUrls) {
+      const path = mapMedia(url);
+      if (path && !media.has(path))
+        media.set(path, { source: url, path, lessonLegacyId: legacyId });
+    }
+    const cover = coverJob(row.lesson_image, legacyId, mapMedia).job;
+    if (cover) media.set(cover.path, cover);
+  }
+  return [...media.values()];
+}
+
 export async function migrateLessons<Q extends PgQueryResultHKT>(
   db: Db<Q>,
   v1Lessons: readonly V1Row[],
