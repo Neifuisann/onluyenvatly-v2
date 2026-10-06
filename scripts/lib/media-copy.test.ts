@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { copyAll, copyMediaObject } from "./media-copy";
+import { copyAll, copyMediaObject, ensureBucket } from "./media-copy";
 
 const target = {
   url: "https://v2.supabase.test/",
@@ -127,5 +127,43 @@ describe("copyAll", () => {
     const results = await copyAll(jobs, target, 3, fn);
     expect(results).toHaveLength(7);
     expect(results.every((r) => r.status === "copied")).toBe(true);
+  });
+});
+
+describe("ensureBucket", () => {
+  const spec = { id: "media", public: true, allowedMimeTypes: ["image/png"] };
+  const fake = (getStatus: number, postStatus = 200) => {
+    const calls: { url: string; method: string; body?: string }[] = [];
+    const fn = (async (input: RequestInfo | URL, init?: RequestInit) => {
+      const method = init?.method ?? "GET";
+      calls.push({ url: String(input), method, body: init?.body as string });
+      return new Response("{}", {
+        status: method === "GET" ? getStatus : postStatus,
+      });
+    }) as typeof fetch;
+    return { fn, calls };
+  };
+
+  it("leaves an existing bucket alone", async () => {
+    const { fn, calls } = fake(200);
+    expect(await ensureBucket(target, spec, fn)).toBe("exists");
+    expect(calls.map((c) => c.method)).toEqual(["GET"]);
+  });
+
+  it("creates a missing bucket with its settings", async () => {
+    const { fn, calls } = fake(400);
+    expect(await ensureBucket(target, spec, fn)).toBe("created");
+    const post = calls[1];
+    expect(post?.url).toBe("https://v2.supabase.test/storage/v1/bucket");
+    expect(JSON.parse(post?.body ?? "{}")).toMatchObject({
+      id: "media",
+      public: true,
+      allowed_mime_types: ["image/png"],
+    });
+  });
+
+  it("throws with the status when creation fails", async () => {
+    const { fn } = fake(400, 403);
+    await expect(ensureBucket(target, spec, fn)).rejects.toThrow("HTTP 403");
   });
 });

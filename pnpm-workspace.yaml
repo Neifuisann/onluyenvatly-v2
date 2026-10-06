@@ -12,3 +12,7 @@ overrides:
   '@lhci/utils>lighthouse': 13.5.0
   tmp: ^0.2.7
   '@lhci/cli>uuid': 11.1.1
+  # GHSA-c475-qrg2-pj4r: no patched 5.x; LHCI's proxy only, never fetches ftp://.
+  'get-uri>basic-ftp': ^6.2.1
+  # GHSA-68fv-2mgg-jv7q (postcss, Tailwind, Next).
+  source-map-js: ^1.2.2
