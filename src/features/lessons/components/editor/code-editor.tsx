@@ -1,6 +1,12 @@
 "use client";
 
-import { defaultKeymap, history, historyKeymap } from "@codemirror/commands";
+import {
+  defaultKeymap,
+  history,
+  historyKeymap,
+  redo,
+  undo,
+} from "@codemirror/commands";
 import {
   HighlightStyle,
   StreamLanguage,
@@ -17,6 +23,7 @@ import {
 } from "@codemirror/view";
 import { tags as t } from "@lezer/highlight";
 import { type RefObject, useEffect, useImperativeHandle, useRef } from "react";
+import type { TextEdit } from "../../domain/editor-commands";
 import { classifyLine } from "../../domain/text-format";
 
 /** A document position that follows edits made after it was taken. */
@@ -35,6 +42,28 @@ export type CodeEditorHandle = {
   insertLine: (marker: Marker, text: string) => void;
   /** Stops tracking a marker. */
   release: (marker: Marker) => void;
+  /** The current document. */
+  text: () => string;
+  /** 1-based line of the cursor. */
+  cursorLine: () => number;
+  /** The cursor's line up to the cursor. */
+  beforeCursor: () => string;
+  /**
+   * Applies edits made against `text()` as one undoable change; with
+   * `select`, the cursor goes to that 1-based line of the result.
+   */
+  apply: (
+    edits: TextEdit[],
+    select?: { line: number; focus?: boolean },
+  ) => void;
+  /** Puts `before`/`after` around the selection (or at the cursor). */
+  wrap: (before: string, after: string) => void;
+  /** Inserts text at the cursor, replacing the selection. */
+  insert: (text: string) => void;
+  /** Shows a 1-based line in the middle of the editor without focusing it. */
+  reveal: (line: number) => void;
+  undo: () => void;
+  redo: () => void;
 };
 
 const IMAGE_TYPE = /^image\//;
@@ -143,6 +172,7 @@ export default function CodeEditor({
   onFiles,
   label,
   handleRef,
+  onCursor,
 }: {
   initialValue: string;
   onChange: (value: string) => void;
@@ -150,6 +180,8 @@ export default function CodeEditor({
   onFiles?: (files: File[], pos: number) => void;
   label: string;
   handleRef: RefObject<CodeEditorHandle | null>;
+  /** The cursor's 1-based line and column, on every move. */
+  onCursor?: (line: number, col: number) => void;
 }) {
   const host = useRef<HTMLDivElement>(null);
   const view = useRef<EditorView | null>(null);
@@ -158,6 +190,8 @@ export default function CodeEditor({
   const files = useRef(onFiles);
   files.current = onFiles;
   const markers = useRef(new Set<Marker>());
+  const cursor = useRef(onCursor);
+  cursor.current = onCursor;
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: created once; later values come from the editor itself
   useEffect(() => {
@@ -183,6 +217,11 @@ export default function CodeEditor({
             spellcheck: "false",
           }),
           EditorView.updateListener.of((u) => {
+            if (u.selectionSet || u.docChanged) {
+              const head = u.state.selection.main.head;
+              const line = u.state.doc.lineAt(head);
+              cursor.current?.(line.number, head - line.from + 1);
+            }
             if (!u.docChanged) return;
             for (const m of markers.current) m.pos = u.changes.mapPos(m.pos);
             change.current(u.state.doc.toString());
@@ -251,6 +290,74 @@ export default function CodeEditor({
     },
     release(marker) {
       markers.current.delete(marker);
+    },
+    text: () => view.current?.state.doc.toString() ?? "",
+    cursorLine() {
+      const v = view.current;
+      return v ? v.state.doc.lineAt(v.state.selection.main.head).number : 1;
+    },
+    beforeCursor() {
+      const v = view.current;
+      if (!v) return "";
+      const head = v.state.selection.main.from;
+      return v.state.sliceDoc(v.state.doc.lineAt(head).from, head);
+    },
+    apply(edits, select) {
+      const v = view.current;
+      if (!v || edits.length === 0) return;
+      const changes = v.state.changes(edits);
+      const doc = changes.apply(v.state.doc);
+      const pos = select
+        ? doc.line(Math.min(Math.max(select.line, 1), doc.lines)).from
+        : undefined;
+      v.dispatch({
+        changes,
+        ...(pos !== undefined && {
+          selection: { anchor: pos },
+          effects: EditorView.scrollIntoView(pos, { y: "center" }),
+        }),
+      });
+      if (select?.focus) v.focus();
+    },
+    wrap(before, after) {
+      const v = view.current;
+      if (!v) return;
+      const { from, to } = v.state.selection.main;
+      v.dispatch({
+        changes: [
+          { from, insert: before },
+          { from: to, insert: after },
+        ],
+        selection:
+          from === to
+            ? { anchor: from + before.length }
+            : { anchor: from + before.length, head: to + before.length },
+        scrollIntoView: true,
+      });
+      v.focus();
+    },
+    insert(text) {
+      const v = view.current;
+      if (!v) return;
+      v.dispatch(v.state.replaceSelection(text), { scrollIntoView: true });
+      v.focus();
+    },
+    reveal(line) {
+      const v = view.current;
+      if (!v) return;
+      const pos = v.state.doc.line(
+        Math.min(Math.max(line, 1), v.state.doc.lines),
+      ).from;
+      v.dispatch({
+        selection: { anchor: pos },
+        effects: EditorView.scrollIntoView(pos, { y: "center" }),
+      });
+    },
+    undo() {
+      if (view.current) undo(view.current);
+    },
+    redo() {
+      if (view.current) redo(view.current);
     },
   }));
 

@@ -8,6 +8,7 @@ import {
   Play,
   Save,
   Send,
+  X,
 } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import {
@@ -15,10 +16,10 @@ import {
   useDeferredValue,
   useEffect,
   useMemo,
+  useRef,
   useState,
   useTransition,
 } from "react";
-import { PageHeader } from "@/components/page-header";
 import { Alert } from "@/components/ui/alert";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -68,6 +69,8 @@ type Step = "content" | "settings";
  * `/admin/lessons/[id]/edit[?step=settings]` (07 §5.6), the v1 flow made
  * consistent: step 1 "Soạn nội dung" (question cards left, text right) →
  * "Tiếp tục" saves the draft → step 2 "Cài đặt & xuất bản" → "Xuất bản".
+ * A full-screen workspace outside the admin shell: one slim bar, then the
+ * step fills the rest of the screen and scrolls inside itself.
  * The step lives in the URL (history entries, so Back returns to step 1);
  * both steps stay mounted so the editor keeps its undo history. "Làm thử"
  * opens the real runner on the text being edited.
@@ -106,6 +109,7 @@ export function LessonEditor({ lesson }: { lesson: EditorLesson }) {
   const [tried, setTried] = useState(false);
   const [serverErrors, setServerErrors] = useState<Record<string, string>>({});
   const [message, setMessage] = useState<EditorMessage>();
+  const settingsScroll = useRef<HTMLDivElement>(null);
   const [settingsPending, startSettings] = useTransition();
   const settings = useMemo(
     () => fromSettingsForm(form, available),
@@ -193,8 +197,15 @@ export function LessonEditor({ lesson }: { lesson: EditorLesson }) {
     if (next === "settings") url.searchParams.set("step", "settings");
     else url.searchParams.delete("step");
     window.history.pushState(null, "", url);
-    window.scrollTo({ top: 0 });
+    settingsScroll.current?.scrollTo({ top: 0 });
   };
+
+  // Successes fade after a while; errors stay until dismissed or replaced.
+  useEffect(() => {
+    if (!message || message.error) return;
+    const timer = setTimeout(() => setMessage(undefined), 6000);
+    return () => clearTimeout(timer);
+  }, [message]);
 
   const primary =
     step === "content"
@@ -260,61 +271,77 @@ export function LessonEditor({ lesson }: { lesson: EditorLesson }) {
     </>
   );
 
+  const title = form.title.trim() || lesson.meta.title;
+
   return (
-    <div className="mx-auto flex max-w-[90rem] flex-col gap-4 pb-24 lg:pb-0">
-      <PageHeader
-        back={{ href: "/admin/lessons", label: t.back, native: true }}
-        title={lesson.meta.title}
-        badges={<LessonStatusBadge status={lesson.status} />}
-        lead={
-          lesson.status === "published"
-            ? lesson.hasDraft
-              ? t.draftSource
-              : t.publishedSource
-            : undefined
-        }
-        actions={
-          // A plain link, so leaving with unsaved work still asks first.
+    <div className="relative flex h-full min-h-0 flex-col">
+      <header className="z-30 flex shrink-0 flex-wrap items-center gap-x-2 gap-y-1 border-border/70 border-b bg-surface px-2 py-1.5 sm:px-3 lg:h-14 lg:flex-nowrap lg:py-0 dark:border-border">
+        {/* A plain link, so leaving with unsaved work still asks first. */}
+        <a
+          href="/admin/lessons"
+          title={t.back}
+          className={cn(
+            buttonVariants({ variant: "ghost", size: "icon" }),
+            "max-lg:order-1",
+          )}
+        >
+          <ArrowLeft aria-hidden />
+          <span className="sr-only">{t.back}</span>
+        </a>
+        <div className="min-w-0 flex-1 max-lg:order-2 lg:max-w-[26rem] lg:flex-initial">
+          <h1 className="truncate font-bold font-display text-base leading-tight">
+            {title}
+          </h1>
+          <p className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-0.5 text-muted-foreground text-xs">
+            <LessonStatusBadge status={lesson.status} className="py-0" />
+            {lesson.status === "published" && (
+              <span className="max-w-full truncate">
+                {lesson.hasDraft ? t.draftSource : t.publishedSource}
+              </span>
+            )}
+          </p>
+        </div>
+
+        {/* Phones: back · title · save state, then the stepper and tools. */}
+        <div className="flex items-center max-lg:order-5 lg:mx-auto">
+          {trying ? (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => setTrying(false)}
+            >
+              <ArrowLeft aria-hidden />
+              {t.tryClose}
+            </Button>
+          ) : (
+            <Stepper step={step} onStep={goStep} />
+          )}
+        </div>
+
+        <span
+          className={cn(
+            "inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 py-1 font-semibold text-xs max-lg:order-3",
+            dirty ? "bg-accent-soft text-accent-text" : "text-muted-foreground",
+          )}
+        >
+          {dirty ? (
+            <span aria-hidden className="size-1.5 rounded-full bg-accent" />
+          ) : (
+            <Check aria-hidden className="size-3.5" />
+          )}
+          {dirty ? t.unsaved : t.saved}
+        </span>
+        <span aria-hidden className="basis-full max-lg:order-4 lg:hidden" />
+        <div className="ml-auto flex items-center gap-1.5 max-lg:order-6 lg:ml-0">
           <a
             href={`/admin/lessons/${lesson.id}/stats`}
+            title={statsCopy.link}
             className={buttonVariants({ variant: "ghost", size: "sm" })}
           >
             <ChartColumn aria-hidden />
-            {statsCopy.link}
+            <span className="max-xl:sr-only">{statsCopy.link}</span>
           </a>
-        }
-      />
-
-      <div className="z-20 -mx-4 flex flex-wrap items-center gap-2 border-border/60 border-y bg-background/90 px-4 py-2.5 backdrop-blur-xl sm:-mx-6 sm:px-6 lg:sticky lg:top-3 lg:-mx-10 lg:rounded-t-xl lg:border-t-0 lg:bg-panel/90 lg:px-10">
-        {trying ? (
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            onClick={() => setTrying(false)}
-          >
-            <ArrowLeft aria-hidden />
-            {t.tryClose}
-          </Button>
-        ) : (
-          <Stepper step={step} onStep={goStep} />
-        )}
-        <div className="ml-auto flex items-center gap-2">
-          <span
-            className={cn(
-              "inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 font-semibold text-xs",
-              dirty
-                ? "bg-accent-soft text-accent-text"
-                : "text-muted-foreground",
-            )}
-          >
-            {dirty ? (
-              <span aria-hidden className="size-1.5 rounded-full bg-accent" />
-            ) : (
-              <Check aria-hidden className="size-3.5" />
-            )}
-            {dirty ? t.unsaved : t.saved}
-          </span>
           {!trying && (
             <Button
               type="button"
@@ -326,15 +353,33 @@ export function LessonEditor({ lesson }: { lesson: EditorLesson }) {
               <span className="max-sm:sr-only">{t.tryOpen}</span>
             </Button>
           )}
-          <div className="hidden items-center gap-2 lg:flex">{buttons()}</div>
+          <div className="hidden items-center gap-2 lg:flex">
+            {buttons("h-9 px-4")}
+          </div>
         </div>
-      </div>
+      </header>
 
       {/* Alert is a live region itself (status, or alert for errors). */}
       {message && (
-        <Alert variant={message.error ? "danger" : "success"}>
-          {message.text}
-        </Alert>
+        <div className="pointer-events-none absolute inset-x-3 top-28 z-40 flex justify-center lg:top-16 lg:right-4 lg:left-auto">
+          <Alert
+            variant={message.error ? "danger" : "success"}
+            className="pointer-events-auto w-full max-w-md shadow-popover"
+          >
+            <div className="flex items-start gap-2">
+              <span className="min-w-0 flex-1">{message.text}</span>
+              <button
+                type="button"
+                onClick={() => setMessage(undefined)}
+                aria-label={t.closeMessage}
+                title={t.closeMessage}
+                className="-my-1 -mr-1 rounded-full p-1 opacity-70 hover:bg-surface/60 hover:opacity-100"
+              >
+                <X aria-hidden className="size-4" />
+              </button>
+            </div>
+          </Alert>
+        </div>
       )}
 
       {/* Both steps stay mounted so the editor keeps its undo history. */}
@@ -342,6 +387,7 @@ export function LessonEditor({ lesson }: { lesson: EditorLesson }) {
         <section
           aria-label={t.steps.content}
           hidden={step !== "content" || trying}
+          className="min-h-0 flex-1"
         >
           <ContentStep
             initialText={lesson.sourceText}
@@ -350,57 +396,67 @@ export function LessonEditor({ lesson }: { lesson: EditorLesson }) {
             config={liveConfig}
           />
         </section>
-        <section
-          aria-label={t.steps.settings}
+        <div
+          ref={settingsScroll}
           hidden={step !== "settings" || trying}
-          className="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_21rem]"
+          className="relative min-h-0 flex-1 overflow-y-auto bg-panel"
         >
-          <div className="flex min-w-0 flex-col gap-5">
-            <SettingsStep
-              form={form}
-              onChange={onChange}
-              errorOf={errorOf}
-              onTouch={(field) => setTouched((s) => new Set([...s, field]))}
-              available={available}
-              onSave={() => {
-                setMessage(undefined);
-                startSettings(async () => {
-                  await saveSettingsNow();
-                });
-              }}
-              sourceText={text}
-            />
-            <CoverPicker lessonId={lesson.id} coverPath={lesson.coverPath} />
-          </div>
-          <div className="lg:sticky lg:top-[5.25rem]">
-            <PublishPanel
-              status={lesson.status}
-              hasDraft={lesson.hasDraft}
-              hasPublished={lesson.hasPublished}
-              stats={stats}
-              config={liveConfig}
-              errors={errors}
-              settingsValid={settings.ok}
-              settingsDirty={settingsDirty}
-              formError={errorOf("form")}
-              pending={pending}
-              onFixContent={() => goStep("content")}
-              onUnpublish={actions.unpublish}
-              onDiscard={actions.askDiscard}
-            />
-          </div>
-        </section>
+          <section
+            aria-label={t.steps.settings}
+            className="mx-auto grid max-w-[80rem] items-start gap-5 px-4 pt-5 pb-28 sm:px-6 lg:grid-cols-[minmax(0,1fr)_21rem] lg:px-8 lg:pb-10"
+          >
+            <div className="flex min-w-0 flex-col gap-5">
+              <SettingsStep
+                form={form}
+                onChange={onChange}
+                errorOf={errorOf}
+                onTouch={(field) => setTouched((s) => new Set([...s, field]))}
+                available={available}
+                onSave={() => {
+                  setMessage(undefined);
+                  startSettings(async () => {
+                    await saveSettingsNow();
+                  });
+                }}
+                sourceText={text}
+              />
+              <CoverPicker lessonId={lesson.id} coverPath={lesson.coverPath} />
+            </div>
+            <div className="lg:sticky lg:top-5">
+              <PublishPanel
+                status={lesson.status}
+                hasDraft={lesson.hasDraft}
+                hasPublished={lesson.hasPublished}
+                stats={stats}
+                config={liveConfig}
+                errors={errors}
+                settingsValid={settings.ok}
+                settingsDirty={settingsDirty}
+                formError={errorOf("form")}
+                pending={pending}
+                onFixContent={() => goStep("content")}
+                onUnpublish={actions.unpublish}
+                onDiscard={actions.askDiscard}
+              />
+            </div>
+          </section>
+        </div>
         {/* Mounted only while open: each visit is a fresh try on the latest text. */}
         {trying && (
-          <section aria-label={t.tryTitle} className="flex flex-col gap-3">
-            <h2 className="heading-section">{t.tryTitle}</h2>
-            <PreviewTab
-              title={form.title || lesson.meta.title}
-              questions={parsed.questions}
-              config={liveConfig}
-              errors={errors}
-            />
-          </section>
+          <div className="relative min-h-0 flex-1 overflow-y-auto bg-panel">
+            <section
+              aria-label={t.tryTitle}
+              className="mx-auto flex max-w-5xl flex-col gap-3 px-4 pt-5 pb-10 sm:px-6"
+            >
+              <h2 className="heading-section">{t.tryTitle}</h2>
+              <PreviewTab
+                title={title}
+                questions={parsed.questions}
+                config={liveConfig}
+                errors={errors}
+              />
+            </section>
+          </div>
         )}
       </TexProvider>
 
