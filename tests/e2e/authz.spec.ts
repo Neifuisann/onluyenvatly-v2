@@ -27,6 +27,10 @@ const ADMIN_PAGES = [
   "/admin/import",
   "/admin/audit",
   "/admin/audit?area=students&page=2",
+  // Game rooms (B-05): the teacher pages and the projector.
+  "/admin/games",
+  "/admin/games/new",
+  `/host/${UUID}`,
 ];
 /** A download: answers JSON, never a redirect (S6-04). */
 const EXPORT = "/admin/results/export?q=an";
@@ -37,6 +41,7 @@ const STUDENT_PAGES = [
   "/leaderboard",
   "/profile",
   "/settings",
+  "/play",
 ];
 /** AI import (S7-04): a same-origin POST, so only the session decides. */
 const IMPORT_BODY = { path: `2026/10/${UUID}.pdf` };
@@ -70,6 +75,22 @@ test.describe("a visitor", () => {
     // 503 where CRON_SECRET is unset (CI), 401 otherwise; never the job.
     const cron = await request.get("/api/cron/daily");
     expect([401, 503]).toContain(cron.status());
+  });
+
+  test("gets 401 from the game room endpoints and the login page from a PIN link", async ({
+    page,
+    request,
+    baseURL,
+  }) => {
+    expect((await request.get(`/api/games/${UUID}/state`)).status()).toBe(401);
+    const answer = await request.post(`/api/games/${UUID}/answer`, {
+      headers: { origin: baseURL ?? "" },
+      data: { index: 0, answer: "A" },
+    });
+    expect(answer.status()).toBe(401);
+    // The link a teacher shares survives the login.
+    await page.goto("/play/482913");
+    await expect(page).toHaveURL(/\/login\?next=%2Fplay%2F482913$/);
   });
 
   test("gets 401 JSON from the results export", async ({ request }) => {
@@ -131,6 +152,19 @@ test.describe("a student", () => {
     });
     expect(res.status()).toBe(403);
     expect(await res.json()).toMatchObject({ ok: false, code: "FORBIDDEN" });
+  });
+
+  test("is refused game rooms it isn't in, and cross-origin answers", async ({
+    page,
+  }) => {
+    expect((await page.request.get(`/api/games/${UUID}/state`)).status()).toBe(
+      404,
+    );
+    const answer = await page.request.post(`/api/games/${UUID}/answer`, {
+      headers: { origin: "https://evil.example" },
+      data: { index: 0, answer: "A" },
+    });
+    expect(answer.status()).toBe(403);
   });
 
   test("opens the student pages", async ({ page }) => {
