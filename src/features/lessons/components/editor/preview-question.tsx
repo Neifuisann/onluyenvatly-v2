@@ -11,12 +11,9 @@ import {
 import { QuestionImage } from "@/components/math-text/question-image";
 import { formatScore } from "@/lib/dates";
 import { cn } from "@/lib/utils";
-import {
-  questionTypeLabels,
-  editorCopy as t,
-  workspaceCopy as w,
-} from "../../messages";
+import { questionTypeLabels, editorCopy as t } from "../../messages";
 import type { Question } from "../../schema";
+import { workspaceCopy as w } from "./messages";
 import { PreviewMathText } from "./preview-math";
 
 const LETTERS = ["A", "B", "C", "D", "E", "F"] as const;

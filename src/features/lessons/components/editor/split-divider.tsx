@@ -1,7 +1,7 @@
 "use client";
 
 import { type RefObject, useEffect, useState } from "react";
-import { workspaceCopy as w } from "../../messages";
+import { workspaceCopy as w } from "./messages";
 
 const KEY = "editor.split";
 const MIN = 25;

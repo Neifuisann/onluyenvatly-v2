@@ -47,12 +47,13 @@ import { type ParseResult, parseLessonText } from "../../domain/parser";
 import { QUESTION_TYPES } from "../../domain/question-types";
 import { serializeLesson } from "../../domain/serializer";
 import {
+  publishCopy,
   questionTypeLabels,
   editorCopy as t,
-  workspaceCopy as w,
 } from "../../messages";
 import type { LessonConfig } from "../../schema";
 import type { CodeEditorHandle } from "./code-editor";
+import { workspaceCopy as w } from "./messages";
 import { PreviewQuestion } from "./preview-question";
 import { SplitDivider, useSplit } from "./split-divider";
 import {
@@ -675,6 +676,20 @@ export function ContentStep({
             />
           </div>
 
+          {errors > 0 && (
+            // Wherever the text is, so phones see it too; jumps to the first.
+            <button
+              type="button"
+              onClick={() => {
+                const first = errorList[0];
+                if (first) goTo(first.line, first.col);
+              }}
+              className="flex shrink-0 items-start gap-2 border-danger/30 border-b bg-danger-soft px-3 py-1.5 text-left text-danger-text text-sm hover:bg-danger-soft/80"
+            >
+              <CircleAlert aria-hidden className="mt-0.5 size-4 shrink-0" />
+              {publishCopy.hasErrors(errors)}
+            </button>
+          )}
           <div className="min-h-0 flex-1">
             <CodeEditor
               initialValue={initialText}
@@ -687,19 +702,6 @@ export function ContentStep({
           </div>
 
           <footer className="flex shrink-0 flex-wrap items-center gap-x-3 gap-y-1 border-border/70 border-t bg-muted/40 px-3 py-1.5 text-muted-foreground text-xs dark:border-border">
-            {errors > 0 && (
-              <button
-                type="button"
-                onClick={() => {
-                  const first = errorList[0];
-                  if (first) goTo(first.line, first.col);
-                }}
-                className="inline-flex items-center gap-1 rounded-full bg-danger-soft px-2 py-0.5 font-semibold text-danger-text hover:ring-1 hover:ring-danger/40"
-              >
-                <CircleAlert aria-hidden className="size-3.5" />
-                {t.issueCount(errors, 0)}
-              </button>
-            )}
             {/* <output> is a polite live region (role status). */}
             <output
               className={cn(
