@@ -243,6 +243,7 @@ export const editorCopy = {
   errorTitle: "Không mở được trình soạn bài",
   errorBody:
     "Có thể do mất kết nối. Bản nháp đã lưu vẫn còn nguyên, bạn thử tải lại nhé.",
+  closeMessage: "Đóng thông báo",
 } as const;
 
 /** The editor's "Cài đặt" tab (S5-03). */

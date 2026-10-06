@@ -13,6 +13,7 @@ import { formatScore } from "@/lib/dates";
 import { cn } from "@/lib/utils";
 import { questionTypeLabels, editorCopy as t } from "../../messages";
 import type { Question } from "../../schema";
+import { workspaceCopy as w } from "./messages";
 import { PreviewMathText } from "./preview-math";
 
 const LETTERS = ["A", "B", "C", "D", "E", "F"] as const;
@@ -20,7 +21,9 @@ const LETTERS = ["A", "B", "C", "D", "E", "F"] as const;
 /**
  * One parsed question in the editor preview, drawn like the student's
  * question card plus its key and explanation (the teacher's view; 07 §5.6).
- * The header jumps to the question's line in the editor.
+ * The header jumps to the question's line in the editor; with `onMark`,
+ * an option's letter sets the key and a statement's pill flips it (the
+ * text is edited, v1 `markAnswerCorrect`).
  */
 export function PreviewQuestion({
   question: q,
@@ -28,12 +31,20 @@ export function PreviewQuestion({
   points,
   hasIssue,
   onGoTo,
+  onMark,
+  active = false,
+  showExplanation = true,
 }: {
   question: Question;
   index: number;
   points: number;
   hasIssue: boolean;
   onGoTo: () => void;
+  /** Option or statement index clicked in the preview. */
+  onMark?: ((item: number) => void) | undefined;
+  /** The editor's cursor is in this question. */
+  active?: boolean;
+  showExplanation?: boolean;
 }) {
   const Icon = hasIssue ? CircleAlert : CircleCheck;
   const heading = t.questionHeading(
@@ -44,11 +55,14 @@ export function PreviewQuestion({
   return (
     <article
       aria-label={heading}
+      aria-current={active ? "location" : undefined}
+      data-question={index}
       className={cn(
-        "flex flex-col gap-4 rounded-xl border bg-surface p-4 shadow-card sm:p-5",
+        "flex scroll-mt-3 flex-col gap-4 rounded-xl border bg-surface p-4 shadow-card transition-shadow sm:p-5",
         hasIssue
           ? "border-danger/50 dark:border-danger/50"
           : "border-border/70 dark:border-border",
+        active && "ring-2 ring-primary/45",
       )}
     >
       <header>
@@ -98,17 +112,11 @@ export function PreviewQuestion({
                     : "border-border/70 dark:border-border",
                 )}
               >
-                <span
-                  aria-hidden
-                  className={cn(
-                    "flex size-8 shrink-0 items-center justify-center rounded-full font-bold font-display text-sm",
-                    key
-                      ? "bg-success text-success-foreground"
-                      : "bg-muted text-muted-foreground",
-                  )}
-                >
-                  {key ? <Check className="size-4" strokeWidth={3} /> : letter}
-                </span>
+                <LetterBadge
+                  letter={letter}
+                  isKey={key}
+                  onClick={onMark && (() => onMark(i))}
+                />
                 <span className="sr-only">{letter}.</span>
                 <span className="min-w-0 flex-1 break-words pt-1">
                   <PreviewMathText text={o.text} />
@@ -128,7 +136,6 @@ export function PreviewQuestion({
         <ul className="grid gap-2">
           {q.statements.map((s, i) => {
             const letter = String.fromCharCode(97 + i);
-            const StatementIcon = s.answer ? Check : X;
             return (
               <li
                 key={letter}
@@ -139,17 +146,11 @@ export function PreviewQuestion({
                   text={s.text}
                   className="min-w-0 flex-1 pt-0.5"
                 />
-                <span
-                  className={cn(
-                    "inline-flex shrink-0 items-center gap-1 rounded-full px-2.5 py-1 font-semibold text-xs",
-                    s.answer
-                      ? "bg-success-soft text-success-text"
-                      : "bg-danger-soft text-danger-text",
-                  )}
-                >
-                  <StatementIcon aria-hidden className="size-3.5" />
-                  {s.answer ? t.true : t.false}
-                </span>
+                <StatementPill
+                  letter={letter}
+                  answer={s.answer}
+                  onClick={onMark && (() => onMark(i))}
+                />
               </li>
             );
           })}
@@ -170,7 +171,7 @@ export function PreviewQuestion({
           )}
         </p>
       )}
-      {q.explanation?.trim() && (
+      {showExplanation && q.explanation?.trim() && (
         <section className="rounded-lg bg-muted/70 p-3.5 text-sm">
           <h3 className="mb-1 flex items-center gap-1.5 font-semibold">
             <Lightbulb aria-hidden className="size-4 text-accent-text" />
@@ -180,5 +181,88 @@ export function PreviewQuestion({
         </section>
       )}
     </article>
+  );
+}
+
+/** An option's letter; a button that sets the key when the preview edits. */
+function LetterBadge({
+  letter,
+  isKey,
+  onClick,
+}: {
+  letter: string;
+  isKey: boolean;
+  onClick: (() => void) | undefined;
+}) {
+  const className = cn(
+    "flex size-8 shrink-0 items-center justify-center rounded-full font-bold font-display text-sm",
+    isKey
+      ? "bg-success text-success-foreground"
+      : "bg-muted text-muted-foreground",
+  );
+  const body = isKey ? <Check className="size-4" strokeWidth={3} /> : letter;
+  if (!onClick)
+    return (
+      <span aria-hidden className={className}>
+        {body}
+      </span>
+    );
+  const label = isKey ? w.unmarkOption(letter) : w.markOption(letter);
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label={label}
+      title={label}
+      className={cn(
+        className,
+        "transition-[box-shadow,background-color] hover:ring-2 hover:ring-success/50",
+        !isKey && "hover:bg-success-soft hover:text-success-text",
+      )}
+    >
+      {body}
+    </button>
+  );
+}
+
+/** A statement's "Đúng"/"Sai"; a button that flips it when the preview edits. */
+function StatementPill({
+  letter,
+  answer,
+  onClick,
+}: {
+  letter: string;
+  answer: boolean;
+  onClick: (() => void) | undefined;
+}) {
+  const Icon = answer ? Check : X;
+  const now = answer ? t.true : t.false;
+  const className = cn(
+    "inline-flex shrink-0 items-center gap-1 rounded-full px-2.5 py-1 font-semibold text-xs",
+    answer
+      ? "bg-success-soft text-success-text"
+      : "bg-danger-soft text-danger-text",
+  );
+  const body = (
+    <>
+      <Icon aria-hidden className="size-3.5" />
+      {now}
+    </>
+  );
+  if (!onClick) return <span className={className}>{body}</span>;
+  const label = w.toggleStatement(letter, now);
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label={label}
+      title={label}
+      className={cn(
+        className,
+        "min-h-8 transition-shadow hover:ring-2 hover:ring-current/30",
+      )}
+    >
+      {body}
+    </button>
   );
 }

@@ -12,10 +12,13 @@ export default function EditorError({
   retry: () => void;
 }) {
   return (
-    <ErrorState
-      title={t.errorTitle}
-      description={t.errorBody}
-      action={<Button onClick={retry}>{stateCopy.retry}</Button>}
-    />
+    // No admin shell here: center the state in the workspace.
+    <div className="m-auto w-full max-w-2xl px-4 py-10">
+      <ErrorState
+        title={t.errorTitle}
+        description={t.errorBody}
+        action={<Button onClick={retry}>{stateCopy.retry}</Button>}
+      />
+    </div>
   );
 }
