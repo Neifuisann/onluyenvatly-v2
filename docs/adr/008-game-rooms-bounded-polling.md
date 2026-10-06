@@ -27,6 +27,8 @@ Option 4.
   - Finished players: every 3 s.
   - Nobody polls during the race itself.
   - Polls stop when the tab is hidden and back off to 10 s on errors.
+  - Polling stops for good once the room is finished, so a podium left on screen costs nothing.
+  - After 5 minutes without a change, polls slow to every 10 s. That bounds a projector left open in the lobby until the cron closes it.
 - **Shared reads:** a room's state is memoized per function instance for 1 s, so a class polling together reads the room about once per second.
 - **Correctness under concurrency:**
   - An answer writes with `WHERE answered = i`, so a retried or parallel copy counts once.

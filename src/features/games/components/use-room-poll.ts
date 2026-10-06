@@ -6,10 +6,16 @@ import type { RoomState } from "../types";
 
 export type PollProblem = "offline" | "removed" | null;
 
+/** After this long without a change, a quiet room is polled less often. */
+export const QUIET_AFTER_MS = 5 * 60_000;
+export const QUIET_INTERVAL_MS = 10_000;
+
 /**
  * Polls `GET /api/games/[id]/state` (ADR-008) while `enabled`: every
  * `intervalMs`, only while the tab is visible, sending the last `rev` so an
- * unchanged room costs an empty 204. Errors back off to 10 s.
+ * unchanged room costs an empty 204. Errors back off to 10 s. It stops for
+ * good once the room is finished (nothing changes after that), and slows to
+ * every 10 s after five quiet minutes (a projector left on in the lobby).
  */
 export function useRoomPoll(
   roomId: string,
@@ -30,6 +36,7 @@ export function useRoomPoll(
     if (!enabled) return;
     let timer: ReturnType<typeof setTimeout> | undefined;
     let stopped = false;
+    let changedAt = Date.now();
     const controller = new AbortController();
 
     const schedule = (ms: number) => {
@@ -52,12 +59,19 @@ export function useRoomPoll(
           const body = (await res.json()) as Result<RoomState>;
           if (body.ok) {
             rev.current = body.data.rev;
+            changedAt = Date.now();
             setState(body.data);
+            // A finished room never changes again.
+            if (body.data.status === "finished") stopped = true;
           }
         } else if (res.status !== 204) throw new Error(String(res.status));
         failures.current = 0;
         setProblem(null);
-        schedule(intervalMs);
+        schedule(
+          Date.now() - changedAt > QUIET_AFTER_MS
+            ? Math.max(intervalMs, QUIET_INTERVAL_MS)
+            : intervalMs,
+        );
       } catch {
         if (controller.signal.aborted) return;
         failures.current += 1;

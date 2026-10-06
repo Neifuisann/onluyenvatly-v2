@@ -21,7 +21,7 @@ import { attachShot, type StorageState } from "./runner-helpers";
 
 test.describe.configure({ mode: "serial" });
 
-const project = (info: TestInfo) =>
+const project = (info: TestInfo): "d" | "m" =>
   info.project.name === "mobile" ? "m" : "d";
 
 /** The project's device settings, for contexts opened by hand. */
@@ -99,6 +99,72 @@ async function race(
   }
 }
 
+/** Opens `/admin/games/new` and creates a 5-question room from the project lesson. */
+async function createRoom(host: Page, p: "d" | "m") {
+  await host.goto("/admin/games/new");
+  await host.getByLabel("Tìm bài").fill(`dua toc do (${p})`);
+  await host.getByText(`E2E – Đua tốc độ (${p})`).click();
+  // The default size is 10, more than the lesson has: the summary says so.
+  const summary = host.getByRole("status").filter({ hasText: /câu/ });
+  await expect(summary).toHaveText("Chỉ có 5 câu phù hợp: bộ đề sẽ có 5 câu.");
+  await host
+    .locator("label", { has: host.locator('input[name="count"][value="5"]') })
+    .click();
+  await expect(summary).toHaveText("Rút ngẫu nhiên 5 câu từ 5 câu.");
+  await host.getByText("Thong thả").click();
+  await host.getByRole("button", { name: "Tạo phòng" }).click();
+  await host.waitForURL(/\/host\/[0-9a-f-]{36}$/);
+  const pin = await host.locator("[data-pin]").getAttribute("data-pin");
+  expect(pin).toMatch(/^[1-9]\d{5}$/);
+  return pin ?? "";
+}
+
+/** Follows the PIN link and joins with the default racer: ends in the lobby. */
+async function joinRoom(page: Page, pin: string) {
+  await page.goto(`/play/${pin}`);
+  await page.getByRole("button", { name: "Vào phòng" }).click();
+  await expect(
+    page.getByRole("heading", { name: "Bạn đã vào phòng!" }),
+  ).toBeVisible();
+}
+
+/** The host, A and B, each in their own browser context. */
+async function openRoles(browser: Browser, info: TestInfo) {
+  const p = project(info);
+  const a = e2eStudent(p === "m" ? "gameA2" : "gameA");
+  const b = e2eStudent(p === "m" ? "gameB2" : "gameB");
+  const hostState = await loginAdminOnce(
+    browser,
+    info,
+    "games",
+    "/admin/games",
+  );
+  const aState = await loginStudent(browser, info, a.phone);
+  const bState = await loginStudent(browser, info, b.phone);
+  const hostContext = await browser.newContext({
+    storageState: hostState,
+    viewport: { width: 1280, height: 800 },
+  });
+  const aContext = await browser.newContext({
+    ...deviceOptions(info),
+    storageState: aState,
+  });
+  const bContext = await browser.newContext({
+    ...deviceOptions(info),
+    storageState: bState,
+  });
+  return {
+    p,
+    a,
+    b,
+    host: await hostContext.newPage(),
+    playerA: await aContext.newPage(),
+    playerB: await bContext.newPage(),
+    close: () =>
+      Promise.all([hostContext.close(), aContext.close(), bContext.close()]),
+  };
+}
+
 test("a class race: create, join, lobby, race, podium and report", async ({
   browser,
 }, info) => {
@@ -118,21 +184,7 @@ test("a class race: create, join, lobby, race, podium and report", async ({
     viewport: { width: 1280, height: 800 },
   });
   const host = await hostContext.newPage();
-  await host.goto("/admin/games/new");
-  await host.getByLabel("Tìm bài").fill(`dua toc do (${p})`);
-  await host.getByText(`E2E – Đua tốc độ (${p})`).click();
-  // The default size is 10, more than the lesson has: the summary says so.
-  const summary = host.getByRole("status").filter({ hasText: /câu/ });
-  await expect(summary).toHaveText("Chỉ có 5 câu phù hợp: bộ đề sẽ có 5 câu.");
-  await host
-    .locator("label", { has: host.locator('input[name="count"][value="5"]') })
-    .click();
-  await expect(summary).toHaveText("Rút ngẫu nhiên 5 câu từ 5 câu.");
-  await host.getByText("Thong thả").click();
-  await host.getByRole("button", { name: "Tạo phòng" }).click();
-  await host.waitForURL(/\/host\/[0-9a-f-]{36}$/);
-  const pin = await host.locator("[data-pin]").getAttribute("data-pin");
-  expect(pin).toMatch(/^[1-9]\d{5}$/);
+  const pin = await createRoom(host, p);
   await expect(host.getByText("Đang chờ học sinh vào phòng…")).toBeVisible();
   await expect(
     host.getByRole("button", { name: "Bắt đầu đua" }),
@@ -249,4 +301,81 @@ test("a class race: create, join, lobby, race, podium and report", async ({
   }
 
   await Promise.all([hostContext.close(), aContext.close(), bContext.close()]);
+});
+
+test("host controls: change racer, remove a player, end mid-race, play again", async ({
+  browser,
+}, info) => {
+  test.setTimeout(180_000);
+  const { p, b, host, playerA, playerB, close } = await openRoles(
+    browser,
+    info,
+  );
+  const pin = await createRoom(host, p);
+  const firstRoom = host.url();
+
+  // A joins, then changes racer from the lobby.
+  await joinRoom(playerA, pin);
+  await playerA.getByRole("button", { name: "Đổi tay đua" }).click();
+  await playerA.getByText("Rùa", { exact: true }).click();
+  await playerA.getByRole("button", { name: "Lưu" }).click();
+  await expect(
+    playerA.getByRole("heading", { name: "Bạn đã vào phòng!" }),
+  ).toBeVisible();
+
+  // B joins and the teacher removes B: B's lobby says so, and so does a reload.
+  await joinRoom(playerB, pin);
+  await expect(host.getByText("2 người chơi")).toBeVisible();
+  await host
+    .getByRole("button", { name: `Mời ${b.fullName} rời phòng` })
+    .click();
+  const removeDialog = host.getByRole("dialog");
+  await expect(removeDialog).toContainText(b.fullName);
+  await removeDialog.getByRole("button", { name: "Mời rời phòng" }).click();
+  await expect(host.getByText("1 người chơi")).toBeVisible();
+  await expect(
+    playerB.getByText("Giáo viên đã mời bạn rời phòng này."),
+  ).toBeVisible({ timeout: 10_000 });
+  await playerB.reload();
+  await expect(
+    playerB.getByText("Giáo viên đã mời bạn rời phòng này."),
+  ).toBeVisible();
+
+  // The race starts; A answers one question, then the teacher ends it.
+  await host.getByRole("button", { name: "Bắt đầu đua" }).click();
+  await expect(playerA.getByRole("region", { name: "Câu 1/5" })).toBeVisible({
+    timeout: 20_000,
+  });
+  await playerA
+    .locator("button[data-option]")
+    .filter({ hasText: GAME_RIGHT })
+    .click();
+  await expect(playerA.getByRole("region", { name: "Câu 2/5" })).toBeVisible({
+    timeout: 15_000,
+  });
+  await host.getByRole("button", { name: "Kết thúc" }).click();
+  await host
+    .getByRole("dialog")
+    .getByRole("button", { name: "Kết thúc" })
+    .click();
+  await expect(
+    host.getByRole("heading", { name: "Bục vinh quang" }),
+  ).toBeVisible({ timeout: 15_000 });
+
+  // A learns at the next tap: the answer is refused and the podium opens.
+  await playerA.locator("button[data-option]").first().click();
+  await expect(
+    playerA.getByRole("heading", { name: "Kết quả chung cuộc" }),
+  ).toBeVisible({ timeout: 15_000 });
+  await expect(playerA.getByText("1/5 câu đúng")).toBeVisible();
+
+  // "Chơi lại" opens a fresh lobby with the same settings.
+  await host.getByRole("button", { name: "Chơi lại" }).click();
+  await host.waitForURL(
+    (url) =>
+      /\/host\/[0-9a-f-]{36}$/.test(url.pathname) && url.href !== firstRoom,
+  );
+  await expect(host.getByText("Đang chờ học sinh vào phòng…")).toBeVisible();
+  await expect(host.getByText("5 câu · Nhịp Thong thả")).toBeVisible();
+  await close();
 });
