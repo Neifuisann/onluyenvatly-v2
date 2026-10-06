@@ -52,10 +52,12 @@ export function remainingQuestions(
     publicQuestions.map((q) => (q.type === "mcq" ? q.options.length : 0)),
     createRng(seed),
   );
-  return plan.order.slice(answered).map((bankIndex) =>
-    withOptionOrder(
-      publicQuestions[bankIndex] as PublicQuestion,
-      plan.options[bankIndex],
-    ),
-  );
+  return plan.order
+    .slice(answered)
+    .map((bankIndex) =>
+      withOptionOrder(
+        publicQuestions[bankIndex] as PublicQuestion,
+        plan.options[bankIndex],
+      ),
+    );
 }

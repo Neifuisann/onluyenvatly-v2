@@ -1,3 +1,4 @@
+import { clsx } from "clsx";
 import {
   Bike,
   CarFront,
@@ -9,8 +10,13 @@ import {
   Sailboat,
   Turtle,
 } from "lucide-react";
-import { cn } from "@/lib/utils";
 import type { Racer } from "../domain/rules";
+
+/*
+ * Game components on phones use `clsx`, not `cn`: tailwind-merge alone is
+ * 8 KB of the 150 KB student budget (S9-02). Conflicting classes are chosen
+ * with props and ternaries instead of overrides.
+ */
 
 export const RACER_ICONS: Record<Racer, LucideIcon> = {
   rabbit: Rabbit,
@@ -42,26 +48,39 @@ const SIZES = {
   xl: "size-28 [&>svg]:size-14",
 } as const;
 
+const OUTLINES = {
+  /** A soft inner edge, the default. */
+  none: "ring-2 ring-racer-ink/15 ring-inset",
+  /** Crossed the line, or the player's own racer. */
+  accent: "ring-3 ring-accent",
+  /** Overlapping chips on the stage. */
+  ink: "ring-2 ring-ink",
+} as const;
+
 /** A player's racer: their icon on their color. Decorative; names carry meaning. */
 export function RacerChip({
   racer,
   color,
   size = "md",
+  outline = "none",
   className,
 }: {
   racer: string;
   color: number;
   size?: keyof typeof SIZES;
-  className?: string;
+  outline?: keyof typeof OUTLINES;
+  /** Layout and motion only (`animate-bob`): never colors or rings. */
+  className?: string | undefined;
 }) {
   const Icon = RACER_ICONS[racer as Racer] ?? Rabbit;
   return (
     <span
       aria-hidden
-      className={cn(
-        "inline-flex shrink-0 items-center justify-center rounded-full text-racer-ink ring-2 ring-racer-ink/15 ring-inset",
+      className={clsx(
+        "inline-flex shrink-0 items-center justify-center rounded-full text-racer-ink",
         RACER_BG[color] ?? RACER_BG[0],
         SIZES[size],
+        OUTLINES[outline],
         className,
       )}
     >

@@ -3,7 +3,6 @@ import Link from "next/link";
 import { EmptyState } from "@/components/empty-state";
 import { buttonVariants } from "@/components/ui/button";
 import { requireStudent } from "@/features/auth/guards";
-import { JoinBanner } from "@/features/games/components/join-banner";
 import {
   ContinueCard,
   NextLessonCard,
@@ -20,6 +19,7 @@ import {
   getContinueAttempt,
   getDashboardStats,
 } from "@/features/dashboard/queries";
+import { JoinBanner } from "@/features/games/components/join-banner";
 import {
   cardGridClass,
   LessonCard,

@@ -23,6 +23,9 @@ import { siteUrl } from "@/lib/site";
 
 const t = gameCopy.host;
 
+/** Live and per user, opened from a link or a QR scan: blocking is expected. */
+export const instant = false;
+
 export const metadata: Metadata = {
   title: t.pageTitle,
   robots: { index: false, follow: false },

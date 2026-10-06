@@ -1,17 +1,15 @@
 import type { Metadata } from "next";
 import { toRunnerQuestion } from "@/features/attempts/components/runner/to-runner-question";
 import { requireStudent } from "@/features/auth/guards";
-import { Finish } from "@/features/games/components/play/finish";
-import { JoinForm } from "@/features/games/components/play/join-form";
-import { Lobby } from "@/features/games/components/play/lobby";
-import { Race, type RaceQuestion } from "@/features/games/components/play/race";
+import { PlayScreen } from "@/features/games/components/play/play-screen";
+import type { RaceQuestion } from "@/features/games/components/play/race";
 import { RacerChip } from "@/features/games/components/racer";
 import { StageBar, StageMessage } from "@/features/games/components/stage";
 import {
   bankPublicQuestions,
   remainingQuestions,
 } from "@/features/games/content";
-import { defaultRacer, PinSchema } from "@/features/games/domain/rules";
+import { defaultRacer } from "@/features/games/domain/rules";
 import {
   effectiveStatus,
   limitMs,
@@ -25,9 +23,13 @@ import {
   getRoomByPin,
   getRoomSnapshot,
 } from "@/features/games/queries";
+import { PinSchema } from "@/features/games/schemas";
 import { notePinMiss, roomState } from "@/features/games/service";
 
 const t = gameCopy.play;
+
+/** Live and per user, opened from a link or a QR scan: blocking is expected. */
+export const instant = false;
 
 export const metadata: Metadata = {
   title: t.pageTitle,
@@ -91,14 +93,18 @@ export default async function PlayPage({ params }: PageProps<"/play/[pin]">) {
                     racer={p.racer}
                     color={p.color}
                     size="sm"
-                    className="ring-2 ring-ink"
+                    outline="ink"
                   />
                 ))}
               </span>
               {t.lobbyPlayers(others.length)}
             </div>
           )}
-          <JoinForm roomId={room.id} initial={defaultRacer(user.id)} />
+          <PlayScreen
+            phase="join"
+            roomId={room.id}
+            initial={defaultRacer(user.id)}
+          />
         </main>
       </div>
     );
@@ -108,10 +114,24 @@ export default async function PlayPage({ params }: PageProps<"/play/[pin]">) {
   const state = roomState(room, snapshot?.players ?? [], player.id, now);
 
   if (status === "lobby")
-    return <Lobby roomId={room.id} title={room.title} initial={state} />;
+    return (
+      <PlayScreen
+        phase="lobby"
+        roomId={room.id}
+        title={room.title}
+        initial={state}
+      />
+    );
 
   if (status === "finished" || player.finishedAt || !room.startedAt)
-    return <Finish roomId={room.id} title={room.title} initial={state} />;
+    return (
+      <PlayScreen
+        phase="finish"
+        roomId={room.id}
+        title={room.title}
+        initial={state}
+      />
+    );
 
   const bank = await getRoomBank(room.id);
   const publicQuestions = bank && (await bankPublicQuestions(bank));
@@ -133,7 +153,8 @@ export default async function PlayPage({ params }: PageProps<"/play/[pin]">) {
     };
   });
   return (
-    <Race
+    <PlayScreen
+      phase="race"
       // A refresh after a resync starts again from the server's position.
       key={`${room.id}:${player.answered}`}
       roomId={room.id}

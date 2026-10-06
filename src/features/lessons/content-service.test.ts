@@ -4,6 +4,7 @@ import { db } from "@/db/client";
 import {
   attempts,
   auditLog,
+  gameRooms,
   lessons,
   lessonVersions,
   users,
@@ -266,6 +267,27 @@ describe("publishLesson", () => {
     });
     // The teacher deletes the attempt; its mistakes stay (S6-04).
     await tdb.delete(attempts).where(eq(attempts.id, started.data.attemptId));
+    const result = await publishLesson(admin, id, V2);
+    expect(result).toMatchObject({
+      ok: true,
+      data: { version: 2, retired: false },
+    });
+    expect(await versions(id)).toHaveLength(2);
+  });
+
+  it("keeps a version a game room's bank uses (B-05)", async () => {
+    const id = await addLesson();
+    await publishLesson(admin, id, V1);
+    const { currentVersionId } = await lessonRow(id);
+    await tdb.insert(gameRooms).values({
+      pin: "123456",
+      hostId: admin.id,
+      title: "Đua",
+      pace: "normal",
+      bank: [{ l: id, v: currentVersionId ?? 0, q: "q_1" }],
+      bankTypes: ["mcq"],
+      lessonIds: [id],
+    });
     const result = await publishLesson(admin, id, V2);
     expect(result).toMatchObject({
       ok: true,

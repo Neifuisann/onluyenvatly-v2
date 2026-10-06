@@ -92,10 +92,10 @@ export function HostScreen({
         )}
         {room.status === "lobby" && (
           <Button
+            variant="accent"
             size="lg"
             disabled={pending || room.players.length === 0}
             onClick={() => run(() => startGameAction(roomId))}
-            className="bg-accent text-accent-foreground hover:bg-accent/90"
           >
             <Play aria-hidden className="fill-current" />
             {pending ? t.starting : t.start}
@@ -130,7 +130,10 @@ export function HostScreen({
               </p>
               <div>
                 <p className="text-ink-muted">{t.pinLabel}</p>
-                <p className="num font-bold font-display text-7xl text-accent tracking-wider sm:text-8xl lg:text-9xl">
+                <p
+                  data-pin={pin}
+                  className="num font-bold font-display text-7xl text-accent tracking-wider sm:text-8xl lg:text-9xl"
+                >
                   {pin.slice(0, 3)}
                   <span className="ml-[0.2em]">{pin.slice(3)}</span>
                 </p>
@@ -190,9 +193,9 @@ export function HostScreen({
         <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-4 px-4 py-6 sm:px-8">
           <div className="flex flex-wrap items-baseline justify-between gap-3">
             <h1 className="font-bold font-display text-2xl">{t.track}</h1>
-            <p className="num text-ink-muted text-lg" role="status">
+            <output className="num text-ink-muted text-lg">
               {t.finishedCount(done, room.players.length)}
-            </p>
+            </output>
           </div>
           <RaceTrack
             players={room.players}
@@ -237,10 +240,10 @@ export function HostScreen({
           {report}
           <div className="flex flex-wrap justify-center gap-3 pb-6">
             <Button
+              variant="accent"
               size="lg"
               disabled={pending}
               onClick={() => run(() => replayGameAction(roomId))}
-              className="bg-accent text-accent-foreground hover:bg-accent/90"
             >
               <RotateCcw aria-hidden />
               {pending ? t.replaying : t.replay}

@@ -1,12 +1,18 @@
 "use client";
 
-import { CircleCheck, CircleMinus, CircleX, Timer, WifiOff } from "lucide-react";
+import { clsx } from "clsx";
+import {
+  CircleCheck,
+  CircleMinus,
+  CircleX,
+  Timer,
+  WifiOff,
+} from "lucide-react";
 import { useRouter } from "next/navigation";
 import type { ReactNode } from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { AttemptAnswer } from "@/db/schema";
 import type { Result } from "@/lib/result";
-import { cn } from "@/lib/utils";
 import type { MarkKind } from "../../domain/scoring";
 import { gameCopy, markCopy } from "../../messages";
 import type { AnswerOutcome, PlayerView } from "../../types";
@@ -27,6 +33,9 @@ export type RaceQuestion = {
 };
 
 type Phase = "countdown" | "question" | "sending" | "feedback";
+
+/** The right/wrong card stays at least this long, however slow the answer. */
+const MIN_FEEDBACK_MS = 1_500;
 
 const MARK_ICON: Record<MarkKind, typeof CircleCheck> = {
   correct: CircleCheck,
@@ -83,6 +92,8 @@ export function Race({
   const [streak, setStreak] = useState(initialStreak);
   const [view, setView] = useState(initialView);
   const [offline, setOffline] = useState(false);
+  /** When the feedback card gives way to the next question (server clock). */
+  const [advanceAt, setAdvanceAt] = useState(0);
   const sending = useRef(false);
   const leaving = useRef(false);
 
@@ -110,6 +121,15 @@ export function Race({
             return;
           }
           offset.current = clockOffset(body.data.serverNow);
+          // A slow answer still shows its card for a moment, even if the
+          // next question's clock has already started on the server.
+          setAdvanceAt(
+            Math.max(
+              Date.parse(body.data.nextShownAt),
+              serverTime() + MIN_FEEDBACK_MS,
+            ),
+          );
+          setNow(serverTime());
           setOutcome(body.data);
           setScore(body.data.score);
           setStreak(body.data.streak);
@@ -124,7 +144,7 @@ export function Race({
         }
       }
     },
-    [index, roomId, router],
+    [index, roomId, router, serverTime],
   );
 
   // The clock: drives the countdown, the timer bar and the timeout.
@@ -141,7 +161,7 @@ export function Race({
         q.type === "tf" ? tf : q.type === "short" ? short.trim() || null : null;
       void send(draft);
     }
-    if (phase === "feedback" && outcome && now >= Date.parse(outcome.nextShownAt)) {
+    if (phase === "feedback" && outcome && now >= advanceAt) {
       if (outcome.finished || outcome.raceOver) {
         // The finish line is a server page; ask for it once.
         if (!leaving.current) router.refresh();
@@ -157,7 +177,7 @@ export function Race({
       setOutcome(null);
       setPhase("question");
     }
-  }, [now, phase, shownAt, q, tf, short, outcome, send, router]);
+  }, [now, phase, shownAt, q, tf, short, outcome, advanceAt, send, router]);
 
   // Keys 1–6 answer an mcq on a keyboard.
   useEffect(() => {
@@ -211,7 +231,7 @@ export function Race({
             {view.me && t.rankOf(view.me.rank, view.total)}
           </span>
           <span
-            className={cn(
+            className={clsx(
               "num inline-flex items-center gap-1 font-bold font-display text-lg",
               seconds <= 5 && phase === "question" && "text-accent",
             )}
@@ -226,9 +246,9 @@ export function Race({
           className="mt-2 h-2.5 overflow-hidden rounded-full bg-lane"
         >
           <div
-            className={cn(
-              "h-full rounded-full bg-accent transition-[width] duration-200 ease-linear",
-              pct < 0.25 && "bg-game-a",
+            className={clsx(
+              "h-full rounded-full transition-[width] duration-200 ease-linear",
+              pct < 0.25 ? "bg-game-a" : "bg-accent",
             )}
             style={{ width: `${(outcome ? 0 : pct) * 100}%` }}
           />
@@ -274,28 +294,23 @@ export function Race({
           />
         )}
         {offline && (
-          <p
-            role="status"
-            className="flex items-center justify-center gap-2 text-accent text-sm"
-          >
+          <output className="flex items-center justify-center gap-2 text-accent text-sm">
             <WifiOff aria-hidden className="size-4" />
             {t.offline}
-          </p>
+          </output>
         )}
       </main>
 
       {outcome && Icon && (
         <section
           aria-live="polite"
-          className={cn(
-            "sticky bottom-0 animate-rise rounded-t-2xl border-lane border-t-4 bg-ink px-4 pt-4 pb-6 shadow-popover",
-          )}
+          className="sticky bottom-0 animate-rise rounded-t-2xl border-lane border-t-4 bg-ink px-4 pt-4 pb-6 shadow-popover"
         >
           <div className="mx-auto flex max-w-3xl flex-col gap-3">
             <div className="flex items-center gap-3">
               <Icon
                 aria-hidden
-                className={cn(
+                className={clsx(
                   "size-10 shrink-0",
                   outcome.mark.k === "correct"
                     ? "text-success"

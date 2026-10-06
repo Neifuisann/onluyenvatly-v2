@@ -1,9 +1,9 @@
 "use client";
 
+import { clsx } from "clsx";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
+import { buttonVariants } from "@/components/ui/button";
 import { gameCopy } from "../../messages";
 import type { RoomState } from "../../types";
 import { RacerChip } from "../racer";
@@ -68,25 +68,20 @@ export function Lobby({
                 {t.lobbyTitle}
               </h1>
               <p className="font-semibold text-lg">{me?.name}</p>
-              <p
-                role="status"
-                className="flex items-center gap-2 text-ink-muted"
-              >
+              <output className="flex items-center gap-2 text-ink-muted">
                 <span
                   aria-hidden
                   className="size-2 animate-pulse rounded-full bg-accent"
                 />
                 {problem === "offline" ? gameCopy.host.connection : t.lobbyWait}
-              </p>
-              <Button
+              </output>
+              <button
                 type="button"
-                variant="ghost"
-                size="sm"
                 onClick={() => setEditing(true)}
-                className="text-ink-foreground hover:bg-lane"
+                className={buttonVariants({ variant: "stage", size: "sm" })}
               >
                 {t.change}
-              </Button>
+              </button>
             </section>
             <section className="w-full" aria-labelledby="lobby-players">
               <h2
@@ -99,7 +94,7 @@ export function Lobby({
                 {room.players.map((p) => (
                   <li
                     key={p.id}
-                    className={cn(
+                    className={clsx(
                       "flex max-w-full animate-pop items-center gap-2 rounded-full bg-lane py-1 pr-3.5 pl-1 text-sm",
                       p.id === room.meId && "ring-2 ring-accent",
                     )}

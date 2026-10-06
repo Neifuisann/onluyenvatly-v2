@@ -3,6 +3,7 @@ import { beforeEach, expect, it, vi } from "vitest";
 import { db } from "@/db/client";
 import {
   attempts,
+  gameRooms,
   lessons,
   lessonVersions,
   rateLimits,
@@ -171,5 +172,94 @@ it("leaves unlimited and recently expired attempts open", async () => {
   expect((await tdb.select().from(attempts)).map((a) => a.status)).toEqual([
     "in_progress",
     "in_progress",
+  ]);
+});
+
+it("closes abandoned game rooms, drops month-old ones and keeps their versions (B-05)", async () => {
+  const [host] = await tdb
+    .insert(users)
+    .values({
+      role: "admin",
+      username: "cron_host",
+      fullName: "Synthetic",
+      passwordHash: "unused",
+    })
+    .returning();
+  const [lesson] = await tdb
+    .insert(lessons)
+    .values({ title: "Synthetic", config: DEFAULT_LESSON_CONFIG })
+    .returning();
+  if (!host || !lesson) throw new Error("seed");
+  const [bankVersion, current] = await tdb
+    .insert(lessonVersions)
+    .values(
+      [1, 2].map((version) => ({
+        lessonId: lesson.id,
+        version,
+        sourceText: "",
+        questions: [],
+        createdAt: old,
+      })),
+    )
+    .returning();
+  if (!bankVersion || !current) throw new Error("seed");
+  await tdb
+    .update(lessons)
+    .set({ currentVersionId: current.id })
+    .where(eq(lessons.id, lesson.id));
+  const day = 86_400_000;
+  const room = (
+    pin: string,
+    patch: Partial<typeof gameRooms.$inferInsert>,
+  ) => ({
+    pin,
+    hostId: host.id,
+    title: pin,
+    pace: "normal",
+    bank: [{ l: lesson.id, v: bankVersion.id, q: "q_1" }],
+    bankTypes: ["mcq" as const],
+    lessonIds: [lesson.id],
+    ...patch,
+  });
+  await tdb.insert(gameRooms).values([
+    // Abandoned lobby and a race past its hard end: closed.
+    room("111111", { createdAt: new Date(now.getTime() - 2 * day) }),
+    room("222222", {
+      status: "running",
+      createdAt: new Date(now.getTime() - 2 * day),
+      hardEndAt: new Date(now.getTime() - 1),
+    }),
+    // A lobby opened an hour ago and a live race: untouched.
+    room("333333", { createdAt: new Date(now.getTime() - 3_600_000) }),
+    room("444444", {
+      status: "running",
+      createdAt: new Date(now.getTime() - 3_600_000),
+      hardEndAt: new Date(now.getTime() + 60_000),
+    }),
+    // A month old: deleted.
+    room("555555", {
+      status: "finished",
+      createdAt: new Date(now.getTime() - 31 * day),
+    }),
+  ]);
+  expect(await runDailyMaintenance(now)).toMatchObject({
+    closedRooms: 2,
+    oldRooms: 1,
+    versions: 0,
+  });
+  const rooms = await tdb
+    .select({ pin: gameRooms.pin, status: gameRooms.status })
+    .from(gameRooms)
+    .orderBy(gameRooms.pin);
+  expect(rooms).toEqual([
+    { pin: "111111", status: "finished" },
+    { pin: "222222", status: "finished" },
+    { pin: "333333", status: "lobby" },
+    { pin: "444444", status: "running" },
+  ]);
+  // The bank's version is not current, yet it stays while a room uses it.
+  expect((await tdb.select().from(lessonVersions)).map((v) => v.id)).toEqual([
+    bankVersion.id,
+    current.id,
   ]);
 });

@@ -1,5 +1,6 @@
 "use client";
 
+import { clsx } from "clsx";
 import {
   Check,
   Circle,
@@ -13,10 +14,9 @@ import {
 } from "lucide-react";
 import type { ReactNode } from "react";
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
 import type { AttemptAnswer } from "@/db/schema";
 import { OPTION_LETTERS } from "@/features/grading/domain/grade";
-import { cn } from "@/lib/utils";
 import { gameCopy } from "../../messages";
 
 const t = gameCopy.play;
@@ -53,7 +53,7 @@ export function AnswerTiles({
   const revealed = expected !== undefined;
   return (
     <fieldset
-      className={cn(
+      className={clsx(
         "grid gap-2.5 sm:grid-cols-2 sm:gap-3",
         options.length === 2 && "grid-cols-2",
       )}
@@ -72,7 +72,7 @@ export function AnswerTiles({
             aria-pressed={isPick}
             disabled={disabled}
             onClick={() => onPick(letter)}
-            className={cn(
+            className={clsx(
               "group relative flex min-h-16 w-full items-center gap-3 rounded-lg px-3.5 py-3 text-left text-game-foreground border-b-4 border-ink/30 transition-[opacity,transform,box-shadow] duration-200 enabled:active:scale-[0.98] disabled:cursor-default sm:min-h-24",
               tile.bg,
               revealed && !isKey && !isPick && "opacity-35",
@@ -134,7 +134,7 @@ export function TrueFalseAnswer({
             <li
               // biome-ignore lint/suspicious/noArrayIndexKey: fixed a–h order
               key={i}
-              className={cn(
+              className={clsx(
                 "flex flex-wrap items-center gap-x-3 gap-y-2 rounded-lg bg-surface px-3.5 py-3 text-foreground",
                 key && mine === right && "ring-2 ring-success",
                 key && mine !== right && "ring-2 ring-danger",
@@ -160,14 +160,15 @@ export function TrueFalseAnswer({
                         next[i] = on ? null : v;
                         onChange(next);
                       }}
-                      className={cn(
+                      className={clsx(
                         "inline-flex h-10 min-w-16 items-center justify-center gap-1 rounded-full border-2 px-3 font-semibold text-sm transition-colors",
                         on
                           ? v
                             ? "border-game-d bg-game-d text-game-foreground"
                             : "border-game-a bg-game-a text-game-foreground"
-                          : "border-border bg-surface text-foreground",
-                        key && isKey && !on && "border-success",
+                          : key && isKey
+                            ? "border-success bg-surface text-foreground"
+                            : "border-border bg-surface text-foreground",
                       )}
                     >
                       {key && isKey && (
@@ -186,15 +187,14 @@ export function TrueFalseAnswer({
         })}
       </ol>
       {!key && (
-        <Button
+        <button
           type="button"
-          size="lg"
           disabled={disabled || value.every((v) => v === null)}
           onClick={onSubmit}
-          className="h-14 bg-accent text-accent-foreground text-lg hover:bg-accent/90"
+          className={buttonVariants({ variant: "accent", size: "xl" })}
         >
           {t.submit}
-        </Button>
+        </button>
       )}
     </div>
   );
@@ -250,14 +250,13 @@ export function ShortAnswer({
           : t.shortHint}
       </p>
       {expected === undefined && (
-        <Button
+        <button
           type="submit"
-          size="lg"
           disabled={disabled}
-          className="h-14 bg-accent text-accent-foreground text-lg hover:bg-accent/90"
+          className={buttonVariants({ variant: "accent", size: "xl" })}
         >
           {t.submit}
-        </Button>
+        </button>
       )}
     </form>
   );

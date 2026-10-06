@@ -2,7 +2,13 @@ import "server-only";
 import { and, eq, isNull, max, sql } from "drizzle-orm";
 import type { Tx } from "@/db/client";
 import { db } from "@/db/client";
-import { attempts, lessons, lessonVersions, mistakes } from "@/db/schema";
+import {
+  attempts,
+  gameRooms,
+  lessons,
+  lessonVersions,
+  mistakes,
+} from "@/db/schema";
 import { writeAudit } from "@/lib/audit";
 import { err, ok, type Result } from "@/lib/result";
 import { type Actor, insertLesson } from "./admin-service";
@@ -293,6 +299,8 @@ export async function publishLesson(
             // versions too: a mistake by FK, a review item through its `v`.
             sql`not exists (select 1 from ${mistakes} where ${mistakes.lessonVersionId} = ${old})`,
             sql`not exists (select 1 from ${attempts} where ${attempts.lessonId} is null and ${attempts.items} @> ${JSON.stringify([{ v: old }])}::jsonb)`,
+            // A game room's bank (B-05) plays and reports from its versions.
+            sql`not exists (select 1 from ${gameRooms} where ${gameRooms.bank} @> ${JSON.stringify([{ v: old }])}::jsonb)`,
           ),
         )
         .returning({ version: lessonVersions.version });

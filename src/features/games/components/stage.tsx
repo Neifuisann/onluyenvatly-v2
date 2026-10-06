@@ -1,9 +1,9 @@
+import { clsx } from "clsx";
 import Link from "next/link";
 import type * as React from "react";
 import { LogoMark } from "@/components/logo";
 import { Mascot, type MascotPose } from "@/components/mascot";
 import { buttonVariants } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
 import { gameCopy } from "../messages";
 
 /**
@@ -21,7 +21,7 @@ export function StageBar({
 }) {
   return (
     <header
-      className={cn(
+      className={clsx(
         "flex min-h-14 items-center gap-3 px-4 py-2 sm:px-6",
         className,
       )}
@@ -65,7 +65,7 @@ export function StageMessage({
         <Link
           href={action.href}
           prefetch={false}
-          className={cn(buttonVariants({ variant: "ink" }), "mt-2")}
+          className={clsx(buttonVariants({ variant: "ink" }), "mt-2")}
         >
           {action.label}
         </Link>

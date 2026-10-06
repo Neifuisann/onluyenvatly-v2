@@ -92,11 +92,10 @@ export function CreateGameForm({ lessons }: { lessons: LessonChoice[] }) {
           : s,
     );
   const toggleType = (ty: QuestionType) =>
-    setTypes((s) =>
-      s.includes(ty) ? s.filter((x) => x !== ty) : [...s, ty],
-    );
+    setTypes((s) => (s.includes(ty) ? s.filter((x) => x !== ty) : [...s, ty]));
 
-  const ready = selected.length > 0 && types.length > 0 && pool >= MIN_QUESTIONS;
+  const ready =
+    selected.length > 0 && types.length > 0 && pool >= MIN_QUESTIONS;
   const chosen = lessons.filter((l) => selected.includes(l.id));
 
   return (
@@ -110,7 +109,10 @@ export function CreateGameForm({ lessons }: { lessons: LessonChoice[] }) {
             </p>
           </div>
           {chosen.length > 0 && (
-            <ul aria-label={t.selected(chosen.length)} className="flex flex-wrap gap-2">
+            <ul
+              aria-label={t.selected(chosen.length)}
+              className="flex flex-wrap gap-2"
+            >
               {chosen.map((l) => (
                 <li key={l.id}>
                   <button
@@ -144,7 +146,9 @@ export function CreateGameForm({ lessons }: { lessons: LessonChoice[] }) {
             />
           </div>
           <fieldset
-            aria-describedby={failed?.fieldErrors?.lessonIds ? "lessons-error" : undefined}
+            aria-describedby={
+              failed?.fieldErrors?.lessonIds ? "lessons-error" : undefined
+            }
             className="max-h-96 overflow-y-auto rounded-md border"
           >
             <legend className="sr-only">{t.lessonsLabel}</legend>
@@ -178,7 +182,8 @@ export function CreateGameForm({ lessons }: { lessons: LessonChoice[] }) {
                           aria-hidden
                           className={cn(
                             "flex size-5 shrink-0 items-center justify-center rounded border-2 border-input",
-                            on && "border-primary bg-primary text-primary-foreground",
+                            on &&
+                              "border-primary bg-primary text-primary-foreground",
                           )}
                         >
                           {on && <Check className="size-3.5" strokeWidth={3} />}
@@ -188,7 +193,15 @@ export function CreateGameForm({ lessons }: { lessons: LessonChoice[] }) {
                             {l.title}
                           </span>
                           <span className="num block truncate text-muted-foreground text-xs">
-                            {[l.grade && `Lớp ${l.grade}`, l.chapter, t.lessonCounts(l.counts.mcq, l.counts.tf, l.counts.short)]
+                            {[
+                              l.grade && `Lớp ${l.grade}`,
+                              l.chapter,
+                              t.lessonCounts(
+                                l.counts.mcq,
+                                l.counts.tf,
+                                l.counts.short,
+                              ),
+                            ]
                               .filter(Boolean)
                               .join(", ")}
                           </span>
@@ -212,7 +225,9 @@ export function CreateGameForm({ lessons }: { lessons: LessonChoice[] }) {
             </p>
           )}
           {lessons.some((l) => !l.allowed) && (
-            <p className="text-muted-foreground text-xs">{t.lessonHiddenHint}</p>
+            <p className="text-muted-foreground text-xs">
+              {t.lessonHiddenHint}
+            </p>
           )}
         </section>
       </div>
@@ -256,7 +271,9 @@ export function CreateGameForm({ lessons }: { lessons: LessonChoice[] }) {
                       onChange={() => toggleType(ty)}
                       className="sr-only"
                     />
-                    {on && <Check aria-hidden className="size-4 text-primary" />}
+                    {on && (
+                      <Check aria-hidden className="size-4 text-primary" />
+                    )}
                     {t.typeNames[ty]}
                     {selected.length > 0 && (
                       <span className="num text-muted-foreground">
@@ -295,7 +312,9 @@ export function CreateGameForm({ lessons }: { lessons: LessonChoice[] }) {
               ))}
             </div>
             {failed?.fieldErrors?.count && (
-              <p className="text-danger-text text-sm">{failed.fieldErrors.count}</p>
+              <p className="text-danger-text text-sm">
+                {failed.fieldErrors.count}
+              </p>
             )}
           </fieldset>
 
@@ -338,9 +357,11 @@ export function CreateGameForm({ lessons }: { lessons: LessonChoice[] }) {
             ))}
           </fieldset>
 
-          <p role="status" className="rounded-md bg-muted px-3.5 py-3 text-sm">
-            {selected.length === 0 ? t.lessonsHint(MAX_LESSONS) : t.summary(count, pool)}
-          </p>
+          <output className="block rounded-md bg-muted px-3.5 py-3 text-sm">
+            {selected.length === 0
+              ? t.lessonsHint(MAX_LESSONS)
+              : t.summary(count, pool)}
+          </output>
           {failed && !failed.fieldErrors && (
             <Alert variant="danger">{failed.message}</Alert>
           )}

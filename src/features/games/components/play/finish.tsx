@@ -3,7 +3,6 @@
 import { Flag } from "lucide-react";
 import Link from "next/link";
 import { buttonVariants } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
 import { gameCopy } from "../../messages";
 import type { RoomState } from "../../types";
 import { Confetti, Podium } from "../podium";
@@ -52,20 +51,18 @@ export function Finish({
       <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-8 px-4 pt-2 pb-12">
         <section className="flex animate-pop flex-col items-center gap-2 text-center">
           {over ? (
-            <h1 className="font-bold font-display text-3xl">
-              {t.finalTitle}
-            </h1>
+            <h1 className="font-bold font-display text-3xl">{t.finalTitle}</h1>
           ) : (
             <>
               <Flag aria-hidden className="size-10 fill-accent text-accent" />
               <h1 className="font-bold font-display text-4xl">
                 {t.finishTitle}
               </h1>
-              <p role="status" className="text-ink-muted">
+              <output className="block text-ink-muted">
                 {problem === "offline"
                   ? gameCopy.host.connection
                   : t.finishWait}
-              </p>
+              </output>
             </>
           )}
         </section>
@@ -121,10 +118,7 @@ export function Finish({
             <Link
               href="/play"
               prefetch={false}
-              className={cn(
-                buttonVariants({ size: "lg" }),
-                "bg-accent text-accent-foreground hover:bg-accent/90",
-              )}
+              className={buttonVariants({ variant: "accent", size: "lg" })}
             >
               {t.another}
             </Link>

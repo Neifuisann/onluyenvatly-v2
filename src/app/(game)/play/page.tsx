@@ -4,10 +4,13 @@ import { Mascot } from "@/components/mascot";
 import { Button } from "@/components/ui/button";
 import { requireStudent } from "@/features/auth/guards";
 import { StageBar } from "@/features/games/components/stage";
-import { PinSchema } from "@/features/games/domain/rules";
 import { gameCopy } from "@/features/games/messages";
+import { PinSchema } from "@/features/games/schemas";
 
 const t = gameCopy.play;
+
+/** Live and per user, opened from a link or a QR scan: blocking is expected. */
+export const instant = false;
 
 export const metadata: Metadata = {
   title: t.pageTitle,
@@ -46,6 +49,8 @@ export default async function PlayEntryPage({
             id="pin"
             name="pin"
             required
+            // Typing the PIN is this page's only job.
+            // biome-ignore lint/a11y/noAutofocus: one input per screen
             autoFocus
             inputMode="numeric"
             autoComplete="off"
@@ -62,7 +67,7 @@ export default async function PlayEntryPage({
               {t.badPin}
             </p>
           )}
-          <Button type="submit" size="lg" className="h-14 text-lg">
+          <Button type="submit" variant="accent" size="xl">
             {t.enter}
           </Button>
         </form>

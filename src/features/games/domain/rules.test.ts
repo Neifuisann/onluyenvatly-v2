@@ -1,11 +1,6 @@
 import { describe, expect, it } from "vitest";
-import {
-  defaultRacer,
-  generatePin,
-  PinSchema,
-  RACER_COLORS,
-  RACERS,
-} from "./rules.ts";
+import { PinSchema } from "../schemas.ts";
+import { defaultRacer, generatePin, RACER_COLORS, RACERS } from "./rules.ts";
 
 describe("PIN", () => {
   it("is six digits without a leading zero", () => {

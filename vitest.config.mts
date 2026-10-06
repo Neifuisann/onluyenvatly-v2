@@ -18,8 +18,10 @@ export default defineConfig({
       DATABASE_URL: "postgres://test:test@localhost:5432/test",
       SESSION_PEPPER: "test-pepper-test-pepper-test-pepper-0000",
     },
-    // PGlite boots in ~1 s per file.
+    // PGlite boots in ~1 s per file, far longer when every file migrates at
+    // once on a busy machine; the setup hooks get the same budget.
     testTimeout: 20_000,
+    hookTimeout: 20_000,
     coverage: {
       provider: "v8",
       include: ["src/features/**", "src/lib/**"],
@@ -103,6 +105,13 @@ export default defineConfig({
         },
         // `/admin/audit` paging, filters and target links (M11).
         "src/features/audit/domain/**": {
+          lines: 95,
+          functions: 95,
+          branches: 95,
+          statements: 95,
+        },
+        // Race scoring, timing, bank draws and standings (B-05).
+        "src/features/games/domain/**": {
           lines: 95,
           functions: 95,
           branches: 95,

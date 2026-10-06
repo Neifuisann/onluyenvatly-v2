@@ -23,7 +23,8 @@ export function useRoomPoll(
   const [problem, setProblem] = useState<PollProblem>(null);
   const rev = useRef(initial?.rev ?? -1);
   const failures = useRef(0);
-  const [nudge, setNudge] = useState(0);
+  /** Set by the running poll loop: poll again right now. */
+  const kick = useRef<() => void>(() => {});
 
   useEffect(() => {
     if (!enabled) return;
@@ -69,6 +70,7 @@ export function useRoomPoll(
       if (!document.hidden) schedule(0);
       else clearTimeout(timer);
     };
+    kick.current = () => schedule(0);
     document.addEventListener("visibilitychange", onVisible);
     schedule(0);
     return () => {
@@ -77,12 +79,12 @@ export function useRoomPoll(
       clearTimeout(timer);
       document.removeEventListener("visibilitychange", onVisible);
     };
-  }, [roomId, intervalMs, enabled, nudge]);
+  }, [roomId, intervalMs, enabled]);
 
   /** Poll now, e.g. right after a host action. */
   const pollNow = useCallback(() => {
     rev.current = -1;
-    setNudge((n) => n + 1);
+    kick.current();
   }, []);
 
   return { state, problem, pollNow };

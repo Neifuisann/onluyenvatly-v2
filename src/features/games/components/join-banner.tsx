@@ -42,10 +42,7 @@ export function JoinBanner() {
           placeholder={t.pinPlaceholder}
           className="num h-11 w-full min-w-0 rounded-full bg-ink-foreground px-4 text-center font-bold font-display text-ink text-lg tracking-[0.2em] placeholder:text-ink/40 focus-visible:outline-accent sm:w-40"
         />
-        <Button
-          type="submit"
-          className="bg-accent text-accent-foreground hover:bg-accent/90"
-        >
+        <Button type="submit" variant="accent">
           {t.enter}
         </Button>
       </form>

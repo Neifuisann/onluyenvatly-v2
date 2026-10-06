@@ -1,5 +1,5 @@
+import { clsx } from "clsx";
 import { Flame } from "lucide-react";
-import { cn } from "@/lib/utils";
 import { trackProgress } from "../domain/scoring";
 import type { Standing } from "../domain/standings";
 import { gameCopy } from "../messages";
@@ -8,8 +8,22 @@ import { RacerChip } from "./racer";
 const t = gameCopy.play;
 
 const LANE = {
-  phone: { h: 44, gap: 6, chip: "sm" as const },
-  stage: { h: 56, gap: 8, chip: "md" as const },
+  phone: {
+    h: 44,
+    gap: 6,
+    chip: "sm" as const,
+    rank: "w-7",
+    name: "w-20 text-sm sm:w-32",
+    score: "w-12 text-sm sm:w-16",
+  },
+  stage: {
+    h: 56,
+    gap: 8,
+    chip: "md" as const,
+    rank: "w-9 text-lg",
+    name: "w-40 text-base lg:w-52 lg:text-lg",
+    score: "w-20 text-lg",
+  },
 };
 
 /**
@@ -48,18 +62,18 @@ export function RaceTrack({
             style={{ top: i * (lane.h + lane.gap), height: lane.h }}
           >
             <span
-              className={cn(
-                "num w-7 shrink-0 text-center font-bold font-display text-ink-muted",
-                size === "stage" && "w-9 text-lg",
-                p.rank <= 3 && "text-accent",
+              className={clsx(
+                "num shrink-0 text-center font-bold font-display",
+                lane.rank,
+                p.rank <= 3 ? "text-accent" : "text-ink-muted",
               )}
             >
               {p.rank}
             </span>
             <span
-              className={cn(
-                "w-20 shrink-0 truncate font-semibold text-ink-foreground text-sm sm:w-32",
-                size === "stage" && "w-40 text-base lg:w-52 lg:text-lg",
+              className={clsx(
+                "shrink-0 truncate font-semibold text-ink-foreground",
+                lane.name,
               )}
             >
               {me ? t.you : p.name}
@@ -69,7 +83,7 @@ export function RaceTrack({
             </span>
             <span
               aria-hidden
-              className={cn(
+              className={clsx(
                 "race-lane relative h-full min-w-0 flex-1 overflow-hidden rounded-full",
                 me && "ring-2 ring-accent",
               )}
@@ -90,15 +104,15 @@ export function RaceTrack({
                   racer={p.racer}
                   color={p.color}
                   size={lane.chip}
-                  className={cn(p.finished && "ring-accent ring-3")}
+                  outline={p.finished ? "accent" : "none"}
                 />
               </span>
             </span>
             <span
               aria-hidden
-              className={cn(
-                "num w-12 shrink-0 text-right font-bold font-display text-ink-foreground text-sm sm:w-16",
-                size === "stage" && "w-20 text-lg",
+              className={clsx(
+                "num shrink-0 text-right font-bold font-display text-ink-foreground",
+                lane.score,
               )}
             >
               {t.pointsShort(p.score)}

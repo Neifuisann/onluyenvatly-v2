@@ -1,13 +1,12 @@
 /**
- * Game rooms (B-05, ADR-008): the fixed rules of a live race. Pure, no
- * imports beyond Zod, so the client bundle can share the constants.
+ * Game rooms (B-05, ADR-008): the fixed rules of a live race. Pure and
+ * import-free (no Zod: the race screens ship these constants to phones);
+ * the input schemas live in `../schemas.ts`.
  */
-import { z } from "zod";
 import type { QuestionType } from "../../lessons/schema.ts";
 
 /** Six digits, never starting with 0, so it reads like a Kahoot PIN. */
 export const PIN_PATTERN = /^[1-9]\d{5}$/;
-export const PinSchema = z.string().trim().regex(PIN_PATTERN);
 
 /** A random PIN from a uniform integer source (`crypto.randomInt`). */
 export function generatePin(randomInt: (min: number, max: number) => number) {
@@ -62,13 +61,6 @@ export const RACERS = [
 export type Racer = (typeof RACERS)[number];
 /** `--racer-0` … `--racer-7` in globals.css. */
 export const RACER_COLORS = 8;
-
-export const RacerSchema = z.enum(RACERS);
-export const RacerColorSchema = z
-  .number()
-  .int()
-  .min(0)
-  .max(RACER_COLORS - 1);
 
 /** A stable starting look from the user id, so a lobby isn't all rabbits. */
 export function defaultRacer(userId: string): { racer: Racer; color: number } {

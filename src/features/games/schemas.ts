@@ -7,12 +7,23 @@ import {
   MIN_QUESTIONS,
   PACE_NAMES,
   type Pace,
-  RacerColorSchema,
-  RacerSchema,
+  PIN_PATTERN,
+  RACER_COLORS,
+  RACERS,
 } from "./domain/rules";
 
 /** Room ids are UUIDs; reject anything else before it reaches SQL. */
 export const RoomIdSchema = z.uuid();
+
+/** A typed or linked PIN; spaces around it are forgiven. */
+export const PinSchema = z.string().trim().regex(PIN_PATTERN);
+
+export const RacerSchema = z.enum(RACERS);
+export const RacerColorSchema = z
+  .number()
+  .int()
+  .min(0)
+  .max(RACER_COLORS - 1);
 
 const unique = <T>(items: T[]) => new Set(items).size === items.length;
 

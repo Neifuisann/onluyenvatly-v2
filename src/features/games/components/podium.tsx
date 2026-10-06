@@ -1,5 +1,5 @@
+import { clsx } from "clsx";
 import { Crown } from "lucide-react";
-import { cn } from "@/lib/utils";
 import type { Standing } from "../domain/standings";
 import { gameCopy } from "../messages";
 import { RACER_BG, RacerChip } from "./racer";
@@ -47,12 +47,12 @@ export function Podium({
               racer={p.racer}
               color={p.color}
               size={place === 0 ? "lg" : "md"}
-              className={cn(place === 0 && "animate-bob")}
+              className={place === 0 ? "animate-bob" : undefined}
             />
             <span
-              className={cn(
-                "line-clamp-2 max-w-full break-words font-semibold text-ink-foreground text-sm sm:text-base",
-                p.id === meId && "text-accent",
+              className={clsx(
+                "line-clamp-2 max-w-full break-words font-semibold text-sm sm:text-base",
+                p.id === meId ? "text-accent" : "text-ink-foreground",
               )}
             >
               {p.id === meId ? `${p.name} (${t.you})` : p.name}
@@ -61,7 +61,7 @@ export function Podium({
               {t.points(p.score)}
             </span>
             <span
-              className={cn(
+              className={clsx(
                 "flex w-full items-start justify-center rounded-t-lg pt-2 font-bold font-display text-3xl text-racer-ink sm:text-4xl",
                 RACER_BG[p.color] ?? RACER_BG[0],
                 height,
@@ -95,7 +95,7 @@ export function Confetti() {
       {PIECES.map((p) => (
         <span
           key={p.key}
-          className={cn(
+          className={clsx(
             "absolute top-0 block animate-confetti rounded-[2px] opacity-0",
             p.color,
             p.wide ? "h-2 w-3" : "h-3 w-1.5",

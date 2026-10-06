@@ -19,6 +19,7 @@ import { writeAudit } from "@/lib/audit";
 import { pgErrorCode } from "@/lib/pg-error";
 import { rateLimit } from "@/lib/rate-limit";
 import { err, ok, type Result } from "@/lib/result";
+import { bankQuestions } from "./content";
 import {
   type BankCandidate,
   type BankItem,
@@ -350,19 +351,6 @@ export async function removePlayer(
   return removed ? ok(null) : err("NOT_FOUND");
 }
 
-/** One bank question with its key, from the shared lesson cache. */
-async function bankQuestion(item: BankItem): Promise<Question | null> {
-  const questions = await getLessonWithAnswers(item.l, item.v);
-  return questions?.find((q) => q.id === item.q) ?? null;
-}
-
-/** Option counts of the whole bank, to rebuild a player's plan. */
-async function bankOptionCounts(bank: readonly BankItem[]) {
-  const questions = await Promise.all(bank.map(bankQuestion));
-  if (questions.some((q) => q === null)) return null;
-  return optionCounts(questions as Question[]);
-}
-
 function toStanding(p: SnapshotPlayer): StandingInput {
   return {
     id: p.id,
@@ -417,13 +405,13 @@ export async function answerQuestion(
   if (input.index >= size) return err("VALIDATION");
   if (input.index > row.answered) return err("CONFLICT");
 
-  const counts = await bankOptionCounts(row.bank);
-  if (!counts) return err("INTERNAL");
-  const plan = playerPlan(counts, createRng(row.seed));
+  // The whole bank (from the shared lesson cache) rebuilds this player's plan.
+  const questions = await bankQuestions(row.bank);
+  if (!questions) return err("INTERNAL");
+  const plan = playerPlan(optionCounts(questions), createRng(row.seed));
   const bankIndex = plan.order[input.index] as number;
   const bankItem = row.bank[bankIndex] as BankItem;
-  const question = await bankQuestion(bankItem);
-  if (!question) return err("INTERNAL");
+  const question = questions[bankIndex] as Question;
   const item = gradingItem(bankItem, plan.options[bankIndex]);
   const expected = expectedAnswer(question, item);
 

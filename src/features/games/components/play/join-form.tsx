@@ -1,10 +1,9 @@
 "use client";
 
-import { Check } from "lucide-react";
+import { clsx } from "clsx";
+import { Check, CircleAlert } from "lucide-react";
 import { useActionState, useState } from "react";
-import { Alert } from "@/components/ui/alert";
-import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
+import { buttonVariants } from "@/components/ui/button";
 import { joinGameAction } from "../../actions";
 import { RACER_COLORS, RACERS, type Racer } from "../../domain/rules";
 import { colorNames, gameCopy, racerNames } from "../../messages";
@@ -61,7 +60,7 @@ export function JoinForm({
             return (
               <label
                 key={r}
-                className={cn(
+                className={clsx(
                   "flex aspect-square cursor-pointer flex-col items-center justify-center gap-1 rounded-lg border-2 text-xs transition-[background-color,border-color,transform] duration-150 active:scale-95 has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-accent",
                   on
                     ? "border-accent bg-lane text-ink-foreground"
@@ -94,10 +93,12 @@ export function JoinForm({
               <label
                 // biome-ignore lint/suspicious/noArrayIndexKey: fixed palette order
                 key={c}
-                className={cn(
-                  "flex size-11 cursor-pointer items-center justify-center rounded-full text-racer-ink ring-offset-2 ring-offset-ink transition-transform duration-150 active:scale-90 has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ink-foreground",
+                className={clsx(
+                  "flex size-11 cursor-pointer items-center justify-center rounded-full text-racer-ink ring-offset-2 ring-offset-ink transition-transform duration-150 active:scale-90",
                   RACER_BG[c],
-                  on && "scale-110 ring-2 ring-accent",
+                  on
+                    ? "scale-110 ring-2 ring-accent"
+                    : "has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ink-foreground",
                 )}
               >
                 <input
@@ -115,16 +116,23 @@ export function JoinForm({
           })}
         </div>
       </fieldset>
-      {failed && <Alert variant="danger">{failed.message}</Alert>}
-      <Button
+      {failed && (
+        <p
+          role="alert"
+          className="flex gap-3 rounded-md bg-danger-soft p-3.5 text-danger-text text-sm"
+        >
+          <CircleAlert aria-hidden className="mt-0.5 size-5 shrink-0" />
+          {failed.message}
+        </p>
+      )}
+      <button
         type="submit"
-        size="lg"
         disabled={pending}
         aria-disabled={pending}
-        className="h-14 bg-accent text-accent-foreground text-lg hover:bg-accent/90"
+        className={buttonVariants({ variant: "accent", size: "xl" })}
       >
         {pending ? t.joining : submitLabel}
-      </Button>
+      </button>
     </form>
   );
 }
