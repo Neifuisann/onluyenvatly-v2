@@ -90,6 +90,47 @@ export async function copyMediaObject(
   }
 }
 
+export type BucketSpec = {
+  id: string;
+  public: boolean;
+  fileSizeLimit?: number;
+  allowedMimeTypes?: string[];
+};
+
+/**
+ * Creates a bucket unless it exists. Returns "created", "exists" or throws
+ * (status only: the body may echo request details).
+ */
+export async function ensureBucket(
+  target: Pick<StorageTarget, "url" | "serviceKey">,
+  spec: BucketSpec,
+  fetchFn: Fetch = fetch,
+): Promise<"created" | "exists"> {
+  const base = `${target.url.replace(/\/+$/, "")}/storage/v1/bucket`;
+  const headers = {
+    authorization: `Bearer ${target.serviceKey}`,
+    apikey: target.serviceKey,
+  };
+  const found = await fetchFn(`${base}/${encodeURIComponent(spec.id)}`, {
+    headers,
+  });
+  if (found.ok) return "exists";
+  const res = await fetchFn(base, {
+    method: "POST",
+    headers: { ...headers, "content-type": "application/json" },
+    body: JSON.stringify({
+      id: spec.id,
+      name: spec.id,
+      public: spec.public,
+      file_size_limit: spec.fileSizeLimit ?? null,
+      allowed_mime_types: spec.allowedMimeTypes ?? null,
+    }),
+  });
+  if (!res.ok)
+    throw new Error(`create bucket ${spec.id} failed: HTTP ${res.status}`);
+  return "created";
+}
+
 /** Run jobs with a small concurrency limit (be gentle with both projects). */
 export async function copyAll(
   jobs: readonly MediaJob[],

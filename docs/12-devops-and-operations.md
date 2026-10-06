@@ -33,6 +33,8 @@ Connection strings (set 2026-09-28):
 | GitHub Actions | `NEON_DATABASE_URL_POOLED` | Neon pooled host (reference copy) |
 | GitHub Actions | `DATABASE_URL_DIRECT` | Supabase **session pooler** `postgres.<ref>@…pooler.supabase.com:5432`: production migrations and backups. Not `db.<ref>.supabase.co`, which is IPv6-only and unreachable from GitHub runners |
 
+Storage (ADR-006): Production needs all three of `SUPABASE_URL` (`https://<ref>.supabase.co`), `SUPABASE_SERVICE_ROLE_KEY` and `NEXT_PUBLIC_MEDIA_BASE_URL` (the `media` bucket's public URL, inlined at build). Without `SUPABASE_URL` every cover, avatar and DOCX upload answers STORAGE_UNAVAILABLE. The `media` (public) and `imports` (private) buckets must exist; `scripts/copy-legacy-media.ts` creates them and copies the v1 images (10 §3.1).
+
 ## 3. CI/CD
 - **Trunk-based.** `main` = production. Short-lived feature branches → PR → CI green + preview checked → squash-merge → Vercel auto-deploys production.
 - Commit messages: Conventional Commits (`feat:`, `fix:`, `chore:`) so the changelog is generated.
