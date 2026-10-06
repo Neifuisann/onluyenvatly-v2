@@ -109,6 +109,7 @@ sequenceDiagram
 Properties:
 - **Idempotent submit.** The row lock plus the `status` check means a double-click or a retry after a timeout gives the same result.
 - **Deadline enforced on the server.** `deadline_at + 30 s grace`. Late submits are graded with the last saved answers.
+- **Time runs while the student is away.** Leaving (Back, the X, reload, closed tab) never pauses `deadline_at`. With no scheduler on the free tier, an attempt past deadline + grace is graded with its saved answers the next time it is touched (`submitExpired`): opening `/attempts/[id]` (then redirects to the result), `startAttempt` on that lesson (the expired attempt counts as used, then a new one starts), or the daily cron. The lesson panel and dashboard show "hết giờ" until then; rating can lag up to a day for a student who never comes back.
 - **Lesson versioning.** An attempt stores `lesson_version`. If the teacher edits a lesson mid-attempt, grading uses the version the student saw. Old versions stay in `lesson_versions`, which keeps a snapshot of the questions JSON.
 
 ### 4.2 AI explanation

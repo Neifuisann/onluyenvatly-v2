@@ -61,6 +61,18 @@ export const runnerCopy = {
   retry: "Thử lại",
 } as const;
 
+/** Asked before leaving the runner: Back, the X, reload (07 §5.2). */
+export const leaveCopy = {
+  title: "Thoát bài làm?",
+  practiceTitle: "Thoát bài ôn tập?",
+  timed:
+    "Bài làm đã được lưu, nhưng thời gian vẫn chạy khi bạn rời đi. Hết giờ, hệ thống tự nộp bài với các câu đã lưu. Bạn có thể vào lại bài để làm tiếp trước khi hết giờ.",
+  untimed:
+    "Bài làm đã được lưu. Bạn có thể vào lại bài để làm tiếp bất cứ lúc nào.",
+  stay: "Ở lại làm bài",
+  leave: "Thoát",
+} as const;
+
 /** `SaveIndicator` and the offline banner (07 §4, §5.2). */
 export const saveCopy = {
   saved: "Đã lưu",
@@ -157,6 +169,9 @@ export const startCopy = {
   starting: "Đang chuẩn bị đề…",
   continue: "Tiếp tục làm bài",
   inProgress: "Bạn đang làm dở bài này.",
+  timeRunning: (when: string) =>
+    `Thời gian vẫn đang chạy, hết giờ lúc ${when}. Hết giờ, bài sẽ tự nộp với các câu đã lưu.`,
+  timeUp: "Đã hết giờ làm bài. Bài được nộp với các câu đã lưu.",
   used: (used: number, max: number) => `Đã dùng ${used}/${max} lượt làm bài.`,
   noneLeft: "Bạn đã dùng hết lượt làm bài này.",
   startsAt: (when: string) => `Giờ bắt đầu: ${when}`,

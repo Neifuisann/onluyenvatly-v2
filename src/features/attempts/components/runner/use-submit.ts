@@ -22,6 +22,8 @@ type Json = {
 export function useSubmit(
   attemptId: string,
   { stop, resume, forget }: ReturnType<typeof useAutosave>,
+  /** Opens the result without the leave prompt (`useLeaveGuard`). */
+  leave: (href: string) => void,
 ) {
   const api = useRunnerApi();
   const router = useRouter();
@@ -62,7 +64,7 @@ export function useSubmit(
         const json = (await res.json().catch(() => null)) as Json | null;
         if (res.ok && json?.ok && json.data?.resultUrl) {
           forget();
-          router.replace(json.data.resultUrl);
+          leave(json.data.resultUrl);
           return;
         }
         if (res.status === 404) {
@@ -82,7 +84,7 @@ export function useSubmit(
     busy.current = false;
     resume();
     if (alive.current) setSubmitting(false);
-  }, [api, attemptId, forget, resume, router, stop]);
+  }, [api, attemptId, forget, leave, resume, router, stop]);
 
   return { submit, submitting, error };
 }

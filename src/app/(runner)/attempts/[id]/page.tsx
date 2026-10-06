@@ -7,9 +7,11 @@ import {
   itemQuestions,
   itemSources,
 } from "@/features/attempts/content";
+import { isPastGrace } from "@/features/attempts/domain/deadline";
 import { runnerCopy } from "@/features/attempts/messages";
 import { getAttempt } from "@/features/attempts/queries";
 import { AttemptIdSchema } from "@/features/attempts/schemas";
+import { submitExpired } from "@/features/attempts/service";
 import { requireStudent } from "@/features/auth/guards";
 import { withOptionOrder } from "@/features/lessons/domain/public-question";
 import { getLessonOverview } from "@/features/lessons/queries";
@@ -41,6 +43,13 @@ export default async function AttemptPage({
   if (!attempt || attempt.userId !== user.id) notFound();
   if (attempt.status !== "in_progress")
     redirect(`/attempts/${attempt.id}/result`);
+  // Time ran out while the student was away: grade the saved answers now
+  // (02 §4.1). Inside the grace the runner's own timer submits instead.
+  const now = new Date();
+  if (isPastGrace(attempt.deadlineAt, now)) {
+    const closed = await submitExpired(user.id, attempt.id, now);
+    if (closed.ok) redirect(`/attempts/${attempt.id}/result`);
+  }
   const { lessonId } = attempt;
   const practice = attempt.mode !== "test";
 
@@ -83,7 +92,7 @@ export default async function AttemptPage({
       )}
       saved={{ answers: attempt.answers, flagged: attempt.flagged }}
       deadlineAt={attempt.deadlineAt?.toISOString() ?? null}
-      serverNow={new Date().toISOString()}
+      serverNow={now.toISOString()}
       startedAt={attempt.startedAt.toISOString()}
       examGuard={lesson?.examGuard ?? false}
       {...(practice && { practice: { checked } })}
