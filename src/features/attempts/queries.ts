@@ -18,6 +18,7 @@ export async function getMyLessonAttempts(userId: string, lessonId: number) {
       status: attempts.status,
       score10: attempts.score10,
       startedAt: attempts.startedAt,
+      deadlineAt: attempts.deadlineAt,
       submittedAt: attempts.submittedAt,
     })
     .from(attempts)
