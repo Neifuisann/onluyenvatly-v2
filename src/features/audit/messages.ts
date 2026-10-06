@@ -29,6 +29,8 @@ const actions: Record<string, string> = {
   "explanation.update": "Sửa giải thích",
   "explanation.approve": "Duyệt giải thích",
   "explanation.regenerate": "Tạo lại giải thích",
+  "game.create": "Tạo phòng thi đấu",
+  "game.remove_player": "Mời học sinh rời phòng thi đấu",
   "account.update_profile": "Sửa hồ sơ",
   "account.request_deletion": "Yêu cầu xóa tài khoản",
   "account.cancel_deletion": "Hủy yêu cầu xóa tài khoản",
@@ -41,6 +43,7 @@ const areas: Record<AuditArea, string> = {
   students: "Học sinh",
   results: "Kết quả",
   explanations: "Giải thích AI",
+  games: "Thi đấu",
   accounts: "Tài khoản",
   settings: "Cài đặt",
 };
@@ -50,6 +53,7 @@ const targets: Record<string, string> = {
   user: "Tài khoản",
   attempt: "Bài làm",
   explanation: "Giải thích",
+  game: "Phòng thi đấu",
   settings: "Cài đặt chung",
 };
 

@@ -51,5 +51,7 @@ export const config = {
     "/profile/:path*",
     "/settings/:path*",
     "/admin/:path*",
+    "/play/:path*",
+    "/host/:path*",
   ],
 };

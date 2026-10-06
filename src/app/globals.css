@@ -61,6 +61,29 @@
   --tier-diamond: #5b7cfa;
   --tier-master: #e0457b;
 
+  /*
+   * Game rooms (B-05). The race plays on the ink stage in both themes, so
+   * these are set once. Answer tiles carry a shape too, never color alone.
+   */
+  --game-a: oklch(0.54 0.19 22);
+  --game-b: oklch(0.5 0.13 245);
+  --game-c: oklch(0.55 0.115 70);
+  --game-d: oklch(0.52 0.13 152);
+  --game-foreground: oklch(1 0 0);
+  /* The stage's raised lane and its tick marks. */
+  --lane: oklch(0.33 0.06 264);
+  --lane-tick: oklch(0.5 0.05 262);
+  /* Racer chips: bright pastels with a dark glyph. */
+  --racer-ink: oklch(0.24 0.05 264);
+  --racer-0: oklch(0.79 0.12 25);
+  --racer-1: oklch(0.82 0.12 60);
+  --racer-2: oklch(0.88 0.14 95);
+  --racer-3: oklch(0.83 0.15 140);
+  --racer-4: oklch(0.83 0.11 185);
+  --racer-5: oklch(0.79 0.1 240);
+  --racer-6: oklch(0.78 0.11 295);
+  --racer-7: oklch(0.8 0.11 345);
+
   --radius: 12px;
   --shadow-card:
     0 1px 2px oklch(0.235 0.045 262 / 0.05),
@@ -160,6 +183,22 @@
   --color-tier-platinum: var(--tier-platinum);
   --color-tier-diamond: var(--tier-diamond);
   --color-tier-master: var(--tier-master);
+  --color-game-a: var(--game-a);
+  --color-game-b: var(--game-b);
+  --color-game-c: var(--game-c);
+  --color-game-d: var(--game-d);
+  --color-game-foreground: var(--game-foreground);
+  --color-lane: var(--lane);
+  --color-lane-tick: var(--lane-tick);
+  --color-racer-ink: var(--racer-ink);
+  --color-racer-0: var(--racer-0);
+  --color-racer-1: var(--racer-1);
+  --color-racer-2: var(--racer-2);
+  --color-racer-3: var(--racer-3);
+  --color-racer-4: var(--racer-4);
+  --color-racer-5: var(--racer-5);
+  --color-racer-6: var(--racer-6);
+  --color-racer-7: var(--racer-7);
 
   /* 07 §3.2: Inter for reading, Bricolage Grotesque for headings and big numbers. */
   --font-sans: var(--font-inter), system-ui, sans-serif;
@@ -187,6 +226,55 @@
   --animate-rise: rise 420ms var(--ease-out-soft) both;
   --animate-pop: pop 360ms var(--ease-out-soft) both;
   --animate-ring: ring 1100ms var(--ease-out-soft) 150ms both;
+  /* Game rooms (B-05): a racer idling in the lobby, a wrong answer, the
+     countdown digits and the podium's confetti. */
+  --animate-bob: bob 1.6s ease-in-out infinite;
+  --animate-shake: shake 420ms ease-in-out both;
+  --animate-count: count 900ms var(--ease-out-soft) both;
+  --animate-confetti: confetti 2.6s cubic-bezier(0.3, 0.6, 0.6, 1) both;
+
+  @keyframes bob {
+    50% {
+      transform: translateY(-6px) rotate(-3deg);
+    }
+  }
+
+  @keyframes shake {
+    20%,
+    60% {
+      transform: translateX(-6px);
+    }
+    40%,
+    80% {
+      transform: translateX(6px);
+    }
+  }
+
+  @keyframes count {
+    from {
+      transform: scale(1.6);
+      opacity: 0;
+    }
+    35% {
+      transform: scale(1);
+      opacity: 1;
+    }
+    to {
+      transform: scale(0.9);
+      opacity: 0;
+    }
+  }
+
+  @keyframes confetti {
+    from {
+      transform: translateY(-10vh) rotate(0deg);
+      opacity: 1;
+    }
+    to {
+      transform: translateY(105vh) rotate(720deg);
+      opacity: 0.9;
+    }
+  }
 
   /* A ring sweeps from empty to its own dash offset (score rings). */
   @keyframes ring {
@@ -302,6 +390,42 @@
   .num {
     font-variant-numeric: tabular-nums;
     font-feature-settings: "tnum", "cv11";
+  }
+
+  /*
+   * Game track (B-05): a lane is a ticker-timer strip. Tick marks every 10 %
+   * of the distance, and each racer's trail is the tape's dotted record.
+   */
+  .race-lane {
+    background-color: var(--lane);
+    background-image: repeating-linear-gradient(
+      to right,
+      var(--lane-tick) 0 1px,
+      transparent 1px 10%
+    );
+    background-size: 100% 6px;
+    background-position: 0 100%;
+    background-repeat: no-repeat;
+  }
+
+  .ticker-tape {
+    background-image: radial-gradient(
+      circle,
+      var(--ink-muted) 1.5px,
+      transparent 2px
+    );
+    background-size: 12px 100%;
+    background-position: left center;
+    background-repeat: repeat-x;
+    opacity: 0.55;
+  }
+
+  .finish-line {
+    background-image: repeating-conic-gradient(
+      var(--ink-foreground) 0 25%,
+      var(--ink) 0 50%
+    );
+    background-size: 8px 8px;
   }
 
   /* MathText (S2-04): question text with server-rendered KaTeX (07 §3.2). */

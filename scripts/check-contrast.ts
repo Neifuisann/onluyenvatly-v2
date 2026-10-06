@@ -48,6 +48,17 @@ const PAIRS: Array<[string, string, number]> = [
   ["input", "surface", 3], // form control borders (WCAG 1.4.11)
   ["ring", "background", 3],
   ["ring", "surface", 3],
+  // Game rooms (B-05): answer tiles, racer chips and the lane on the stage.
+  ["game-foreground", "game-a", 4.5],
+  ["game-foreground", "game-b", 4.5],
+  ["game-foreground", "game-c", 4.5],
+  ["game-foreground", "game-d", 4.5],
+  ...[0, 1, 2, 3, 4, 5, 6, 7].map(
+    (i) => ["racer-ink", `racer-${i}`, 4.5] as [string, string, number],
+  ),
+  ["ink-foreground", "lane", 4.5],
+  ["ink-muted", "lane", 4.5],
+  ["accent", "lane", 4.5],
 ];
 
 const css = readFileSync(

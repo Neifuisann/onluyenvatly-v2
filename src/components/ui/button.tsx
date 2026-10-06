@@ -18,6 +18,10 @@ export const buttonVariants = cva(
         soft: "bg-primary-soft text-foreground hover:bg-primary-soft/70",
         ghost: "text-foreground hover:bg-muted",
         ink: "bg-ink-foreground text-ink hover:bg-ink-foreground/90",
+        /* Game stage (B-05): the sun-yellow main action, and a quiet one. */
+        accent:
+          "bg-accent text-accent-foreground shadow-card hover:bg-accent/90",
+        stage: "text-ink-foreground hover:bg-lane",
         danger:
           "bg-danger text-danger-foreground shadow-card hover:bg-danger-hover",
         link: "h-auto rounded-sm px-0 text-primary underline-offset-4 hover:underline active:scale-100",
@@ -26,6 +30,7 @@ export const buttonVariants = cva(
         default: "h-11 px-5",
         sm: "h-9 px-4",
         lg: "h-12 px-6 text-base",
+        xl: "h-14 px-7 text-lg",
         icon: "size-11",
       },
     },

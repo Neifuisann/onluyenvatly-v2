@@ -19,6 +19,7 @@ import {
   getContinueAttempt,
   getDashboardStats,
 } from "@/features/dashboard/queries";
+import { JoinBanner } from "@/features/games/components/join-banner";
 import {
   cardGridClass,
   LessonCard,
@@ -94,6 +95,7 @@ export default async function DashboardPage() {
           grade={grade}
         />
       </div>
+      <JoinBanner />
       <section aria-labelledby="recommended-heading" className="space-y-4">
         <div className="flex items-baseline justify-between gap-3">
           <h2 id="recommended-heading" className="heading-section">

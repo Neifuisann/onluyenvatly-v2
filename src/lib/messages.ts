@@ -21,6 +21,8 @@ export const errorMessages = {
   NOT_OPEN_YET: "Bài chưa đến giờ làm. Bạn quay lại sau nhé.",
   LESSON_CLOSED: "Bài đã đóng vì đáp án đã được công bố.",
   DEADLINE_PASSED: "Đã hết thời gian làm bài.",
+  GAME_OVER: "Cuộc đua đã kết thúc.",
+  GAME_FULL: "Phòng đã đủ người chơi.",
   AI_UNAVAILABLE: "Tính năng AI đang tạm dừng. Vui lòng thử lại sau.",
   AI_QUOTA: "Hôm nay đã hết lượt dùng AI. Vui lòng thử lại vào ngày mai.",
   STORAGE_UNAVAILABLE:
@@ -132,6 +134,7 @@ export const shellCopy = {
     students: "Học sinh",
     results: "Kết quả",
     explanations: "Giải thích AI",
+    games: "Thi đấu",
     settings: "Cài đặt",
     audit: "Nhật ký",
   },

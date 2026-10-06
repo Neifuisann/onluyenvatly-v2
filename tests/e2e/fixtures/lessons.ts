@@ -153,6 +153,27 @@ export const flaggedExplanations = (["d", "m"] as const).map((p) => ({
   votesDown: 3,
 }));
 
+/**
+ * B-05 game rooms: five mcq questions whose right option says so, so the
+ * spec can pick it in any player's shuffle. Each has a private explanation
+ * that must never reach a player.
+ */
+export const GAME_RIGHT = "Về đích đúng";
+export const gameQuestions = (project: "d" | "m"): Question[] =>
+  [1, 2, 3, 4, 5].map((n) => ({
+    id: `q_game_${n}`,
+    type: "mcq",
+    stem: `Câu đua số ${n} (${project}): $s = ${n}\\,\\text{m}$`,
+    options: [
+      { text: GAME_RIGHT },
+      { text: "Lệch một" },
+      { text: "Lệch hai" },
+      { text: "Lệch ba" },
+    ],
+    answer: 0,
+    explanation: ANSWER_MARKER,
+  }));
+
 export type E2eLesson = NewLesson & { questions?: Question[] };
 
 export const e2eLessons: E2eLesson[] = [
@@ -359,6 +380,18 @@ export const e2eLessons: E2eLesson[] = [
       },
       status: "published",
       questions: reviewQuestions(p),
+    }),
+  ),
+  ...(["d", "m"] as const).map(
+    (p): E2eLesson => ({
+      legacyId: `e2e-game-${p}`,
+      title: `E2E – Đua tốc độ (${p})`,
+      chapter: `Thi đấu E2E (${p})`,
+      tags: ["e2e-game"],
+      sortOrder: 503,
+      config: { ...DEFAULT_LESSON_CONFIG, countsForRating: false },
+      status: "published",
+      questions: gameQuestions(p),
     }),
   ),
   // S6-05 statistics: archived (off the catalog and every student page);

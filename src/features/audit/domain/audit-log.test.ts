@@ -116,7 +116,7 @@ describe("auditTargetHref", () => {
     targetId,
   });
 
-  it("opens lessons, students, attempts and settings", () => {
+  it("opens lessons, students, attempts, games and settings", () => {
     expect(auditTargetHref(row("lesson.publish", "lesson", "12"))).toBe(
       "/admin/lessons/12/edit",
     );
@@ -132,6 +132,10 @@ describe("auditTargetHref", () => {
     expect(auditTargetHref(row("settings.update", "settings", "1"))).toBe(
       "/admin/settings",
     );
+    expect(auditTargetHref(row("game.create", "game", UUID))).toBe(
+      `/host/${UUID}`,
+    );
+    expect(auditTargetHref(row("game.create", "game", "12"))).toBeNull();
   });
 
   it("links nothing that was deleted or has no page", () => {

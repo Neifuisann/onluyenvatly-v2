@@ -36,7 +36,9 @@ for (const path of await walk(".next/server/app")) {
     const manifest = manifestSchema.parse(raw);
     const route =
       page.replace(/\/\([^/]+\)/g, "").replace(/\/page$/, "") || "/";
-    const limitKB = route.startsWith("/admin")
+    // Teacher-only screens: the admin area and the game projector (B-05),
+    // opened on a desktop or a classroom PC, never a student's phone.
+    const limitKB = /^\/(admin|host)(\/|$)/.test(route)
       ? 350
       : /^\/attempts\/\[[^/]+\]$/.test(route)
         ? 180

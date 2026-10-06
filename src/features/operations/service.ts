@@ -1,7 +1,13 @@
 import "server-only";
 import { and, asc, eq, isNotNull, lt, or, sql } from "drizzle-orm";
 import { db } from "@/db/client";
-import { attempts, lessonVersions, rateLimits, sessions } from "@/db/schema";
+import {
+  attempts,
+  gameRooms,
+  lessonVersions,
+  rateLimits,
+  sessions,
+} from "@/db/schema";
 import { cleanupImports } from "@/features/ai/import-service";
 import { flushAttemptCounters } from "@/features/attempts/counter-service";
 import { submitExpired } from "@/features/attempts/service";
@@ -48,9 +54,30 @@ export async function runDailyMaintenance(now = new Date()) {
       union select lesson_version_id from attempts where lesson_version_id is not null
       union select lesson_version_id from mistakes
       union select (i->>'v')::bigint from attempts a, jsonb_array_elements(a.items) i where i->>'v' is not null
+      union select (b->>'v')::bigint from game_rooms g, jsonb_array_elements(g.bank) b
     )
   `)
     .returning({ id: lessonVersions.id });
+  // Game rooms (B-05): a lobby nobody started, or a race past its hard end,
+  // is closed so its PIN is free again; rooms older than a month go, with
+  // their players.
+  const closedRooms = await db
+    .update(gameRooms)
+    .set({ status: "finished", finishedAt: now })
+    .where(
+      or(
+        and(
+          eq(gameRooms.status, "lobby"),
+          lt(gameRooms.createdAt, cutoff.staleLobbies),
+        ),
+        and(eq(gameRooms.status, "running"), lt(gameRooms.hardEndAt, now)),
+      ),
+    )
+    .returning({ id: gameRooms.id });
+  const oldRooms = await db
+    .delete(gameRooms)
+    .where(lt(gameRooms.createdAt, cutoff.gameRooms))
+    .returning({ id: gameRooms.id });
   const privateRows = await db
     .update(attempts)
     .set({ ip: null, guardEvents: [] })
@@ -80,5 +107,7 @@ export async function runDailyMaintenance(now = new Date()) {
     versions: oldVersions.length,
     privateRows: privateRows.length,
     imports,
+    closedRooms: closedRooms.length,
+    oldRooms: oldRooms.length,
   };
 }

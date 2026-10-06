@@ -299,6 +299,8 @@ async function main() {
   // or mistakes (S7-06: they also pin the versions deleted below).
   await db.delete(schema.mistakes);
   await db.delete(schema.attempts);
+  // …and without game rooms (B-05): an open room would keep its PIN.
+  await db.delete(schema.gameRooms);
   // Drafts the AI import spec created (S7-04).
   await db
     .delete(schema.lessons)

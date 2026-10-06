@@ -613,6 +613,108 @@ export const explanationVotes = pgTable(
   ],
 ).enableRLS();
 
+export const gameStatus = pgEnum("game_status", [
+  "lobby",
+  "running",
+  "finished",
+]);
+
+/** A bank question: lesson, version, question id (B-05). */
+export type GameBankItem = { l: number; v: number; q: string };
+/** One answered bank question: outcome kind and points (B-05). */
+export type GameMarkRow = {
+  k: "correct" | "partial" | "wrong" | "blank" | "timeout";
+  s: number;
+};
+
+/**
+ * Live races a teacher hosts (B-05, ADR-008). Players join with the PIN; the
+ * bank is drawn once at creation and holds references only, never content.
+ * `rev` goes up on every change players can see, so a poll that already has
+ * the latest state is answered 204 without reading the players.
+ */
+export const gameRooms = pgTable(
+  "game_rooms",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    /** Six digits; unique among rooms not finished. */
+    pin: text("pin").notNull(),
+    hostId: uuid("host_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    title: text("title").notNull(),
+    status: gameStatus("status").notNull().default("lobby"),
+    /** `fast` | `normal` | `relaxed` (`games/domain/rules.ts`). */
+    pace: text("pace").notNull(),
+    bank: jsonb("bank").$type<GameBankItem[]>().notNull(),
+    /** Aligned with `bank`: `mcq` | `tf` | `short`, for timers and reports. */
+    bankTypes: text("bank_types")
+      .array()
+      .$type<("mcq" | "tf" | "short")[]>()
+      .notNull(),
+    /** The lessons chosen, for "Chơi lại" and the list. */
+    lessonIds: bigint("lesson_ids", { mode: "number" }).array().notNull(),
+    rev: integer("rev").notNull().default(0),
+    createdAt: timestamptz("created_at").notNull().defaultNow(),
+    startedAt: timestamptz("started_at"),
+    /** Past it a running room counts as finished (`raceHardEnd`). */
+    hardEndAt: timestamptz("hard_end_at"),
+    finishedAt: timestamptz("finished_at"),
+  },
+  (t) => [
+    uniqueIndex("game_rooms_open_pin_uq")
+      .on(t.pin)
+      .where(sql`${t.status} <> 'finished'`),
+    index("game_rooms_pin_created_idx").on(t.pin, t.createdAt.desc()),
+    index("game_rooms_host_created_idx").on(t.hostId, t.createdAt.desc()),
+    check("game_rooms_pin_check", sql`${t.pin} ~ '^[1-9][0-9]{5}$'`),
+    check(
+      "game_rooms_bank_aligned",
+      sql`jsonb_array_length(${t.bank}) = cardinality(${t.bankTypes})`,
+    ),
+  ],
+).enableRLS();
+
+/**
+ * One student in one race. `seed` rebuilds their question order and option
+ * shuffles; `answered` is how far they are, and the guarded
+ * `WHERE answered = i` update makes a retried answer count once.
+ */
+export const gamePlayers = pgTable(
+  "game_players",
+  {
+    /** Public id in standings, so user ids never reach other browsers. */
+    id: bigint("id", { mode: "number" })
+      .primaryKey()
+      .generatedAlwaysAsIdentity(),
+    roomId: uuid("room_id")
+      .notNull()
+      .references(() => gameRooms.id, { onDelete: "cascade" }),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    racer: text("racer").notNull(),
+    color: smallint("color").notNull(),
+    seed: bigint("seed", { mode: "number" }).notNull(),
+    answered: smallint("answered").notNull().default(0),
+    correct: smallint("correct").notNull().default(0),
+    score: integer("score").notNull().default(0),
+    streak: smallint("streak").notNull().default(0),
+    bestStreak: smallint("best_streak").notNull().default(0),
+    /** Bank-aligned; null where not reached yet. */
+    marks: jsonb("marks").$type<(GameMarkRow | null)[]>().notNull(),
+    joinedAt: timestamptz("joined_at").notNull().defaultNow(),
+    lastAnsweredAt: timestamptz("last_answered_at"),
+    finishedAt: timestamptz("finished_at"),
+    /** Removed by the host: hidden from standings, can't rejoin. */
+    removedAt: timestamptz("removed_at"),
+  },
+  (t) => [
+    unique("game_players_room_user_uq").on(t.roomId, t.userId),
+    index("game_players_user_idx").on(t.userId),
+  ],
+).enableRLS();
+
 export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
 export type Session = typeof sessions.$inferSelect;
@@ -627,3 +729,5 @@ export type Rating = typeof ratings.$inferSelect;
 export type RatingEvent = typeof ratingEvents.$inferSelect;
 export type Mistake = typeof mistakes.$inferSelect;
 export type AttemptOverride = typeof attemptOverrides.$inferSelect;
+export type GameRoom = typeof gameRooms.$inferSelect;
+export type GamePlayer = typeof gamePlayers.$inferSelect;

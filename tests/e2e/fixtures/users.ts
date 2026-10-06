@@ -26,6 +26,7 @@ export const E2E_SPEC_ADMINS = [
   "stats",
   "explanations",
   "import",
+  "games",
 ] as const;
 export type E2eSpecAdmin = (typeof E2E_SPEC_ADMINS)[number];
 export const e2eSpecAdminUsername = (spec: E2eSpecAdmin, project: string) =>
@@ -221,6 +222,36 @@ export const e2eStudents = [
     key: "account2",
     phone: "0900000027",
     fullName: "Học Sinh Cài Đặt Hai",
+    status: "active",
+    grade: 10,
+  },
+  // B-05 game rooms: two racers per Playwright project (grade 10, unrated,
+  // so off every board the other specs read).
+  {
+    key: "gameA",
+    phone: "0900000028",
+    fullName: "Tay Đua An",
+    status: "active",
+    grade: 10,
+  },
+  {
+    key: "gameA2",
+    phone: "0900000029",
+    fullName: "Tay Đua An Hai",
+    status: "active",
+    grade: 10,
+  },
+  {
+    key: "gameB",
+    phone: "0900000040",
+    fullName: "Tay Đua Bình",
+    status: "active",
+    grade: 10,
+  },
+  {
+    key: "gameB2",
+    phone: "0900000041",
+    fullName: "Tay Đua Bình Hai",
     status: "active",
     grade: 10,
   },

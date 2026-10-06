@@ -17,10 +17,13 @@ Student (bottom tab bar on mobile, left sidebar ≥ 1024px)
 ├─ Ôn tập         /review      (mistakes bank → personalized practice)
 ├─ Xếp hạng       /leaderboard
 └─ Tôi            /profile     (stats, history) → /settings
+   (+ "Thi đấu cùng lớp" banner on the dashboard → /play → /play/[pin];
+    full screen, no shell; the five tabs stay as they are)
 
 Admin (sidebar)
 ├─ Tổng quan  ├─ Bài tập (list / editor / stats)  ├─ Nhập bằng AI
 ├─ Học sinh (Chờ duyệt badge)  ├─ Kết quả  ├─ Giải thích AI
+├─ Thi đấu (/admin/games → new → /host/[id], full screen)
 └─ Cài đặt  └─ Nhật ký
 ```
 Public: top bar with logo, "Lý thuyết", "Đăng nhập", and a primary "Đăng ký" button.
@@ -261,6 +264,27 @@ The admin area uses the same Lagoon language as the student side. Every page sta
 - `/admin/lessons`: pill search, status switch, a table of 20 rows per page with topic glyphs, status badges (dot + text), and numbered pages (`Pagination`: first, last, current ± 1, "…" for longer runs; "Trang trước/sau" become arrows on phones). The unfiltered list stays reorderable per page.
 - `/admin/audit` ("Nhật ký"): an area switch, then one card list like the results (initials avatar, the action in bold with its time, the actor and role, the target as a link plus the recorded ids/counts as small mono chips) and numbered pages; the sleeping bunny when the log is empty, the telescope for an empty area.
 - Students, results and pending rows carry initials avatars; result scores are tinted pills by the result screen's bands (≥ 8 / ≥ 5 / below). The AI import uses a drop zone and a three-step strip.
+
+### 5.8 Game rooms (B-05, 2026-10-06)
+One arena for the projector and the phones: every game screen sits on the navy `ink` stage in both themes. The one memorable element is the **race track as a ticker-timer strip**: each lane has tick marks every 10 % of the distance, every racer leaves a dotted tape trail behind it (the school-lab ticker-tape experiment), and a checkered finish line closes the lane. Lanes sit at absolute offsets ordered by rank, so an overtake glides (700 ms) instead of jumping. A racer's distance is its points against a perfect, instant race.
+- **Tokens** (`globals.css`, checked by `pnpm check:contrast`):
+  - four answer tiles `--game-a…d` (coral, lagoon blue, ochre, leaf) with white text at ≥ 4.98:1;
+  - the lane `--lane` and its ticks;
+  - eight pastel racer colors `--racer-0…7` with the dark `--racer-ink` glyph (≥ 8:1).
+- **Never color alone:**
+  - Each answer tile also carries a shape (triangle, diamond, circle, square, star, hexagon).
+  - Revealed keys get a check, a wrong pick an X.
+  - Statuses are text.
+- **Phone race** (`/play/[pin]`, 360 px first):
+  - a top bar with points and the streak flame;
+  - "Câu i/n", my rank and the seconds left over a draining bar (coral under 25 %);
+  - the question on a surface card (KaTeX from the server);
+  - full-width tiles on phones, a 2 × 2 grid from `sm`.
+  - One tap answers; keys 1–6 work on a keyboard.
+  - The feedback sheet rises from the bottom: result, "+points", the gap to the player ahead and a five-lane mini track. It stays at least 1.5 s.
+- **Lobby:** my racer bobs (1.6 s loop; nothing moves with reduced motion), and the roster chips pop in as players join. Picking a racer uses two radio groups (icons, colors) with a large live preview.
+- **Projector** (`/host/[id]`, 1280 px): the PIN at 8–9 rem in sun yellow, split 3 + 3 digits for reading aloud, beside a white QR card. During the race, the class track; at the end, a podium that rises third → first, one burst of confetti (hidden with reduced motion), and cards for the questions the class missed most, with their keys.
+- **Buttons:** variants `accent` (sun-yellow main action), `stage` (quiet text on the stage) and size `xl` (56 px), so phone game screens compose classes with `clsx` and never need tailwind-merge (08 §4).
 
 ## 6. Content & tone (Vietnamese UI copy)
 - Talk to the student with "bạn". Keep it short and positive: "Làm tốt lắm!", "Còn 6 câu cần ôn lại."

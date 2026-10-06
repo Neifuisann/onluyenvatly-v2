@@ -9,6 +9,7 @@
 | CLS | < 0.05 | Lighthouse CI |
 | First-load JS (gzip), student routes | **< 150 KB** (runner < 180 KB) | `next build` output checked by `scripts/check-bundle.ts` in CI |
 | Admin routes JS | < 350 KB (editor lazy-loads CodeMirror) | same |
+| Game projector `/host/[id]` JS (B-05) | < 350 KB, the admin budget: teacher only, a desktop or classroom PC | same |
 | TTFB static/ISR | < 100 ms (CDN) | Synthetic check |
 | TTFB dynamic p75 | < 400 ms | Vercel logs / Speed Insights |
 | Server time p95: `startAttempt` | < 300 ms | k6 |
@@ -71,19 +72,21 @@ Assumptions:
 | Supabase egress (DB + storage) | DB results ~1 GB + images ~1 GB | 5 GB (+5 GB cached) | ~40 % ← watch |
 | Supabase storage | 18 MB existing images (2,527) + ~50 MB/year | 1 GB | ~7 % |
 | Gemini requests | explanation cache misses (~100–300/day at first, falling as the cache fills) + imports | free tier RPD | see 09 |
+| Game rooms (B-05, ADR-008) | 13 games/month × 40 players × 20 questions ≈ 5,600 invocations each (mostly 204 polls, ~10 ms CPU) = **~73k invocations, ~15 min Active CPU, ~60 MB origin transfer** | on top of the lines above | **+~7 % invocations, +~6 % CPU** |
 
 **Rule:** if any line goes over **60 %** in the daily quota check (12 §5), stop feature work and optimise. The usual fixes are more caching, less prefetching, longer autosave intervals, and smaller payloads.
 
 ## 4. Cost-control guardrails built into the code
 1. `<Link prefetch={false}>` on lesson-card grids and leaderboard rows.
 2. Autosave is dirty-checked and throttled (30 s), with a flush on `pagehide`.
-3. No polling anywhere. No realtime. Timers are client-side against the server `deadline_at`.
-4. Shared data goes through tagged caching (ADR-005). Admin mutations invalidate precisely.
-5. Payload hygiene: the runner gets question content once (RSC) and the save endpoint accepts only `{answers, flagged}` (≈ 1 KB for 40 questions; hard cap 16 KB). S3-05 sends the whole state rather than diffs: it is small, and last-write-wins stays trivially correct.
-6. AI calls always go through the DB cache and the global daily budget (ADR-007).
-7. Upload bytes never pass through functions (ADR-006).
-8. Bots: `robots.txt` disallows everything except the landing, materials and share pages. `/admin` and `/attempts` send `noindex`.
-9. Admin insight (S6-05/06) adds nothing to the student hot path: a submit invalidates neither the lesson statistics nor the dashboard; both are shared-cached for 5 minutes and computed from one indexed read (stats: the latest 2,000 attempts of a version; dashboard: one statement over the last 30 days, ~20–85 ms on 25,000 attempts in PGlite). A teacher opening them costs a few invocations a day.
+3. No polling outside live game rooms, and no realtime. Timers are client-side against the server `deadline_at`. Game rooms (B-05) poll within ADR-008: the lobby and the projector every 2 s, finished players every 3 s, nobody during the race, never in a hidden tab, 204 with no body while the room’s `rev` is unchanged, and a 1 s per-instance snapshot shared by the class.
+4. Student game screens stay under 150 KB by loading one phase per request (`PlayScreen`), keeping Zod out of `games/domain/rules.ts`, and using `clsx` instead of `cn` (tailwind-merge) on phone-only components: `/play/[pin]` measured 145.4 KB, `/play` 139.5 KB (2026-10-06).
+5. Shared data goes through tagged caching (ADR-005). Admin mutations invalidate precisely.
+6. Payload hygiene: the runner gets question content once (RSC) and the save endpoint accepts only `{answers, flagged}` (≈ 1 KB for 40 questions; hard cap 16 KB). S3-05 sends the whole state rather than diffs: it is small, and last-write-wins stays trivially correct.
+7. AI calls always go through the DB cache and the global daily budget (ADR-007).
+8. Upload bytes never pass through functions (ADR-006).
+9. Bots: `robots.txt` disallows everything except the landing, materials and share pages. `/admin`, `/attempts`, `/play` and `/host` send `noindex`.
+10. Admin insight (S6-05/06) adds nothing to the student hot path: a submit invalidates neither the lesson statistics nor the dashboard; both are shared-cached for 5 minutes and computed from one indexed read (stats: the latest 2,000 attempts of a version; dashboard: one statement over the last 30 days, ~20–85 ms on 25,000 attempts in PGlite). A teacher opening them costs a few invocations a day.
 
 ## 5. What happens if we exceed a free limit
 | Limit hit | Effect | Mitigation |

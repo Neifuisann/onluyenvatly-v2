@@ -17,6 +17,9 @@ erDiagram
   attempts ||--o| rating_events : produces
   lessons ||--o{ question_explanations : explains
   users ||--o{ audit_log : acts
+  users ||--o{ game_rooms : hosts
+  game_rooms ||--o{ game_players : has
+  users ||--o{ game_players : plays
   settings
   rate_limits
   media
@@ -191,6 +194,24 @@ As built (S7-02, migration `0008`): also `prompt_version` text (09 §5) and `rev
 ### `explanation_votes`
 `(question_hash, user_id)` PK (→ `question_explanations` and `users`, both cascade), `up` boolean, `created_at`. One vote per student per explanation; `voteExplanation` moves the counters on `question_explanations` in the same transaction (S7-02).
 
+### `game_rooms` (B-05, migration `0015`)
+`id` uuid PK (in the host URL), `pin` text (six digits, `^[1-9][0-9]{5}$`), `host_id` → `users` (cascade), `title`, `status` enum (`lobby`, `running`, `finished`), `pace` text (`fast` | `normal` | `relaxed`), `bank` jsonb, `bank_types` text[], `lesson_ids` bigint[], `rev` int, `created_at`, `started_at`, `hard_end_at`, `finished_at`.
+- `bank` is the race's question bank, drawn once at creation: `[{ l: lessonId, v: versionId, q: questionId }]`. It holds references only, never content. `bank_types` is aligned with it (a check enforces the same length), so timers and reports don't read content.
+- `rev` goes up on every change players can see (join, racer change, start, answer, removal, end). A poll that sends the same `rev` gets 204 (ADR-008).
+- `hard_end_at` = start + countdown + every question at full time and feedback + 5 min. Past it, a running room reads as finished (`effectiveStatus`) and the daily cron closes it.
+- Indexes:
+  - unique `pin` where `status <> 'finished'`, so a PIN is free again once its room ends;
+  - `(pin, created_at DESC)` for `/play/[pin]`;
+  - `(host_id, created_at DESC)` for `/admin/games`.
+- Lesson versions in any room's bank are kept by publish and by the daily version cleanup. Rooms are deleted after 30 days, with their players.
+
+### `game_players` (B-05)
+`id` bigint identity PK (the public id in standings, so user ids never reach other browsers), `room_id` → `game_rooms` (cascade), `user_id` → `users` (cascade), `racer` text, `color` smallint (0–7), `seed` bigint, `answered`, `correct`, `streak`, `best_streak` smallint, `score` int, `marks` jsonb, `joined_at`, `last_answered_at`, `finished_at`, `removed_at`. Unique `(room_id, user_id)`; index `user_id`.
+- `seed` rebuilds the player's question order and mcq option shuffles (`playerPlan`), so nothing per question is stored up front.
+- `marks` is aligned with the bank: `{ k: 'correct'|'partial'|'wrong'|'blank'|'timeout', s: points }`, or null where not reached. It feeds the teacher's per-question report.
+- An answer is one `UPDATE … WHERE answered = i`. A retry or parallel copy matches nothing and gets the stored mark back.
+- `removed_at`: the host removed the player. They're hidden from standings and can't rejoin.
+
 ### `rate_limits`
 `key` text PK (e.g. `login:ip:1.2.3.4@10m`; the window is part of the key so one logical key can carry several limits), `window_start` timestamptz, `count` int. Identifiers such as phone numbers are hashed before they go into a key. Windows are fixed and UTC-aligned (`1m`, `10m`, `1h`, `1d`), computed in `src/lib/rate-limit.ts`.
 Implemented as one atomic upsert:
@@ -319,9 +340,10 @@ RLS is **enabled on every table with no policies**. The app connects with a role
 | mistakes | ~80 B | ~150,000 | ~15 MB |
 | rating_events | ~70 B | 45,000 | ~4 MB |
 | question_explanations | ~1.5 KB | ~6,000 | ~9 MB |
+| game_rooms + game_players | ~1 KB + ~0.4 KB | kept 30 days: ~15 rooms, ~600 players | < 1 MB |
 | indexes + everything else | | | ~40 MB |
 | **Total** | | | **≈ 140 MB/year** |
 
 Compare with v1, which stores the full question text and options inside every result. **v1 measured on 2026-09-28 (S0-03): 205 MB total**, of which `results` is 174 MB for 24,206 rows (~7 KB each, because every result embeds the questions), `rating_history` 9 MB, `lessons` 4 MB (170 rows). The v2 `attempts` layout (~1.2 KB) makes the migrated history roughly 30 MB.
 
-Retention: `guard_events` is trimmed after 180 days, `audit_log` after 180 days, `sessions` when expired, and `rate_limits` rows older than 1 day are deleted.
+Retention: `guard_events` is trimmed after 180 days, `audit_log` after 180 days, `sessions` when expired, and `rate_limits` rows older than 1 day are deleted. Game rooms (B-05) are closed when abandoned (a lobby after a day, a race past its hard end) and deleted after 30 days.
