@@ -42,6 +42,7 @@ export async function LessonAttemptPanel({
     needsExtra ? getMyExtraAttempts(userId, lessonId) : 0,
   ]);
   const open = mine.find((a) => a.status === "in_progress");
+  const timeUp = open?.deadlineAt != null && now >= open.deadlineAt;
   const closed = mine.filter((a) => a.status !== "in_progress");
   const check = canStart(
     schedule,
@@ -99,7 +100,19 @@ export async function LessonAttemptPanel({
       )}
       {open ? (
         <div className="grid gap-3 rounded-md bg-accent-soft p-4">
-          <p className="font-medium text-sm">{t.inProgress}</p>
+          {/* The runner grades a test whose time ran out, then shows the result. */}
+          {timeUp ? (
+            <p className="font-medium text-sm">{t.timeUp}</p>
+          ) : (
+            <div className="space-y-1 text-sm">
+              <p className="font-medium">{t.inProgress}</p>
+              {open.deadlineAt && (
+                <p className="text-muted-foreground">
+                  {t.timeRunning(formatDateTime(open.deadlineAt))}
+                </p>
+              )}
+            </div>
+          )}
           <Link
             href={`/attempts/${open.id}`}
             className={buttonVariants({
@@ -108,7 +121,7 @@ export async function LessonAttemptPanel({
             })}
             prefetch={false}
           >
-            {t.continue}
+            {timeUp ? t.viewResult : t.continue}
             <ArrowRight aria-hidden />
           </Link>
         </div>

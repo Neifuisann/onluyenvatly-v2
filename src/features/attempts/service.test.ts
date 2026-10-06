@@ -165,6 +165,54 @@ describe("startAttempt", () => {
     expect(await rows(lessonId)).toHaveLength(1);
   });
 
+  it("resumes a timed attempt until deadline + grace, even after the deadline", async () => {
+    const lessonId = await addLesson({ timeLimitSec: 60 });
+    const first = await startAttempt(student, lessonId, ctx);
+    const at = new Date(NOW.getTime() + 60_000 + DEADLINE_GRACE_MS);
+    expect(await startAttempt(student, lessonId, { ...ctx, now: at })).toEqual({
+      ok: true,
+      data: { attemptId: first.ok ? first.data.attemptId : "", resumed: true },
+    });
+  });
+
+  it("grades an attempt that ran out of time while away, then starts anew", async () => {
+    const lessonId = await addLesson({ timeLimitSec: 60 });
+    const first = await startAttempt(student, lessonId, ctx);
+    const id = first.ok ? first.data.attemptId : "";
+    await saveProgress(
+      student.id,
+      id,
+      { answers: ["A", null, null], flagged: [] },
+      new Date(NOW.getTime() + 30_000),
+    );
+    const later = new Date(NOW.getTime() + 60_000 + DEADLINE_GRACE_MS + 1);
+    const again = await startAttempt(student, lessonId, {
+      ...ctx,
+      now: later,
+    });
+    expect(again).toMatchObject({ ok: true, data: { resumed: false } });
+    if (again.ok) expect(again.data.attemptId).not.toBe(id);
+    const [old] = await tdb.select().from(attempts).where(eq(attempts.id, id));
+    expect(old).toMatchObject({
+      status: "submitted",
+      answers: ["A", null, null],
+      score: 0.25,
+      submittedAt: later,
+      timeTakenSec: 60,
+    });
+  });
+
+  it("counts an attempt closed by its deadline against maxAttempts", async () => {
+    const lessonId = await addLesson({ timeLimitSec: 60, maxAttempts: 1 });
+    await startAttempt(student, lessonId, ctx);
+    const later = new Date(NOW.getTime() + 60_000 + DEADLINE_GRACE_MS + 1);
+    expect(
+      await startAttempt(student, lessonId, { ...ctx, now: later }),
+    ).toMatchObject({ ok: false, code: "ATTEMPT_LIMIT" });
+    const [row] = await rows(lessonId);
+    expect(row?.status).toBe("submitted");
+  });
+
   it("converges two parallel starts on one attempt", async () => {
     const lessonId = await addLesson();
     const [a, b] = await Promise.all([

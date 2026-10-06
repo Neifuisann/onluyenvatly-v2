@@ -10,7 +10,6 @@ import {
   Square,
   X,
 } from "lucide-react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { Alert } from "@/components/ui/alert";
@@ -25,6 +24,7 @@ import {
   summarize,
 } from "../../domain/runner-state";
 import {
+  leaveCopy,
   practiceCopy,
   previewCopy,
   saveCopy,
@@ -41,6 +41,7 @@ import { TestTimer } from "./test-timer";
 import type { RunnerQuestion } from "./types";
 import { useAutosave } from "./use-autosave";
 import { useExamGuard } from "./use-exam-guard";
+import { useLeaveGuard } from "./use-leave-guard";
 import { useSubmit } from "./use-submit";
 
 export type RunnerProps = {
@@ -120,7 +121,10 @@ function RunnerScreen({
   // Closed elsewhere (another tab submitted, the deadline passed): the page
   // itself redirects to the result once refreshed.
   const save = useAutosave(attemptId, () => router.refresh(), !preview);
-  const { submit, submitting, error } = useSubmit(attemptId, save);
+  const leaveHref =
+    exitHref ?? (lessonId ? `/lessons/${lessonId}` : "/dashboard");
+  const guard = useLeaveGuard(!preview, leaveHref);
+  const { submit, submitting, error } = useSubmit(attemptId, save, guard.leave);
   const current = useRunner((s) => s.current);
   const answers = useRunner((s) => s.answers);
   const flagged = useRunner((s) => s.flagged.includes(s.current));
@@ -226,17 +230,16 @@ function RunnerScreen({
       >
         <div className="mx-auto flex h-16 max-w-5xl items-center gap-1.5 px-2 sm:px-3">
           {!preview && (
-            <Link
-              href={
-                exitHref ?? (lessonId ? `/lessons/${lessonId}` : "/dashboard")
-              }
+            <button
+              type="button"
+              onClick={guard.exit}
+              aria-haspopup="dialog"
               aria-label={practice ? practiceCopy.exit : t.exit}
               title={practice ? practiceCopy.exit : t.exit}
               className="flex size-11 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-              prefetch={false}
             >
               <X aria-hidden className="size-5" />
-            </Link>
+            </button>
           )}
           <Button
             type="button"
@@ -520,6 +523,28 @@ function RunnerScreen({
       />
       {preview && (
         <PreviewResult open={resultOpen} onClose={() => setResultOpen(false)} />
+      )}
+      {!preview && (
+        <Dialog
+          open={guard.asking}
+          onClose={guard.stay}
+          title={practice ? leaveCopy.practiceTitle : leaveCopy.title}
+          closeLabel={t.close}
+          footer={
+            <>
+              <Button type="button" variant="secondary" onClick={guard.confirm}>
+                {leaveCopy.leave}
+              </Button>
+              <Button type="button" onClick={guard.stay}>
+                {leaveCopy.stay}
+              </Button>
+            </>
+          }
+        >
+          <p className="text-sm">
+            {deadlineAt ? leaveCopy.timed : leaveCopy.untimed}
+          </p>
+        </Dialog>
       )}
     </div>
   );
