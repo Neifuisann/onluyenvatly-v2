@@ -32,7 +32,8 @@ const nextConfig: NextConfig = {
         }),
       },
       // Private areas stay out of search results even if a link leaks (08 §5).
-      ...["/admin/:path*", "/attempts/:path*"].map((source) => ({
+      ...["/admin/:path*", "/attempts/:path*", "/play/:path*", "/host/:path*"].map(
+        (source) => ({
         source,
         headers: [{ key: "X-Robots-Tag", value: "noindex, nofollow" }],
       })),

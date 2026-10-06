@@ -126,6 +126,7 @@ export const gameCopy = {
     starting: "Đang bắt đầu…",
     noPlayers: "Cần ít nhất một người chơi để bắt đầu.",
     remove: (name: string) => `Mời ${name} rời phòng`,
+    removeAction: "Mời rời phòng",
     removeConfirm: (name: string) =>
       `Mời ${name} rời phòng? Bạn ấy sẽ không vào lại được.`,
     end: "Kết thúc",

@@ -3,6 +3,7 @@ import Link from "next/link";
 import { EmptyState } from "@/components/empty-state";
 import { buttonVariants } from "@/components/ui/button";
 import { requireStudent } from "@/features/auth/guards";
+import { JoinBanner } from "@/features/games/components/join-banner";
 import {
   ContinueCard,
   NextLessonCard,
@@ -94,6 +95,7 @@ export default async function DashboardPage() {
           grade={grade}
         />
       </div>
+      <JoinBanner />
       <section aria-labelledby="recommended-heading" className="space-y-4">
         <div className="flex items-baseline justify-between gap-3">
           <h2 id="recommended-heading" className="heading-section">

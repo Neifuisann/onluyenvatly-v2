@@ -20,6 +20,7 @@ export const AUDIT_AREAS = {
   students: ["student"],
   results: ["attempt"],
   explanations: ["explanation"],
+  games: ["game"],
   accounts: ["account"],
   settings: ["settings", "admin"],
 } as const satisfies Record<string, readonly [string, ...string[]]>;
@@ -131,6 +132,8 @@ export function auditTargetHref({
         : null;
     case "attempt":
       return UUID.test(targetId) ? `/attempts/${targetId}/result` : null;
+    case "game":
+      return UUID.test(targetId) ? `/host/${targetId}` : null;
     default:
       return null;
   }
