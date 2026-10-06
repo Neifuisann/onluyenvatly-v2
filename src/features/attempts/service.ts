@@ -1,5 +1,5 @@
 import "server-only";
-import { randomInt } from "node:crypto";
+import { randomInt, randomUUID } from "node:crypto";
 import { and, eq, gte, isNull, or, type SQL, sql } from "drizzle-orm";
 import { db } from "@/db/client";
 import {
@@ -113,8 +113,12 @@ async function startOnce(
   )
     return err("NOT_FOUND");
 
+  // An attempt whose time ran out while the student was away is graded now
+  // (saved answers only) and counts as used; anything else is resumed.
   const open = await findOpenAttempt(user.id, lessonId);
-  if (open) return ok({ attemptId: open, resumed: true });
+  if (open && !isPastGrace(open.deadlineAt, now))
+    return ok({ attemptId: open.id, resumed: true });
+  if (open) await submitExpired(user.id, open.id, now);
 
   const config = LessonConfigSchema.safeParse(lesson.config);
   if (!config.success) return err("INTERNAL");
@@ -155,7 +159,7 @@ async function startOnce(
   if (created) return ok({ attemptId: created.id, resumed: false });
 
   const winner = await findOpenAttempt(user.id, lessonId);
-  return winner ? ok({ attemptId: winner, resumed: true }) : err("CONFLICT");
+  return winner ? ok({ attemptId: winner.id, resumed: true }) : err("CONFLICT");
 }
 
 export { DEADLINE_GRACE_MS };
@@ -363,6 +367,21 @@ export async function submitAttempt(
 }
 
 /**
+ * Closes an attempt whose deadline + grace has passed: graded with the
+ * answers saved in time, as a late submit would be (02 §4.1). Runs when the
+ * student comes back (runner, new start) and from the daily cron: the free
+ * tier has no scheduler to do it at the exact second.
+ */
+export function submitExpired(userId: string, attemptId: string, now: Date) {
+  return submitAttempt(
+    userId,
+    attemptId,
+    { answers: [], flagged: [], clientSubmitId: randomUUID() },
+    now,
+  );
+}
+
+/**
  * Appends new exam-guard events, keeping the first `MAX_GUARD_EVENTS`.
  * Append-only: a forged save can't erase what was recorded. A beacon that
  * arrived but wasn't confirmed may repeat a few events; teachers read them
@@ -522,7 +541,7 @@ async function startCounts(
 
 async function findOpenAttempt(userId: string, lessonId: number) {
   const [row] = await db
-    .select({ id: attempts.id })
+    .select({ id: attempts.id, deadlineAt: attempts.deadlineAt })
     .from(attempts)
     .where(
       and(
@@ -532,5 +551,5 @@ async function findOpenAttempt(userId: string, lessonId: number) {
       ),
     )
     .limit(1);
-  return row?.id ?? null;
+  return row ?? null;
 }

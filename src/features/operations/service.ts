@@ -1,11 +1,10 @@
 import "server-only";
-import { randomUUID } from "node:crypto";
 import { and, asc, eq, isNotNull, lt, or, sql } from "drizzle-orm";
 import { db } from "@/db/client";
 import { attempts, lessonVersions, rateLimits, sessions } from "@/db/schema";
 import { cleanupImports } from "@/features/ai/import-service";
 import { flushAttemptCounters } from "@/features/attempts/counter-service";
-import { submitAttempt } from "@/features/attempts/service";
+import { submitExpired } from "@/features/attempts/service";
 import { retentionCutoffs } from "./domain/retention";
 
 /** S9-05: bounded, retry-safe daily work; no new student hot-path queries. */
@@ -24,16 +23,7 @@ export async function runDailyMaintenance(now = new Date()) {
   let submitted = 0;
   let failed = 0;
   for (const attempt of stale) {
-    const result = await submitAttempt(
-      attempt.userId,
-      attempt.id,
-      {
-        answers: [],
-        flagged: [],
-        clientSubmitId: randomUUID(),
-      },
-      now,
-    );
+    const result = await submitExpired(attempt.userId, attempt.id, now);
     if (result.ok) submitted++;
     else failed++;
   }
