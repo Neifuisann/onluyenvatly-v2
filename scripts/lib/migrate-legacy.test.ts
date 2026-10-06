@@ -6,6 +6,7 @@ import { parseLessonText } from "@/features/lessons/domain/parser";
 import type { Question } from "@/features/lessons/schema";
 import { createTestDb, resetDb, type TestDb } from "@/test/db";
 import {
+  legacyMediaJobs,
   migrateLessons,
   migrateUsers,
   renderReport,
@@ -235,6 +236,22 @@ describe("migrateLessons", () => {
         lessonLegacyId: "10",
       },
     ]);
+  });
+});
+
+describe("legacyMediaJobs", () => {
+  it("lists the same images as migrateLessons without writing rows", async () => {
+    const { media } = await migrateLessons(db, SAMPLE);
+    await resetDb(db);
+    const jobs = legacyMediaJobs([
+      ...SAMPLE,
+      { id: "quiz_game", lesson_image: "data:image/png;base64,AAAA" },
+      { id: 10, lesson_image: "data:image/jpeg;base64,AAAA", questions: [] },
+    ]);
+    expect(jobs.map((j) => j.path).sort()).toEqual(
+      [...media.map((m) => m.path), "legacy/covers/lesson-10.jpg"].sort(),
+    );
+    expect(await db.$count(lessons)).toBe(0);
   });
 });
 
