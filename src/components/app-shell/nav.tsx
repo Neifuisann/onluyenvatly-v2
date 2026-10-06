@@ -1,6 +1,7 @@
 import {
   BookOpen,
   ClipboardList,
+  Flag,
   House,
   LayoutDashboard,
   type LucideIcon,
@@ -49,6 +50,7 @@ export const NAV: Record<ShellVariant, NavItem[]> = {
       label: a.explanations,
       icon: MessageSquareText,
     },
+    { href: "/admin/games", label: a.games, icon: Flag },
     { href: "/admin/settings", label: a.settings, icon: Settings },
     { href: "/admin/audit", label: a.audit, icon: ScrollText },
   ],

@@ -30,7 +30,7 @@ export async function mockDbModule() {
 /** Empties every app table except the settings row, which is reset. */
 export async function resetDb(db: TestDb) {
   await db.execute(
-    sql`truncate table explanation_votes, question_explanations, mistakes, rating_events, ratings, attempts, audit_log, rate_limits, sessions, media, lesson_versions, lessons, users restart identity cascade`,
+    sql`truncate table game_players, game_rooms, explanation_votes, question_explanations, mistakes, rating_events, ratings, attempts, audit_log, rate_limits, sessions, media, lesson_versions, lessons, users restart identity cascade`,
   );
   await db.execute(sql`delete from settings`);
   await db.execute(sql`insert into settings (id) values (1)`);
