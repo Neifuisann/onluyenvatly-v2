@@ -9,6 +9,7 @@
 | [005](005-caching-and-invalidation.md) | Tagged Next.js data cache; no in-memory caches, no Redis | Accepted |
 | [006](006-media-storage.md) | Supabase Storage public bucket, browser-side resize, direct signed uploads | Accepted |
 | [007](007-ai-explanation-cache.md) | AI explanations generated once per question and stored | Accepted |
+| [008](008-game-rooms-bounded-polling.md) | Live game rooms: student-paced race, bounded polling, no realtime service | Proposed |
 
 To add one, copy the template below to `NNN-short-title.md`, then set Status to `Accepted` when the owner signs off (Sprint 0, task S0-02).
 

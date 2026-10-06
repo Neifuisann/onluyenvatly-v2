@@ -21,7 +21,7 @@ A fast, calm, phone-first place where Vietnamese high-school students **practise
 - Payments, paid content or ads. The site is non-commercial (owner decision), which keeps it within Vercel Hobby terms; see ADR-001.
 - Device binding (owner decision).
 - Native mobile apps. The site will be an installable PWA instead.
-- Real-time multiplayer quiz game.
+- ~~Real-time multiplayer quiz game.~~ Reversed on 2026-10-06: class races in game rooms (R10, B-05, ADR-008), student-paced with bounded polling rather than a realtime service.
 - Multi-tenant or multiple schools. There is one teacher organisation, though several admin/teacher accounts are supported.
 - XP, badges, leagues, quests. Removed in v1; could come back after launch as P3.
 
@@ -88,7 +88,7 @@ Priority: **P0** is required for launch (parity with v1 plus the fixes), **P1** 
 | R7 | Profile: rating chart, accuracy by chapter and question type, streak of active days (computed, no gamification). | P1 |
 | R8 | Theory materials for grade 10/11/12 as static pages (migrated from `materials/`). | P1 |
 | R9 | Handout gallery. | P2 |
-| R10 | ~~Quiz game mode~~: **dropped** (owner decision, §7) | — |
+| R10 | **Game rooms** (B-05, ADR-008): the teacher opens a room from chosen lessons (random bank of 5–40 questions, a pace, the question types) and shows its PIN, link and QR; logged-in students join, pick a racer and race through the same bank in their own order with server-timed speed points, streaks and live standings; podium and the hardest questions at the end. Lessons whose answers are hidden are excluded; no rating or mistakes. Reverses §7 Q4 (owner request, 2026-10-06) | P2 |
 
 ### 4.5 Admin
 | ID | Requirement | P |
@@ -137,5 +137,5 @@ Priority: **P0** is required for launch (parity with v1 plus the fixes), **P1** 
 | 1 | Does the site make money (paid lessons, ads, tutoring sales)? | **No, non-commercial** | Vercel Hobby is allowed. ADR-001 accepted as is. v1's `pricing` column is not migrated |
 | 2 | Keep the v1 rating quirk (no change for tests > 5 min)? | **Fix it in v2** | v2 uses only the new formula (ADR-004). No formula toggle. Migrated ratings are copied unchanged |
 | 3 | Device binding? | **No** | Device binding removed everywhere (no device cookie, no `approved_device_id`, no "reset device" action). Single active session (A6) stays |
-| 4 | Quiz game? | **No, drop it** | R10 and backlog item B-05 removed; `quizzes`/`quiz_results` archived in the final v1 dump only |
+| 4 | Quiz game? | **No, drop it**, then **reversed 2026-10-06**: the owner asked for Kahoot/Quizizz-style class races | v1’s game and its `quizzes`/`quiz_results` stay archived. R10 and B-05 are back as new game rooms (ADR-008), not a v1 port |
 | 5 | Domain: keep `onluyenvatly.vercel.app` or buy one (≈ $10/year, the only optional cost)? | *Open* (not blocking; default is to keep the `.vercel.app` name) | — |

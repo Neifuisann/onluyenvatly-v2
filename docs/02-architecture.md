@@ -60,6 +60,7 @@ Rule: **do as little work per request as possible, and do it once for everyone w
 | `/attempts/[id]` test runner | Dynamic. Questions come from a cached, **answer-stripped** lesson snapshot + the attempt row | `lesson:{id}:public` | on save |
 | `/attempts/[id]/result` | Dynamic (owner or admin), finished attempts are immutable → cached per attempt. S3 ships a score-only page reading the attempt per request (one PK lookup); the per-attempt cache arrives with the full review in S4-03 | `attempt:{id}` | on delete |
 | `/leaderboard` | Cached **60 s** (`cacheLife`), shared by all users | `leaderboard` | time-based + on attempt delete |
+| `/play`, `/play/[pin]`, `/host/[id]` (B-05) | Dynamic, live per class. Questions come from the cached answer-free lesson view, the room and its players from a per-instance **1 s** snapshot shared by the class (ADR-008) | — | `game_rooms.rev` (polls get 204 while unchanged) |
 | `/profile`, `/review`, `/dashboard` | Dynamic, per user | — | — |
 | `/admin/**` | Dynamic, no cache | — | — |
 
@@ -154,7 +155,7 @@ onluyenvatly-v2/
 │  │  ├─ layout.tsx  globals.css  manifest.ts  robots.ts  sitemap.ts
 │  ├─ features/               ← domain modules; each has queries.ts, actions.ts, components/, *.test.ts
 │  │  ├─ auth/  lessons/  attempts/  grading/  rating/  review/
-│  │  ├─ leaderboard/  students/  stats/  ai/  media/  settings/  audit/
+│  │  ├─ leaderboard/  students/  stats/  ai/  media/  settings/  audit/  games/
 │  ├─ components/ui/           ← shadcn primitives
 │  ├─ components/              ← shared app components (MathText, QuestionCard, AppShell…)
 │  ├─ db/
@@ -194,5 +195,5 @@ All env vars are validated at boot by `src/lib/env.ts` (Zod). The build fails if
 
 ## 8. What we are deliberately *not* adding
 - No Redis/Upstash, no queue, no separate API server, no microservices. Postgres does it all at this scale.
-- No Supabase Auth, no Realtime, no Edge Functions. That's less surface area and fewer quotas to watch.
+- No Supabase Auth, no Realtime, no Edge Functions. That's less surface area and fewer quotas to watch. Game rooms (B-05) poll within the bounds of ADR-008 instead of using Realtime.
 - No Edge runtime middleware doing DB lookups. `proxy.ts` (formerly `middleware.ts`) only does a cheap cookie-presence check and redirect; real auth happens in layouts and actions.
