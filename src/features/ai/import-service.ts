@@ -37,7 +37,7 @@ import {
   importPrompt,
   sniffImport,
 } from "./domain/import";
-import { AI_TIMEOUT_MS } from "./domain/policy";
+import { AI_ATTEMPT_TIMEOUT_MS, AI_TIMEOUT_MS } from "./domain/policy";
 import type { Ai, AiFailure, AiText } from "./gemini";
 import { importCopy as t } from "./messages";
 
@@ -229,6 +229,9 @@ export async function startImport(
     system: IMPORT_SYSTEM,
     contents,
     timeoutMs: AI_TIMEOUT_MS.import,
+    attemptTimeoutMs: AI_ATTEMPT_TIMEOUT_MS.import,
+    // Low thinking skipped shared passages and misread answer keys (09 §4).
+    thinking: "high",
     maxOutputTokens: IMPORT_MAX_OUTPUT_TOKENS,
     temperature: 0.1,
   });

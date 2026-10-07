@@ -11,13 +11,43 @@ export const AI_TIMEOUT_MS = {
   import: 280_000,
 } as const;
 
+/**
+ * Longest one model may take to start answering (the first chunk, thought
+ * summaries included) before the next model is tried. Import only: an
+ * overloaded model can hang for 1.5–3 minutes before its 503, which alone
+ * would use up the deadline, while a working model starts within seconds.
+ */
+export const AI_ATTEMPT_TIMEOUT_MS = { import: 100_000 } as const;
+
+export type ThinkingLevel = "low" | "medium" | "high";
+
+/**
+ * How hard a model thinks before answering. Gemini 3 and later take a
+ * `thinkingLevel`; older or unknown model names get nothing (a 2.x model
+ * answers 400 to it, which would stop the fallback chain). Thought
+ * summaries are streamed (`includeThoughts`) so a model that is thinking
+ * shows it is alive; the SDK's `text` leaves them out.
+ */
+export function thinkingConfigFor(
+  model: string,
+  level: ThinkingLevel | undefined,
+): { thinkingLevel: "LOW" | "MEDIUM" | "HIGH"; includeThoughts: true } | null {
+  const major = Number(/^gemini-(\d+)(?:[.-]|$)/.exec(model)?.[1]);
+  if (!level || !(major >= 3)) return null;
+  return {
+    thinkingLevel: level.toUpperCase() as "LOW" | "MEDIUM" | "HIGH",
+    includeThoughts: true,
+  };
+}
+
 /** Retries of one model on a transient error (429/5xx), after the first try. */
 export const MAX_RETRIES = 2;
 
 /**
  * `GEMINI_MODEL_*` may list fallbacks, comma-separated
- * (`gemini-3.8-flash,gemini-3.7-flash`): each model has its own free-tier
- * quota, so a 429 moves to the next one instead of waiting.
+ * (`gemini-3.5-flash-lite,gemini-3.5-flash`): each model has its own free-tier
+ * quota and its own load, so a 429 or 503 moves to the next one instead of
+ * waiting.
  */
 export function parseModels(value: string | undefined): string[] {
   if (!value) return [];
@@ -35,9 +65,10 @@ export type NextStep = "retry" | "next-model" | "fail";
 
 /**
  * What to do after a failed call. `status` is the HTTP status (undefined for
- * a network error). 429 (quota) prefers another model, whose quota is
- * separate; 5xx and network errors retry the same model first; 404 (model
- * gone) moves on; anything else (400, 401, 403) is our fault and stops.
+ * a network error). 429 (quota) and 503 (model overloaded, "high demand")
+ * prefer another model, whose quota and load are separate; other 5xx and
+ * network errors retry the same model first; 404 (model gone) moves on;
+ * anything else (400, 401, 403) is our fault and stops.
  */
 export function nextStep(
   status: number | undefined,
@@ -45,7 +76,7 @@ export function nextStep(
   hasNextModel: boolean,
 ): NextStep {
   const canRetry = retriesSoFar < MAX_RETRIES;
-  if (status === 429) {
+  if (status === 429 || status === 503) {
     if (hasNextModel) return "next-model";
     return canRetry ? "retry" : "fail";
   }

@@ -152,13 +152,16 @@ describe("generateText", () => {
     expect(logs[0]).toMatchObject({ ok: false, reason: "budget" });
   });
 
-  it("retries a 503 with backoff and counts the gate once", async () => {
+  it("retries a 503 on the last model with backoff and counts the gate once", async () => {
     const generateContent = vi
       .fn()
       .mockRejectedValueOnce(apiError(503))
       .mockRejectedValueOnce(apiError(503))
       .mockResolvedValue(res("ok"));
-    const { ai, sleep, gate, logs } = setup({ generateContent });
+    const { ai, sleep, gate, logs } = setup(
+      { generateContent },
+      { models: { text: ["m-1"], import: [] } },
+    );
     const out = await ai.generateText(req);
     expect(out).toMatchObject({ ok: true, text: "ok" });
     expect(generateContent.mock.calls.map(modelOf)).toEqual([
@@ -175,6 +178,18 @@ describe("generateText", () => {
     const generateContent = vi
       .fn()
       .mockRejectedValueOnce(apiError(429))
+      .mockResolvedValue(res("ok"));
+    const { ai, sleep } = setup({ generateContent });
+    const out = await ai.generateText(req);
+    expect(out).toMatchObject({ ok: true, usage: { model: "m-2" } });
+    expect(generateContent.mock.calls.map(modelOf)).toEqual(["m-1", "m-2"]);
+    expect(sleep).not.toHaveBeenCalled();
+  });
+
+  it("moves to the next model on 503 (overloaded) without waiting", async () => {
+    const generateContent = vi
+      .fn()
+      .mockRejectedValueOnce(apiError(503))
       .mockResolvedValue(res("ok"));
     const { ai, sleep } = setup({ generateContent });
     const out = await ai.generateText(req);
@@ -368,6 +383,81 @@ describe("streamText", () => {
     for await (const _ of s.chunks) break;
     expect(await s.result).toMatchObject({ ok: false, reason: "error" });
     expect(onReturn).toHaveBeenCalled();
+  });
+
+  it("moves on when a model does not start answering in time", async () => {
+    vi.useFakeTimers();
+    let stalledSignal: AbortSignal | undefined;
+    const generateContentStream = vi
+      .fn()
+      .mockImplementationOnce(async (p: GenerateContentParameters) => {
+        stalledSignal = p.config?.abortSignal;
+        return new Promise(() => {});
+      })
+      .mockResolvedValue(stream(["ok"]));
+    const { ai, logs } = setup(
+      { generateContentStream },
+      { now: () => Date.now() },
+    );
+    const started = ai.streamText({
+      ...req,
+      timeoutMs: 10_000,
+      attemptTimeoutMs: 3000,
+    });
+    await vi.advanceTimersByTimeAsync(3000);
+    const s = await started;
+    if (!s.ok) throw new Error("expected a stream");
+    expect(stalledSignal?.aborted).toBe(true);
+    expect(generateContentStream.mock.calls.map(modelOf)).toEqual([
+      "m-1",
+      "m-2",
+    ]);
+    expect(await collect(s.chunks)).toEqual(["ok"]);
+    expect(await s.result).toMatchObject({ ok: true, usage: { model: "m-2" } });
+    expect(logs.at(-1)).toMatchObject({ ok: true, model: "m-2", retries: 1 });
+  });
+
+  it("reports a timeout when the last model never starts answering", async () => {
+    vi.useFakeTimers();
+    const { ai, logs } = setup(
+      { generateContentStream: vi.fn(() => new Promise<never>(() => {})) },
+      { models: { text: ["m-1"], import: [] }, now: () => Date.now() },
+    );
+    const started = ai.streamText({
+      ...req,
+      timeoutMs: 10_000,
+      attemptTimeoutMs: 3000,
+    });
+    await vi.advanceTimersByTimeAsync(10_000);
+    expect(await started).toEqual({
+      ok: false,
+      code: "AI_UNAVAILABLE",
+      reason: "timeout",
+    });
+    expect(logs.at(-1)).toMatchObject({ ok: false, reason: "timeout" });
+  });
+
+  it("keeps a slow stream going once it has started", async () => {
+    vi.useFakeTimers();
+    async function* slow(): AsyncGenerator<GenerateContentResponse> {
+      yield res("Ý ", { usage: false });
+      await new Promise((r) => setTimeout(r, 5000));
+      yield res("chính");
+    }
+    const { ai } = setup(
+      { generateContentStream: vi.fn(async () => slow()) },
+      { now: () => Date.now() },
+    );
+    const s = await ai.streamText({
+      ...req,
+      timeoutMs: 10_000,
+      attemptTimeoutMs: 3000,
+    });
+    if (!s.ok) throw new Error("expected a stream");
+    const read = collect(s.chunks);
+    await vi.advanceTimersByTimeAsync(5000);
+    expect(await read).toEqual(["Ý ", "chính"]);
+    expect(await s.result).toMatchObject({ ok: true, text: "Ý chính" });
   });
 
   it("cuts a stalled stream at the deadline", async () => {

@@ -7,6 +7,7 @@ import {
   MAX_RETRIES,
   nextStep,
   parseModels,
+  thinkingConfigFor,
 } from "./policy";
 
 describe("parseModels", () => {
@@ -30,8 +31,14 @@ describe("nextStep", () => {
     expect(nextStep(429, MAX_RETRIES, false)).toBe("fail");
   });
 
-  it("retries 5xx and network errors on the same model first", () => {
-    expect(nextStep(503, 0, true)).toBe("retry");
+  it("moves to the next model on 503 (overloaded), retries it on the last", () => {
+    expect(nextStep(503, 0, true)).toBe("next-model");
+    expect(nextStep(503, 0, false)).toBe("retry");
+    expect(nextStep(503, MAX_RETRIES, false)).toBe("fail");
+  });
+
+  it("retries other 5xx and network errors on the same model first", () => {
+    expect(nextStep(500, 0, true)).toBe("retry");
     expect(nextStep(undefined, 1, true)).toBe("retry");
     expect(nextStep(500, MAX_RETRIES, true)).toBe("next-model");
     expect(nextStep(504, MAX_RETRIES, false)).toBe("fail");
@@ -90,5 +97,33 @@ describe("effectiveBudget", () => {
 describe("budgetKey", () => {
   it("is one row per Vietnam day", () => {
     expect(budgetKey("2026-10-01")).toBe("ai:global:2026-10-01");
+  });
+});
+
+describe("thinkingConfigFor", () => {
+  it("sets the level, with thought summaries, on Gemini 3 and later", () => {
+    for (const model of [
+      "gemini-3.5-flash-lite",
+      "gemini-3-flash-preview",
+      "gemini-10.1-pro",
+    ])
+      expect(thinkingConfigFor(model, "high")).toEqual({
+        thinkingLevel: "HIGH",
+        includeThoughts: true,
+      });
+    expect(thinkingConfigFor("gemini-3.8-flash", "low")?.thinkingLevel).toBe(
+      "LOW",
+    );
+  });
+
+  it("sends nothing to older or unknown models, or without a level", () => {
+    for (const model of [
+      "gemini-2.5-flash",
+      "gemini-flash-latest",
+      "gemini-3x",
+      "e2e-model",
+    ])
+      expect(thinkingConfigFor(model, "high")).toBeNull();
+    expect(thinkingConfigFor("gemini-3.5-flash", undefined)).toBeNull();
   });
 });
