@@ -44,19 +44,20 @@ export function regradeAttempt(
   });
   const repriced = items.some((item, i) => item !== a.items[i]);
   const maxScore = items.reduce((s, i) => s + toCents(i.p), 0) / 100;
-  if (!a.earned)
+  const stored = a.earned;
+  if (!stored)
     return repriced
       ? { items, earned: null, score: null, maxScore, score10: null }
       : null;
 
   const earned = items.map((item, i) => {
     const q = questions.get(item.q);
-    if (!changed.has(item.q) || !q) return a.earned?.[i] ?? 0;
+    if (!changed.has(item.q) || !q) return stored[i] ?? 0;
     return gradeItem(q, item, a.answers[i] ?? null, tfScoring).earned;
   });
   // A text-only fix (a typo in the stem) moves no mark: nothing to write.
   const remarked = earned.some(
-    (e, i) => toCents(e) !== toCents(a.earned?.[i] ?? 0),
+    (e, i) => toCents(e) !== toCents(stored[i] ?? 0),
   );
   if (!repriced && !remarked) return null;
   const score = earned.reduce((s, e) => s + toCents(e), 0) / 100;

@@ -111,6 +111,46 @@ describe("regradeAttempt", () => {
     ).toBe("correct");
   });
 
+  it("keeps the stored mark of a changed question the version no longer has", () => {
+    expect(
+      regradeAttempt(graded, byId(), new Set(["q_1"]), new Map(), "thpt2025"),
+    ).toBeNull();
+  });
+
+  it("scores 0 when every question of the attempt is removed", () => {
+    const r = regradeAttempt(
+      { items: [{ q: "q_1", p: 1 }], answers: ["A"], earned: [1] },
+      byId(mcq("q_1", 0, { removed: true })),
+      new Set(["q_1"]),
+      new Map([["q_1", 0]]),
+      "thpt2025",
+    );
+    expect(r).toMatchObject({ earned: [0], score: 0, maxScore: 0, score10: 0 });
+  });
+
+  it("reads missing answers as blank and missing marks as 0", () => {
+    const r = regradeAttempt(
+      {
+        items: [
+          { q: "q_1", p: 1 },
+          { q: "q_2", p: 1 },
+        ],
+        answers: [],
+        earned: [],
+      },
+      byId(mcq("q_1", 0, { free: true })),
+      new Set(["q_1"]),
+      new Map(),
+      "thpt2025",
+    );
+    expect(r).toMatchObject({
+      earned: [1, 0],
+      score: 1,
+      maxScore: 2,
+      score10: 5,
+    });
+  });
+
   it("re-prices an attempt in progress without grading it", () => {
     const r = regradeAttempt(
       { items, answers: [null, null, null], earned: null },
