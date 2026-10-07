@@ -11,7 +11,9 @@ import {
 } from "@/db/schema";
 import { startAttempt, submitAttempt } from "@/features/attempts/service";
 import { resetDb, type TestDb } from "@/test/db";
+import { getComposeSources } from "./admin-queries";
 import {
+  composeLesson,
   discardDraft,
   publishLesson,
   saveDraft,
@@ -354,5 +356,131 @@ describe("discardDraft", () => {
     await saveDraft(admin, id, V1);
     expect(await discardDraft(admin, id)).toMatchObject({ code: "CONFLICT" });
     expect(await discardDraft(admin, 999)).toMatchObject({ code: "NOT_FOUND" });
+  });
+});
+
+describe("composeLesson / getComposeSources", () => {
+  /** A lesson whose draft holds `questions` as given (v1-style ids repeat). */
+  async function sourceWith(
+    title: string,
+    questions: Question[],
+    grade: number | null = 12,
+  ) {
+    const [row] = await tdb
+      .insert(lessons)
+      .values({ title, grade, status: "draft", config: DEFAULT_LESSON_CONFIG })
+      .returning({ id: lessons.id });
+    const id = row?.id ?? 0;
+    const [v] = await tdb
+      .insert(lessonVersions)
+      .values({ lessonId: id, version: 1, sourceText: "…", questions })
+      .returning({ id: lessonVersions.id });
+    await tdb
+      .update(lessons)
+      .set({ draftVersionId: v?.id ?? null })
+      .where(eq(lessons.id, id));
+    return id;
+  }
+  const mcq = (stem: string, id = "q_1"): Question => ({
+    id,
+    type: "mcq",
+    stem,
+    options: [{ text: "s" }, { text: "m" }],
+    answer: 0,
+  });
+  const tf: Question = {
+    id: "q_2",
+    type: "tf",
+    stem: "Xét các mệnh đề",
+    statements: [
+      { text: "a", answer: true },
+      { text: "b", answer: false },
+    ],
+    explanation: "Vì thế.",
+  };
+
+  it("lists lessons with questions and their counts per type, published version first", async () => {
+    const published = await addLesson();
+    await saveDraft(admin, published, V2);
+    await publishLesson(admin, published);
+    // A newer draft with one question less does not change the counts.
+    await saveDraft(admin, published, V1);
+    const draftOnly = await sourceWith("Nháp", [mcq("Câu A"), tf]);
+    await addLesson(); // no version at all
+    const sources = await getComposeSources();
+    expect(sources.map((s) => s.id).sort()).toEqual(
+      [published, draftOnly].sort(),
+    );
+    expect(sources.find((s) => s.id === published)).toMatchObject({
+      mcq: 2,
+      tf: 0,
+      short: 1,
+    });
+    expect(sources.find((s) => s.id === draftOnly)).toMatchObject({
+      mcq: 1,
+      tf: 1,
+      short: 0,
+      grade: 12,
+    });
+  });
+
+  it("draws a new draft with fresh ids, keeps explanations and the shared grade, and audits it", async () => {
+    const a = await sourceWith("A", [mcq("Câu A"), tf]);
+    const b = await sourceWith("B", [mcq("Câu B"), mcq("câu  a", "q_3")]);
+    const result = await composeLesson(
+      admin,
+      {
+        title: "Ôn tập",
+        lessonIds: [a, b],
+        counts: { mcq: 2, tf: 1, short: 0 },
+      },
+      () => 0,
+    );
+    if (!result.ok) throw new Error(result.message);
+    const { id } = result.data;
+    expect(result.data.questions).toBe(3);
+    const row = await lessonRow(id);
+    expect(row).toMatchObject({ title: "Ôn tập", status: "draft", grade: 12 });
+    const [v] = await versions(id);
+    const qs = v?.questions as Question[];
+    expect(qs.map((q) => q.type)).toEqual(["mcq", "mcq", "tf"]);
+    // "câu  a" repeats "Câu A": only two different mcq stems exist.
+    expect(new Set(qs.map((q) => q.stem.toLowerCase()))).toEqual(
+      new Set(["câu a", "câu b", "xét các mệnh đề"]),
+    );
+    expect(new Set(qs.map((q) => q.id)).size).toBe(3);
+    expect(qs.some((q) => ["q_1", "q_2", "q_3"].includes(q.id))).toBe(false);
+    expect(qs.at(-1)?.explanation).toBe("Vì thế.");
+    expect(v?.sourceText).toMatch(/^Câu 1: /);
+    const [entry] = await tdb
+      .select({ action: auditLog.action, data: auditLog.data })
+      .from(auditLog)
+      .where(eq(auditLog.targetId, String(id)));
+    expect(entry).toMatchObject({
+      action: "lesson.compose",
+      data: { from: [a, b], questions: 3 },
+    });
+  });
+
+  it("refuses more questions than the sources hold, and deleted sources, writing nothing", async () => {
+    const a = await sourceWith("A", [mcq("Câu A"), tf], 10);
+    const tooMany = await composeLesson(admin, {
+      title: "X",
+      lessonIds: [a],
+      counts: { mcq: 2, tf: 0, short: 0 },
+    });
+    expect(tooMany).toMatchObject({ ok: false, code: "VALIDATION" });
+    await tdb
+      .update(lessons)
+      .set({ deletedAt: new Date() })
+      .where(eq(lessons.id, a));
+    const gone = await composeLesson(admin, {
+      title: "X",
+      lessonIds: [a],
+      counts: { mcq: 1, tf: 0, short: 0 },
+    });
+    expect(gone).toMatchObject({ ok: false, code: "NOT_FOUND" });
+    expect(await tdb.select({ id: lessons.id }).from(lessons)).toHaveLength(1);
+    expect(await actions()).toEqual([]);
   });
 });

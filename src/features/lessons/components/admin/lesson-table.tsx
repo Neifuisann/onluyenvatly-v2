@@ -3,12 +3,13 @@
 import {
   Archive,
   ArchiveRestore,
+  ArrowDown,
+  ArrowUp,
+  ArrowUpDown,
   ChartColumn,
   Copy,
   GripVertical,
-  ListChecks,
   Trash2,
-  Users,
 } from "lucide-react";
 import Link from "next/link";
 import {
@@ -31,7 +32,12 @@ import {
   reorder,
   restore,
 } from "../../admin-actions";
-import { moveItem, withPageOrder } from "../../domain/admin-list";
+import {
+  type AdminSort,
+  moveItem,
+  type SortDir,
+  withPageOrder,
+} from "../../domain/admin-list";
 import { lessonTopic } from "../../domain/topic";
 import { statsCopy, adminLessonsCopy as t } from "../../messages";
 import { TopicGlyph } from "../topic-glyph";
@@ -47,11 +53,35 @@ export type LessonTableRow = {
   attemptCount: number;
   hasDraft: boolean;
   /** Pre-formatted on the server (`dd/mm/yyyy hh:mm`). */
+  created: string;
   updated: string;
 };
 
+type SortableColumn = "title" | "created" | "updated";
+
+export type TableSort = {
+  by: AdminSort;
+  dir: SortDir;
+  /** Where each column's arrow leads (built on the server with the filters). */
+  hrefs: Record<SortableColumn, string>;
+};
+
+/** `dd/mm/yyyy hh:mm` on two lines: the date, then a quieter time. */
+function DateCell({ value }: { value: string }) {
+  const [date, time] = value.split(" ");
+  return (
+    <>
+      <span className="block text-foreground">{date}</span>
+      <span className="block text-muted-foreground text-xs">{time}</span>
+    </>
+  );
+}
+
 /**
- * `/admin/lessons` table (S5-01), one page at a time. Reorder by dragging
+ * `/admin/lessons` table (S5-01, S5-07), one page at a time, Azota-style:
+ * one column per fact (status, questions, attempts, dates) and arrows on the
+ * sortable headers; on phones the facts fold under the title. In the manual
+ * order (`order` given), reorder by dragging
  * the handle (mouse or touch, pointer events) within the page, or with ↑/↓
  * on the focused handle, which also crosses to the neighbouring page. Every
  * move sends the full order (`order`) and is rolled back if refused.
@@ -60,8 +90,10 @@ export function LessonTable({
   rows,
   order: fullOrder,
   offset,
+  sort,
 }: {
   rows: LessonTableRow[];
+  sort: TableSort;
   /** The whole list's ids in order; `null` when filtered (no reordering). */
   order: number[] | null;
   /** Index of `rows[0]` in `order`. */
@@ -203,22 +235,44 @@ export function LessonTable({
       </output>
       <div className={cn(cardClass, "overflow-hidden")}>
         <table className="w-full border-collapse text-sm">
-          <thead className="border-b bg-muted/50 text-left text-muted-foreground text-xs">
+          <thead className="whitespace-nowrap border-b bg-muted/50 text-left text-muted-foreground text-xs">
             <tr>
               {reorderable && (
                 <th scope="col" className="w-11 px-1 py-2.5">
                   <span className="sr-only">{t.columns.order}</span>
                 </th>
               )}
-              <th scope="col" className="px-3 py-2.5 font-semibold">
-                {t.columns.title}
-              </th>
+              <SortHeader column="title" label={t.columns.title} sort={sort} />
               <th
                 scope="col"
                 className="hidden px-3 py-2.5 font-semibold md:table-cell"
               >
-                {t.columns.updated}
+                {t.columns.status}
               </th>
+              <th
+                scope="col"
+                className="hidden px-3 py-2.5 text-right font-semibold lg:table-cell"
+              >
+                {t.columns.questions}
+              </th>
+              <th
+                scope="col"
+                className="hidden px-3 py-2.5 text-right font-semibold lg:table-cell"
+              >
+                {t.columns.attempts}
+              </th>
+              <SortHeader
+                column="created"
+                label={t.columns.created}
+                sort={sort}
+                className="hidden xl:table-cell"
+              />
+              <SortHeader
+                column="updated"
+                label={t.columns.updated}
+                sort={sort}
+                className="hidden md:table-cell"
+              />
               <th scope="col" className="px-2 py-2.5 text-right">
                 <span className="sr-only">{t.columns.actions}</span>
               </th>
@@ -253,31 +307,26 @@ export function LessonTable({
                   </td>
                 )}
                 <td className="px-3 py-3">
-                  <div className="flex items-start gap-3">
+                  <div className="flex items-center gap-3">
                     <TopicGlyph
                       topic={lessonTopic(row.chapter, row.title)}
                       className={cn(
-                        "hidden size-10 rounded-md sm:flex [&_svg]:size-5",
+                        "hidden size-10 shrink-0 rounded-md sm:flex [&_svg]:size-5",
                         row.status === "archived" && "opacity-60",
                       )}
                     />
                     <div className="min-w-0 flex-1 space-y-1">
-                      <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                        <Link
-                          href={`/admin/lessons/${row.id}/edit`}
-                          prefetch={false}
-                          className="break-words font-display font-semibold text-[0.9375rem] text-foreground leading-snug tracking-[-0.01em] hover:text-primary hover:underline"
-                        >
-                          {row.title}
-                        </Link>
-                        <LessonStatusBadge status={row.status} />
-                        {row.hasDraft && row.status !== "draft" && (
-                          <span className="rounded-full border border-dashed px-2 py-0.5 font-medium text-muted-foreground text-xs">
-                            {t.hasDraft}
-                          </span>
-                        )}
-                      </div>
-                      <p className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-muted-foreground text-xs">
+                      <Link
+                        href={`/admin/lessons/${row.id}/edit`}
+                        prefetch={false}
+                        className="line-clamp-2 break-words font-display font-semibold text-[0.9375rem] text-foreground leading-snug tracking-[-0.01em] hover:text-primary hover:underline"
+                      >
+                        {row.title}
+                      </Link>
+                      <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-muted-foreground text-xs">
+                        <span className="md:hidden">
+                          <LessonStatusBadge status={row.status} />
+                        </span>
                         {(row.grade || row.chapter) && (
                           <span>
                             {[row.grade && t.grade(row.grade), row.chapter]
@@ -285,33 +334,48 @@ export function LessonTable({
                               .join(" · ")}
                           </span>
                         )}
-                        <span className="inline-flex items-center gap-1">
-                          <ListChecks aria-hidden className="size-3.5" />
-                          {t.questions(row.questionCount)}
-                        </span>
-                        <span className="inline-flex items-center gap-1">
-                          <Users aria-hidden className="size-3.5" />
+                        <span className="num lg:hidden">
+                          {t.questions(row.questionCount)} ·{" "}
                           {t.attempts(row.attemptCount)}
                         </span>
-                        <span className="md:hidden">{row.updated}</span>
-                        <Link
-                          href={`/admin/lessons/${row.id}/stats`}
-                          prefetch={false}
-                          aria-label={statsCopy.linkFor(row.title)}
-                          className="inline-flex items-center gap-1 font-semibold text-primary hover:underline"
-                        >
-                          <ChartColumn aria-hidden className="size-3.5" />
-                          {statsCopy.link}
-                        </Link>
+                        <span className="num md:hidden">{row.updated}</span>
                       </p>
                     </div>
                   </div>
                 </td>
-                <td className="num hidden whitespace-nowrap px-3 py-3 text-muted-foreground md:table-cell">
-                  {row.updated}
+                <td className="hidden px-3 py-3 md:table-cell">
+                  <div className="flex flex-col items-start gap-1">
+                    <LessonStatusBadge status={row.status} />
+                    {row.hasDraft && row.status !== "draft" && (
+                      <span className="text-muted-foreground text-xs">
+                        {t.hasDraftShort}
+                      </span>
+                    )}
+                  </div>
+                </td>
+                <td className="num hidden px-3 py-3 text-right lg:table-cell">
+                  {row.questionCount}
+                </td>
+                <td className="num hidden px-3 py-3 text-right lg:table-cell">
+                  {row.attemptCount}
+                </td>
+                <td className="num hidden whitespace-nowrap px-3 py-3 xl:table-cell">
+                  <DateCell value={row.created} />
+                </td>
+                <td className="num hidden whitespace-nowrap px-3 py-3 md:table-cell">
+                  <DateCell value={row.updated} />
                 </td>
                 <td className="py-1.5 pr-2 pl-1">
                   <div className="flex justify-end">
+                    <Link
+                      href={`/admin/lessons/${row.id}/stats`}
+                      prefetch={false}
+                      aria-label={statsCopy.linkFor(row.title)}
+                      title={statsCopy.linkFor(row.title)}
+                      className={iconButtonClass}
+                    >
+                      <ChartColumn aria-hidden />
+                    </Link>
                     <IconButton
                       label={`${t.duplicate}: ${row.title}`}
                       disabled={pending}
@@ -402,6 +466,9 @@ export function LessonTable({
   );
 }
 
+const iconButtonClass =
+  "flex size-11 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-50 [&_svg]:size-[1.125rem]";
+
 function IconButton({
   label,
   className,
@@ -412,11 +479,57 @@ function IconButton({
       type="button"
       aria-label={label}
       title={label}
-      className={cn(
-        "flex size-11 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-50 [&_svg]:size-[1.125rem]",
-        className,
-      )}
+      className={cn(iconButtonClass, className)}
       {...props}
     />
+  );
+}
+
+/**
+ * A sortable column's header: a link with an arrow (↕ while another column
+ * sorts, ↑/↓ for the current direction) and `aria-sort` on the cell.
+ */
+function SortHeader({
+  column,
+  label,
+  sort,
+  className,
+}: {
+  column: SortableColumn;
+  label: string;
+  sort: TableSort;
+  className?: string;
+}) {
+  const active = sort.by === column;
+  const Arrow = !active
+    ? ArrowUpDown
+    : sort.dir === "asc"
+      ? ArrowUp
+      : ArrowDown;
+  return (
+    <th
+      scope="col"
+      aria-sort={
+        active ? (sort.dir === "asc" ? "ascending" : "descending") : undefined
+      }
+      className={cn("px-1.5 py-1 font-semibold", className)}
+    >
+      <Link
+        href={sort.hrefs[column]}
+        prefetch={false}
+        scroll={false}
+        title={t.sortBy(label, active ? sort.dir : null)}
+        className={cn(
+          "inline-flex min-h-9 items-center gap-1 rounded-full px-1.5 transition-colors hover:bg-muted hover:text-foreground",
+          active && "text-foreground",
+        )}
+      >
+        {label}
+        <Arrow
+          aria-hidden
+          className={cn("size-3.5", !active && "opacity-60")}
+        />
+      </Link>
+    </th>
   );
 }

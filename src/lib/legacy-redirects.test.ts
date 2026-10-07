@@ -87,14 +87,15 @@ describe("LEGACY_REDIRECTS (05 §1)", () => {
     ["/review-mistakes", "/review"],
     ["/practice", "/review"],
     ["/history", "/admin/results"],
-    ["/admin/new", "/admin/lessons"],
-    ["/admin/lessons/new", "/admin/lessons"],
+    ["/admin/new", "/admin/lessons/create"],
+    ["/admin/lessons/new", "/admin/lessons/create"],
     ["/admin/edit/1712345678901", "/admin/lessons"],
     ["/admin/configure", "/admin/lessons"],
     ["/admin/configure/1712345678901", "/admin/lessons"],
     ["/admin/lessons/1712345678901/statistics", "/admin/lessons"],
     ["/admin/statistics", "/admin"],
-    ["/admin/ai-tools", "/admin/import"],
+    ["/admin/ai-tools", "/admin/lessons/create?mode=file"],
+    ["/admin/import", "/admin/lessons/create?mode=file"],
   ])("%s → %s", (from, to) => {
     expect(resolve(from)).toBe(to);
   });
@@ -109,6 +110,7 @@ describe("LEGACY_REDIRECTS (05 §1)", () => {
       "/admin/lessons",
       "/admin/lessons/12/edit",
       "/admin/lessons/12/stats",
+      "/admin/lessons/create",
       "/share/lessons/12",
       "/ly-thuyet",
       "/gallery",
@@ -120,7 +122,8 @@ describe("LEGACY_REDIRECTS (05 §1)", () => {
 
   it("points every rule at a route that exists", () => {
     for (const { destination } of LEGACY_REDIRECTS) {
-      const path = destination.replace(/:\w+\*?/g, "x");
+      // A query (`?mode=file`) picks a view of the page, not another route.
+      const [path = ""] = destination.replace(/:\w+\*?/g, "x").split("?");
       expect(routeExists(path), destination).toBe(true);
     }
   });

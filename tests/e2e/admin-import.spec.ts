@@ -7,7 +7,8 @@ import { IMPORTED_TITLE_PREFIX } from "./fixtures/lessons";
 import { emulateScheme, type StorageState } from "./runner-helpers";
 
 /**
- * S7-04 AI import against the Storage and Gemini stand-ins: a PDF goes
+ * S7-04 AI import against the Storage and Gemini stand-ins, reached from
+ * "Tạo bài mới" (S5-07): a PDF goes
  * straight to the private `imports` bucket, `POST /api/ai/import` streams
  * the lesson text (with a missing key and a `[Hình]`), and "Tạo bài nháp"
  * opens the editor on a new draft whose validation flags the missing key.
@@ -15,7 +16,12 @@ import { emulateScheme, type StorageState } from "./runner-helpers";
  */
 let storageState: StorageState;
 test.beforeAll(async ({ browser }, info) => {
-  storageState = await loginAdminOnce(browser, info, "import", "/admin/import");
+  storageState = await loginAdminOnce(
+    browser,
+    info,
+    "import",
+    "/admin/lessons/create",
+  );
 });
 test.use({
   // biome-ignore lint/correctness/noEmptyPattern: Playwright requires destructured fixture dependencies.
@@ -55,9 +61,12 @@ test("a PDF becomes a draft lesson through the AI, flagged where the key is miss
   };
   const before = (await importCalls()).length;
 
-  await page.goto("/admin/import");
+  // One of the three ways to create a lesson.
+  await page.goto("/admin/lessons/create");
+  await page.getByRole("link", { name: "Chọn file đề" }).click();
+  await expect(page).toHaveURL(/\/admin\/lessons\/create\?mode=file$/);
   await expect(
-    page.getByRole("heading", { name: "Nhập đề bằng AI", level: 1 }),
+    page.getByRole("heading", { name: "Nhập đề từ file bằng AI", level: 1 }),
   ).toBeVisible();
   await expectAccessible(page);
 

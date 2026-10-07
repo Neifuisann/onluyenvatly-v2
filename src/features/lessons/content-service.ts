@@ -1,5 +1,5 @@
 import "server-only";
-import { and, eq, isNull, max, sql } from "drizzle-orm";
+import { and, eq, inArray, isNull, max, sql } from "drizzle-orm";
 import type { Tx } from "@/db/client";
 import { db } from "@/db/client";
 import {
@@ -12,9 +12,11 @@ import {
 import { writeAudit } from "@/lib/audit";
 import { err, ok, type Result } from "@/lib/result";
 import { type Actor, insertLesson } from "./admin-service";
+import { type ComposeInput, pickQuestions } from "./domain/compose";
 import { checkPublishable, draftContent } from "./domain/content";
+import { serializeLesson } from "./domain/serializer";
 import { summarizeLesson } from "./domain/summary";
-import { publishCopy } from "./messages";
+import { composeCopy, publishCopy } from "./messages";
 import {
   DEFAULT_LESSON_CONFIG,
   LessonConfigSchema,
@@ -158,6 +160,83 @@ export async function createImportedLesson(
       data: { versionId, ...counts },
     });
     return { id, ...counts };
+  });
+}
+
+/**
+ * "Tạo từ bài có sẵn" (S5-07): a new draft whose questions are drawn at
+ * random from other lessons (their published version, else their draft).
+ * The picked questions are written back as text and parsed again, so they
+ * get fresh ids (v1 ids like `q_1` repeat across lessons). One transaction;
+ * students see nothing until it is published.
+ */
+export async function composeLesson(
+  actor: Actor,
+  input: ComposeInput,
+  random: () => number = Math.random,
+): Promise<Result<{ id: number; questions: number }>> {
+  return db.transaction(async (tx) => {
+    const sources = await tx
+      .select({
+        id: lessons.id,
+        grade: lessons.grade,
+        questions: lessonVersions.questions,
+      })
+      .from(lessons)
+      .innerJoin(
+        lessonVersions,
+        eq(
+          lessonVersions.id,
+          sql`coalesce(${lessons.currentVersionId}, ${lessons.draftVersionId})`,
+        ),
+      )
+      .where(
+        and(inArray(lessons.id, input.lessonIds), isNull(lessons.deletedAt)),
+      );
+    if (sources.length !== input.lessonIds.length)
+      return err("NOT_FOUND", { message: composeCopy.sourcesGone });
+    // Keep the teacher's choice order, so equal copies resolve the same way.
+    const order = new Map(input.lessonIds.map((id, i) => [id, i]));
+    const pool = sources
+      .sort((a, b) => (order.get(a.id) ?? 0) - (order.get(b.id) ?? 0))
+      .flatMap((s) => {
+        const parsed = QuestionsSchema.safeParse(s.questions);
+        return parsed.success ? parsed.data : [];
+      });
+    const picked = pickQuestions(pool, input.counts, random);
+    if (!picked.ok) return err("VALIDATION", { message: picked.message });
+
+    const id = await insertLesson(tx, actor, input.title);
+    const grades = new Set(sources.map((s) => s.grade));
+    const [grade] = grades;
+    if (grades.size === 1 && grade != null)
+      await tx.update(lessons).set({ grade }).where(eq(lessons.id, id));
+    const content = draftContent(serializeLesson(picked.questions));
+    const versionId = await writeDraft(
+      tx,
+      actor,
+      id,
+      {
+        status: "draft",
+        config: DEFAULT_LESSON_CONFIG,
+        currentVersionId: null,
+        draftVersionId: null,
+      },
+      content,
+    );
+    await writeAudit(tx, {
+      actorId: actor.id,
+      action: "lesson.compose",
+      targetType: "lesson",
+      targetId: id,
+      data: {
+        versionId,
+        from: input.lessonIds,
+        counts: input.counts,
+        questions: content.questions.length,
+      },
+    });
+    return ok({ id, questions: content.questions.length });
   });
 }
 

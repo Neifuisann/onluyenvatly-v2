@@ -4,6 +4,7 @@ import { FileUp, RotateCcw, Sparkles } from "lucide-react";
 import { useRouter } from "next/navigation";
 import {
   useDeferredValue,
+  useEffect,
   useId,
   useMemo,
   useRef,
@@ -25,6 +26,7 @@ import {
   importTitle,
 } from "../../domain/import";
 import { importCopy as t } from "../../messages";
+import { ImportProgress } from "./import-progress";
 
 type Phase = "idle" | "uploading" | "reading" | "done" | "failed";
 
@@ -46,7 +48,7 @@ function contentTypeOf(file: File): ImportContentType | null {
 }
 
 /**
- * `/admin/import` (S7-04, 09 §4): pick a file → signed upload to Storage →
+ * "Nhập từ file bằng AI" on `/admin/lessons/create` (S7-04, S5-07, 09 §4): pick a file → signed upload to Storage →
  * `POST /api/ai/import` streams the lesson text, parsed as it arrives → the
  * teacher creates a draft and continues in the editor. A stream that stops
  * midway keeps what arrived (09 §6).
@@ -57,6 +59,8 @@ export function ImportPanel({ aiEnabled }: { aiEnabled: boolean }) {
   const [file, setFile] = useState<File | null>(null);
   const [title, setTitle] = useState("");
   const [phase, setPhase] = useState<Phase>("idle");
+  const [startedAt, setStartedAt] = useState(0);
+  const outputRef = useRef<HTMLElement>(null);
   const [text, setText] = useState("");
   const [error, setError] = useState<string>();
   const [creating, startCreate] = useTransition();
@@ -77,6 +81,12 @@ export function ImportPanel({ aiEnabled }: { aiEnabled: boolean }) {
 
   const busy = phase === "uploading" || phase === "reading";
 
+  // Follow the text as it streams in, so the newest question is in view.
+  useEffect(() => {
+    const box = outputRef.current;
+    if (busy && box && text) box.scrollTop = box.scrollHeight;
+  }, [busy, text]);
+
   const pick = (f: File | null) => {
     setFile(f);
     setError(undefined);
@@ -90,6 +100,7 @@ export function ImportPanel({ aiEnabled }: { aiEnabled: boolean }) {
     if (file.size > IMPORT_MAX_BYTES) return setError(t.tooBig);
     setError(undefined);
     setText("");
+    setStartedAt(Date.now());
     setPhase("uploading");
     const fail = (message: string) => {
       setError(message);
@@ -211,7 +222,7 @@ export function ImportPanel({ aiEnabled }: { aiEnabled: boolean }) {
         <div className="flex flex-wrap gap-2">
           <Button type="submit" disabled={busy || !aiEnabled}>
             <Sparkles aria-hidden />
-            {t.start}
+            {busy ? t.working : t.start}
           </Button>
           {(phase === "done" || phase === "failed") && (
             <Button type="button" variant="secondary" onClick={reset}>
@@ -222,18 +233,14 @@ export function ImportPanel({ aiEnabled }: { aiEnabled: boolean }) {
         </div>
       </form>
 
-      <div aria-live="polite" className="flex flex-col gap-2">
-        {phase === "uploading" && (
-          <p className="flex items-center gap-2 text-sm">
-            <FileUp aria-hidden className="size-4" />
-            {t.uploading}
-          </p>
-        )}
-        {phase === "reading" && (
-          <p className="text-sm">
-            {t.reading} {parsed.total > 0 && `${t.received(parsed.total)}.`}
-          </p>
-        )}
+      {(phase === "uploading" || phase === "reading") && (
+        <ImportProgress
+          phase={phase}
+          startedAt={startedAt}
+          received={parsed.total}
+        />
+      )}
+      <div aria-live="polite" className="flex flex-col gap-2 empty:hidden">
         {error && <Alert variant="danger">{error}</Alert>}
       </div>
 
@@ -268,6 +275,7 @@ export function ImportPanel({ aiEnabled }: { aiEnabled: boolean }) {
             {t.output}
           </h2>
           <section
+            ref={outputRef}
             // Scrollable, so it must be reachable by keyboard (axe).
             // biome-ignore lint/a11y/noNoninteractiveTabindex: scroll container
             tabIndex={0}

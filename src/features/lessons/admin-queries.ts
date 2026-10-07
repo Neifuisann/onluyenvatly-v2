@@ -1,9 +1,11 @@
 import "server-only";
-import { and, asc, eq, isNull, sql } from "drizzle-orm";
+import { and, asc, desc, eq, isNull, sql } from "drizzle-orm";
 import { db } from "@/db/client";
 import { lessons, lessonVersions } from "@/db/schema";
 import type { AdminListFilters } from "./domain/admin-list";
 import { searchTerms } from "./domain/catalog";
+import type { ComposeSource } from "./domain/compose";
+import type { QuestionType } from "./schema";
 
 /**
  * Admin reads (S5-01). Per request and uncached: only the teacher uses them,
@@ -19,11 +21,13 @@ export type AdminLessonRow = {
   questionCount: number;
   attemptCount: number;
   hasDraft: boolean;
+  createdAt: Date;
   updatedAt: Date;
 };
 
 /**
- * Every matching lesson not deleted, in the teacher's order. ~170 small rows:
+ * Every matching lesson not deleted, in the teacher's order (the page sorts
+ * it again when another order is chosen, `sortAdminRows`). ~170 small rows:
  * the page slices them in memory (`paginate`), because reordering one page
  * sends the full id order back.
  */
@@ -40,6 +44,7 @@ export async function getAdminLessons(
       questionCount: lessons.questionCount,
       attemptCount: lessons.attemptCount,
       hasDraft: sql<boolean>`${lessons.draftVersionId} is not null`,
+      createdAt: lessons.createdAt,
       updatedAt: lessons.updatedAt,
     })
     .from(lessons)
@@ -114,4 +119,38 @@ export async function getLessonForEditing(
     sourceText: row.sourceText ?? "",
     questions: row.questions ?? [],
   };
+}
+
+/** Questions of one type in a version's jsonb, counted by Postgres. */
+const countType = (type: QuestionType) =>
+  sql<number>`(select count(*)::int from jsonb_array_elements(case when jsonb_typeof(${lessonVersions.questions}) = 'array' then ${lessonVersions.questions} else '[]'::jsonb end) as q where q->>'type' = ${type})`;
+
+/**
+ * "Tạo từ bài có sẵn" (S5-07): every lesson with questions to draw from,
+ * newest change first, with its questions per type in the version the draw
+ * reads (published, else draft). Counts only: the questions stay in the
+ * database until the teacher submits.
+ */
+export async function getComposeSources(): Promise<ComposeSource[]> {
+  const rows = await db
+    .select({
+      id: lessons.id,
+      title: lessons.title,
+      status: lessons.status,
+      grade: lessons.grade,
+      mcq: countType("mcq"),
+      tf: countType("tf"),
+      short: countType("short"),
+    })
+    .from(lessons)
+    .innerJoin(
+      lessonVersions,
+      eq(
+        lessonVersions.id,
+        sql`coalesce(${lessons.currentVersionId}, ${lessons.draftVersionId})`,
+      ),
+    )
+    .where(isNull(lessons.deletedAt))
+    .orderBy(desc(lessons.updatedAt), desc(lessons.id));
+  return rows.filter((r) => r.mcq + r.tf + r.short > 0);
 }

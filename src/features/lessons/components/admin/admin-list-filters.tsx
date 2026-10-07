@@ -5,8 +5,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
+  ADMIN_SORTS,
   type AdminListFilters,
   adminListHref,
+  DEFAULT_SORT,
+  defaultDir,
   LESSON_STATUSES,
 } from "../../domain/admin-list";
 import { adminLessonsCopy as t } from "../../messages";
@@ -15,11 +18,12 @@ const STATUSES = [null, ...LESSON_STATUSES] as const;
 
 /**
  * Pill search (GET form) and a segmented status switch, the same shapes as
- * the student catalog (07 §5.5); the URL is the only state.
+ * the student catalog (07 §5.5); the URL is the only state. On phones the
+ * table has no column headers, so the order is a segmented switch too.
  */
 export function AdminListFilterBar({ filters }: { filters: AdminListFilters }) {
   return (
-    <div className="flex flex-col gap-3 md:flex-row md:items-center">
+    <div className="flex flex-col gap-3 md:flex-row md:flex-wrap md:items-center">
       <Form
         action="/admin/lessons"
         prefetch={false}
@@ -30,6 +34,13 @@ export function AdminListFilterBar({ filters }: { filters: AdminListFilters }) {
         {filters.status && (
           <input type="hidden" name="status" value={filters.status} />
         )}
+        {filters.sort !== DEFAULT_SORT && (
+          <input type="hidden" name="sort" value={filters.sort} />
+        )}
+        {filters.sort !== "manual" &&
+          filters.dir !== defaultDir(filters.sort) && (
+            <input type="hidden" name="dir" value={filters.dir} />
+          )}
         <Label htmlFor="admin-lessons-q" className="sr-only">
           {t.searchLabel}
         </Label>
@@ -66,6 +77,16 @@ export function AdminListFilterBar({ filters }: { filters: AdminListFilters }) {
           href: adminListHref(filters, { status: s }),
           label: s ? t.statuses[s] : t.statusAll,
           active: filters.status === s,
+        }))}
+      />
+      <SegmentedNav
+        label={t.sortGroup}
+        className="md:hidden"
+        items={ADMIN_SORTS.map((s) => ({
+          key: s,
+          href: adminListHref(filters, { sort: s, dir: defaultDir(s) }),
+          label: t.sorts[s],
+          active: filters.sort === s,
         }))}
       />
     </div>

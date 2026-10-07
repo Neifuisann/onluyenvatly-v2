@@ -7,9 +7,28 @@ import { z } from "zod";
 export const LESSON_STATUSES = ["draft", "published", "archived"] as const;
 export type LessonStatus = (typeof LESSON_STATUSES)[number];
 
+/**
+ * List order: last change (the default), creation, title, or the teacher's
+ * manual order (the catalog's default sort), the only one that can be
+ * dragged.
+ */
+export const ADMIN_SORTS = ["updated", "created", "title", "manual"] as const;
+export type AdminSort = (typeof ADMIN_SORTS)[number];
+export type SortDir = "asc" | "desc";
+
+export const DEFAULT_SORT: AdminSort = "updated";
+
+/** Dates newest first, titles A–Z, the manual order top to bottom. */
+export function defaultDir(sort: AdminSort): SortDir {
+  return sort === "updated" || sort === "created" ? "desc" : "asc";
+}
+
 export type AdminListFilters = {
   q: string | null;
   status: LessonStatus | null;
+  sort: AdminSort;
+  /** Always `asc` for the manual order. */
+  dir: SortDir;
   /** 1-based; clamped to the last page by `paginate`. */
   page: number;
 };
@@ -30,16 +49,27 @@ const FiltersSchema = z.object({
     .catch(null)
     .transform((s) => s || null),
   status: z.enum(LESSON_STATUSES).nullable().catch(null),
+  sort: z.enum(ADMIN_SORTS).catch(DEFAULT_SORT),
+  dir: z.enum(["asc", "desc"]).nullable().catch(null),
   page: z.coerce.number().int().min(1).max(1000).catch(1),
 });
 
-/** Never throws: anything invalid falls back to "no filter", page 1. */
+/**
+ * Never throws: anything invalid falls back to "no filter", the default
+ * order and page 1.
+ */
 export function parseAdminListParams(params: RawParams): AdminListFilters {
-  return FiltersSchema.parse({
+  const { dir, ...f } = FiltersSchema.parse({
     q: first(params.q) || null,
     status: first(params.status) || null,
+    sort: first(params.sort) || DEFAULT_SORT,
+    dir: first(params.dir) || null,
     page: first(params.page) || 1,
   });
+  return {
+    ...f,
+    dir: f.sort === "manual" ? "asc" : (dir ?? defaultDir(f.sort)),
+  };
 }
 
 /** A new search or status starts again on page 1 unless `page` is patched. */
@@ -51,14 +81,69 @@ export function adminListHref(
   const params = new URLSearchParams();
   if (next.q) params.set("q", next.q);
   if (next.status) params.set("status", next.status);
+  if (next.sort !== DEFAULT_SORT) params.set("sort", next.sort);
+  if (next.sort !== "manual" && next.dir !== defaultDir(next.sort))
+    params.set("dir", next.dir);
   if (next.page > 1) params.set("page", String(next.page));
   const qs = params.toString();
   return qs ? `/admin/lessons?${qs}` : "/admin/lessons";
 }
 
-/** Drag-reorder only makes sense on the whole, unfiltered list. */
-export function canReorder(f: Pick<AdminListFilters, "q" | "status">): boolean {
-  return !f.q && !f.status;
+/**
+ * Clicking a column's arrow: the same column flips direction, another one
+ * starts in its natural direction. Back to page 1 either way.
+ */
+export function sortHref(f: AdminListFilters, sort: AdminSort): string {
+  const dir =
+    f.sort === sort && sort !== "manual"
+      ? f.dir === "asc"
+        ? "desc"
+        : "asc"
+      : defaultDir(sort);
+  return adminListHref(f, { sort, dir });
+}
+
+/** True when a search or status filter narrows the list. */
+export function isFiltered(f: Pick<AdminListFilters, "q" | "status">): boolean {
+  return Boolean(f.q || f.status);
+}
+
+/** Drag-reorder only makes sense on the whole list in the manual order. */
+export function canReorder(
+  f: Pick<AdminListFilters, "q" | "status" | "sort">,
+): boolean {
+  return !isFiltered(f) && f.sort === "manual";
+}
+
+type Sortable = { id: number; title: string; createdAt: Date; updatedAt: Date };
+
+const titleCollator = new Intl.Collator("vi", {
+  sensitivity: "base",
+  numeric: true,
+});
+
+/**
+ * `rows` (read in the manual order) in the chosen order. Ties fall back to
+ * the id, so the order is stable between requests.
+ */
+export function sortAdminRows<T extends Sortable>(
+  rows: readonly T[],
+  sort: AdminSort,
+  dir: SortDir,
+): T[] {
+  if (sort === "manual") return [...rows];
+  const sign = dir === "asc" ? 1 : -1;
+  const compare = (a: T, b: T): number => {
+    switch (sort) {
+      case "title":
+        return titleCollator.compare(a.title.trim(), b.title.trim());
+      case "created":
+        return a.createdAt.getTime() - b.createdAt.getTime();
+      case "updated":
+        return a.updatedAt.getTime() - b.updatedAt.getTime();
+    }
+  };
+  return [...rows].sort((a, b) => sign * (compare(a, b) || a.id - b.id));
 }
 
 /**

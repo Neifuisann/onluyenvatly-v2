@@ -4,6 +4,7 @@ import type { AuditArea } from "./domain/audit-log";
 const actions: Record<string, string> = {
   "lesson.create": "Tạo bài mới",
   "lesson.import": "Nhập bài bằng AI",
+  "lesson.compose": "Tạo bài từ bài có sẵn",
   "lesson.duplicate": "Nhân bản bài",
   "lesson.reorder": "Sắp xếp lại bài",
   "lesson.archive": "Lưu trữ bài",

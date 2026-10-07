@@ -232,6 +232,17 @@
   --animate-shake: shake 420ms ease-in-out both;
   --animate-count: count 900ms var(--ease-out-soft) both;
   --animate-confetti: confetti 2.6s cubic-bezier(0.3, 0.6, 0.6, 1) both;
+  /* Work of unknown length (the AI import): a bar sweeping its track. */
+  --animate-indeterminate: indeterminate 1.6s ease-in-out infinite;
+
+  @keyframes indeterminate {
+    from {
+      transform: translateX(-100%);
+    }
+    to {
+      transform: translateX(300%);
+    }
+  }
 
   @keyframes bob {
     50% {
