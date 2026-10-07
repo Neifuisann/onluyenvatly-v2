@@ -266,7 +266,13 @@ export function LessonTable({
                     <div className="min-w-0 flex-1 space-y-1">
                       <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
                         <Link
-                          href={`/admin/lessons/${row.id}/results`}
+                          // Who took it (B-10); a never-published lesson has
+                          // no attempts, so its title opens the editor.
+                          href={
+                            row.hasPublished
+                              ? `/admin/lessons/${row.id}/results`
+                              : `/admin/lessons/${row.id}/edit`
+                          }
                           prefetch={false}
                           className="break-words font-display font-semibold text-[0.9375rem] text-foreground leading-snug tracking-[-0.01em] hover:text-primary hover:underline"
                         >

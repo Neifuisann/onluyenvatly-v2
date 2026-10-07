@@ -107,7 +107,7 @@ export async function correctLesson(
       })
       .where(eq(lessons.id, id));
 
-    const regraded = await regradeVersion(tx, versionId, {
+    const regraded = await regradeVersion(tx, id, versionId, {
       questions: new Map(questions.map((q) => [q.id, q])),
       changed: new Set(changed),
       points,
@@ -122,6 +122,7 @@ export async function correctLesson(
         .delete(mistakes)
         .where(
           and(
+            eq(mistakes.lessonId, id),
             eq(mistakes.lessonVersionId, versionId),
             inArray(mistakes.questionId, removed),
           ),
@@ -155,6 +156,7 @@ type Rescored = { attemptId: string; userId: string; performance: number };
 
 async function regradeVersion(
   tx: Tx,
+  lessonId: number,
   versionId: number,
   c: {
     questions: Parameters<typeof regradeAttempt>[1];
@@ -179,7 +181,9 @@ async function regradeVersion(
     .from(attempts)
     .where(
       and(
+        // `attempts_lesson_version_idx`.
         eq(attempts.lessonVersionId, versionId),
+        eq(attempts.lessonId, lessonId),
         sql`(${sql.join(holds, sql` or `)})`,
       ),
     )

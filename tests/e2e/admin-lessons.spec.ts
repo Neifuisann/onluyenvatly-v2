@@ -26,8 +26,8 @@ const COPY = `${SOURCE} (bản sao)`;
 const PAGE_SIZE = 20;
 
 async function titles(page: Page) {
-  // The title links (each row also links its statistics, S6-05).
-  const links = page.locator('main tbody tr a[href$="/edit"]');
+  // The title links: the row's other links (statistics, "Sửa") are labelled.
+  const links = page.locator("main tbody tr a:not([aria-label])");
   await expect(links.first()).toBeVisible();
   return links.allTextContents();
 }

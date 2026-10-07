@@ -13,7 +13,7 @@ import { writeAudit } from "@/lib/audit";
 import { err, ok, type Result } from "@/lib/result";
 import { type Actor, insertLesson } from "./admin-service";
 import { checkPublishable, draftContent } from "./domain/content";
-import { summarizeLesson } from "./domain/summary";
+import { liveQuestions, summarizeLesson } from "./domain/summary";
 import { publishCopy } from "./messages";
 import {
   DEFAULT_LESSON_CONFIG,
@@ -29,8 +29,10 @@ import {
  *   only when attempts use it; otherwise it is deleted in the same
  *   transaction and the new one takes over its number, so a version number
  *   is used up only when students took the previous content;
- * - an attempt keeps `lesson_version_id`, so it is always graded against
- *   the content it was started on.
+ * - an attempt keeps `lesson_version_id`, so it is graded against the
+ *   content it was started on. The one exception: a teacher's correction
+ *   to the current version (`correction-service.ts`, 04 §3.4) changes it
+ *   in place and regrades its attempts.
  * Callers check `requireAdmin()` first.
  */
 
@@ -113,13 +115,17 @@ async function writeDraft(
   return row.id;
 }
 
-/** Questions whose ids a new parse should reuse: the draft's, else the published ones. */
+/**
+ * Questions whose ids a new parse should reuse: the draft's, else the
+ * published ones. Never a removed one (B-10): the text no longer holds it,
+ * so it would shift the by-position matches onto the wrong questions.
+ */
 async function previousQuestions(tx: Tx, lesson: LockedLesson) {
   const draft = await readVersion(tx, lesson.draftVersionId);
   if (draft && draft.questions.length > 0)
-    return { draft, questions: draft.questions };
+    return { draft, questions: liveQuestions(draft.questions) };
   const current = await readVersion(tx, lesson.currentVersionId);
-  return { draft, questions: current?.questions ?? [] };
+  return { draft, questions: liveQuestions(current?.questions ?? []) };
 }
 
 /**

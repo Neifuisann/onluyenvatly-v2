@@ -7,7 +7,7 @@ import {
 } from "./corrections";
 import { parseLessonText } from "./parser";
 import { serializeLesson } from "./serializer";
-import { countByType, summarizeLesson } from "./summary";
+import { countByType, liveQuestions, summarizeLesson } from "./summary";
 
 const questions: Question[] = [
   {
@@ -206,5 +206,19 @@ describe("diffCorrections", () => {
       perQuestion,
     );
     expect(r.ok && r.changed).toEqual(["q_mcq", "q_tf", "q_short"]);
+  });
+});
+
+describe("a removed question and the editor", () => {
+  it("never lends its id to a live question when the text is parsed again", () => {
+    const r = run([{ kind: "remove", questionId: "q_tf" }]);
+    if (!r.ok) throw new Error(r.message);
+    // The teacher rewrites question 3's stem in the full editor: no stem
+    // match, so the id comes by position among the live questions.
+    const text = serializeLesson(r.questions).replace("Tính", "Tính lại");
+    const { questions: parsed } = parseLessonText(text, {
+      previous: liveQuestions(r.questions),
+    });
+    expect(parsed.map((q) => q.id)).toEqual(["q_mcq", "q_short"]);
   });
 });
