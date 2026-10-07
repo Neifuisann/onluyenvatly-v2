@@ -82,7 +82,9 @@ test("journey 7: publish a new version; the old attempt keeps the old one", asyn
   );
   // A published lesson opens as its questions (B-10); the text editor is
   // one more click.
-  await editor.getByRole("link", { name: `Sửa: ${title}`, exact: true }).click();
+  await editor
+    .getByRole("link", { name: `Sửa: ${title}`, exact: true })
+    .click();
   await expect(editor).toHaveURL(/\/admin\/lessons\/\d+\/questions$/);
   await editor.getByRole("link", { name: "Soạn lại toàn bài" }).click();
   await expect(editor).toHaveURL(/\/admin\/lessons\/\d+\/edit$/);
