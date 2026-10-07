@@ -130,6 +130,7 @@ export const adminLessonsCopy = {
     grade: "Khối",
     questions: "Số câu",
     attempts: "Lượt làm",
+    created: "Ngày tạo",
     updated: "Cập nhật",
     actions: "Thao tác",
   },
@@ -173,6 +174,84 @@ export const adminLessonsCopy = {
   create: "Tạo bài mới",
   newTitle: "Bài tập mới",
   edit: "Sửa",
+  hasDraftShort: "Có nháp",
+  created: "Tạo",
+  sortGroup: "Sắp xếp danh sách",
+  sorts: {
+    updated: "Mới sửa",
+    created: "Mới tạo",
+    title: "Tên A–Z",
+    manual: "Thứ tự riêng",
+  },
+  sortBy: (column: string, dir: "asc" | "desc" | null) =>
+    dir
+      ? `Sắp theo ${column.toLowerCase()}, đang ${dir === "asc" ? "tăng dần" : "giảm dần"}. Bấm để đảo chiều.`
+      : `Sắp theo ${column.toLowerCase()}`,
+  manualLink: "Sắp theo thứ tự riêng (kéo thả)",
+  manualHint: "Kéo biểu tượng ⋮⋮ để đổi thứ tự bài học sinh thấy.",
+} as const;
+
+/** `/admin/lessons/create` (S5-07): how a new lesson starts. */
+export const createCopy = {
+  title: "Tạo bài mới",
+  lead: "Chọn cách tạo bài. Bài mới luôn là bản nháp: học sinh chưa thấy cho tới khi bạn xuất bản.",
+  back: "Danh sách bài",
+  backToChoices: "Chọn cách khác",
+  choicesLabel: "Cách tạo bài",
+  manual: {
+    title: "Tự soạn",
+    body: "Mở trình soạn với một bài trống. Gõ hoặc dán đề theo định dạng văn bản, xem trước ngay bên cạnh.",
+    action: "Mở trình soạn",
+  },
+  file: {
+    title: "Nhập từ file bằng AI",
+    body: "Tải lên đề PDF, Word (.docx) hoặc ảnh chụp. AI chuyển sang định dạng soạn bài để bạn kiểm tra và sửa.",
+    action: "Chọn file đề",
+    badge: "AI",
+  },
+  compose: {
+    title: "Tạo từ bài có sẵn",
+    body: "Chọn một hay nhiều bài, đặt số câu mỗi loại. Hệ thống bốc ngẫu nhiên thành một đề ôn tập để bạn xem lại.",
+    action: "Chọn bài nguồn",
+  },
+  aiOff: "AI đang tắt",
+  fileTitle: "Nhập đề từ file bằng AI",
+  composeTitle: "Tạo đề từ bài có sẵn",
+} as const;
+
+/** "Tạo từ bài có sẵn" (S5-07). */
+export const composeCopy = {
+  sourcesTitle: "1. Chọn bài nguồn",
+  sourcesHint:
+    "Chỉ tính câu hợp lệ của bản đã xuất bản (bài chưa xuất bản: bản nháp).",
+  search: "Lọc bài nguồn",
+  searchPlaceholder: "Lọc theo tên bài",
+  gradeGroup: "Lọc theo khối",
+  gradeAll: "Mọi khối",
+  grade: (g: number) => `Lớp ${g}`,
+  selectShown: "Chọn tất cả đang hiện",
+  clear: "Bỏ chọn hết",
+  selected: (n: number) => `Đã chọn ${n} bài`,
+  noSources: "Chưa có bài nào có câu hỏi để lấy.",
+  noMatch: "Không có bài nào khớp bộ lọc.",
+  sourceCounts: (c: { mcq: number; tf: number; short: number }) =>
+    `${c.mcq} TN · ${c.tf} Đ/S · ${c.short} TLN`,
+  countsTitle: "2. Số câu mỗi loại",
+  countsHint: "Câu trùng nhau giữa các bài chỉ được lấy một lần.",
+  available: (n: number) => `có ${n}`,
+  max: "Tối đa",
+  total: "Tổng số câu",
+  titleLabel: "3. Tên bài",
+  titleOne: (title: string) => `Ôn tập: ${title}`.slice(0, 200),
+  titleMany: (n: number) => `Ôn tập tổng hợp (${n} bài)`,
+  submit: "Bốc câu và tạo bài nháp",
+  submitting: "Đang tạo bài…",
+  pickFirst: "Chọn ít nhất một bài nguồn.",
+  noneWanted: "Đặt số câu cần lấy (ít nhất 1 câu).",
+  tooMany: (max: number) => `Một bài có tối đa ${max} câu.`,
+  notEnough: (type: "mcq" | "tf" | "short", want: number, have: number) =>
+    `Cần ${want} câu ${questionTypeLabels[type].toLowerCase()} nhưng các bài đã chọn chỉ có ${have} câu khác nhau.`,
+  sourcesGone: "Có bài nguồn vừa bị xóa. Tải lại trang rồi chọn lại.",
 } as const;
 
 /** `/admin/lessons/[id]/edit` (S5-02, 07 §5.6). */

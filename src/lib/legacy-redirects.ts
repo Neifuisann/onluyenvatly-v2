@@ -40,9 +40,9 @@ export const LEGACY_REDIRECTS: readonly LegacyRedirect[] = [
 
   // Teacher pages (v1 lesson ids don't carry over: land on the list)
   { source: "/history", destination: "/admin/results" },
-  { source: "/admin/new", destination: "/admin/lessons" },
+  { source: "/admin/new", destination: "/admin/lessons/create" },
   { source: "/admin/new-legacy", destination: "/admin/lessons" },
-  { source: "/admin/lessons/new", destination: "/admin/lessons" },
+  { source: "/admin/lessons/new", destination: "/admin/lessons/create" },
   { source: "/admin/edit/:id", destination: "/admin/lessons" },
   { source: "/admin/edit-legacy/:id", destination: "/admin/lessons" },
   { source: "/admin/configure/:id*", destination: "/admin/lessons" },
@@ -52,5 +52,8 @@ export const LEGACY_REDIRECTS: readonly LegacyRedirect[] = [
   { source: "/admin/adaptive-quiz", destination: "/admin/lessons" },
   { source: "/admin/quiz", destination: "/admin/lessons" },
   { source: "/admin/uploads", destination: "/admin/lessons" },
-  { source: "/admin/ai-tools", destination: "/admin/import" },
+  { source: "/admin/ai-tools", destination: "/admin/lessons/create?mode=file" },
+
+  // v2 pages that moved (S5-07: the AI import is now one way to create a lesson)
+  { source: "/admin/import", destination: "/admin/lessons/create?mode=file" },
 ];

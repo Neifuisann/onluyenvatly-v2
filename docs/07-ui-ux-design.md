@@ -21,7 +21,7 @@ Student (bottom tab bar on mobile, left sidebar ≥ 1024px)
     full screen, no shell; the five tabs stay as they are)
 
 Admin (sidebar)
-├─ Tổng quan  ├─ Bài tập (list / editor / stats)  ├─ Nhập bằng AI
+├─ Tổng quan  ├─ Bài tập (list / Tạo bài mới: tự soạn · từ file bằng AI · từ bài có sẵn / editor / stats)
 ├─ Học sinh (Chờ duyệt badge)  ├─ Kết quả  ├─ Giải thích AI
 ├─ Thi đấu (/admin/games → new → /host/[id], full screen)
 └─ Cài đặt  └─ Nhật ký
@@ -261,7 +261,8 @@ As built (S5-03): "Cài đặt" is a second ARIA tab (←/→ between tabs; both
 ### 5.7 Teacher screens (S8-01, 2026-09-30)
 The admin area uses the same Lagoon language as the student side. Every page starts with `PageHeader` (optional back link, display title with status chips, lead, actions on the right); settings blocks and panels are `SectionCard`s. Link-based switches (lesson status, student view/status/grade, explanation views, stats sort) are one muted pill track with the current choice raised (`SegmentedNav`, like the catalog's grade switch). Page-level empty states show the bunny (telescope for no matches, all-clear for an empty queue, graph for stats without attempts).
 - `/admin`: greeting lead, a navy hero with the approval queue ("5 học sinh đang chờ duyệt" → "Duyệt ngay", waiting bunny) or today's submissions (graph bunny), icon tiles, the 30-day chart (today's bar in sun yellow) and the hardest questions with a rate bar.
-- `/admin/lessons`: pill search, status switch, a table of 20 rows per page with topic glyphs, status badges (dot + text), and numbered pages (`Pagination`: first, last, current ± 1, "…" for longer runs; "Trang trước/sau" become arrows on phones). The unfiltered list stays reorderable per page.
+- `/admin/lessons`: pill search, status switch, an Azota-style table of 20 rows per page (S5-07: one column per fact: Tên bài with topic glyph and grade · chapter, Trạng thái badge (dot + text) with "Có nháp" under it, Số câu, Lượt làm, Ngày tạo, Cập nhật as date over time, then Thống kê / Nhân bản / Lưu trữ / Xóa icons; columns fold under the title on narrower screens), sortable by the header arrows (newest change first by default), and numbered pages (`Pagination`: first, last, current ± 1, "…" for longer runs; "Trang trước/sau" become arrows on phones). Only the unfiltered manual order ("Sắp theo thứ tự riêng") is reorderable per page.
+- `/admin/lessons/create`: three cards (Tự soạn, Nhập từ file bằng AI, Tạo từ bài có sẵn); the whole card is the target. The compose view is a source list (filter by name and grade, ticks, counts per type per lesson) beside a sticky panel: questions per type with "có N" and "Tối đa", the total, the title, "Bốc câu và tạo bài nháp".
 - `/admin/audit` ("Nhật ký"): an area switch, then one card list like the results (initials avatar, the action in bold with its time, the actor and role, the target as a link plus the recorded ids/counts as small mono chips) and numbered pages; the sleeping bunny when the log is empty, the telescope for an empty area.
 - Students, results and pending rows carry initials avatars; result scores are tinted pills by the result screen's bands (≥ 8 / ≥ 5 / below). The AI import uses a drop zone and a three-step strip.
 

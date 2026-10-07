@@ -30,6 +30,7 @@ import {
   timeBonusV2,
 } from "../src/features/rating/domain/rating.ts";
 import {
+  COMPOSED_TITLE_PREFIX,
   e2eLessons,
   e2eQuestions,
   flaggedExplanations,
@@ -301,13 +302,16 @@ async function main() {
   await db.delete(schema.attempts);
   // …and without game rooms (B-05): an open room would keep its PIN.
   await db.delete(schema.gameRooms);
-  // Drafts the AI import spec created (S7-04).
+  // Drafts the AI import (S7-04) and compose (S5-07) specs created.
   await db
     .delete(schema.lessons)
     .where(
       and(
         isNull(schema.lessons.legacyId),
-        like(schema.lessons.title, `${IMPORTED_TITLE_PREFIX}%`),
+        or(
+          like(schema.lessons.title, `${IMPORTED_TITLE_PREFIX}%`),
+          like(schema.lessons.title, `${COMPOSED_TITLE_PREFIX}%`),
+        ),
       ),
     );
   await seedResults();

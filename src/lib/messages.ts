@@ -130,7 +130,6 @@ export const shellCopy = {
   adminNavItems: {
     overview: "Tổng quan",
     lessons: "Bài tập",
-    import: "Nhập bằng AI",
     students: "Học sinh",
     results: "Kết quả",
     explanations: "Giải thích AI",

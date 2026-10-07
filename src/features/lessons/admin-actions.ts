@@ -23,6 +23,7 @@ import {
   updateLessonSettings,
 } from "./admin-service";
 import {
+  composeLesson as composeLessonService,
   discardDraft as discardDraftService,
   type PublishResult,
   publishLesson,
@@ -32,6 +33,7 @@ import {
 } from "./content-service";
 import { type CorrectionOutcome, correctLesson } from "./correction-service";
 import { LessonIdSchema, ReorderSchema } from "./domain/admin-list";
+import { ComposeSchema } from "./domain/compose";
 import { SourceTextSchema } from "./domain/content";
 import { parseSingleQuestion } from "./domain/corrections";
 import { SettingsFormSchema } from "./domain/settings-form";
@@ -123,6 +125,20 @@ export async function createLesson(): Promise<void> {
   const { id } = await createLessonService(user);
   // Drafts are invisible to students: no shared tag changes.
   redirect(`/admin/lessons/${id}/edit`);
+}
+
+/**
+ * "Tạo từ bài có sẵn" (S5-07): a new draft drawn at random from the chosen
+ * lessons. Drafts are invisible to students: no shared tag changes; the
+ * browser opens the editor so the teacher reviews it.
+ */
+export async function composeLesson(
+  input: unknown,
+): Promise<Result<{ id: number; questions: number }>> {
+  const user = await requireAdmin();
+  const parsed = ComposeSchema.safeParse(input);
+  if (!parsed.success) return err("VALIDATION");
+  return composeLessonService(user, parsed.data);
 }
 
 const TexBatchSchema = z

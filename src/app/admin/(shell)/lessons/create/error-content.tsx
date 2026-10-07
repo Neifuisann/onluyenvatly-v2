@@ -2,10 +2,9 @@
 
 import { ErrorState } from "@/components/error-state";
 import { Button } from "@/components/ui/button";
-import { importCopy } from "@/features/ai/messages";
-import { catalogCopy } from "@/features/lessons/messages";
+import { catalogCopy, createCopy } from "@/features/lessons/messages";
 
-export default function AdminImportError({
+export default function CreateLessonError({
   retry,
 }: {
   error: Error & { digest?: string };
@@ -13,7 +12,7 @@ export default function AdminImportError({
 }) {
   return (
     <ErrorState
-      title={importCopy.title}
+      title={createCopy.title}
       description={catalogCopy.errorBody}
       action={<Button onClick={retry}>{catalogCopy.retry}</Button>}
     />

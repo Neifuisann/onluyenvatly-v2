@@ -29,7 +29,8 @@ const ADMIN_PAGES = [
   "/admin/results?lesson=1&q=an&from=2026-01-01",
   "/admin/explanations",
   "/admin/explanations?lesson=1",
-  "/admin/import",
+  "/admin/lessons/create",
+  "/admin/lessons/create?mode=compose",
   "/admin/audit",
   "/admin/audit?area=students&page=2",
   // Game rooms (B-05): the teacher pages and the projector.

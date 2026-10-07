@@ -120,15 +120,23 @@ export const importCopy = {
   file: "File đề",
   fileHint: "PDF, DOCX, PNG, JPG hoặc WEBP; tối đa 10 MB.",
   dropHint: "Chọn file hoặc kéo thả vào đây",
-  stepsLabel: "Các bước nhập đề",
-  steps: ["Tải file đề", "AI chuyển đề", "Sửa trong trình soạn"],
   lessonTitle: "Tên bài",
   lessonTitleHint:
     "Mặc định lấy theo tên file; đổi sau trong Cài đặt cũng được.",
   start: "Nhập bằng AI",
   uploading: "Đang tải file lên…",
-  reading: "AI đang đọc đề… Đề dài có thể mất 1–3 phút.",
-  received: (n: number) => `Đã nhận ${n} câu`,
+  working: "Đang xử lý…",
+  progressLabel: "Tiến trình nhập đề",
+  progressSteps: ["Tải file lên", "AI đọc đề", "Nhận câu hỏi"],
+  readingStart: "AI đang đọc đề…",
+  readingLong:
+    "AI vẫn đang đọc đề. Đề dài có thể mất 1–3 phút, bạn cứ để trang mở.",
+  busyRetry:
+    "Máy chủ AI đang đông, hệ thống đang tự thử lại. Bạn cứ để trang mở.",
+  writing: "AI đang chép câu hỏi, văn bản hiện dần bên dưới…",
+  elapsed: (s: number) =>
+    `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`,
+  received: (n: number) => `đã nhận ${n} câu`,
   doneTitle: "AI đã chuyển xong",
   summary: (c: { total: number; mcq: number; tf: number; short: number }) =>
     `${c.total} câu: ${c.mcq} trắc nghiệm, ${c.tf} đúng/sai, ${c.short} trả lời ngắn.`,
