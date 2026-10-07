@@ -121,3 +121,13 @@ export const ReorderSchema = z.strictObject({
     .max(2000)
     .refine((ids) => new Set(ids).size === ids.length),
 });
+
+/**
+ * Where "Sửa" goes (B-10): a lesson with a published version opens as its
+ * questions (corrections, then "Soạn lại toàn bài"); otherwise the editor.
+ */
+export function editHref(id: number, hasPublished: boolean): string {
+  return hasPublished
+    ? `/admin/lessons/${id}/questions`
+    : `/admin/lessons/${id}/edit`;
+}

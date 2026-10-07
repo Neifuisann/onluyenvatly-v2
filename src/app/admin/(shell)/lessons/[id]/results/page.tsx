@@ -13,7 +13,7 @@ import { LessonStudents } from "@/features/attempts/components/admin/lesson-stud
 import { summarizeStudents } from "@/features/attempts/domain/lesson-results";
 import { lessonResultsCopy as t } from "@/features/attempts/messages";
 import { requireAdmin } from "@/features/auth/guards";
-import { LessonIdSchema } from "@/features/lessons/domain/admin-list";
+import { editHref, LessonIdSchema } from "@/features/lessons/domain/admin-list";
 import { getStatsLesson } from "@/features/lessons/stats-queries";
 import { formatClock, formatDateTime, formatScore } from "@/lib/dates";
 
@@ -64,7 +64,7 @@ export default async function LessonResultsPage({
               {t.stats}
             </Link>
             <Link
-              href={`/admin/lessons/${lesson.id}/edit`}
+              href={editHref(lesson.id, lesson.current !== null)}
               prefetch={false}
               className={actionClass}
             >

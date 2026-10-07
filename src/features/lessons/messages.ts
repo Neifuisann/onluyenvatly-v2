@@ -484,3 +484,80 @@ export const shareCopy = {
   copied: "Đã sao chép liên kết chia sẻ.",
   copyFailed: "Không sao chép được, bạn tự sao chép liên kết này:",
 } as const;
+
+/** Refusals of a correction to a published version (B-10). */
+export const correctionCopy = {
+  notFound: "Không tìm thấy câu hỏi này trong bài. Tải lại trang rồi thử lại.",
+  badAnswer: "Đáp án không hợp lệ cho câu hỏi này.",
+  pointsByType:
+    "Điểm câu này được chia theo tổng điểm của loại câu hỏi. Đổi trong phần Cài đặt.",
+  shapeChanged:
+    "Không thể đổi loại câu hỏi hoặc số phương án/mệnh đề ở đây vì bài làm cũ dựa vào chúng. Hãy dùng “Soạn lại toàn bài”.",
+  lastQuestion: "Bài cần còn ít nhất một câu hỏi.",
+  invalid: "Câu hỏi chưa hợp lệ.",
+  hasDraft:
+    "Bài đang có bản nháp chưa xuất bản. Xuất bản hoặc bỏ bản nháp trước khi sửa trực tiếp.",
+  noPublished: "Bài chưa có phiên bản đã xuất bản.",
+  archived: "Bài đã lưu trữ. Khôi phục bài trước khi sửa.",
+  oneQuestion: "Nội dung cần đúng một câu hỏi, bắt đầu bằng “Câu 1:”.",
+  lineError: (line: number, message: string) => `Dòng ${line}: ${message}`,
+} as const;
+
+/** `/admin/lessons/[id]/questions` and the one-question editor (B-10). */
+export const questionsCopy = {
+  metaTitle: "Câu hỏi của bài",
+  title: (lesson: string) => `Câu hỏi: ${lesson}`,
+  lead: (version: number, submitted: number) =>
+    `Phiên bản ${version} đang dùng · ${submitted} lượt nộp. Bấm chữ cái để đổi đáp án, đổi điểm, tặng điểm hoặc xóa câu, rồi bấm “Lưu”: mọi bài làm trên phiên bản này được chấm lại.`,
+  back: "Bài tập",
+  results: "Kết quả",
+  stats: "Thống kê",
+  fullEditor: "Soạn lại toàn bài",
+  settings: "Cài đặt",
+  loading: "Đang tải câu hỏi",
+  errorTitle: "Không tải được câu hỏi",
+  draftTitle: "Bài đang có bản nháp",
+  draftBody:
+    "Bản nháp sẽ thay nội dung này khi xuất bản, nên chưa thể sửa trực tiếp. Mở trình soạn để xuất bản hoặc bỏ bản nháp.",
+  openDraft: "Mở bản nháp",
+  archivedBody: "Bài đã lưu trữ. Khôi phục bài trước khi sửa câu hỏi.",
+  listLabel: "Các câu hỏi",
+  changes: (n: number) => (n ? `${n} thay đổi chưa lưu` : "Chưa có thay đổi"),
+  cancel: "Hủy",
+  save: "Lưu",
+  saving: "Đang lưu…",
+  confirmTitle: "Lưu và chấm lại?",
+  confirmBody: (changes: number, submitted: number) =>
+    submitted
+      ? `${changes} thay đổi sẽ áp dụng ngay cho bài đang xuất bản, và ${submitted} lượt nộp sẽ được chấm lại theo đáp án mới. Xếp hạng của học sinh được tính lại theo điểm mới.`
+      : `${changes} thay đổi sẽ áp dụng ngay cho bài đang xuất bản.`,
+  confirm: "Lưu và chấm lại",
+  close: "Đóng",
+  saved: (regraded: number) =>
+    regraded ? `Đã lưu. Đã chấm lại ${regraded} bài làm.` : "Đã lưu.",
+  leave: "Bạn có thay đổi chưa lưu. Rời trang?",
+  points: (n: number) => `Điểm câu ${n}`,
+  pointsShared: "Điểm chia theo loại câu (Cài đặt)",
+  free: "Tặng điểm",
+  freeLabel: (n: number, on: boolean) =>
+    on ? `Bỏ tặng điểm câu ${n}` : `Tặng điểm câu ${n}: ai cũng được trọn điểm`,
+  freeBadge: "Mọi học sinh được trọn điểm câu này",
+  remove: (n: number) => `Xóa câu ${n}`,
+  removed: (n: number) =>
+    `Câu ${n} sẽ bị xóa khi lưu. Điểm của câu này không còn tính.`,
+  undo: "Hoàn tác",
+  editContent: "Sửa nội dung",
+  editContentLabel: (n: number) => `Sửa nội dung câu ${n}`,
+  saveFirst: "Lưu hoặc hủy thay đổi trước",
+  shortAnswer: (n: number) => `Đáp án đúng câu ${n}`,
+  // The one-question editor.
+  editMeta: "Sửa câu hỏi",
+  editTitle: (n: number) => `Sửa nội dung câu ${n}`,
+  editLead:
+    "Chỉ câu này. Giữ nguyên loại câu và số phương án; “Lưu” áp dụng ngay và chấm lại bài làm.",
+  editBack: "Quay lại",
+  editText: "Nội dung câu hỏi",
+  editPreview: "Xem trước",
+  notFoundTitle: "Không tìm thấy câu hỏi",
+  notFoundBody: "Câu hỏi đã bị xóa hoặc bài chưa xuất bản.",
+} as const;

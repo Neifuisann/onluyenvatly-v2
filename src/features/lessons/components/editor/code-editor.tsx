@@ -89,6 +89,7 @@ const lessonText = StreamLanguage.define<null>({
         answer: [/^answer\s*:/iu, "keyword"],
         explanation: [/^giải thích\s*:/iu, "comment"],
         points: [/^.+/u, "number"],
+        free: [/^.+/u, "number"],
         image: [/^.+/u, "link"],
       };
       if (kind === "option" || kind === "statement") {

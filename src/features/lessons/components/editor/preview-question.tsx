@@ -23,7 +23,8 @@ const LETTERS = ["A", "B", "C", "D", "E", "F"] as const;
  * question card plus its key and explanation (the teacher's view; 07 §5.6).
  * The header jumps to the question's line in the editor; with `onMark`,
  * an option's letter sets the key and a statement's pill flips it (the
- * text is edited, v1 `markAnswerCorrect`).
+ * text is edited, v1 `markAnswerCorrect`). Without `onGoTo` the header is
+ * plain, with `toolbar` on its right (the questions page, B-10).
  */
 export function PreviewQuestion({
   question: q,
@@ -34,17 +35,23 @@ export function PreviewQuestion({
   onMark,
   active = false,
   showExplanation = true,
+  toolbar,
+  footer,
 }: {
   question: Question;
   index: number;
   points: number;
   hasIssue: boolean;
-  onGoTo: () => void;
+  onGoTo?: (() => void) | undefined;
   /** Option or statement index clicked in the preview. */
   onMark?: ((item: number) => void) | undefined;
   /** The editor's cursor is in this question. */
   active?: boolean;
   showExplanation?: boolean;
+  /** Controls on the right of a plain header. */
+  toolbar?: React.ReactNode;
+  /** Below the question (e.g. the short answer field). */
+  footer?: React.ReactNode;
 }) {
   const Icon = hasIssue ? CircleAlert : CircleCheck;
   const heading = t.questionHeading(
@@ -65,34 +72,50 @@ export function PreviewQuestion({
         active && "ring-2 ring-primary/45",
       )}
     >
-      <header>
-        <button
-          type="button"
-          onClick={onGoTo}
-          aria-label={t.goToQuestion(index + 1)}
-          className="group -m-1.5 flex w-[calc(100%+0.75rem)] flex-wrap items-center gap-2 rounded-lg p-1.5 text-left text-muted-foreground text-sm transition-colors hover:bg-muted/60"
-        >
+      {!onGoTo ? (
+        <header className="flex flex-wrap items-center gap-2 text-muted-foreground text-sm">
           <span className="num rounded-full bg-ink px-3 py-1 font-bold font-display text-ink-foreground text-sm">
             {t.questionLabel(index + 1)}
           </span>
           <span className="font-medium">{questionTypeLabels[q.type]}</span>
           <span aria-hidden>·</span>
           <span className="num">{formatScore(points)}đ</span>
-          <span
-            className={cn(
-              "ml-auto inline-flex items-center gap-1 font-semibold text-xs",
-              hasIssue ? "text-danger-text" : "text-success-text",
-            )}
+          {toolbar && (
+            <div className="ml-auto flex flex-wrap items-center gap-1">
+              {toolbar}
+            </div>
+          )}
+        </header>
+      ) : (
+        <header>
+          <button
+            type="button"
+            onClick={onGoTo}
+            aria-label={t.goToQuestion(index + 1)}
+            className="group -m-1.5 flex w-[calc(100%+0.75rem)] flex-wrap items-center gap-2 rounded-lg p-1.5 text-left text-muted-foreground text-sm transition-colors hover:bg-muted/60"
           >
-            <Icon aria-hidden className="size-4" />
-            {hasIssue && t.questionHasIssue}
-          </span>
-          <PenLine
-            aria-hidden
-            className="size-4 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100"
-          />
-        </button>
-      </header>
+            <span className="num rounded-full bg-ink px-3 py-1 font-bold font-display text-ink-foreground text-sm">
+              {t.questionLabel(index + 1)}
+            </span>
+            <span className="font-medium">{questionTypeLabels[q.type]}</span>
+            <span aria-hidden>·</span>
+            <span className="num">{formatScore(points)}đ</span>
+            <span
+              className={cn(
+                "ml-auto inline-flex items-center gap-1 font-semibold text-xs",
+                hasIssue ? "text-danger-text" : "text-success-text",
+              )}
+            >
+              <Icon aria-hidden className="size-4" />
+              {hasIssue && t.questionHasIssue}
+            </span>
+            <PenLine
+              aria-hidden
+              className="size-4 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100"
+            />
+          </button>
+        </header>
+      )}
       <div className="break-words text-[1.0625rem] leading-relaxed">
         <PreviewMathText text={q.stem} />
         {q.image && <QuestionImage media={q.image} />}
@@ -180,6 +203,7 @@ export function PreviewQuestion({
           <PreviewMathText text={q.explanation} />
         </section>
       )}
+      {footer}
     </article>
   );
 }

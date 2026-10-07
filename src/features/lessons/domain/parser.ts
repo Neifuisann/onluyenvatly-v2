@@ -8,6 +8,7 @@
  *   *a) …  b) …            true/false (a–h, `*` marks true statements)
  *   Answer: 0,63 ± 0,01    short answer, optional absolute tolerance
  *   [0.25 pts]             points
+ *   [Tặng điểm]            everyone gets the points (B-10)
  *   Giải thích: …          teacher explanation, runs until the next `Câu N:`
  *
  * Any other line continues the previous element. `\` before a line that would
@@ -78,6 +79,7 @@ type Draft = {
   tolerance: number | undefined;
   points: number | undefined;
   explanation: string[] | null;
+  free: boolean;
 };
 
 const ALPHABET =
@@ -152,6 +154,7 @@ export function parseLessonText(
         shortAnswer: null,
         tolerance: undefined,
         points: undefined,
+        free: false,
         explanation: null,
       };
       drafts.push(cur);
@@ -195,6 +198,9 @@ export function parseLessonText(
         return;
       case "points":
         setPoints(kind.raw, lineNo, col);
+        return;
+      case "free":
+        q.free = true;
         return;
       case "explanation":
         q.explanation = [kind.rest];
@@ -304,6 +310,7 @@ function finalize(
     ...(d.stem.image && { image: d.stem.image }),
     ...(d.points !== undefined && { points: d.points }),
     ...(d.explanation && { explanation: joinText(d.explanation) }),
+    ...(d.free && { free: true as const }),
   };
 
   let q: Question;

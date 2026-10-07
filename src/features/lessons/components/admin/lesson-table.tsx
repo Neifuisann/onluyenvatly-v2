@@ -32,7 +32,7 @@ import {
   reorder,
   restore,
 } from "../../admin-actions";
-import { moveItem, withPageOrder } from "../../domain/admin-list";
+import { editHref, moveItem, withPageOrder } from "../../domain/admin-list";
 import { lessonTopic } from "../../domain/topic";
 import { statsCopy, adminLessonsCopy as t } from "../../messages";
 import { TopicGlyph } from "../topic-glyph";
@@ -47,6 +47,7 @@ export type LessonTableRow = {
   questionCount: number;
   attemptCount: number;
   hasDraft: boolean;
+  hasPublished: boolean;
   /** Pre-formatted on the server (`dd/mm/yyyy hh:mm`). */
   updated: string;
 };
@@ -314,7 +315,7 @@ export function LessonTable({
                 <td className="py-1.5 pr-2 pl-1">
                   <div className="flex justify-end">
                     <Link
-                      href={`/admin/lessons/${row.id}/edit`}
+                      href={editHref(row.id, row.hasPublished)}
                       prefetch={false}
                       aria-label={`${t.edit}: ${row.title}`}
                       title={`${t.edit}: ${row.title}`}
