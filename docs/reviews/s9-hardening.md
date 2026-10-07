@@ -112,6 +112,12 @@ redirect back for errors when JavaScript is off. That changes the start
 button's UX and its E2E specs, so it is left as a follow-up rather than
 folded into this PR.
 
+Done in the 2026-10-08 performance pass: `POST /api/attempts/start` (and
+`/api/review/start`, `/api/attempts/[id]/check`, the other Server Actions on
+PPR student pages). With JavaScript the form asks for JSON and navigates
+client-side; without it the route answers 303 as the action did, so the k6
+script is unchanged.
+
 The submit route no longer fails a committed grade when the post-commit
 counter write fails: it logs the error code and the daily flush repairs the
 counter.

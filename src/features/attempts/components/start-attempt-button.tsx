@@ -1,19 +1,22 @@
 "use client";
 
 import { Play } from "lucide-react";
-import { useActionState } from "react";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { startAttempt } from "../actions";
 import { startCopy as t } from "../messages";
+import { useOpenRunner } from "./use-open-runner";
 
-/** Posts `startAttempt`; works without JavaScript as a plain form. */
+/** Posts to `/api/attempts/start`; works without JavaScript as a plain form. */
 export function StartAttemptButton({ lessonId }: { lessonId: number }) {
-  const [state, action, pending] = useActionState(startAttempt, null);
-  const failed = state && !state.ok ? state : null;
+  const { onSubmit, pending, error } = useOpenRunner(t.failed);
   return (
-    <form action={action} className="grid gap-3">
-      {failed && <Alert variant="danger">{failed.message}</Alert>}
+    <form
+      action="/api/attempts/start"
+      method="post"
+      onSubmit={onSubmit}
+      className="grid gap-3"
+    >
+      {error && <Alert variant="danger">{error}</Alert>}
       <input type="hidden" name="lessonId" value={lessonId} />
       <Button
         type="submit"

@@ -1,6 +1,11 @@
 import type { Event } from "@sentry/nextjs";
 import { expect, it } from "vitest";
-import { sanitizeSpan, sanitizeTelemetry, telemetryPrivacy } from "./telemetry";
+import {
+  safeSpanName,
+  sanitizeSpan,
+  sanitizeTelemetry,
+  telemetryPrivacy,
+} from "./telemetry";
 
 it("removes request bodies, URLs, users, messages, breadcrumbs, arbitrary fields and stack locals", () => {
   const event: Event = {
@@ -95,4 +100,107 @@ it("allowlists streamed spans and disables logs, metrics and breadcrumbs", () =>
   expect(telemetryPrivacy.beforeSendLog()).toBeNull();
   expect(telemetryPrivacy.beforeSendMetric()).toBeNull();
   expect(telemetryPrivacy.beforeBreadcrumb()).toBeNull();
+});
+
+it("keeps build chunk paths and source map debug IDs so stack traces resolve", () => {
+  const debugId = "0b5c2a7e-1f3d-4c8a-9e2b-6d4f1a3c5e7b";
+  const clean = sanitizeTelemetry({
+    exception: {
+      values: [
+        {
+          type: "Error",
+          stacktrace: {
+            frames: [
+              {
+                filename:
+                  "https://onluyenvatly.vercel.app/_next/static/chunks/13c8331ph4w70.js",
+                function: "submitAttempt",
+                lineno: 1,
+                colno: 4021,
+                in_app: true,
+              },
+              { abs_path: "app:///_next/server/chunks/ssr/0q1w.js", lineno: 3 },
+              { filename: "/home/private/app/.next/server/x.js", lineno: 2 },
+              { filename: "https://example.test/_next/static/a.js?private" },
+              { filename: "x.js", function: "private value" },
+            ],
+          },
+        },
+      ],
+    },
+    debug_meta: {
+      images: [
+        {
+          type: "sourcemap",
+          code_file:
+            "https://onluyenvatly.vercel.app/_next/static/chunks/13c8331ph4w70.js",
+          debug_id: debugId,
+        },
+        { type: "sourcemap", code_file: "C:privatea.js", debug_id: debugId },
+      ],
+    },
+  });
+  expect(JSON.stringify(clean)).not.toContain("private");
+  expect(clean.exception?.values?.[0]?.stacktrace?.frames).toEqual([
+    {
+      filename:
+        "https://onluyenvatly.vercel.app/_next/static/chunks/13c8331ph4w70.js",
+      abs_path:
+        "https://onluyenvatly.vercel.app/_next/static/chunks/13c8331ph4w70.js",
+      function: "submitAttempt",
+      in_app: true,
+      lineno: 1,
+      colno: 4021,
+    },
+    {
+      filename: "app:///_next/server/chunks/ssr/0q1w.js",
+      abs_path: "app:///_next/server/chunks/ssr/0q1w.js",
+      lineno: 3,
+    },
+    { filename: "x.js", lineno: 2 },
+    { filename: "a.js" },
+    { filename: "x.js" },
+  ]);
+  expect(clean.debug_meta?.images).toEqual([
+    {
+      type: "sourcemap",
+      code_file:
+        "https://onluyenvatly.vercel.app/_next/static/chunks/13c8331ph4w70.js",
+      debug_id: debugId,
+    },
+  ]);
+});
+
+it("names spans by route template and keeps only Web Vitals, status and op", () => {
+  expect(safeSpanName("GET /lessons/[id]")).toBe("GET /lessons/[id]");
+  expect(safeSpanName("/attempts/[id]/result")).toBe("/attempts/[id]/result");
+  expect(safeSpanName("/lessons/511")).toBe("application");
+  expect(
+    safeSpanName("/attempts/2fbfe2df-7156-41b5-848f-d40c2a0398bf/result"),
+  ).toBe("application");
+  expect(safeSpanName("select * from users")).toBe("application");
+  expect(safeSpanName("/review?chapter=private")).toBe("application");
+  const span = sanitizeSpan({
+    trace_id: "a".repeat(32),
+    span_id: "b".repeat(16),
+    name: "/dashboard",
+    start_timestamp: 1,
+    end_timestamp: 2,
+    status: "ok",
+    is_segment: true,
+    attributes: {
+      "browser.web_vital.lcp.value": 1234.5,
+      "browser.web_vital.lcp.element": "p.private",
+      "http.response.status_code": { value: 200, type: "integer" },
+      "sentry.op": "pageload",
+      "sentry.origin": "Private Origin",
+      "url.full": "https://example.test/private",
+    },
+  });
+  expect(span.name).toBe("/dashboard");
+  expect(span.attributes).toEqual({
+    "browser.web_vital.lcp.value": 1234.5,
+    "http.response.status_code": 200,
+    "sentry.op": "pageload",
+  });
 });

@@ -13,7 +13,6 @@ import type { AttemptAnswer } from "@/db/schema";
 import type { PracticeFeedback } from "@/features/review/domain/practice";
 import { formatScore } from "@/lib/dates";
 import { cn } from "@/lib/utils";
-import { checkPracticeAnswer } from "../../actions";
 import { isAnswered } from "../../domain/runner-state";
 import { practiceCopy as t } from "../../messages";
 import { useRunner, useRunnerApi } from "./store";
@@ -59,7 +58,15 @@ export function PracticeProvider({
     setErrors(({ [index]: _, ...rest }) => rest);
     startTransition(async () => {
       try {
-        const result = await checkPracticeAnswer({ attemptId, index, answer });
+        const res = await fetch(`/api/attempts/${attemptId}/check`, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ index, answer }),
+          cache: "no-store",
+        });
+        const result = (await res.json()) as
+          | { ok: true; data: PracticeFeedback }
+          | { ok: false; message: string };
         if (result.ok) {
           api.getState().lock(index);
           setFeedback((f) => ({ ...f, [index]: result.data }));

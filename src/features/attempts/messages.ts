@@ -167,6 +167,7 @@ export const startCopy = {
   heading: "Làm bài",
   start: "Bắt đầu làm bài",
   starting: "Đang chuẩn bị đề…",
+  failed: "Chưa mở được bài. Kiểm tra mạng rồi thử lại.",
   continue: "Tiếp tục làm bài",
   inProgress: "Bạn đang làm dở bài này.",
   timeRunning: (when: string) =>

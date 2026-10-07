@@ -41,8 +41,8 @@ export default async function LessonsPage({
       </output>
       {catalog.items.length ? (
         <div className={cardGridClass}>
-          {catalog.items.map((lesson) => (
-            <LessonCard key={lesson.id} lesson={lesson} />
+          {catalog.items.map((lesson, i) => (
+            <LessonCard key={lesson.id} lesson={lesson} priority={i < 2} />
           ))}
         </div>
       ) : (

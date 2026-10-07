@@ -141,6 +141,7 @@ describe("server and secret boundaries", () => {
         ?.match(/process\.env\.\w+/g),
     ).toEqual([
       "process.env.NEXT_PUBLIC_SENTRY_DSN",
+      "process.env.NEXT_PUBLIC_VERCEL_ENV",
       "process.env.NEXT_PUBLIC_MEDIA_BASE_URL",
     ]);
   });

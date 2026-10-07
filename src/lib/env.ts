@@ -44,6 +44,10 @@ const serverSchema = z.object({
 
 const clientSchema = z.object({
   NEXT_PUBLIC_SENTRY_DSN: z.url().optional(),
+  // Set by Vercel on every build; tags browser errors and traces.
+  NEXT_PUBLIC_VERCEL_ENV: z
+    .enum(["development", "preview", "production"])
+    .optional(),
   // Public URL of the `media` bucket; images show as their path until set.
   NEXT_PUBLIC_MEDIA_BASE_URL: z.url().optional(),
 });

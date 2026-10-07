@@ -1,5 +1,6 @@
 import { ArrowUpRight, Clock, ListChecks } from "lucide-react";
 import Link from "next/link";
+import { preconnect } from "react-dom";
 import { cardClass } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { mediaUrl } from "@/lib/media";
@@ -12,12 +13,17 @@ import { TopicGlyph } from "./topic-glyph";
 /** 07 §4: topic glyph (or the teacher's cover), title, "28 câu · 50 phút". */
 export function LessonCard({
   lesson,
+  priority = false,
   className,
 }: {
   lesson: CatalogItem;
+  /** First cards of a page: above the fold on a phone, often the LCP. */
+  priority?: boolean;
   className?: string;
 }) {
   const cover = lesson.coverPath ? mediaUrl(lesson.coverPath) : null;
+  // Covers live on the Storage origin: open the connection with the HTML.
+  if (cover) preconnect(new URL(cover).origin);
   return (
     <Link
       href={`/lessons/${lesson.id}`}
@@ -35,7 +41,8 @@ export function LessonCard({
         <img
           src={cover}
           alt=""
-          loading="lazy"
+          loading={priority ? "eager" : "lazy"}
+          fetchPriority={priority ? "high" : "auto"}
           decoding="async"
           className="h-32 w-full object-cover"
         />

@@ -62,7 +62,19 @@ const withMDX = createMDX({
   },
 });
 
+/**
+ * Sentry (12 §4). With `SENTRY_AUTH_TOKEN`, `SENTRY_ORG` and `SENTRY_PROJECT`
+ * set on the build (Vercel, never in a file), source maps are uploaded and
+ * then deleted from the output, so production stack traces are readable
+ * without serving maps. Without them nothing is uploaded or generated.
+ */
+const uploadSourceMaps = Boolean(process.env.SENTRY_AUTH_TOKEN);
 export default withSentryConfig(withMDX(nextConfig), {
-  silent: true,
-  sourcemaps: { disable: true },
+  silent: !process.env.CI,
+  sourcemaps: {
+    disable: !uploadSourceMaps,
+    deleteSourcemapsAfterUpload: true,
+  },
+  widenClientFileUpload: uploadSourceMaps,
+  telemetry: false,
 });

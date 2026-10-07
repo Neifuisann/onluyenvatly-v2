@@ -54,13 +54,16 @@ export async function startReviewPractice(
     now,
   );
   const picked = pickMistakes(candidates, input.count, rng);
-  const versions = new Map<number, Question[] | null>();
-  for (const p of picked)
-    if (!versions.has(p.versionId))
-      versions.set(
-        p.versionId,
-        await getLessonWithAnswers(p.lessonId, p.versionId),
-      );
+  // One read per version, in parallel (each is cached, but a miss is a query).
+  const wanted = new Map(picked.map((p) => [p.versionId, p.lessonId]));
+  const versions = new Map<number, Question[] | null>(
+    await Promise.all(
+      [...wanted].map(
+        async ([versionId, lessonId]) =>
+          [versionId, await getLessonWithAnswers(lessonId, versionId)] as const,
+      ),
+    ),
+  );
   const chosen = picked.flatMap((p) => {
     const question = versions
       .get(p.versionId)

@@ -12,7 +12,7 @@ import type { SessionUser } from "./session";
  * are found on disk (the `admin-actions.ts` of every feature, plus the media
  * and settings actions, which are admin only), so a new admin action is
  * covered the day it is exported. Student- and visitor-facing actions
- * (`auth/actions`, `attempts/actions`) are not in this list on purpose.
+ * (`auth/actions`) are not in this list on purpose.
  */
 
 vi.mock("@/db/client", async () => (await import("@/test/db")).mockDbModule());
