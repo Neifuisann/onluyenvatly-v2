@@ -9,7 +9,6 @@ import {
   Repeat,
   ScrollText,
   Settings,
-  Sparkles,
   Trophy,
   User,
   Users,
@@ -42,7 +41,6 @@ export const NAV: Record<ShellVariant, NavItem[]> = {
   admin: [
     { href: "/admin", label: a.overview, icon: LayoutDashboard, exact: true },
     { href: "/admin/lessons", label: a.lessons, icon: BookOpen },
-    { href: "/admin/import", label: a.import, icon: Sparkles },
     { href: "/admin/students", label: a.students, icon: Users },
     { href: "/admin/results", label: a.results, icon: ClipboardList },
     {

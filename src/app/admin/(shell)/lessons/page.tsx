@@ -1,12 +1,11 @@
-import { Plus, Sparkles } from "lucide-react";
+import { GripVertical, Plus } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { EmptyState } from "@/components/empty-state";
 import { PageHeader } from "@/components/page-header";
 import { Pagination } from "@/components/pagination";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
 import { requireAdmin } from "@/features/auth/guards";
-import { createLesson } from "@/features/lessons/admin-actions";
 import { getAdminLessons } from "@/features/lessons/admin-queries";
 import { AdminListFilterBar } from "@/features/lessons/components/admin/admin-list-filters";
 import { LessonTable } from "@/features/lessons/components/admin/lesson-table";
@@ -14,19 +13,22 @@ import {
   ADMIN_PAGE_SIZE,
   adminListHref,
   canReorder,
+  isFiltered,
   parseAdminListParams,
+  sortAdminRows,
+  sortHref,
 } from "@/features/lessons/domain/admin-list";
 import { adminLessonsCopy as t } from "@/features/lessons/messages";
 import { formatDateTime } from "@/lib/dates";
-import { shellCopy } from "@/lib/messages";
 import { paginate } from "@/lib/pagination";
 
 export const metadata: Metadata = { title: t.title };
 
 /**
- * `/admin/lessons?q=&status=&page=` (S5-01): 20 lessons per page. One read
- * of the (small) matching list; the page is sliced here so reordering a page
- * can send the whole order back.
+ * `/admin/lessons?q=&status=&sort=&dir=&page=` (S5-01, S5-07): 20 lessons
+ * per page, newest change first unless a column's arrow picks another
+ * order. One read of the (small) matching list, sorted and sliced here; in
+ * the manual order a reordered page sends the whole order back.
  */
 export default async function AdminLessonsPage({
   searchParams,
@@ -34,36 +36,30 @@ export default async function AdminLessonsPage({
   await requireAdmin();
   const filters = parseAdminListParams(await searchParams);
   const all = await getAdminLessons(filters);
-  const filtered = !canReorder(filters);
-  const slice = paginate(all, filters.page, ADMIN_PAGE_SIZE);
+  const rows = sortAdminRows(all, filters.sort, filters.dir);
+  const searching = isFiltered(filters);
+  const reorderable = canReorder(filters);
+  const slice = paginate(rows, filters.page, ADMIN_PAGE_SIZE);
   return (
     <div className="mx-auto flex max-w-6xl flex-col gap-6">
       <PageHeader
         title={t.title}
         lead={t.lead}
         actions={
-          <>
-            <Link
-              href="/admin/import"
-              prefetch={false}
-              className={buttonVariants({ variant: "secondary" })}
-            >
-              <Sparkles aria-hidden />
-              {shellCopy.adminNavItems.import}
-            </Link>
-            <form action={createLesson}>
-              <Button type="submit">
-                <Plus aria-hidden />
-                {t.create}
-              </Button>
-            </form>
-          </>
+          <Link
+            href="/admin/lessons/create"
+            prefetch={false}
+            className={buttonVariants()}
+          >
+            <Plus aria-hidden />
+            {t.create}
+          </Link>
         }
       />
       <AdminListFilterBar filters={filters} />
       {slice.total ? (
         <>
-          <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 text-muted-foreground text-sm">
+          <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 text-muted-foreground text-sm">
             <p className="num">
               {slice.pageCount > 1
                 ? t.countRange(
@@ -73,13 +69,35 @@ export default async function AdminLessonsPage({
                   )
                 : t.count(slice.total)}
             </p>
-            {filtered && <p>{t.reorderHint}</p>}
+            {filters.sort !== "manual" ? (
+              <Link
+                href={sortHref(filters, "manual")}
+                prefetch={false}
+                scroll={false}
+                className="inline-flex min-h-11 items-center gap-1.5 font-medium hover:text-foreground hover:underline"
+              >
+                <GripVertical aria-hidden className="size-4" />
+                {t.manualLink}
+              </Link>
+            ) : (
+              <p>{searching ? t.reorderHint : t.manualHint}</p>
+            )}
           </div>
           <LessonTable
-            order={filtered ? null : all.map((r) => r.id)}
+            order={reorderable ? all.map((r) => r.id) : null}
             offset={slice.offset}
-            rows={slice.items.map(({ updatedAt, ...r }) => ({
+            sort={{
+              by: filters.sort,
+              dir: filters.dir,
+              hrefs: {
+                title: sortHref(filters, "title"),
+                created: sortHref(filters, "created"),
+                updated: sortHref(filters, "updated"),
+              },
+            }}
+            rows={slice.items.map(({ createdAt, updatedAt, ...r }) => ({
               ...r,
+              created: formatDateTime(createdAt),
               updated: formatDateTime(updatedAt),
             }))}
           />
@@ -91,11 +109,11 @@ export default async function AdminLessonsPage({
         </>
       ) : (
         <EmptyState
-          mascot={filtered ? "telescope" : "studying"}
-          title={filtered ? t.noMatchTitle : t.emptyTitle}
-          description={filtered ? t.noMatchBody : t.emptyBody}
+          mascot={searching ? "telescope" : "studying"}
+          title={searching ? t.noMatchTitle : t.emptyTitle}
+          description={searching ? t.noMatchBody : t.emptyBody}
           action={
-            filtered ? (
+            searching ? (
               <Link
                 href="/admin/lessons"
                 prefetch={false}
