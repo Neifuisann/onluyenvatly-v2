@@ -7,6 +7,7 @@ import {
   Copy,
   GripVertical,
   ListChecks,
+  PenLine,
   Trash2,
   Users,
 } from "lucide-react";
@@ -264,7 +265,7 @@ export function LessonTable({
                     <div className="min-w-0 flex-1 space-y-1">
                       <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
                         <Link
-                          href={`/admin/lessons/${row.id}/edit`}
+                          href={`/admin/lessons/${row.id}/results`}
                           prefetch={false}
                           className="break-words font-display font-semibold text-[0.9375rem] text-foreground leading-snug tracking-[-0.01em] hover:text-primary hover:underline"
                         >
@@ -312,6 +313,15 @@ export function LessonTable({
                 </td>
                 <td className="py-1.5 pr-2 pl-1">
                   <div className="flex justify-end">
+                    <Link
+                      href={`/admin/lessons/${row.id}/edit`}
+                      prefetch={false}
+                      aria-label={`${t.edit}: ${row.title}`}
+                      title={`${t.edit}: ${row.title}`}
+                      className={iconClass}
+                    >
+                      <PenLine aria-hidden />
+                    </Link>
                     <IconButton
                       label={`${t.duplicate}: ${row.title}`}
                       disabled={pending}
@@ -402,6 +412,9 @@ export function LessonTable({
   );
 }
 
+const iconClass =
+  "flex size-11 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-50 [&_svg]:size-[1.125rem]";
+
 function IconButton({
   label,
   className,
@@ -412,10 +425,7 @@ function IconButton({
       type="button"
       aria-label={label}
       title={label}
-      className={cn(
-        "flex size-11 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-50 [&_svg]:size-[1.125rem]",
-        className,
-      )}
+      className={cn(iconClass, className)}
       {...props}
     />
   );
