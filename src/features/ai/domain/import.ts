@@ -4,13 +4,24 @@
  * DOCX HTML to text, and cleaning the model's output. Pure.
  */
 
+import { classifyLine } from "../../lessons/domain/text-format.ts";
+
 /**
  * Changelog (09 §5):
  * - import-v1 (S7-04): format spec + two worked examples; `*` only where the
  *   source shows the answer; figures as `[Hình]` placeholders (PDF/image) or
  *   kept `media:` lines (DOCX).
+ * - import-v2 (2026-10-07): a shared passage ("Sử dụng thông tin sau cho
+ *   Câu 3 và Câu 4") is copied into every question that uses it, tables
+ *   become ` | ` lines, "Cho biết" constants go to the questions that need
+ *   them, numbering runs on across parts; when the exam has a key the model
+ *   first copies it on an `ĐÁP ÁN:` line (dropped by `cleanImportText`,
+ *   with anything else before `Câu 1`) and marks answers from it; a table
+ *   goes before the options; a third worked example. On the
+ *   2025 THPT reference exam v1 dropped all five shared passages, the data
+ *   table and the constants, leaving questions that could not be answered.
  */
-export const IMPORT_PROMPT_VERSION = "import-v1";
+export const IMPORT_PROMPT_VERSION = "import-v2";
 
 /** 09 §4: PDF, DOCX or an image, at most 10 MB. */
 export const IMPORT_MAX_BYTES = 10 * 1024 * 1024;
@@ -109,7 +120,9 @@ d) Tần số tăng khi tăng khối lượng.
 Câu 3. Tính chu kì (s) của con lắc có k = 100 N/m, m = 1 kg (làm tròn đến hai chữ số thập phân).
 ĐÁP ÁN: 1B; 2: a Đ, b S, c Đ, d S; 3: 0,63`;
 
-const EXAMPLE_OUTPUT = `Câu 1: Một vật dao động điều hoà với phương trình $x = 5\\cos(2\\pi t)$ cm. Biên độ dao động là
+const EXAMPLE_OUTPUT = `ĐÁP ÁN: 1B; 2: a Đ, b S, c Đ, d S; 3: 0,63
+
+Câu 1: Một vật dao động điều hoà với phương trình $x = 5\\cos(2\\pi t)$ cm. Biên độ dao động là
 A. 2 cm
 *B. 5 cm
 C. 10 cm
@@ -139,18 +152,49 @@ D. rad
 Câu 2: Gia tốc trọng trường lấy $g = 9{,}8$ m/s². Tính chu kì con lắc đơn dài 1 m.
 Answer:`;
 
+const EXAMPLE3_SOURCE = `Cho biết: π = 3,14; g = 9,8 m/s².
+Sử dụng thông tin sau cho Câu 7 và Câu 8: Một con lắc đơn dài 1,0 m dao động nhỏ. Bảng bên ghi thời gian 10 dao động toàn phần.
+(bảng) Lần đo: 1, 2, 3 — t (s): 20,1; 20,0; 19,9
+Câu 7. Chu kì trung bình của con lắc là
+A. 2,0 s. B. 1,0 s. C. 20 s. D. 0,5 s.
+Câu 8. Tính gia tốc trọng trường đo được (m/s², làm tròn đến hàng phần mười).
+ĐÁP ÁN: 7A; 8: 9,9`;
+
+const EXAMPLE3_SHARED = `Một con lắc đơn dài 1,0 m dao động nhỏ. Bảng bên ghi thời gian 10 dao động toàn phần.
+Lần đo | 1 | 2 | 3
+t (s) | 20,1 | 20,0 | 19,9`;
+
+const EXAMPLE3_OUTPUT = `ĐÁP ÁN: 7A; 8: 9,9
+
+Câu 1: ${EXAMPLE3_SHARED}
+Chu kì trung bình của con lắc là
+*A. 2,0 s
+B. 1,0 s
+C. 20 s
+D. 0,5 s
+
+Câu 2: ${EXAMPLE3_SHARED}
+Tính gia tốc trọng trường đo được (m/s², làm tròn đến hàng phần mười).
+Cho biết: $\\pi = 3{,}14$.
+Answer: 9,9`;
+
 /** The worked examples in the prompt; a test checks they parse. */
 export const IMPORT_EXAMPLE_OUTPUTS = [
   EXAMPLE_OUTPUT,
   EXAMPLE2_OUTPUT,
+  EXAMPLE3_OUTPUT,
 ] as const;
 
-/** 09 §4: the exact format, two worked examples, and the guardrails. */
+/** 09 §4: the exact format, three worked examples, and the guardrails. */
 export const IMPORT_SYSTEM = [
   "Bạn chuyển đề kiểm tra Vật lý (tiếng Việt) sang định dạng văn bản của trang web ôn thi. Chỉ trả về văn bản theo định dạng, không lời dẫn, không bọc trong ```.",
   "",
   "ĐỊNH DẠNG:",
-  "- Mỗi câu bắt đầu bằng một dòng `Câu N: <đề bài>` (đánh số lại từ 1). Đề dài có thể xuống dòng.",
+  "- Nếu đề có bảng đáp án: dòng ĐẦU TIÊN bạn viết là `ĐÁP ÁN: …`, chép lại nguyên bảng đáp án theo từng phần. Sau đó đánh dấu đáp án từng câu theo đúng dòng này. Đề không có đáp án thì không viết dòng này. Mọi thứ viết trước `Câu 1:` (kể cả dòng này) sẽ bị XOÁ, nên không đặt gì khác ở đó.",
+  "- Mỗi câu bắt đầu bằng một dòng `Câu N: <đề bài>`, đánh số liên tục 1, 2, 3… qua mọi phần của đề (không đánh lại từ 1 ở mỗi phần). Đề dài có thể xuống dòng.",
+  "- Đoạn thông tin dùng chung cho nhiều câu (ví dụ `Sử dụng thông tin sau cho Câu 3 và Câu 4: …`): chép NGUYÊN VĂN đoạn đó vào đầu đề bài của TỪNG câu dùng nó, bỏ cụm `Sử dụng thông tin sau cho…`. Mỗi câu được hiển thị riêng và có thể bị xáo trộn, nên không bao giờ được bỏ đoạn này.",
+  "- Bảng số liệu (kể cả bảng nhỏ nằm cạnh hình, ví dụ bảng `Lần đo | V (cm³) | p (bar)`): bảng là chữ, không phải hình, nên phải chép đủ vào đề bài, mỗi hàng một dòng, các ô cách nhau bằng ` | `, hàng đầu là tiêu đề cột. Đặt bảng TRƯỚC dòng `A.` hoặc `a)` đầu tiên của câu: dòng nằm sau một phương án/phát biểu sẽ bị coi là phần tiếp theo của phương án/phát biểu đó.",
+  "- Dữ kiện chung của cả đề (ví dụ `Cho biết: π = 3,14; R = 8,31 J.mol⁻¹.K⁻¹`): KHÔNG đặt ở đầu bài (sẽ bị xoá); thay vào đó chép NGUYÊN dòng `Cho biết: …` vào cuối đề bài (trước phương án/phát biểu/`Answer:`) của TỪNG câu có tính toán dùng đến bất kì giá trị nào trong đó (ví dụ câu tính số mol, số phân tử, nhiệt độ). Không chắc thì cứ chép.",
   "- Trắc nghiệm nhiều lựa chọn: mỗi phương án một dòng `A. …`, `B. …` (tối đa A–F). Đặt `*` ngay trước chữ cái của phương án đúng: `*B. …`.",
   "- Đúng/Sai: mỗi phát biểu một dòng `a) …`, `b) …` (tối đa a–h). Đặt `*` trước phát biểu ĐÚNG: `*a) …`; phát biểu sai để nguyên.",
   "- Trả lời ngắn: một dòng `Answer: <đáp số>` (dấu phẩy thập phân như trong đề).",
@@ -158,11 +202,13 @@ export const IMPORT_SYSTEM = [
   "- Điểm riêng của câu (chỉ khi đề ghi rõ): một dòng `[0.25 pts]`.",
   "- Công thức viết bằng LaTeX trong `$…$`. Giữ nguyên số liệu và đơn vị.",
   "- Hình vẽ: nếu gặp dòng `![](media:…)` thì giữ nguyên đúng vị trí; nếu đề có hình mà bạn không chép được thì ghi một dòng `[Hình]` ngay dưới đề bài của câu đó (trước các phương án).",
-  "- Một dòng trống giữa hai câu. Bỏ tiêu đề đề thi, hướng dẫn làm bài, số trang, mã đề.",
+  "- Một dòng trống giữa hai câu. Bỏ tiêu đề đề thi, hướng dẫn làm bài (`PHẦN I. Thí sinh trả lời…`), số trang, mã đề, họ tên/số báo danh; nhưng giữ mọi dữ kiện câu hỏi cần (đoạn dùng chung, bảng, hằng số).",
   "",
   "QUY TẮC:",
   "- Chỉ đánh dấu `*` hoặc ghi đáp số khi đề THỂ HIỆN đáp án (bảng đáp án, phương án được tô/gạch chân, lời giải). Nếu đề không có đáp án thì KHÔNG đoán: để không có `*`, và `Answer:` để trống.",
+  "- Khi đề có bảng đáp án: đáp án từng câu phải khớp ĐÚNG Y dòng `ĐÁP ÁN:` bạn đã chép, kể cả khi bạn tự tính ra kết quả khác; không tự giải để chọn đáp án. Đúng/Sai trong bảng (`Câu 4. a Đúng b Sai c Đúng d Sai`): `Đúng` → có `*`, `Sai` → không có `*`. Lưu ý mỗi PHẦN của đề đánh số câu riêng: `Câu 1` của phần Đúng/Sai ứng với câu Đúng/Sai đầu tiên.",
   "- Không thêm, bớt hay sửa nội dung câu hỏi. Không tự viết lời giải.",
+  "- Mỗi câu phải đủ dữ kiện để làm được khi đứng một mình. Trước khi trả lời, kiểm tra lại: câu nào dựa vào đoạn dùng chung, bảng hay hằng số mà thiếu thì chép bổ sung.",
   "",
   "VÍ DỤ 1 (đề có bảng đáp án ở cuối):",
   EXAMPLE_SOURCE,
@@ -173,6 +219,11 @@ export const IMPORT_SYSTEM = [
   EXAMPLE2_SOURCE,
   "=>",
   EXAMPLE2_OUTPUT,
+  "",
+  "VÍ DỤ 3 (đoạn thông tin dùng chung, bảng số liệu, dữ kiện chung):",
+  EXAMPLE3_SOURCE,
+  "=>",
+  EXAMPLE3_OUTPUT,
 ].join("\n");
 
 /** The user turn: the file goes alongside as inline data, or the DOCX text. */
@@ -234,15 +285,58 @@ export function htmlToLessonText(html: string): string {
     .trim();
 }
 
+/** A question header as the parser reads it: `Câu 1:` or `Câu 1. `. */
+const QUESTION_HEADER = /^[ \t]*câu[ \t]*\d+[ \t]*[:.]/imu;
+/** A table row as the prompt asks for it: cells joined by ` | `. */
+const TABLE_ROW = /\S[ \t]+\|[ \t]+\S/;
+
+const kindOf = (line: string) => classifyLine(line.trim()).kind;
+
+/**
+ * One question's lines with its table rows moved up into the stem, before
+ * the first option or statement: models copy a table where it sits on the
+ * page (often beside the statements), but below an option the parser would
+ * read it as part of that option. A `Giải thích:` block is left alone.
+ */
+function liftTableRows(lines: string[]): string[] {
+  const first = lines.findIndex((l) =>
+    ["option", "statement"].includes(kindOf(l)),
+  );
+  if (first < 0) return lines;
+  const explanation = lines.findIndex((l) => kindOf(l) === "explanation");
+  const end = explanation < 0 ? lines.length : explanation;
+  const rows: string[] = [];
+  const rest: string[] = [];
+  lines.forEach((l, i) => {
+    const row = i > first && i < end && kindOf(l) === "text";
+    (row && TABLE_ROW.test(l) ? rows : rest).push(l);
+  });
+  if (rows.length === 0) return lines;
+  return [...rest.slice(0, first), ...rows, ...rest.slice(first)];
+}
+
 /**
  * The model's text as the editor takes it: without a wrapping code fence,
- * with Unix line ends and at most one blank line in a row.
+ * with Unix line ends and at most one blank line in a row, starting at the
+ * first question (the `ĐÁP ÁN:` line the prompt asks for first, or any
+ * preamble, is dropped), and with each table in its question's stem.
  */
 export function cleanImportText(text: string): string {
-  return text
+  const unfenced = text
     .replace(/\r\n?/g, "\n")
     .replace(/^\s*```[a-zA-Z]*[ \t]*\n/, "")
-    .replace(/\n```\s*$/, "")
+    .replace(/\n```\s*$/, "");
+  const first = unfenced.search(QUESTION_HEADER);
+  const questions: string[][] = [];
+  for (const line of (first > 0 ? unfenced.slice(first) : unfenced).split(
+    "\n",
+  )) {
+    if (kindOf(line) === "header" || questions.length === 0) questions.push([]);
+    questions.at(-1)?.push(line);
+  }
+  return questions
+    .flatMap(liftTableRows)
+    .join("\n")
     .replace(/\n{3,}/g, "\n\n")
     .trim();
 }

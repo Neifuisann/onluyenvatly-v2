@@ -99,9 +99,14 @@ describe("the prompt", () => {
   });
 
   it("has worked examples the editor parses: the first clean, the second only missing keys", () => {
-    const [clean, missing] = IMPORT_EXAMPLE_OUTPUTS.map((t) =>
-      parseLessonText(t),
+    const [clean, missing, shared] = IMPORT_EXAMPLE_OUTPUTS.map((t) =>
+      parseLessonText(cleanImportText(t)),
     );
+    // The shared passage and its table open both questions.
+    expect(shared?.issues).toEqual([]);
+    expect(shared?.questions.map((q) => q.type)).toEqual(["mcq", "short"]);
+    for (const q of shared?.questions ?? [])
+      expect(q.stem).toContain("t (s) | 20,1 | 20,0 | 19,9");
     expect(clean?.questions.map((q) => q.type)).toEqual(["mcq", "tf", "short"]);
     expect(clean?.issues).toEqual([]);
     // One error per question: the mcq has no `*`, the short answer is empty.
@@ -156,5 +161,47 @@ describe("cleanImportText", () => {
       cleanImportText("```text\r\nCâu 1: a\r\n\r\n\r\n\r\nCâu 2: b\n```\n"),
     ).toBe("Câu 1: a\n\nCâu 2: b");
     expect(cleanImportText("  Câu 1: a ")).toBe("Câu 1: a");
+  });
+
+  it("starts at the first question, dropping the answer-key line or a preamble", () => {
+    expect(
+      cleanImportText(
+        "ĐÁP ÁN: 1B; 2: a Đ\n\nDưới đây là đề:\nCâu 1: a\nA. x\n\nCÂU 2. b",
+      ),
+    ).toBe("Câu 1: a\nA. x\n\nCÂU 2. b");
+    expect(cleanImportText("```\nĐÁP ÁN: 1A\ncâu 1: a\n```")).toBe("câu 1: a");
+    // Without any question, nothing is dropped (the editor shows why).
+    expect(cleanImportText("Không đọc được đề.")).toBe("Không đọc được đề.");
+  });
+
+  it("moves a table copied below the statements into the stem", () => {
+    const text = [
+      "Câu 1: Đo áp suất theo thể tích (bảng bên).",
+      "*a) Nén khí chậm.",
+      "b) p tỉ lệ với V.",
+      "Lần đo | V (cm³) | p (bar)",
+      "1 | 22 | 1,04",
+      "",
+      "Câu 2: Tính $|q|/m$, với F = Bv|q|.",
+      "Lần đo | 1 | 2",
+      "A. 1",
+      "*B. 2",
+      "Giải thích: bảng | giữ nguyên | ở đây",
+      "",
+      "Câu 3: Không có phương án | vẫn là đề.",
+      "Answer: 3",
+    ].join("\n");
+    const clean = cleanImportText(text);
+    expect(clean.split("\n").slice(0, 5)).toEqual([
+      "Câu 1: Đo áp suất theo thể tích (bảng bên).",
+      "Lần đo | V (cm³) | p (bar)",
+      "1 | 22 | 1,04",
+      "*a) Nén khí chậm.",
+      "b) p tỉ lệ với V.",
+    ]);
+    // Already in the stem, inside an explanation, or with no options: untouched.
+    expect(clean.split("\n").slice(5)).toEqual(text.split("\n").slice(5));
+    const [q1] = parseLessonText(clean).questions;
+    expect(q1?.stem).toContain("1 | 22 | 1,04");
   });
 });

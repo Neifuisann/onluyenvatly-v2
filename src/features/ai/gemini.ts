@@ -1,17 +1,26 @@
 import "server-only";
 import type {
+  ThinkingLevel as ApiThinkingLevel,
   ContentListUnion,
   GenerateContentParameters,
   GenerateContentResponse,
 } from "@google/genai";
-import { backoffMs, errorStatus, nextStep } from "./domain/policy";
+import {
+  backoffMs,
+  errorStatus,
+  nextStep,
+  type ThinkingLevel,
+  thinkingConfigFor,
+} from "./domain/policy";
 
 /**
  * The Gemini wrapper (09 §2, S7-01). Every generation goes through here:
  * the gate (kill switch + global daily budget) is checked once per call,
  * then the configured models are tried in order, with retries and jittered
- * backoff on 429/5xx, all inside one deadline. Each call logs one line with
- * the model, token counts and duration, never the prompt or the output.
+ * backoff on 429/5xx, all inside one deadline. A model that does not start
+ * answering within `attemptTimeoutMs` is cut and treated as overloaded.
+ * Each call logs one line with the model, token counts and duration, never
+ * the prompt or the output.
  *
  * `createAi` takes its dependencies so the rules are unit-tested with a fake
  * client; `client.ts` wires the real SDK, env and database.
@@ -36,6 +45,14 @@ export type AiRequest = {
   system?: string;
   contents: ContentListUnion;
   timeoutMs: number;
+  /**
+   * Longest one model may take to start answering (first chunk), after
+   * which its request is aborted and the next model is tried (like a 503).
+   * Unset: only `timeoutMs` applies.
+   */
+  attemptTimeoutMs?: number;
+  /** Gemini 3+ only (see `thinkingConfigFor`); unset: the model's default. */
+  thinking?: ThinkingLevel;
   maxOutputTokens?: number;
   temperature?: number;
 };
@@ -117,6 +134,8 @@ const failureOf = (reason: AiFailureReason): AiFailure =>
   fail(reason === "rate_limited" ? "AI_QUOTA" : "AI_UNAVAILABLE", reason);
 
 class Timeout extends Error {}
+/** One model took longer than `attemptTimeoutMs` to start answering. */
+class Stalled extends Error {}
 
 /** One deadline for a whole call: retries, backoff and the stream itself. */
 function deadline(ms: number) {
@@ -140,6 +159,30 @@ function deadline(ms: number) {
 }
 
 type Deadline = ReturnType<typeof deadline>;
+
+/**
+ * One model's try inside the call's deadline: its request is also aborted
+ * if it has not settled within `ms`. `clear` disarms the cap once the
+ * model has started answering (or failed by itself).
+ */
+function attemptDeadline(parent: Deadline, ms: number | undefined) {
+  if (!ms) return { ...parent, clear: () => {} };
+  const controller = new AbortController();
+  let rejectStalled: (e: unknown) => void = () => {};
+  const stalled = new Promise<never>((_, reject) => {
+    rejectStalled = reject;
+  });
+  stalled.catch(() => {});
+  const timer = setTimeout(() => {
+    controller.abort();
+    rejectStalled(new Stalled());
+  }, ms);
+  return {
+    signal: AbortSignal.any([parent.signal, controller.signal]),
+    race: <T>(p: Promise<T>) => Promise.race([parent.race(p), stalled]),
+    clear: () => clearTimeout(timer),
+  };
+}
 
 const defaultLog = (entry: AiLogEntry) =>
   console.info(JSON.stringify({ evt: "ai", ...entry }));
@@ -195,22 +238,36 @@ export function createAi(deps: AiDeps) {
     let retries = 0;
     let retriesHere = 0;
     let status: number | undefined;
+    let stalled = false;
     let reason: AiFailureReason = "error";
     while (true) {
       const model = models[m] as string;
+      const tryTimer = attemptDeadline(timer, req.attemptTimeoutMs);
       try {
-        const value = await timer.race(attempt(client, model, timer));
+        const value = await tryTimer.race(attempt(client, model, tryTimer));
+        tryTimer.clear();
         return { ok: true, value, model, retries, started, timer };
       } catch (error) {
+        tryTimer.clear();
         if (error instanceof Timeout || timer.signal.aborted) {
           reason = "timeout";
           break;
         }
-        status = errorStatus(error);
+        stalled = error instanceof Stalled;
+        status = stalled ? undefined : errorStatus(error);
       }
-      const step = nextStep(status, retriesHere, m < models.length - 1);
+      // A model that never started answering is as good as overloaded.
+      const step = nextStep(
+        stalled ? 503 : status,
+        retriesHere,
+        m < models.length - 1,
+      );
       if (step === "fail") {
-        reason = status === 429 ? "rate_limited" : "error";
+        reason = stalled
+          ? "timeout"
+          : status === 429
+            ? "rate_limited"
+            : "error";
         break;
       }
       retries++;
@@ -245,6 +302,7 @@ export function createAi(deps: AiDeps) {
     model: string,
     signal: AbortSignal,
   ): GenerateContentParameters {
+    const thinkingConfig = thinkingConfigFor(model, req.thinking);
     return {
       model,
       contents: req.contents,
@@ -253,6 +311,12 @@ export function createAi(deps: AiDeps) {
         ...(req.system && { systemInstruction: req.system }),
         ...(req.maxOutputTokens && { maxOutputTokens: req.maxOutputTokens }),
         ...(req.temperature !== undefined && { temperature: req.temperature }),
+        ...(thinkingConfig && {
+          thinkingConfig: {
+            ...thinkingConfig,
+            thinkingLevel: thinkingConfig.thinkingLevel as ApiThinkingLevel,
+          },
+        }),
       },
     };
   }
