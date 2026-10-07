@@ -243,6 +243,8 @@ type QuestionBase = {
   image?: Media;
   points?: number;       // explicit points override ([2 pts] in the text format), 0–100
   explanation?: string;  // teacher-written, shown after submit
+  free?: true;           // "Tặng điểm" (B-10): every answer, blank included, gets the points
+  removed?: true;        // removed from a version attempts use (B-10): worth 0 there, never in new attempts, counts or the text
 };
 
 type McqQuestion = QuestionBase & {
@@ -311,6 +313,7 @@ Rules: `*` marks the correct option or true statement. `A.`–`F.` means MCQ, `a
 Implemented in `src/features/lessons/domain/` (`parser.ts`, `serializer.ts`, with the shared line grammar in `text-format.ts`). `parse(serialize(qs)) == qs` is property-tested. Details:
 - Header `Câu N:` (or `Câu N.` followed by a space), any case. The number is ignored and the serializer renumbers. Text before the first header is dropped with a warning.
 - Points: `[0.25 pts]`, `[1 pt]`, `[1,5 điểm]` on their own line, or at the end of the header line (a v1 habit).
+- `[Tặng điểm]` (or `[free]`) on its own line (B-10): everyone gets the question's points. A removed question (`removed: true`) is never written to the text.
 - Short answers: `Answer: 0,63` is stored canonically as `"0.63"`. `Answer: 1.5 ± 0.05` (or `+-`) sets an absolute tolerance.
 - Images: a line `![alt](media:2026/09/x.webp =640x360)` (size optional) sets the image of the stem, or of the MCQ option just above it. One image per element; true/false statements take none. A stem may be only an image (`Câu 1:` followed by the image line); such questions keep their id across edits by image path. More images can sit inline in the text.
 - `Giải thích:` runs until the next `Câu N:` and keeps blank lines.
@@ -319,6 +322,17 @@ Implemented in `src/features/lessons/domain/` (`parser.ts`, `serializer.ts`, wit
 - Question ids: the text carries none. Parsing with the lesson's previous questions reuses ids by stem (ignoring case, spacing and accents), then by position and type. New questions get `q_` + 8 random characters.
 - v1 → v2 normalization (10 §4) lives in `legacy.ts`. It is tested against synthetic v1-shaped lessons in `tests/fixtures/v1-sample/` and, once exported (S0-05), the real fixtures in `tests/fixtures/v1/`.
 
+### 3.4 Corrections to a published version (B-10)
+A published version is normally immutable: an attempt is graded against the content it started on. The one exception is a **correction** from `/admin/lessons/[id]/questions`, Azota's "Chấm lại điểm": a wrong key, points, a question given free or removed, or one question's text. `correctLesson` (`lessons/correction-service.ts`) applies it to the CURRENT version in place and regrades in one transaction:
+- the lesson row, then the version row, are locked. A correction is refused while a draft exists (publishing it would undo the fix), for an archived lesson, and when it changes a question's shape (type, option or statement count), since stored answers and option orders index into it;
+- `lesson_versions.questions` gets the corrected questions and `source_text` is regenerated with `serializeLesson`; `lessons.question_count`/`type_counts` are recomputed without removed questions;
+- every attempt on that version holding a changed question is locked (id order) and rewritten by the pure `regradeAttempt` (`grading/domain/regrade.ts`): only the changed items are graded again (stored marks of the others are kept, migrated v1 marks included); their points become the question's own when they count (`pointsEditable`: per-question mode, or a type without a total) and 0 when removed; `max_score`, `score` and `score10` follow. Attempts in progress get their items re-priced and are graded at submit. Rows that would not change are not written;
+- a removed question leaves the mistakes bank (`mistakes` of that version and question id);
+- students whose rated score moved get their rating replayed from their events with the new performance (`replayWithPerformance`), the `ratings` rows locked after the attempts, the submit's order; v1-legacy events keep their delta;
+- audit `lesson.correct` `{ versionId, kinds, questions, regraded, rated }`.
+
+Older versions' attempts keep their own content. A submit racing a correction may grade with the content it had already loaded; the next correction (or none) leaves it as graded.
+
 ## 4. Grading rules (pure function `grade()`)
 Implemented in `src/features/grading/domain/` (`grade.ts`, `points.ts`, `short-answer.ts`); items are built in `src/features/attempts/domain/build-items.ts`. All money-style: marks are rounded half up to cents and sums are done in integer cents.
 - **mcq:** full points if `answer === selectedOriginalIndex`, else 0. The client submits the *displayed* letter; the server maps it back through the stored option order. A letter outside the options or any other value scores 0.
@@ -326,6 +340,7 @@ Implemented in `src/features/grading/domain/` (`grade.ts`, `points.ts`, `short-a
 - **short:** normalize both sides (trim, `,`→`.`, remove spaces and a trailing `.`), parse as a number. Correct if `|a − b| ≤ tolerance` (default 0). Numbers are compared exactly up to floating-point noise: `"1,5" = "1.5" = " 1.50 "`, but an unrounded `0.628` is not `0.63`, as on the THPT answer sheet. If either side isn't a number, compare the normalized strings, ignoring case. Empty → 0.
 - **Points plan:** `per-question` uses `q.points ?? 1`. `per-type-total` splits each type's total across the selected questions of that type, in display order, with the v1 remainder-cent algorithm (1.00 over 3 → 0.34, 0.33, 0.33), so the sum is exact. A type without a total falls back to per-question points. The plan is fixed into `items[].p` at start.
 - **Selection and order (seeded per attempt):** the pool picks `poolTypeCounts` questions of each type at random and keeps the teacher's order. `shuffleQuestions` shuffles within each type and groups mcq → tf → short (v1 behaviour, the THPT layout). `shuffleOptions` stores a random option order for each mcq item.
+- **Tặng điểm (B-10):** a question with `free: true` gives full points to every item, blank answers included.
 - Each item's outcome is `correct` (full marks), `partial` (tf only), `wrong` or `blank`.
 - `score10 = round2(score / max_score × 10)`.
 

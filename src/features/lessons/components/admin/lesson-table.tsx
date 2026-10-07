@@ -9,6 +9,7 @@ import {
   ChartColumn,
   Copy,
   GripVertical,
+  PenLine,
   Trash2,
 } from "lucide-react";
 import Link from "next/link";
@@ -34,6 +35,7 @@ import {
 } from "../../admin-actions";
 import {
   type AdminSort,
+  editHref,
   moveItem,
   type SortDir,
   withPageOrder,
@@ -52,6 +54,7 @@ export type LessonTableRow = {
   questionCount: number;
   attemptCount: number;
   hasDraft: boolean;
+  hasPublished: boolean;
   /** Pre-formatted on the server (`dd/mm/yyyy hh:mm`). */
   created: string;
   updated: string;
@@ -317,7 +320,13 @@ export function LessonTable({
                     />
                     <div className="min-w-0 flex-1 space-y-1">
                       <Link
-                        href={`/admin/lessons/${row.id}/edit`}
+                        // Who took it (B-10); a never-published lesson has
+                        // no attempts, so its title opens the editor.
+                        href={
+                          row.hasPublished
+                            ? `/admin/lessons/${row.id}/results`
+                            : `/admin/lessons/${row.id}/edit`
+                        }
                         prefetch={false}
                         className="line-clamp-2 break-words font-display font-semibold text-[0.9375rem] text-foreground leading-snug tracking-[-0.01em] hover:text-primary hover:underline"
                       >
@@ -375,6 +384,15 @@ export function LessonTable({
                       className={iconButtonClass}
                     >
                       <ChartColumn aria-hidden />
+                    </Link>
+                    <Link
+                      href={editHref(row.id, row.hasPublished)}
+                      prefetch={false}
+                      aria-label={`${t.edit}: ${row.title}`}
+                      title={`${t.edit}: ${row.title}`}
+                      className={iconButtonClass}
+                    >
+                      <PenLine aria-hidden />
                     </Link>
                     <IconButton
                       label={`${t.duplicate}: ${row.title}`}

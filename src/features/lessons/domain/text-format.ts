@@ -14,6 +14,7 @@ export type LineKind =
   | { kind: "statement"; correct: boolean; letter: string; rest: string }
   | { kind: "answer"; rest: string }
   | { kind: "points"; raw: string }
+  | { kind: "free" }
   | { kind: "explanation"; rest: string }
   | {
       kind: "image";
@@ -33,6 +34,8 @@ const POINTS = /^\[\s*(\d+(?:[.,]\d+)?)\s*(?:pts?|điểm|đ)\s*\]$/iu;
 /** A points marker at the end of a `Câu N:` line (v1 put them there). */
 export const TRAILING_POINTS =
   /\s*\[\s*(\d+(?:[.,]\d+)?)\s*(?:pts?|điểm|đ)\s*\]$/iu;
+/** Everyone gets the points (B-10). */
+const FREE = /^\[\s*(?:tặng điểm|free)\s*\]$/iu;
 const EXPLANATION = /^giải thích\s*:\s*(.*)$/iu;
 const IMAGE =
   /^!\[([^\]\n]*)\]\(media:([A-Za-z0-9][A-Za-z0-9/_.-]*)(?:\s+=(\d+)x(\d+))?\)$/u;
@@ -61,6 +64,7 @@ export function classifyLine(line: string): LineKind {
   if (m) return { kind: "answer", rest: m[1] ?? "" };
   m = POINTS.exec(line);
   if (m) return { kind: "points", raw: m[1] ?? "" };
+  if (FREE.test(line)) return { kind: "free" };
   m = EXPLANATION.exec(line);
   if (m) return { kind: "explanation", rest: m[1] ?? "" };
   m = IMAGE.exec(line);

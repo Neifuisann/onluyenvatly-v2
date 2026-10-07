@@ -80,7 +80,13 @@ test("journey 7: publish a new version; the old attempt keeps the old one", asyn
   await editor.goto(
     `/admin/lessons?q=${encodeURIComponent(`xuat ban (${p})`)}`,
   );
-  await editor.getByRole("link", { name: title, exact: true }).click();
+  // A published lesson opens as its questions (B-10); the text editor is
+  // one more click.
+  await editor
+    .getByRole("link", { name: `Sửa: ${title}`, exact: true })
+    .click();
+  await expect(editor).toHaveURL(/\/admin\/lessons\/\d+\/questions$/);
+  await editor.getByRole("link", { name: "Soạn lại toàn bài" }).click();
   await expect(editor).toHaveURL(/\/admin\/lessons\/\d+\/edit$/);
   const phone = (editor.viewportSize()?.width ?? 0) < 1024;
   const cm = editor.locator(".cm-content");

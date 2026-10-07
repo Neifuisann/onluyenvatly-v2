@@ -12,7 +12,7 @@ import {
   ScoreHistogram,
   StatsSummary,
 } from "@/features/lessons/components/stats/stats-summary";
-import { LessonIdSchema } from "@/features/lessons/domain/admin-list";
+import { editHref, LessonIdSchema } from "@/features/lessons/domain/admin-list";
 import {
   chooseStatsVersion,
   parseStatsParams,
@@ -60,7 +60,10 @@ export default async function LessonStatsPage({
   return (
     <div className="mx-auto flex max-w-4xl flex-col gap-6">
       <PageHeader
-        back={{ href: `/admin/lessons/${lesson.id}/edit`, label: t.back }}
+        back={{
+          href: editHref(lesson.id, lesson.current !== null),
+          label: t.back,
+        }}
         title={t.title(lesson.title)}
         lead={t.lead}
       />

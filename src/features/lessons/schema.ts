@@ -62,6 +62,14 @@ const base = {
   points: z.number().min(0).max(100).optional(),
   /** Teacher-written, shown only after submit. */
   explanation: z.string().max(20_000).optional(),
+  /** Everyone gets the question's points, whatever they answered (`[Tặng điểm]`). */
+  free: z.literal(true).optional(),
+  /**
+   * Removed from a published version that attempts use (B-10): kept so those
+   * attempts still find it (worth 0 there), but never in a new attempt, the
+   * counts or the editor text.
+   */
+  removed: z.literal(true).optional(),
 };
 
 /** A question needs stem text, an image, or both (like an MCQ option). */

@@ -17,6 +17,11 @@ const ADMIN_PAGES = [
   "/admin/lessons/1/edit",
   "/admin/lessons/1/stats",
   "/admin/lessons/1/stats?version=1&sort=hardest",
+  // The teacher's lesson view (B-10).
+  "/admin/lessons/1/results",
+  `/admin/lessons/1/results/${UUID}`,
+  "/admin/lessons/1/questions",
+  "/admin/lessons/1/questions/q_1",
   "/admin/students",
   `/admin/students/${UUID}`,
   "/admin/settings",

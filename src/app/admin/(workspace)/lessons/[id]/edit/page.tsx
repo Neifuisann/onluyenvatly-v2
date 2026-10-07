@@ -25,7 +25,8 @@ export default async function EditLessonPage({
   const previous = Array.isArray(lesson.questions)
     ? lesson.questions.flatMap((q) => {
         const parsed = QuestionSchema.safeParse(q);
-        return parsed.success ? [parsed.data] : [];
+        // A removed question (B-10) is not in the text: no id to lend.
+        return parsed.success && !parsed.data.removed ? [parsed.data] : [];
       })
     : [];
   return (

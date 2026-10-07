@@ -5,7 +5,11 @@
 import type { AttemptItem } from "../../../db/schema.ts";
 import { pointsPlan } from "../../grading/domain/points.ts";
 import { identityOrder } from "../../lessons/domain/public-question.ts";
-import { countByType, poolTypeCounts } from "../../lessons/domain/summary.ts";
+import {
+  countByType,
+  liveQuestions,
+  poolTypeCounts,
+} from "../../lessons/domain/summary.ts";
 import {
   type LessonConfig,
   QUESTION_TYPES,
@@ -61,7 +65,8 @@ export function buildItems(
   rng: Rng,
 ): AttemptItem[] {
   const ordered = orderQuestions(
-    selectQuestions(questions, config.pool, rng),
+    // Removed questions (B-10) stay only for the attempts that have them.
+    selectQuestions(liveQuestions(questions), config.pool, rng),
     config.shuffleQuestions,
     rng,
   );

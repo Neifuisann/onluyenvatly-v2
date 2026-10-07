@@ -393,6 +393,9 @@ export const attempts = pgTable(
     index("attempts_submitted_idx")
       .on(t.submittedAt.desc())
       .where(sql`${t.status} = 'submitted'`),
+    // A version's attempts, every status: the regrade after a correction
+    // (B-10) and publish's "does an attempt still use it" check.
+    index("attempts_lesson_version_idx").on(t.lessonVersionId),
     index("attempts_expiry_idx")
       .on(t.status, t.deadlineAt)
       .where(sql`${t.status} = 'in_progress'`),

@@ -68,7 +68,10 @@ export async function startReviewPractice(
     const question = versions
       .get(p.versionId)
       ?.find((q) => q.id === p.questionId);
-    return question ? [{ question, versionId: p.versionId }] : [];
+    // A question removed from its version (B-10) is not practised.
+    return question && !question.removed
+      ? [{ question, versionId: p.versionId }]
+      : [];
   });
   if (chosen.length === 0) return err("NOT_FOUND", { message: t.nothing });
 

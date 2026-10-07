@@ -60,6 +60,8 @@ export function gradeItem(
   tfScoring: TfScoring,
 ): ItemMark {
   const max = item.p;
+  // "Tặng điểm" (B-10): full marks for everyone, a blank answer included.
+  if (q.free) return mark(max, 1);
   if (isBlank(answer)) return mark(max, 0, true);
   switch (q.type) {
     case "mcq":

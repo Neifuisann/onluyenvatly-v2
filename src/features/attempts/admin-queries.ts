@@ -3,6 +3,7 @@ import { and, asc, desc, eq, gte, lt, type SQL, sql } from "drizzle-orm";
 import { db } from "@/db/client";
 import { attempts, lessons, users } from "@/db/schema";
 import type { ResultCsvRow } from "./domain/csv";
+import type { LessonStudent } from "./domain/lesson-results";
 import {
   EXPORT_LIMIT,
   nameTerms,
@@ -134,4 +135,104 @@ export async function getResultLessons(): Promise<ResultLessonOption[]> {
     })
     .from(lessons)
     .orderBy(asc(lessons.sortOrder), asc(lessons.id));
+}
+
+/** A class is far below this; it bounds the grouped read. */
+export const LESSON_STUDENTS_LIMIT = 1000;
+
+/**
+ * `/admin/lessons/[id]/results`: one row per student who submitted the
+ * lesson, with their try count, latest and best score. One grouped read
+ * through `attempts_lesson_submitted_idx`; students only, as the results list.
+ */
+export async function getLessonStudents(
+  lessonId: number,
+): Promise<LessonStudent[]> {
+  const latest = sql`${attempts.submittedAt} desc nulls last, ${attempts.id} desc`;
+  return db
+    .select({
+      userId: attempts.userId,
+      fullName: users.fullName,
+      className: users.className,
+      grade: users.grade,
+      attempts: sql<number>`count(*)::int`,
+      latestScore10: sql<
+        number | null
+      >`((array_agg(${attempts.score10} order by ${latest}))[1])::float8`,
+      bestScore10: sql<number | null>`max(${attempts.score10})::float8`,
+      latestTimeTakenSec: sql<
+        number | null
+      >`(array_agg(${attempts.timeTakenSec} order by ${latest}))[1]`,
+      latestSubmittedAt: sql<Date | null>`max(${attempts.submittedAt})`.mapWith(
+        attempts.submittedAt,
+      ),
+    })
+    .from(attempts)
+    .innerJoin(users, eq(users.id, attempts.userId))
+    .where(
+      and(
+        eq(attempts.lessonId, lessonId),
+        eq(attempts.status, "submitted"),
+        eq(users.role, "student"),
+      ),
+    )
+    .groupBy(attempts.userId, users.fullName, users.className, users.grade)
+    .limit(LESSON_STUDENTS_LIMIT);
+}
+
+export type LessonStudentAttempt = {
+  id: string;
+  status: "in_progress" | "submitted" | "expired";
+  score: number | null;
+  maxScore: number;
+  score10: number | null;
+  timeTakenSec: number | null;
+  startedAt: Date;
+  submittedAt: Date | null;
+  guardCount: number;
+};
+
+/**
+ * `/admin/lessons/[id]/results/[userId]`: the student and every try of the
+ * lesson, oldest first (try 1, 2, …). Null when the student doesn't exist.
+ */
+export async function getLessonStudentAttempts(
+  lessonId: number,
+  userId: string,
+): Promise<{
+  student: {
+    id: string;
+    fullName: string;
+    className: string | null;
+    grade: number | null;
+  };
+  attempts: LessonStudentAttempt[];
+} | null> {
+  const [student] = await db
+    .select({
+      id: users.id,
+      fullName: users.fullName,
+      className: users.className,
+      grade: users.grade,
+    })
+    .from(users)
+    .where(eq(users.id, userId))
+    .limit(1);
+  if (!student) return null;
+  const rows = await db
+    .select({
+      id: attempts.id,
+      status: attempts.status,
+      score: attempts.score,
+      maxScore: attempts.maxScore,
+      score10: attempts.score10,
+      timeTakenSec: attempts.timeTakenSec,
+      startedAt: attempts.startedAt,
+      submittedAt: attempts.submittedAt,
+      guardCount: sql<number>`jsonb_array_length(${attempts.guardEvents})::int`,
+    })
+    .from(attempts)
+    .where(and(eq(attempts.userId, userId), eq(attempts.lessonId, lessonId)))
+    .orderBy(asc(attempts.startedAt), asc(attempts.id));
+  return { student, attempts: rows };
 }
