@@ -1,7 +1,7 @@
 import "server-only";
 import { and, asc, desc, eq, isNull, sql } from "drizzle-orm";
 import { db } from "@/db/client";
-import { lessons, lessonVersions } from "@/db/schema";
+import { attempts, lessons, lessonVersions } from "@/db/schema";
 import type { AdminListFilters } from "./domain/admin-list";
 import { searchTerms } from "./domain/catalog";
 import type { ComposeSource } from "./domain/compose";
@@ -21,6 +21,8 @@ export type AdminLessonRow = {
   questionCount: number;
   attemptCount: number;
   hasDraft: boolean;
+  /** A version is published ("Sửa" opens its questions, B-10). */
+  hasPublished: boolean;
   createdAt: Date;
   updatedAt: Date;
 };
@@ -44,6 +46,7 @@ export async function getAdminLessons(
       questionCount: lessons.questionCount,
       attemptCount: lessons.attemptCount,
       hasDraft: sql<boolean>`${lessons.draftVersionId} is not null`,
+      hasPublished: sql<boolean>`${lessons.currentVersionId} is not null`,
       createdAt: lessons.createdAt,
       updatedAt: lessons.updatedAt,
     })
@@ -121,9 +124,48 @@ export async function getLessonForEditing(
   };
 }
 
-/** Questions of one type in a version's jsonb, counted by Postgres. */
+/**
+ * `/admin/lessons/[id]/questions` (B-10): the CURRENT version as the teacher
+ * corrects it, and how many submitted attempts a correction would regrade.
+ * Includes answers: admin only. Null without a published version.
+ */
+export async function getLessonForCorrection(id: number) {
+  const [row] = await db
+    .select({
+      id: lessons.id,
+      title: lessons.title,
+      status: lessons.status,
+      config: lessons.config,
+      versionId: lessons.currentVersionId,
+      version: lessonVersions.version,
+      questions: lessonVersions.questions,
+      hasDraft: sql<boolean>`${lessons.draftVersionId} is not null`,
+    })
+    .from(lessons)
+    .innerJoin(lessonVersions, eq(lessonVersions.id, lessons.currentVersionId))
+    .where(and(eq(lessons.id, id), isNull(lessons.deletedAt)))
+    .limit(1);
+  if (!row?.versionId) return null;
+  // `attempts_lesson_submitted_idx`, then the version filter.
+  const [count] = await db
+    .select({ n: sql<number>`count(*)::int` })
+    .from(attempts)
+    .where(
+      and(
+        eq(attempts.lessonId, id),
+        eq(attempts.status, "submitted"),
+        eq(attempts.lessonVersionId, row.versionId),
+      ),
+    );
+  return { ...row, versionId: row.versionId, submitted: count?.n ?? 0 };
+}
+
+/**
+ * Questions of one type in a version's jsonb, counted by Postgres. Removed
+ * questions (B-10) don't count: compose never draws them.
+ */
 const countType = (type: QuestionType) =>
-  sql<number>`(select count(*)::int from jsonb_array_elements(case when jsonb_typeof(${lessonVersions.questions}) = 'array' then ${lessonVersions.questions} else '[]'::jsonb end) as q where q->>'type' = ${type})`;
+  sql<number>`(select count(*)::int from jsonb_array_elements(case when jsonb_typeof(${lessonVersions.questions}) = 'array' then ${lessonVersions.questions} else '[]'::jsonb end) as q where q->>'type' = ${type} and not q ? 'removed')`;
 
 /**
  * "Tạo từ bài có sẵn" (S5-07): every lesson with questions to draw from,

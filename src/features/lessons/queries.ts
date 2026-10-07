@@ -11,7 +11,7 @@ import {
   toPublicQuestion,
 } from "./domain/public-question";
 import { previewQuestions, sharesQuestions } from "./domain/share";
-import type { TypeCounts } from "./domain/summary";
+import { liveQuestions, type TypeCounts } from "./domain/summary";
 import type { LessonConfig, Question } from "./schema";
 
 /** What a lesson card needs, and nothing else (no questions, no config). */
@@ -278,9 +278,9 @@ export async function getSharePreview(id: number) {
         and(eq(lessonVersions.id, versionId), eq(lessonVersions.lessonId, id)),
       )
       .limit(1);
-    questions = previewQuestions((row?.questions ?? []) as Question[]).map(
-      (q) => toPublicQuestion(q),
-    );
+    questions = previewQuestions(
+      liveQuestions((row?.questions ?? []) as Question[]),
+    ).map((q) => toPublicQuestion(q));
   }
   return { ...meta, questions };
 }

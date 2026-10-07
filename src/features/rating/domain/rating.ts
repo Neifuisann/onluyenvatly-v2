@@ -171,6 +171,49 @@ export function replayWithout(
   return { state, changed };
 }
 
+export type RescoredEvent = RewrittenEvent & { performance: number | null };
+
+/**
+ * A regrade (B-10) changed some attempts' scores: replays the student's
+ * events in order, from where their history started, with the new
+ * performance of those events. Returns the new state and only the events
+ * whose performance or `before/delta/after` change.
+ */
+export function replayWithPerformance(
+  events: readonly StoredRatingEvent[],
+  performances: ReadonlyMap<number, number>,
+): { state: RatingState; changed: RescoredEvent[] } {
+  const start = events[0]?.before ?? START_RATING;
+  const updated = events.map((e) => ({
+    ...e,
+    performance: performances.get(e.id) ?? e.performance,
+  }));
+  const { state, steps } = replayRatings(updated, {
+    rating: start,
+    peak: start,
+    rated: 0,
+  });
+  const changed = steps.flatMap((s, i): RescoredEvent[] => {
+    const e = updated[i] as StoredRatingEvent;
+    const old = events[i] as StoredRatingEvent;
+    return s.before === old.before &&
+      s.delta === old.delta &&
+      s.after === old.after &&
+      e.performance === old.performance
+      ? []
+      : [
+          {
+            id: e.id,
+            before: s.before,
+            delta: s.delta,
+            after: s.after,
+            performance: e.performance,
+          },
+        ];
+  });
+  return { state, changed };
+}
+
 export const TIERS = [
   { id: "master", min: 2000 },
   { id: "diamond", min: 1800 },

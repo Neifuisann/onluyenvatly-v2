@@ -1,0 +1,1 @@
+CREATE INDEX "attempts_lesson_version_idx" ON "attempts" USING btree ("lesson_version_id");

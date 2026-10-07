@@ -31,11 +31,13 @@ import {
   saveDraft as saveDraftService,
   unpublishLesson,
 } from "./content-service";
+import { type CorrectionOutcome, correctLesson } from "./correction-service";
 import { LessonIdSchema, ReorderSchema } from "./domain/admin-list";
 import { ComposeSchema } from "./domain/compose";
 import { SourceTextSchema } from "./domain/content";
+import { parseSingleQuestion } from "./domain/corrections";
 import { SettingsFormSchema } from "./domain/settings-form";
-import { MediaPathSchema } from "./schema";
+import { MAX_QUESTIONS, MediaPathSchema, QuestionIdSchema } from "./schema";
 
 /**
  * Admin lesson actions (05 §2). Every one: `requireAdmin()` first, Zod, the
@@ -312,4 +314,101 @@ export async function suggestTags(
   if (!parsed.success) return err("VALIDATION");
   if (!(await helperLimit(user.id)).ok) return err("RATE_LIMITED");
   return suggestTagsService(parsed.data);
+}
+
+const CorrectionInputSchema = z.discriminatedUnion("kind", [
+  z.strictObject({
+    kind: z.literal("mcq-answer"),
+    questionId: QuestionIdSchema,
+    answer: z.number().int().min(0).max(5),
+  }),
+  z.strictObject({
+    kind: z.literal("tf-answer"),
+    questionId: QuestionIdSchema,
+    answers: z.array(z.boolean()).min(2).max(8),
+  }),
+  z.strictObject({
+    kind: z.literal("short-answer"),
+    questionId: QuestionIdSchema,
+    answer: z.string().max(100),
+  }),
+  z.strictObject({
+    kind: z.literal("points"),
+    questionId: QuestionIdSchema,
+    points: z.number().min(0).max(100),
+  }),
+  z.strictObject({
+    kind: z.literal("free"),
+    questionId: QuestionIdSchema,
+    free: z.boolean(),
+  }),
+  z.strictObject({ kind: z.literal("remove"), questionId: QuestionIdSchema }),
+]);
+
+const CorrectSchema = z.strictObject({
+  id: LessonIdSchema,
+  corrections: z
+    .array(CorrectionInputSchema)
+    .min(1)
+    .max(MAX_QUESTIONS * 4),
+});
+
+/** Everything a correction can change: content, counts, scores, ratings. */
+function invalidateCorrection(id: number, rated: boolean) {
+  invalidateLesson(id);
+  updateTag(tags.lessonPublic(id));
+  updateTag(tags.lessonAnswers(id));
+  updateTag(tags.lessonStats(id));
+  updateTag(tags.adminOverview);
+  if (rated) updateTag(tags.leaderboard);
+}
+
+/**
+ * "Lưu" on `/admin/lessons/[id]/questions` (B-10): keys, points, free and
+ * removed questions, applied to the published version in place, then every
+ * attempt on it is regraded in the same transaction.
+ */
+export async function correctQuestions(
+  input: unknown,
+): Promise<Result<CorrectionOutcome>> {
+  const user = await requireAdmin();
+  const parsed = CorrectSchema.safeParse(input);
+  if (!parsed.success) return err("VALIDATION");
+  const result = await correctLesson(
+    user,
+    parsed.data.id,
+    parsed.data.corrections,
+  );
+  if (result.ok) {
+    invalidateCorrection(parsed.data.id, result.data.rated);
+    refresh();
+  }
+  return result;
+}
+
+const QuestionTextSchema = z.strictObject({
+  id: LessonIdSchema,
+  questionId: QuestionIdSchema,
+  sourceText: z.string().max(50_000),
+});
+
+/**
+ * "Lưu" in the one-question editor (B-10): the text must hold that one
+ * question, of the same shape; it replaces the published one and the
+ * attempts are regraded. The client then goes back to the questions page.
+ */
+export async function saveQuestionText(
+  input: unknown,
+): Promise<Result<CorrectionOutcome>> {
+  const user = await requireAdmin();
+  const parsed = QuestionTextSchema.safeParse(input);
+  if (!parsed.success) return err("VALIDATION");
+  const { id, questionId, sourceText } = parsed.data;
+  const question = parseSingleQuestion(sourceText, questionId);
+  if (!question.ok) return err("VALIDATION", { message: question.message });
+  const result = await correctLesson(user, id, [
+    { kind: "content", question: question.question },
+  ]);
+  if (result.ok) invalidateCorrection(id, result.data.rated);
+  return result;
 }

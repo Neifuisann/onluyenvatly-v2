@@ -9,6 +9,7 @@ import {
   gradeItem,
   isBlank,
 } from "@/features/grading/domain/grade";
+import { liveQuestions } from "@/features/lessons/domain/summary";
 import { getLessonWithAnswers } from "@/features/lessons/queries";
 import {
   LessonConfigSchema,
@@ -112,7 +113,7 @@ export async function createGame(
   const candidates: BankCandidate[] = [];
   for (const lesson of chosen) {
     const questions = await getLessonWithAnswers(lesson.id, lesson.versionId);
-    for (const question of questions ?? [])
+    for (const question of liveQuestions(questions ?? []))
       candidates.push({
         lessonId: lesson.id,
         versionId: lesson.versionId,

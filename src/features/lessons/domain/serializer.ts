@@ -57,6 +57,7 @@ export function serializeQuestion(q: Question, index: number): string {
   }
 
   if (q.points !== undefined) lines.push(`[${formatNumber(q.points)} pts]`);
+  if (q.free) lines.push("[Tặng điểm]");
   if (q.explanation) {
     const [first = "", ...rest] = q.explanation.split("\n");
     lines.push(
@@ -67,6 +68,10 @@ export function serializeQuestion(q: Question, index: number): string {
   return lines.join("\n");
 }
 
+/** Removed questions (B-10) stay in the stored JSON only, never in the text. */
 export function serializeLesson(questions: readonly Question[]): string {
-  return questions.map(serializeQuestion).join("\n\n");
+  return questions
+    .filter((q) => !q.removed)
+    .map(serializeQuestion)
+    .join("\n\n");
 }

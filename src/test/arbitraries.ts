@@ -74,6 +74,7 @@ const baseFields = {
   image: mediaArb,
   points: pointsArb,
   explanation: textArb,
+  free: fc.constant(true as const),
 };
 
 /** Mostly stems with text; sometimes an image-only stem (v1 had those). */

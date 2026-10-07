@@ -181,8 +181,9 @@ test("the editor links to the stats; accessible in light and dark, fits 360 px",
   page,
 }) => {
   await openStats(page);
+  // A lesson with a published version opens as its questions (B-10).
   await page.getByRole("link", { name: "Sửa bài" }).click();
-  await expect(page).toHaveURL(/\/edit$/);
+  await expect(page).toHaveURL(/\/admin\/lessons\/\d+\/questions$/);
   await page.getByRole("link", { name: "Thống kê", exact: true }).click();
   await expect(page).toHaveURL(/\/admin\/lessons\/\d+\/stats$/);
   await expect(tile(page, "Lượt nộp")).toHaveText("5");

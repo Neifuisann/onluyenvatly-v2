@@ -10,6 +10,7 @@ import {
   ratingDelta,
   replayRatings,
   replayWithout,
+  replayWithPerformance,
   tierOf,
   timeBonusV1,
   timeBonusV2,
@@ -264,5 +265,47 @@ describe("tiers", () => {
     [0, "bronze"],
   ] as const)("%i → %s", (rating, tier) => {
     expect(tierOf(rating)).toBe(tier);
+  });
+});
+
+describe("replayWithPerformance (regrade, B-10)", () => {
+  const inputs = [
+    { performance: 1, timeBonus: 1 },
+    { performance: 0.286, timeBonus: 0.842 },
+    { performance: 0, timeBonus: 0.5 },
+  ];
+  function stored(list: typeof inputs) {
+    let state = INITIAL_RATING;
+    return list.map((a, i) => {
+      const s = applyRating(state, a.performance, a.timeBonus);
+      state = s.state;
+      return { id: i + 1, formula: "v2", ...a, ...s };
+    });
+  }
+
+  it("equals the history the student would have had with the new score", () => {
+    const events = stored(inputs);
+    const { state, changed } = replayWithPerformance(
+      events,
+      new Map([[2, 0.9]]),
+    );
+    const fresh = stored([
+      inputs[0],
+      { performance: 0.9, timeBonus: 0.842 },
+      inputs[2],
+    ] as typeof inputs);
+    expect(state).toEqual(fresh.at(-1)?.state);
+    expect(changed.map((c) => c.id)).toEqual([2, 3]);
+    expect(changed[0]).toMatchObject({
+      performance: 0.9,
+      delta: fresh[1]?.delta,
+    });
+  });
+
+  it("changes nothing for the same performance", () => {
+    const events = stored(inputs);
+    expect(replayWithPerformance(events, new Map([[3, 0]])).changed).toEqual(
+      [],
+    );
   });
 });

@@ -441,6 +441,7 @@ Pilot data note: the final migration upserts only rows with `legacy_id`. Attempt
 | B-07 | Light gamification (daily streak, weekly goal) with no new quotas | — |
 | B-08 | Offline-first runner via service worker (download a test before a class with bad Wi-Fi) | — |
 | B-09 | AI quality check of lessons | AI6 |
+| B-10 | **Teacher's lesson view** (owner's request 2026-10-07, after Azota): lesson → students → each try; a published lesson opens as its questions, where the teacher fixes a key, points, gives a question free or removes it, and the attempts are regraded; "Sửa nội dung" edits one question's text | owner |
 
 **B-05 implementation status (2026-10-06, branch `feat/B-05-game-rooms`).** Built and verified locally against PGlite. It covers the teacher’s create form, the projector (PIN, link, QR, lobby, live ticker-tape track, podium, the class’s hardest questions, “Chơi lại”) and the student flow on `/play/[pin]` (racer, lobby, server-timed race, feedback with live standings, finish line, podium). Two tables (migration `0015`). Answers are idempotent per question. The room auto-finishes. Publish and the daily cron keep versions a room uses, and the cron closes abandoned rooms and deletes month-old ones.
 - **Tests:** unit and PGlite integration tests (`games/domain` at the 95 % gate; `games/service.test.ts`: eligibility, PIN clashes, joins, start/end, scoring, streaks, timeouts, parallel duplicate answers, auto-finish, removal, polls).

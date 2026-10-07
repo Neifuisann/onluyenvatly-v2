@@ -12,9 +12,16 @@ import {
 
 export type TypeCounts = Record<QuestionType, number>;
 
+/** The questions a new attempt can get: all but the removed ones (B-10). */
+export function liveQuestions<Q extends Pick<Question, "removed">>(
+  questions: readonly Q[],
+): Q[] {
+  return questions.filter((q) => !q.removed);
+}
+
 export function countByType(questions: readonly Question[]): TypeCounts {
   const counts: TypeCounts = { mcq: 0, tf: 0, short: 0 };
-  for (const q of questions) counts[q.type] += 1;
+  for (const q of liveQuestions(questions)) counts[q.type] += 1;
   return counts;
 }
 
