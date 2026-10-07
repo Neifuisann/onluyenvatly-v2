@@ -315,11 +315,28 @@ function liftTableRows(lines: string[]): string[] {
   return [...rest.slice(0, first), ...rows, ...rest.slice(first)];
 }
 
+const isQuestionPart = (line: string) =>
+  ["option", "statement", "answer"].includes(kindOf(line));
+
+/**
+ * Text before the first `Câu N:`: paragraphs without options, statements or
+ * an `Answer:` line (the `ĐÁP ÁN:` line the prompt asks for first, a
+ * preamble) are dropped; a paragraph that is a question whose header the
+ * model left out gets one, so the question is kept.
+ */
+function rescuePreamble(preamble: string): string {
+  return preamble
+    .split(/\n[ \t]*\n/)
+    .filter((p) => p.split("\n").some(isQuestionPart))
+    .map((p) => `Câu 1: ${p.trim()}\n\n`)
+    .join("");
+}
+
 /**
  * The model's text as the editor takes it: without a wrapping code fence,
  * with Unix line ends and at most one blank line in a row, starting at the
- * first question (the `ĐÁP ÁN:` line the prompt asks for first, or any
- * preamble, is dropped), and with each table in its question's stem.
+ * first question (see `rescuePreamble`), and with each table in its
+ * question's stem.
  */
 export function cleanImportText(text: string): string {
   const unfenced = text
@@ -327,10 +344,12 @@ export function cleanImportText(text: string): string {
     .replace(/^\s*```[a-zA-Z]*[ \t]*\n/, "")
     .replace(/\n```\s*$/, "");
   const first = unfenced.search(QUESTION_HEADER);
+  const body =
+    first > 0
+      ? rescuePreamble(unfenced.slice(0, first)) + unfenced.slice(first)
+      : unfenced;
   const questions: string[][] = [];
-  for (const line of (first > 0 ? unfenced.slice(first) : unfenced).split(
-    "\n",
-  )) {
+  for (const line of body.split("\n")) {
     if (kindOf(line) === "header" || questions.length === 0) questions.push([]);
     questions.at(-1)?.push(line);
   }

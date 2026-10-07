@@ -170,6 +170,14 @@ describe("cleanImportText", () => {
       ),
     ).toBe("Câu 1: a\nA. x\n\nCÂU 2. b");
     expect(cleanImportText("```\nĐÁP ÁN: 1A\ncâu 1: a\n```")).toBe("câu 1: a");
+    // A first question whose header the model left out is kept.
+    expect(
+      cleanImportText(
+        "ĐÁP ÁN: 1A\n\nMột vật có k = 50 N/m. Chu kì là\nA. 1 s\nB. 2 s\n\nCâu 2: b\nAnswer:",
+      ),
+    ).toBe(
+      "Câu 1: Một vật có k = 50 N/m. Chu kì là\nA. 1 s\nB. 2 s\n\nCâu 2: b\nAnswer:",
+    );
     // Without any question, nothing is dropped (the editor shows why).
     expect(cleanImportText("Không đọc được đề.")).toBe("Không đọc được đề.");
   });
