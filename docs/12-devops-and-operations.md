@@ -68,12 +68,14 @@ As built (S7-04): the route exists and only removes AI import files older than 2
 |---|---|---|
 | Site down | UptimeRobot → `/api/health` (checks DB) | Email/Telegram after 2 failures |
 | Errors and performance | Sentry (server + client), sample traces at 5 % to stay in the free tier. Spans keep route templates (`GET /lessons/[id]`), op and Web Vitals only; errors keep build-chunk frames and source map debug IDs, nothing personal (`operations/domain/telemetry.ts`) | Email on new issue |
-| Web vitals | `useReportWebVitals` → Vercel Analytics (if within the free allowance) or a tiny `/api/vitals` insert with sampling | Weekly review |
+| Page views | Vercel Web Analytics (`@vercel/analytics/next` in the root layout); enable Web Analytics in the Vercel project dashboard and monitor its allowance | Weekly review |
 | Quotas | Vercel dashboard usage notifications (turn on email alerts) + `quota-check.yml` | GitHub issue at 60 % |
 | AI usage | `rate_limits` counters `ai:global:{date}` | In the admin dashboard |
 | Backups | `backup.yml` failure → GitHub email | Immediate |
 
 Sentry setup (owner): create a Next.js project, then in Vercel (Production and Preview) set `SENTRY_DSN` and `NEXT_PUBLIC_SENTRY_DSN` (the same DSN), and for readable stack traces `SENTRY_AUTH_TOKEN` (an org token with `project:releases`), `SENTRY_ORG` and `SENTRY_PROJECT`. With the token, `next build` uploads source maps and deletes them from the output; without a DSN the SDK never loads. Release = `VERCEL_GIT_COMMIT_SHA`, environment = `VERCEL_ENV`.
+
+Web Analytics uses Vercel's same-origin `/_vercel/insights/` script and event endpoints, already allowed by the CSP. It adds no application database queries or custom events. Page-view analytics does not enable Vercel Speed Insights; Web Vitals continue through Sentry. PR #30 also pins Next.js and `@next/mdx` to 16.3.8 to clear the high-severity image-optimization advisory GHSA-cjq9-62q9-8jv4 without weakening the dependency audit.
 
 Logging: `src/lib/logger.ts` writes JSON lines (`level`, `msg`, `route`, `userId` hashed, `durationMs`). No personal data in logs (06 §4).
 
