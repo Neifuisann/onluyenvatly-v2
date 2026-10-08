@@ -1,21 +1,28 @@
 import type { Metadata, Viewport } from "next";
-import { Bricolage_Grotesque, Inter, JetBrains_Mono } from "next/font/google";
+import { JetBrains_Mono } from "next/font/google";
+import localFont from "next/font/local";
 import { shellCopy } from "@/lib/messages";
 import { siteUrl } from "@/lib/site";
 import { themeScript } from "@/lib/theme";
 import "./globals.css";
 
-/** Reading face: UI and question text (07 §3.2). */
-const sans = Inter({
+/**
+ * Reading face: UI and question text (07 §3.2). Self-hosted subsets, one file
+ * per family with Latin + Vietnamese (scripts/subset-fonts.py): Google's
+ * split made every Vietnamese page fetch latin, latin-ext and vietnamese.
+ */
+const sans = localFont({
+  src: "./fonts/inter-vi.woff2",
   variable: "--font-inter",
-  subsets: ["vietnamese", "latin"],
+  weight: "100 900",
   display: "swap",
 });
 
 /** Display face: page titles, scores and other big numbers. */
-const display = Bricolage_Grotesque({
+const display = localFont({
+  src: "./fonts/bricolage-grotesque-vi.woff2",
   variable: "--font-bricolage",
-  subsets: ["vietnamese", "latin"],
+  weight: "200 800",
   display: "swap",
   preload: false,
 });

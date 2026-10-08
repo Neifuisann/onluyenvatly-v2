@@ -67,11 +67,13 @@ As built (S7-04): the route exists and only removes AI import files older than 2
 | Signal | Source | Alert |
 |---|---|---|
 | Site down | UptimeRobot → `/api/health` (checks DB) | Email/Telegram after 2 failures |
-| Errors | Sentry (server + client), sample traces at 5 % to stay in the free tier | Email on new issue |
+| Errors and performance | Sentry (server + client), sample traces at 5 % to stay in the free tier. Spans keep route templates (`GET /lessons/[id]`), op and Web Vitals only; errors keep build-chunk frames and source map debug IDs, nothing personal (`operations/domain/telemetry.ts`) | Email on new issue |
 | Web vitals | `useReportWebVitals` → Vercel Analytics (if within the free allowance) or a tiny `/api/vitals` insert with sampling | Weekly review |
 | Quotas | Vercel dashboard usage notifications (turn on email alerts) + `quota-check.yml` | GitHub issue at 60 % |
 | AI usage | `rate_limits` counters `ai:global:{date}` | In the admin dashboard |
 | Backups | `backup.yml` failure → GitHub email | Immediate |
+
+Sentry setup (owner): create a Next.js project, then in Vercel (Production and Preview) set `SENTRY_DSN` and `NEXT_PUBLIC_SENTRY_DSN` (the same DSN), and for readable stack traces `SENTRY_AUTH_TOKEN` (an org token with `project:releases`), `SENTRY_ORG` and `SENTRY_PROJECT`. With the token, `next build` uploads source maps and deletes them from the output; without a DSN the SDK never loads. Release = `VERCEL_GIT_COMMIT_SHA`, environment = `VERCEL_ENV`.
 
 Logging: `src/lib/logger.ts` writes JSON lines (`level`, `msg`, `route`, `userId` hashed, `durationMs`). No personal data in logs (06 §4).
 

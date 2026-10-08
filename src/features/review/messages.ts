@@ -37,6 +37,7 @@ export const reviewCopy = {
     `${n} câu thuộc bài chưa công bố đáp án nên chưa có trong bài ôn tập.`,
   start: "Bắt đầu ôn tập",
   starting: "Đang tạo bài…",
+  failed: "Chưa tạo được bài ôn tập. Kiểm tra mạng rồi thử lại.",
   nothing: "Không có câu nào để ôn theo bộ lọc này.",
   // Open practice
   continueTitle: "Bạn đang có một bài ôn tập chưa nộp",

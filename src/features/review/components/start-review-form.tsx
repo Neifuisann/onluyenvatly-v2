@@ -1,16 +1,15 @@
 "use client";
 
 import { Play } from "lucide-react";
-import { useActionState } from "react";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { startReviewPractice } from "@/features/attempts/actions";
+import { useOpenRunner } from "@/features/attempts/components/use-open-runner";
 import { REVIEW_SIZES } from "../domain/practice";
 import { reviewCopy as t } from "../messages";
 
 /**
  * "Tạo bài ôn tập" (S7-06): size 10/20/30 under the page's filters. A plain
- * form posting `startReviewPractice`, which opens the runner.
+ * form posting to `/api/review/start`, which opens the runner.
  */
 export function StartReviewForm({
   chapter,
@@ -21,11 +20,15 @@ export function StartReviewForm({
   type: string | null;
   available: number;
 }) {
-  const [state, action, pending] = useActionState(startReviewPractice, null);
-  const failed = state && !state.ok ? state : null;
+  const { onSubmit, pending, error } = useOpenRunner(t.failed);
   return (
-    <form action={action} className="grid gap-4">
-      {failed && <Alert variant="danger">{failed.message}</Alert>}
+    <form
+      action="/api/review/start"
+      method="post"
+      onSubmit={onSubmit}
+      className="grid gap-4"
+    >
+      {error && <Alert variant="danger">{error}</Alert>}
       <input type="hidden" name="chapter" value={chapter ?? ""} />
       <input type="hidden" name="type" value={type ?? ""} />
       <fieldset className="grid gap-2">
