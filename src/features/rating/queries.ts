@@ -65,6 +65,7 @@ export async function getLeaderboard(f: {
       fullName: users.fullName,
       initialsOnly: users.leaderboardInitials,
       className: users.className,
+      avatarPath: users.avatarPath,
       rating: ratings.rating,
       weekDelta,
     })
@@ -90,11 +91,12 @@ export async function getLeaderboard(f: {
     )
     .limit(MAX_ROWS);
   // Resolved before caching: a student who chose initials never has their
-  // full name in the shared entry (S8-04).
+  // full name (or picture) in the shared entry (S8-04).
   return withRanks(
-    rows.map(({ fullName, initialsOnly, ...row }) => ({
+    rows.map(({ fullName, initialsOnly, avatarPath, ...row }) => ({
       ...row,
       fullName: publicName(fullName, initialsOnly),
+      avatarPath: initialsOnly ? null : avatarPath,
     })),
     f.period,
   );

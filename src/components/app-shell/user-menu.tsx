@@ -7,12 +7,14 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { logout, logoutAll } from "@/features/auth/actions";
+import { mediaUrl } from "@/lib/media";
 import { authCopy, shellCopy } from "@/lib/messages";
 import { cn } from "@/lib/utils";
 
 export type ShellUser = {
   fullName: string;
   role: "student" | "teacher" | "admin";
+  avatarPath?: string | null;
 };
 
 const roleLabel = {
@@ -28,14 +30,37 @@ export function initials(name: string): string {
   return `${first.charAt(0)}${last.charAt(0)}`.toUpperCase() || "?";
 }
 
-/** Initials on a lagoon disc; the name is always next to it or in the label. */
+/**
+ * The profile picture, or initials on a lagoon disc when there is none. The
+ * name is always next to it or in the label, so the image is decorative.
+ */
 export function Avatar({
   name,
+  path,
   className,
 }: {
   name: string;
+  /** Storage path of the uploaded picture (S8-04). */
+  path?: string | null | undefined;
   className?: string;
 }) {
+  const src = path ? mediaUrl(path) : null;
+  if (src)
+    return (
+      // biome-ignore lint/performance/noImgElement: ADR-006, pre-sized upload
+      <img
+        src={src}
+        alt=""
+        width={36}
+        height={36}
+        loading="lazy"
+        decoding="async"
+        className={cn(
+          "size-9 shrink-0 rounded-full bg-muted object-cover",
+          className,
+        )}
+      />
+    );
   return (
     <span
       aria-hidden
@@ -75,7 +100,11 @@ export function UserMenu({
           compact ? "px-1.5" : "px-1.5 py-1",
         )}
       >
-        <Avatar name={user.fullName} className={cn(compact && "size-8")} />
+        <Avatar
+          name={user.fullName}
+          path={user.avatarPath}
+          className={cn(compact && "size-8")}
+        />
         <span className={cn("min-w-0 flex-1 text-left", compact && "sr-only")}>
           <span className="block truncate font-semibold text-sm leading-tight">
             {user.fullName}

@@ -81,6 +81,7 @@ export const catalogCopy = {
   searchLabel: "Tìm bài tập",
   searchPlaceholder: "Tìm bài tập, ví dụ: dao động",
   searchSubmit: "Tìm",
+  searchClear: "Xóa nội dung tìm kiếm",
   gradeGroup: "Lọc theo khối",
   gradeAll: "Tất cả",
   grade: (g: number) => `Lớp ${g}`,
@@ -97,6 +98,7 @@ export const catalogCopy = {
     title: "Theo tên (A–Z)",
   },
   apply: "Áp dụng",
+  done: "Xong",
   clear: "Xóa bộ lọc",
   showing: (shown: number, total: number) =>
     `Đang hiển thị ${shown}/${total} bài`,

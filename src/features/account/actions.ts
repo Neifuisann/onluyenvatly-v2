@@ -114,13 +114,20 @@ export async function saveMyAvatar(
   const parsed = AvatarPathSchema.safeParse(input);
   if (!parsed.success) return err("VALIDATION");
   const result = await setAvatar(user, parsed.data);
-  if (result.ok) refresh();
+  if (result.ok) {
+    // The picture is on the leaderboard (and the shell).
+    updateTag(tags.leaderboard);
+    refresh();
+  }
   return result;
 }
 
 export async function removeMyAvatar(): Promise<Result<{ removed: boolean }>> {
   const user = await requireUser();
   const result = await removeAvatar(user);
-  if (result.ok) refresh();
+  if (result.ok) {
+    if (result.data.removed) updateTag(tags.leaderboard);
+    refresh();
+  }
   return result;
 }

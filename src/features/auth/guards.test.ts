@@ -16,6 +16,7 @@ const user = (patch: Partial<SessionUser> = {}): SessionUser => ({
   role: "student",
   fullName: "Học Sinh",
   grade: 12,
+  avatarPath: null,
   mustChangePassword: false,
   sessionId: "s",
   ...patch,

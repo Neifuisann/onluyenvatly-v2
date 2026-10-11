@@ -108,6 +108,7 @@ async function addUser(role: "student" | "admin" = "student") {
     role,
     fullName: "Học Sinh",
     grade: 12,
+    avatarPath: null,
     mustChangePassword: false,
     sessionId: "s",
   } satisfies SessionUser;
