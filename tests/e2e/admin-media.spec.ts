@@ -137,9 +137,18 @@ test("a pasted 5 MB PNG becomes a small WebP in Storage and a media line", async
   const image = page.locator(`main article img[src$="${upload.path}"]`);
   await expect(image).toBeVisible();
   await expect(image).toHaveAttribute("width", "1280");
-  expect(
-    await image.evaluate((el) => (el as HTMLImageElement).naturalWidth),
-  ).toBe(1280);
+  // The width attribute makes the box visible before any byte arrives, and the
+  // image is lazy and decoded async: on a phone the preview only mounts on the
+  // tab switch, so bring it into view and wait for the decoded file.
+  await image.scrollIntoViewIfNeeded();
+  await expect
+    .poll(() =>
+      image.evaluate((el) => {
+        const img = el as HTMLImageElement;
+        return img.complete ? img.naturalWidth : 0;
+      }),
+    )
+    .toBe(1280);
 });
 
 test("cover: upload, show, remove", async ({ page }, info) => {
