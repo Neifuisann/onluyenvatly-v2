@@ -1,11 +1,18 @@
 import Link from "next/link";
+import { Suspense } from "react";
 import { Logo } from "@/components/logo";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { buttonVariants } from "@/components/ui/button";
+import { homePath } from "@/features/auth/core/login-policy";
+import { getCurrentUser } from "@/features/auth/queries";
 import { shellCopy } from "@/lib/messages";
 import { cn } from "@/lib/utils";
 
-/** Public top bar (07 §2): logo, "Lý thuyết", "Đăng nhập", primary "Đăng ký". */
+/**
+ * Public top bar (07 §2): logo, "Lý thuyết", then "Đăng nhập" + primary
+ * "Đăng ký" for visitors, or a way back to their home for a signed-in user
+ * (a student opening a shared lesson link must not look logged out).
+ */
 export function PublicHeader() {
   return (
     <header className="sticky top-0 z-30 border-border/60 border-b bg-background/80 backdrop-blur-xl">
@@ -31,23 +38,49 @@ export function PublicHeader() {
           >
             {shellCopy.theory}
           </Link>
-          <Link
-            href="/login"
-            prefetch={false}
-            className={buttonVariants({ variant: "ghost", size: "sm" })}
-          >
-            {shellCopy.login}
-          </Link>
-          <Link
-            href="/register"
-            prefetch={false}
-            className={buttonVariants({ size: "sm" })}
-          >
-            {shellCopy.register}
-          </Link>
+          {/* The cookie read is a dynamic hole: the rest stays static. */}
+          <Suspense fallback={null}>
+            <AccountLinks />
+          </Suspense>
           <ThemeToggle />
         </nav>
       </div>
     </header>
+  );
+}
+
+/**
+ * Visitors (no session cookie) cost no query; only a signed-in user's
+ * session is looked up, deduped per request with the page's own reads.
+ */
+async function AccountLinks() {
+  const user = await getCurrentUser();
+  if (user)
+    return (
+      <Link
+        href={homePath(user.role)}
+        prefetch={false}
+        className={buttonVariants({ size: "sm" })}
+      >
+        {shellCopy.toHome}
+      </Link>
+    );
+  return (
+    <>
+      <Link
+        href="/login"
+        prefetch={false}
+        className={buttonVariants({ variant: "ghost", size: "sm" })}
+      >
+        {shellCopy.login}
+      </Link>
+      <Link
+        href="/register"
+        prefetch={false}
+        className={buttonVariants({ size: "sm" })}
+      >
+        {shellCopy.register}
+      </Link>
+    </>
   );
 }
