@@ -434,7 +434,7 @@ Pilot data note: the final migration upserts only rows with `legacy_id`. Attempt
 |---|---|---|
 | B-01 | Chapters/collections and a learning path per grade | L6 |
 | B-02 | Adaptive quiz builder (questions from recent lessons weighted by class error rate) | M10 |
-| B-03 | Multiple teachers with per-class ownership | A8+ |
+| B-03 | ✅ **Multiple teachers, classes and subjects** (owner's request 2026-10-11, after Azota; ADR-009): teachers own classes and lessons and don't see each other's; open registration; teachers add students by phone; students see the lessons of their classes | A8+, owner |
 | B-04 | Excel export with formatting; per-class reports | M12 |
 | B-05 | ✅ **Game rooms** (pulled in on the owner’s request 2026-10-06; see the status below and ADR-008) | R10 |
 | B-06 | Suspicious-similarity report (identical answer patterns) | 06 §3 |
@@ -442,6 +442,11 @@ Pilot data note: the final migration upserts only rows with `legacy_id`. Attempt
 | B-08 | Offline-first runner via service worker (download a test before a class with bad Wi-Fi) | — |
 | B-09 | AI quality check of lessons | AI6 |
 | B-10 | **Teacher's lesson view** (owner's request 2026-10-07, after Azota): lesson → students → each try; a published lesson opens as its questions, where the teacher fixes a key, points, gives a question free or removes it, and the attempts are regraded; "Sửa nội dung" edits one question's text | owner |
+
+**B-03 implementation status (2026-10-11, branch `claude/stoic-feynman-rfwbc6`).** Built and verified locally against PGlite. Migration `0017` (role `teacher`, `lessons.owner_id`/`subject`, `classes`, `class_members`, `class_lessons`, backfill: owners, pending students activated, one class per owner with every student and lesson). Registration is open and signs the student in; `/classes` and `/classes/[id]` replace the catalog; `/admin/classes` (create, add students by phone, give lessons, archive, delete); every teacher read and write scoped by owner; class leaderboards; the approval queue removed; staff accounts created as teacher or admin on `/admin/settings`; subject on lessons and classes.
+- **Tests:** unit + PGlite (`classes/domain`, `classes/service.test.ts`, a migration test running `0017` on pre-B-03 data, a second-teacher case in the lesson, results, students, games, explanations, overview and attempt tests; `authz.test.ts` keeps teachers out of every platform action).
+- **E2E:** `classes.spec.ts` (journey 1: register → no class → the teacher adds the student and a lesson → the student takes it → removed → class deleted; a teacher's isolation), desktop and 360 px, axe light/dark; auth, dashboard, leaderboard and admin-students specs updated.
+- **Open:** the owner's sign-off on ADR-009; per-subject ratings; sharing lessons between teachers; a class filter on `/admin/results`; grades beyond 10–12 and non-physics branding.
 
 **B-05 implementation status (2026-10-06, branch `feat/B-05-game-rooms`).** Built and verified locally against PGlite. It covers the teacher’s create form, the projector (PIN, link, QR, lobby, live ticker-tape track, podium, the class’s hardest questions, “Chơi lại”) and the student flow on `/play/[pin]` (racer, lobby, server-timed race, feedback with live standings, finish line, podium). Two tables (migration `0015`). Answers are idempotent per question. The room auto-finishes. Publish and the daily cron keep versions a room uses, and the cron closes abandoned rooms and deletes month-old ones.
 - **Tests:** unit and PGlite integration tests (`games/domain` at the 95 % gate; `games/service.test.ts`: eligibility, PIN clashes, joins, start/end, scoring, streaks, timeouts, parallel duplicate answers, auto-finish, removal, polls).
