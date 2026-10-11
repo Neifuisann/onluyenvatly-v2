@@ -14,6 +14,7 @@ import {
   type GameConfig,
   type Question,
 } from "@/features/lessons/schema";
+import { shareLesson } from "@/test/classes";
 import { resetDb, type TestDb } from "@/test/db";
 import { BREAK_MS, COUNTDOWN_MS } from "./domain/engine";
 import { playMove } from "./service";
@@ -59,6 +60,16 @@ async function setup(game: GameConfig | null) {
     })
     .returning({ id: users.id });
   userId = u?.id ?? "";
+  const [teacher] = await tdb
+    .insert(users)
+    .values({
+      role: "teacher",
+      status: "active",
+      fullName: "Giáo viên",
+      phone: "0900000002",
+      passwordHash: "x",
+    })
+    .returning({ id: users.id });
   const [lesson] = await tdb
     .insert(lessons)
     .values({
@@ -76,6 +87,8 @@ async function setup(game: GameConfig | null) {
     .update(lessons)
     .set({ currentVersionId: version?.id ?? null })
     .where(eq(lessons.id, lessonId));
+  // B-03: students reach a lesson only through a class.
+  await shareLesson(tdb, lessonId, teacher?.id ?? "");
   const started = await startAttempt(
     { id: userId, role: "student" },
     lessonId,

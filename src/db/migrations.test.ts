@@ -27,14 +27,14 @@ const before = mkdtempSync(join(tmpdir(), "ovl-migrations-"));
 
 afterAll(() => rmSync(before, { recursive: true, force: true }));
 
-/** The migrations folder without its last entry (0017). */
+/** The migrations folder up to 0016, without 0017 and anything after it. */
 function migrationsBefore0017() {
   cpSync(source, before, { recursive: true });
   const journalPath = join(before, "meta", "_journal.json");
   const journal = JSON.parse(readFileSync(journalPath, "utf8")) as {
-    entries: { tag: string }[];
+    entries: { idx: number; tag: string }[];
   };
-  journal.entries = journal.entries.filter((e) => e.tag !== "0017_classes");
+  journal.entries = journal.entries.filter((e) => e.idx < 17);
   writeFileSync(journalPath, JSON.stringify(journal));
   return before;
 }
