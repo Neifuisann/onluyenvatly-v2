@@ -101,7 +101,7 @@ beforeAll(async () => {
     .returning({ id: users.id });
   const [cls] = await tdb
     .insert(classes)
-    .values({ ownerId: teacher?.id ?? "", name: "12A1" })
+    .values({ ownerId: teacher?.id ?? "", name: "12A1", joinCode: "AAAAAAAA" })
     .returning({ id: classes.id });
   classId = cls?.id ?? 0;
   await tdb

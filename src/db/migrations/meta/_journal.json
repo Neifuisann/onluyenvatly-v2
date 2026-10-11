@@ -134,6 +134,13 @@
       "when": 1791695067436,
       "tag": "0018_zombie_game",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1791734964914,
+      "tag": "0019_class_join_codes",
+      "breakpoints": true
     }
   ]
 }

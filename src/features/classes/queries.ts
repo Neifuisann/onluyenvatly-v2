@@ -91,6 +91,7 @@ export async function getTeacherClass(owner: Owner, id: number) {
       subject: classes.subject,
       grade: classes.grade,
       description: classes.description,
+      joinCode: classes.joinCode,
       archivedAt: classes.archivedAt,
     })
     .from(classes)
@@ -241,3 +242,70 @@ export const canOpenLesson = cache(
     return Boolean(row);
   },
 );
+
+/**
+ * The teacher's open classes for "Chia sẻ" on a lesson, newest first
+ * (`classes_owner_created_idx`). An admin gets every open class, each
+ * other teacher's labelled with that teacher's name.
+ */
+export async function getShareClasses(
+  owner: Owner,
+): Promise<{ id: number; name: string }[]> {
+  const rows = await db
+    .select({
+      id: classes.id,
+      name: classes.name,
+      ownerId: classes.ownerId,
+      ownerName: users.fullName,
+    })
+    .from(classes)
+    .innerJoin(users, eq(users.id, classes.ownerId))
+    .where(and(managedBy(owner), isNull(classes.archivedAt)))
+    .orderBy(desc(classes.createdAt), desc(classes.id))
+    .limit(500);
+  return rows.map((r) => ({
+    id: r.id,
+    name: r.ownerId === owner.id ? r.name : `${r.name} · ${r.ownerName}`,
+  }));
+}
+
+export type JoinTarget = {
+  id: number;
+  name: string;
+  subject: string;
+  grade: number | null;
+  teacherName: string;
+  /** The signed-in student is already in the class. */
+  member: boolean;
+  /** The class has the lesson the link points at (false without one). */
+  hasLesson: boolean;
+};
+
+/**
+ * What `/join/<code>` shows: the open class behind the code
+ * (`classes_join_code_uq`), with the visitor's membership and whether the
+ * linked lesson is in it, in one read. Null for an unknown or archived class.
+ */
+export async function getJoinTarget(
+  code: string,
+  userId: string,
+  lessonId?: number,
+): Promise<JoinTarget | null> {
+  const [row] = await db
+    .select({
+      id: classes.id,
+      name: classes.name,
+      subject: classes.subject,
+      grade: classes.grade,
+      teacherName: users.fullName,
+      member: sql<boolean>`exists (select 1 from ${classMembers} where ${classMembers.classId} = ${classes.id} and ${classMembers.userId} = ${userId})`,
+      hasLesson: lessonId
+        ? sql<boolean>`exists (select 1 from ${classLessons} where ${classLessons.classId} = ${classes.id} and ${classLessons.lessonId} = ${lessonId})`
+        : sql<boolean>`false`,
+    })
+    .from(classes)
+    .innerJoin(users, eq(users.id, classes.ownerId))
+    .where(and(eq(classes.joinCode, code), isNull(classes.archivedAt)))
+    .limit(1);
+  return row ?? null;
+}

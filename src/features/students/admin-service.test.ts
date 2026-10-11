@@ -591,7 +591,7 @@ describe("a teacher's view (B-03)", () => {
     const teacher = { id: t?.id ?? "", role: "teacher" as const };
     const [c] = await tdb
       .insert(classes)
-      .values({ ownerId: teacher.id, name: "12A1" })
+      .values({ ownerId: teacher.id, name: "12A1", joinCode: "AAAAAAAA" })
       .returning({ id: classes.id });
     if (studentIds.length)
       await tdb

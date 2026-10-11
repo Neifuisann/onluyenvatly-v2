@@ -16,6 +16,8 @@ import {
   countTeacherStudents,
   getClassLessonIds,
   getClassMembers,
+  getJoinTarget,
+  getShareClasses,
   getStudentClass,
   getStudentClasses,
   getTeacherClass,
@@ -25,9 +27,12 @@ import {
   addMembers,
   createClass,
   deleteClass,
+  joinClass,
   removeMember,
+  resetJoinCode,
   setClassArchived,
   setClassLessons,
+  shareLessonToClass,
   updateClass,
 } from "./service";
 
@@ -315,5 +320,114 @@ describe("class reads", () => {
     expect(await setClassLessons(admin, id, [lessonId])).toMatchObject({
       ok: true,
     });
+  });
+});
+
+describe("invite links", () => {
+  const codeOf = async (id: number) =>
+    (await getTeacherClass(teacher, id))?.joinCode ?? "";
+
+  it("gives each class a code; resetting one kills the old link", async () => {
+    const a = await createClass(teacher, form, NOW);
+    const b = await createClass(teacher, form, NOW);
+    const old = await codeOf(a.id);
+    expect(old).toMatch(/^[2-9A-HJKMNP-Z]{8}$/);
+    expect(old).not.toBe(await codeOf(b.id));
+
+    expect(await resetJoinCode(other, a.id)).toMatchObject({
+      code: "NOT_FOUND",
+    });
+    const reset = await resetJoinCode(teacher, a.id, NOW);
+    if (!reset.ok) throw new Error("reset");
+    expect(reset.data.joinCode).not.toBe(old);
+    expect(await codeOf(a.id)).toBe(reset.data.joinCode);
+    const s = await addUser("student");
+    expect(await joinClass({ id: s.id, role: "student" }, old)).toMatchObject({
+      code: "NOT_FOUND",
+    });
+  });
+
+  it("joins a student once and says whether the class has the linked lesson", async () => {
+    const { id } = await createClass(teacher, form, NOW);
+    const lessonId = await addLesson(teacher.id);
+    const elsewhere = await addLesson(teacher.id);
+    await setClassLessons(teacher, id, [lessonId]);
+    const code = await codeOf(id);
+    const s = await addUser("student");
+    const student = { id: s.id, role: "student" as const };
+
+    expect(await getJoinTarget(code, s.id, lessonId)).toMatchObject({
+      id,
+      member: false,
+      hasLesson: true,
+    });
+    expect(await joinClass(student, code, lessonId, NOW)).toEqual({
+      ok: true,
+      data: { classId: id, joined: true, hasLesson: true },
+    });
+    expect(await canOpenLesson(s.id, "student", lessonId)).toBe(true);
+    expect(await joinClass(student, code, elsewhere)).toEqual({
+      ok: true,
+      data: { classId: id, joined: false, hasLesson: false },
+    });
+    expect(await getJoinTarget(code, s.id)).toMatchObject({
+      member: true,
+      hasLesson: false,
+    });
+    const members = await getClassMembers(id);
+    expect(members.map((m) => m.userId)).toEqual([s.id]);
+    expect((await audit()).map((a) => a.action)).toContain("class.join");
+  });
+
+  it("refuses teachers, unknown codes and archived classes", async () => {
+    const { id } = await createClass(teacher, form, NOW);
+    const code = await codeOf(id);
+    expect(await joinClass(other, code)).toMatchObject({ code: "FORBIDDEN" });
+    const s = await addUser("student");
+    const student = { id: s.id, role: "student" as const };
+    expect(await joinClass(student, "ZZZZZZZZ")).toMatchObject({
+      code: "NOT_FOUND",
+    });
+    await setClassArchived(teacher, id, true, NOW);
+    expect(await getJoinTarget(code, s.id)).toBeNull();
+    expect(await joinClass(student, code)).toMatchObject({
+      code: "NOT_FOUND",
+    });
+  });
+});
+
+describe("shareLessonToClass", () => {
+  it("gives the lesson to the class once and returns the class's code", async () => {
+    const { id } = await createClass(teacher, form, NOW);
+    const lessonId = await addLesson(teacher.id);
+    const first = await shareLessonToClass(teacher, lessonId, id, NOW);
+    expect(first).toMatchObject({ ok: true, data: { assigned: true } });
+    expect(await getClassLessonIds(id)).toEqual([lessonId]);
+    const again = await shareLessonToClass(teacher, lessonId, id, NOW);
+    expect(again).toMatchObject({ ok: true, data: { assigned: false } });
+    if (!first.ok || !again.ok) throw new Error("share");
+    expect(again.data.joinCode).toBe(first.data.joinCode);
+  });
+
+  it("only shares the teacher's own published lesson to their own open class", async () => {
+    const { id } = await createClass(teacher, form, NOW);
+    const theirs = await addLesson(other.id);
+    const draft = await addLesson(teacher.id, "draft");
+    const mine = await addLesson(teacher.id);
+    expect(await shareLessonToClass(teacher, theirs, id)).toMatchObject({
+      code: "NOT_FOUND",
+    });
+    expect(await shareLessonToClass(teacher, draft, id)).toMatchObject({
+      code: "NOT_FOUND",
+    });
+    expect(await shareLessonToClass(other, mine, id)).toMatchObject({
+      code: "NOT_FOUND",
+    });
+    await setClassArchived(teacher, id, true, NOW);
+    expect(await shareLessonToClass(teacher, mine, id)).toMatchObject({
+      code: "CONFLICT",
+    });
+    expect(await getShareClasses(teacher)).toEqual([]);
+    expect(await getClassLessonIds(id)).toEqual([]);
   });
 });

@@ -14,6 +14,7 @@ import { asc, eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/pglite";
 import { migrate } from "drizzle-orm/pglite/migrator";
 import { afterAll, describe, expect, it } from "vitest";
+import { JoinCodeSchema } from "../features/classes/domain/invite";
 import * as schema from "./schema";
 
 /**
@@ -90,6 +91,7 @@ describe("migration 0017_classes", () => {
         ownerId: schema.classes.ownerId,
         name: schema.classes.name,
         subject: schema.classes.subject,
+        joinCode: schema.classes.joinCode,
       })
       .from(schema.classes)
       .orderBy(asc(schema.classes.ownerId));
@@ -97,6 +99,10 @@ describe("migration 0017_classes", () => {
       ["00000000-0000-4000-8000-0000000000a1", "Lớp Vật lý", "physics"],
       ["00000000-0000-4000-8000-0000000000a2", "Lớp Vật lý", "physics"],
     ]);
+    // 0019: every class gets its own invite code from the invite alphabet.
+    for (const c of classes)
+      expect(JoinCodeSchema.parse(c.joinCode)).toBe(c.joinCode);
+    expect(new Set(classes.map((c) => c.joinCode)).size).toBe(classes.length);
     for (const c of classes) {
       const members = await db
         .select({ userId: schema.classMembers.userId })

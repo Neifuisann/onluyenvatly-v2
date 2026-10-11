@@ -68,7 +68,9 @@ export function LoginForm() {
       <p className="text-center text-muted-foreground text-sm">
         {authCopy.noAccount}{" "}
         <Link
-          href="/register"
+          href={
+            next ? `/register?next=${encodeURIComponent(next)}` : "/register"
+          }
           prefetch={false}
           className="font-medium text-primary underline-offset-4 hover:underline"
         >

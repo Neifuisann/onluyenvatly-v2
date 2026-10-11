@@ -81,6 +81,7 @@ export async function register(
   const parsed = RegisterSchema.safeParse({
     ...values,
     password: text(formData, "password"),
+    next: text(formData, "next"),
   });
   if (!parsed.success)
     return {
@@ -90,13 +91,15 @@ export async function register(
 
   const result = await registerStudent(parsed.data, await getRequestMeta());
   if (!result.ok) return { ...result, values };
-  // Active at once (B-03): signed in, waiting for a teacher to add a class.
+  // Active at once (B-03): signed in, then on to the invite link they came
+  // from, else waiting for a teacher to add a class.
   (await cookies()).set(
     SESSION_COOKIE,
     result.data.token,
     sessionCookieOptions(env.NODE_ENV === "production"),
   );
-  redirect("/classes");
+  const next = safeNextPath(parsed.data.next);
+  redirect(next ? landingPath("student", next) : "/classes");
 }
 
 export async function logout(): Promise<void> {

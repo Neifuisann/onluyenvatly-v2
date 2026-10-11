@@ -4,6 +4,7 @@ import { PageHeader, SectionCard } from "@/components/page-header";
 import { requireTeacher } from "@/features/auth/guards";
 import { ClassDanger } from "@/features/classes/components/admin/class-danger";
 import { ClassForm } from "@/features/classes/components/admin/class-form";
+import { InvitePanel } from "@/features/classes/components/admin/invite-panel";
 import { LessonPicker } from "@/features/classes/components/admin/lesson-picker";
 import { MemberPanel } from "@/features/classes/components/admin/member-panel";
 import { ClassIdSchema } from "@/features/classes/domain/classes";
@@ -58,6 +59,18 @@ export default async function AdminClassPage({
           )
         }
       />
+
+      <SectionCard
+        id="class-invite"
+        title={t.inviteSection}
+        lead={t.inviteLead}
+      >
+        <InvitePanel
+          classId={cls.id}
+          joinCode={cls.joinCode}
+          archived={archived}
+        />
+      </SectionCard>
 
       <SectionCard
         id="class-members"

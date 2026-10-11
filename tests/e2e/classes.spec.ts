@@ -52,7 +52,11 @@ test.use({
 
 /** A signed-out visitor in a fresh browser context, with its own client IP. */
 async function visitor(browser: Browser) {
-  const context = await browser.newContext();
+  // `test.use({ storageState })` also applies to `browser.newContext()`:
+  // start from an empty state, or the visitor is the teacher.
+  const context = await browser.newContext({
+    storageState: { cookies: [], origins: [] },
+  });
   const page = await context.newPage();
   await page.setExtraHTTPHeaders({
     "x-forwarded-for": `10.50.${rand(250)}.${rand(250) + 1}`,
@@ -184,6 +188,9 @@ test("journey 1: register → no class → the teacher adds the student and a le
   await s.goto(studentClassUrl);
   await expect(s.getByText("Không tìm thấy lớp")).toBeVisible();
   await s.goto(lessonUrl);
+  await expect(
+    s.getByRole("heading", { name: "Bài này chưa được giao cho lớp của bạn" }),
+  ).toBeVisible();
   await expect(s.getByRole("button", { name: "Bắt đầu làm bài" })).toHaveCount(
     0,
   );
@@ -201,6 +208,84 @@ test("journey 1: register → no class → the teacher adds the student and a le
   await expect(
     page.locator("main").getByText(className).filter({ visible: true }),
   ).toHaveCount(0);
+});
+
+test("invite link: the teacher shares a lesson through a class; a new student registers from the link and lands on it", async ({
+  page,
+  browser,
+}, info) => {
+  const p = tag(info.project.name);
+  const phone = randomPhone();
+  const fullName = `${REGISTERED_NAME_PREFIX} ${p.toUpperCase()}${rand(9000) + 1000}`;
+  const className = `${CREATED_CLASS_PREFIX} ${p}${rand(9000) + 1000}`;
+  const lessonTitle = `E2E – Bài của cô (${p})`;
+
+  // The teacher creates a class; it comes with an invite link.
+  await page.goto("/admin/classes");
+  await page.getByLabel("Tên lớp").fill(className);
+  await page.getByLabel("Môn học").selectOption("physics");
+  await page.getByRole("button", { name: "Tạo lớp", exact: true }).click();
+  await expect(page).toHaveURL(/\/admin\/classes\/\d+$/);
+  await expect(page.getByText(/\/join\/[2-9A-Z]{8}$/)).toBeVisible();
+  const classUrl = page.url();
+
+  // "Chia sẻ" on the lesson: pick the class, get its invite with the lesson.
+  await page.goto("/admin/lessons");
+  await page
+    .getByRole("button", { name: `Chia sẻ cho học sinh: ${lessonTitle}` })
+    .click();
+  const dialog = page.getByRole("dialog", { name: "Chia sẻ bài cho học sinh" });
+  await dialog.getByLabel("Lớp nhận bài").selectOption({ label: className });
+  await dialog.getByRole("button", { name: "Sao chép liên kết" }).click();
+  const link = dialog.getByText(/\/join\/[2-9A-Z]{8}\?bai=\d+$/);
+  await expect(link).toBeVisible();
+  const shared = new URL((await link.textContent()) ?? "");
+  const invitePath = `${shared.pathname}${shared.search}`;
+
+  // A new student opens it signed out, registers, and joins the class.
+  const student = await visitor(browser);
+  const s = student.page;
+  await s.goto(invitePath);
+  await expect(s).toHaveURL(/\/login\?next=%2Fjoin%2F/);
+  // "Đăng ký" carries the invite along. Loaded fresh: after a client-side
+  // navigation the hidden login form would still match the field labels.
+  const register = s.getByRole("link", { name: "Đăng ký" });
+  await expect(register).toHaveAttribute(
+    "href",
+    /^\/register\?next=%2Fjoin%2F/,
+  );
+  await s.goto((await register.getAttribute("href")) ?? "");
+  await s.getByLabel("Họ và tên").fill(fullName);
+  await s.getByLabel("Số điện thoại").fill(phone);
+  await s.getByLabel("Ngày sinh").fill("2009-05-17");
+  await s.getByLabel("Khối").selectOption("12");
+  await s.getByLabel("Lớp").fill("12a1");
+  await s.getByLabel("Mật khẩu", { exact: true }).fill("vatly-e2e-2026");
+  await s.getByRole("button", { name: "Đăng ký", exact: true }).click();
+  await s.waitForURL((url) => `${url.pathname}${url.search}` === invitePath);
+  await expect(s.getByText(className)).toBeVisible();
+  await expectGood(s);
+  await s.getByRole("button", { name: "Vào lớp", exact: true }).click();
+  await expect(s).toHaveURL(/\/lessons\/\d+$/);
+  await expect(
+    s.getByRole("button", { name: "Bắt đầu làm bài" }),
+  ).toBeVisible();
+  // Opening the link again goes straight on.
+  await s.goto(invitePath);
+  await expect(s).toHaveURL(/\/lessons\/\d+$/);
+  await student.context.close();
+
+  // The teacher sees the student in the class, then deletes it.
+  await page.goto(classUrl);
+  await expect(
+    page.getByRole("list", { name: "Học sinh trong lớp" }),
+  ).toContainText(fullName);
+  await page.getByRole("button", { name: "Xóa lớp" }).click();
+  await page
+    .getByRole("dialog", { name: "Xóa lớp" })
+    .getByRole("button", { name: "Xóa lớp" })
+    .click();
+  await expect(page).toHaveURL(/\/admin\/classes$/);
 });
 
 test("a teacher sees only their own lessons and none of the platform pages", async ({
