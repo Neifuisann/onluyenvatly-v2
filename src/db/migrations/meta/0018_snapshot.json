@@ -46,12 +46,8 @@
           "name": "attempt_overrides_user_id_users_id_fk",
           "tableFrom": "attempt_overrides",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -59,12 +55,8 @@
           "name": "attempt_overrides_lesson_id_lessons_id_fk",
           "tableFrom": "attempt_overrides",
           "tableTo": "lessons",
-          "columnsFrom": [
-            "lesson_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["lesson_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -72,12 +64,8 @@
           "name": "attempt_overrides_granted_by_users_id_fk",
           "tableFrom": "attempt_overrides",
           "tableTo": "users",
-          "columnsFrom": [
-            "granted_by"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["granted_by"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -85,10 +73,7 @@
       "compositePrimaryKeys": {
         "attempt_overrides_user_id_lesson_id_pk": {
           "name": "attempt_overrides_user_id_lesson_id_pk",
-          "columns": [
-            "user_id",
-            "lesson_id"
-          ]
+          "columns": ["user_id", "lesson_id"]
         }
       },
       "uniqueConstraints": {},
@@ -439,12 +424,8 @@
           "name": "attempts_user_id_users_id_fk",
           "tableFrom": "attempts",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -452,12 +433,8 @@
           "name": "attempts_lesson_id_lessons_id_fk",
           "tableFrom": "attempts",
           "tableTo": "lessons",
-          "columnsFrom": [
-            "lesson_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["lesson_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -465,12 +442,8 @@
           "name": "attempts_lesson_version_id_lesson_versions_id_fk",
           "tableFrom": "attempts",
           "tableTo": "lesson_versions",
-          "columnsFrom": [
-            "lesson_version_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["lesson_version_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -480,9 +453,7 @@
         "attempts_legacy_result_id_unique": {
           "name": "attempts_legacy_result_id_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "legacy_result_id"
-          ]
+          "columns": ["legacy_result_id"]
         }
       },
       "policies": {},
@@ -602,12 +573,8 @@
           "name": "audit_log_actor_id_users_id_fk",
           "tableFrom": "audit_log",
           "tableTo": "users",
-          "columnsFrom": [
-            "actor_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["actor_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -664,12 +631,8 @@
           "name": "class_lessons_class_id_classes_id_fk",
           "tableFrom": "class_lessons",
           "tableTo": "classes",
-          "columnsFrom": [
-            "class_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["class_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -677,12 +640,8 @@
           "name": "class_lessons_lesson_id_lessons_id_fk",
           "tableFrom": "class_lessons",
           "tableTo": "lessons",
-          "columnsFrom": [
-            "lesson_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["lesson_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -690,10 +649,7 @@
       "compositePrimaryKeys": {
         "class_lessons_class_id_lesson_id_pk": {
           "name": "class_lessons_class_id_lesson_id_pk",
-          "columns": [
-            "class_id",
-            "lesson_id"
-          ]
+          "columns": ["class_id", "lesson_id"]
         }
       },
       "uniqueConstraints": {},
@@ -753,12 +709,8 @@
           "name": "class_members_class_id_classes_id_fk",
           "tableFrom": "class_members",
           "tableTo": "classes",
-          "columnsFrom": [
-            "class_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["class_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -766,12 +718,8 @@
           "name": "class_members_user_id_users_id_fk",
           "tableFrom": "class_members",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -779,12 +727,8 @@
           "name": "class_members_added_by_users_id_fk",
           "tableFrom": "class_members",
           "tableTo": "users",
-          "columnsFrom": [
-            "added_by"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["added_by"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -792,10 +736,7 @@
       "compositePrimaryKeys": {
         "class_members_class_id_user_id_pk": {
           "name": "class_members_class_id_user_id_pk",
-          "columns": [
-            "class_id",
-            "user_id"
-          ]
+          "columns": ["class_id", "user_id"]
         }
       },
       "uniqueConstraints": {},
@@ -904,12 +845,8 @@
           "name": "classes_owner_id_users_id_fk",
           "tableFrom": "classes",
           "tableTo": "users",
-          "columnsFrom": [
-            "owner_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["owner_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -965,12 +902,8 @@
           "name": "explanation_votes_user_id_users_id_fk",
           "tableFrom": "explanation_votes",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -978,12 +911,8 @@
           "name": "explanation_votes_question_hash_fk",
           "tableFrom": "explanation_votes",
           "tableTo": "question_explanations",
-          "columnsFrom": [
-            "question_hash"
-          ],
-          "columnsTo": [
-            "question_hash"
-          ],
+          "columnsFrom": ["question_hash"],
+          "columnsTo": ["question_hash"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -991,10 +920,7 @@
       "compositePrimaryKeys": {
         "explanation_votes_question_hash_user_id_pk": {
           "name": "explanation_votes_question_hash_user_id_pk",
-          "columns": [
-            "question_hash",
-            "user_id"
-          ]
+          "columns": ["question_hash", "user_id"]
         }
       },
       "uniqueConstraints": {},
@@ -1142,12 +1068,8 @@
           "name": "game_players_room_id_game_rooms_id_fk",
           "tableFrom": "game_players",
           "tableTo": "game_rooms",
-          "columnsFrom": [
-            "room_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["room_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -1155,12 +1077,8 @@
           "name": "game_players_user_id_users_id_fk",
           "tableFrom": "game_players",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -1170,10 +1088,7 @@
         "game_players_room_user_uq": {
           "name": "game_players_room_user_uq",
           "nullsNotDistinct": false,
-          "columns": [
-            "room_id",
-            "user_id"
-          ]
+          "columns": ["room_id", "user_id"]
         }
       },
       "policies": {},
@@ -1339,12 +1254,8 @@
           "name": "game_rooms_host_id_users_id_fk",
           "tableFrom": "game_rooms",
           "tableTo": "users",
-          "columnsFrom": [
-            "host_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["host_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -1435,12 +1346,8 @@
           "name": "lesson_versions_lesson_id_lessons_id_fk",
           "tableFrom": "lesson_versions",
           "tableTo": "lessons",
-          "columnsFrom": [
-            "lesson_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["lesson_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -1448,12 +1355,8 @@
           "name": "lesson_versions_created_by_users_id_fk",
           "tableFrom": "lesson_versions",
           "tableTo": "users",
-          "columnsFrom": [
-            "created_by"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["created_by"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -1463,18 +1366,12 @@
         "lesson_versions_lesson_version_uq": {
           "name": "lesson_versions_lesson_version_uq",
           "nullsNotDistinct": false,
-          "columns": [
-            "lesson_id",
-            "version"
-          ]
+          "columns": ["lesson_id", "version"]
         },
         "lesson_versions_legacy_hash_uq": {
           "name": "lesson_versions_legacy_hash_uq",
           "nullsNotDistinct": false,
-          "columns": [
-            "lesson_id",
-            "legacy_hash"
-          ]
+          "columns": ["lesson_id", "legacy_hash"]
         }
       },
       "policies": {},
@@ -1734,12 +1631,8 @@
           "name": "lessons_current_version_id_lesson_versions_id_fk",
           "tableFrom": "lessons",
           "tableTo": "lesson_versions",
-          "columnsFrom": [
-            "current_version_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["current_version_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         },
@@ -1747,12 +1640,8 @@
           "name": "lessons_draft_version_id_lesson_versions_id_fk",
           "tableFrom": "lessons",
           "tableTo": "lesson_versions",
-          "columnsFrom": [
-            "draft_version_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["draft_version_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         },
@@ -1760,12 +1649,8 @@
           "name": "lessons_created_by_users_id_fk",
           "tableFrom": "lessons",
           "tableTo": "users",
-          "columnsFrom": [
-            "created_by"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["created_by"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         },
@@ -1773,12 +1658,8 @@
           "name": "lessons_owner_id_users_id_fk",
           "tableFrom": "lessons",
           "tableTo": "users",
-          "columnsFrom": [
-            "owner_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["owner_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -1788,9 +1669,7 @@
         "lessons_legacy_id_unique": {
           "name": "lessons_legacy_id_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "legacy_id"
-          ]
+          "columns": ["legacy_id"]
         }
       },
       "policies": {},
@@ -1857,12 +1736,8 @@
           "name": "media_uploaded_by_users_id_fk",
           "tableFrom": "media",
           "tableTo": "users",
-          "columnsFrom": [
-            "uploaded_by"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["uploaded_by"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -1872,9 +1747,7 @@
         "media_path_unique": {
           "name": "media_path_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "path"
-          ]
+          "columns": ["path"]
         }
       },
       "policies": {},
@@ -1985,12 +1858,8 @@
           "name": "mistakes_user_id_users_id_fk",
           "tableFrom": "mistakes",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -1998,12 +1867,8 @@
           "name": "mistakes_lesson_id_lessons_id_fk",
           "tableFrom": "mistakes",
           "tableTo": "lessons",
-          "columnsFrom": [
-            "lesson_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["lesson_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -2011,12 +1876,8 @@
           "name": "mistakes_lesson_version_id_lesson_versions_id_fk",
           "tableFrom": "mistakes",
           "tableTo": "lesson_versions",
-          "columnsFrom": [
-            "lesson_version_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["lesson_version_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -2024,12 +1885,8 @@
           "name": "mistakes_last_attempt_id_attempts_id_fk",
           "tableFrom": "mistakes",
           "tableTo": "attempts",
-          "columnsFrom": [
-            "last_attempt_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["last_attempt_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -2037,11 +1894,7 @@
       "compositePrimaryKeys": {
         "mistakes_user_id_lesson_id_question_id_pk": {
           "name": "mistakes_user_id_lesson_id_question_id_pk",
-          "columns": [
-            "user_id",
-            "lesson_id",
-            "question_id"
-          ]
+          "columns": ["user_id", "lesson_id", "question_id"]
         }
       },
       "uniqueConstraints": {},
@@ -2181,12 +2034,8 @@
           "name": "question_explanations_lesson_id_lessons_id_fk",
           "tableFrom": "question_explanations",
           "tableTo": "lessons",
-          "columnsFrom": [
-            "lesson_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["lesson_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         },
@@ -2194,12 +2043,8 @@
           "name": "question_explanations_reviewed_by_users_id_fk",
           "tableFrom": "question_explanations",
           "tableTo": "users",
-          "columnsFrom": [
-            "reviewed_by"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["reviewed_by"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -2373,12 +2218,8 @@
           "name": "rating_events_user_id_users_id_fk",
           "tableFrom": "rating_events",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -2386,12 +2227,8 @@
           "name": "rating_events_attempt_id_attempts_id_fk",
           "tableFrom": "rating_events",
           "tableTo": "attempts",
-          "columnsFrom": [
-            "attempt_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["attempt_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -2399,12 +2236,8 @@
           "name": "rating_events_lesson_id_lessons_id_fk",
           "tableFrom": "rating_events",
           "tableTo": "lessons",
-          "columnsFrom": [
-            "lesson_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["lesson_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -2414,16 +2247,12 @@
         "rating_events_legacy_history_id_unique": {
           "name": "rating_events_legacy_history_id_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "legacy_history_id"
-          ]
+          "columns": ["legacy_history_id"]
         },
         "rating_events_attempt_id_unique": {
           "name": "rating_events_attempt_id_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "attempt_id"
-          ]
+          "columns": ["attempt_id"]
         }
       },
       "policies": {},
@@ -2491,12 +2320,8 @@
           "name": "ratings_user_id_users_id_fk",
           "tableFrom": "ratings",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -2593,12 +2418,8 @@
           "name": "sessions_user_id_users_id_fk",
           "tableFrom": "sessions",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -2674,12 +2495,8 @@
           "name": "settings_updated_by_users_id_fk",
           "tableFrom": "settings",
           "tableTo": "users",
-          "columnsFrom": [
-            "updated_by"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["updated_by"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -2899,23 +2716,17 @@
         "users_legacy_id_unique": {
           "name": "users_legacy_id_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "legacy_id"
-          ]
+          "columns": ["legacy_id"]
         },
         "users_phone_unique": {
           "name": "users_phone_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "phone"
-          ]
+          "columns": ["phone"]
         },
         "users_username_unique": {
           "name": "users_username_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "username"
-          ]
+          "columns": ["username"]
         }
       },
       "policies": {},
@@ -2936,74 +2747,42 @@
     "public.attempt_mode": {
       "name": "attempt_mode",
       "schema": "public",
-      "values": [
-        "test",
-        "practice",
-        "review",
-        "game"
-      ]
+      "values": ["test", "practice", "review", "game"]
     },
     "public.attempt_status": {
       "name": "attempt_status",
       "schema": "public",
-      "values": [
-        "in_progress",
-        "submitted",
-        "expired"
-      ]
+      "values": ["in_progress", "submitted", "expired"]
     },
     "public.explanation_source": {
       "name": "explanation_source",
       "schema": "public",
-      "values": [
-        "ai",
-        "teacher"
-      ]
+      "values": ["ai", "teacher"]
     },
     "public.game_status": {
       "name": "game_status",
       "schema": "public",
-      "values": [
-        "lobby",
-        "running",
-        "finished"
-      ]
+      "values": ["lobby", "running", "finished"]
     },
     "public.lesson_status": {
       "name": "lesson_status",
       "schema": "public",
-      "values": [
-        "draft",
-        "published",
-        "archived"
-      ]
+      "values": ["draft", "published", "archived"]
     },
     "public.mistake_status": {
       "name": "mistake_status",
       "schema": "public",
-      "values": [
-        "open",
-        "resolved"
-      ]
+      "values": ["open", "resolved"]
     },
     "public.user_role": {
       "name": "user_role",
       "schema": "public",
-      "values": [
-        "student",
-        "teacher",
-        "admin"
-      ]
+      "values": ["student", "teacher", "admin"]
     },
     "public.user_status": {
       "name": "user_status",
       "schema": "public",
-      "values": [
-        "pending",
-        "active",
-        "rejected",
-        "disabled"
-      ]
+      "values": ["pending", "active", "rejected", "disabled"]
     }
   },
   "schemas": {},
