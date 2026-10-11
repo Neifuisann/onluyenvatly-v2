@@ -15,6 +15,7 @@ import {
   lessons,
   users,
 } from "@/db/schema";
+import { generateJoinCode } from "@/features/classes/domain/invite";
 import type { TestDb } from "./db";
 
 /** The owner's test class, created on first use. */
@@ -27,7 +28,7 @@ export async function classFor(db: TestDb, ownerId: string): Promise<number> {
   if (found) return found.id;
   const [row] = await db
     .insert(classes)
-    .values({ ownerId, name: "Lớp test" })
+    .values({ ownerId, name: "Lớp test", joinCode: generateJoinCode() })
     .returning({ id: classes.id });
   if (!row) throw new Error("class insert failed");
   return row.id;

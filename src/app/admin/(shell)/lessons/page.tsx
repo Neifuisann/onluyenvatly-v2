@@ -6,6 +6,7 @@ import { PageHeader } from "@/components/page-header";
 import { Pagination } from "@/components/pagination";
 import { buttonVariants } from "@/components/ui/button";
 import { requireTeacher } from "@/features/auth/guards";
+import { getShareClasses } from "@/features/classes/queries";
 import { getAdminLessons } from "@/features/lessons/admin-queries";
 import { AdminListFilterBar } from "@/features/lessons/components/admin/admin-list-filters";
 import { LessonTable } from "@/features/lessons/components/admin/lesson-table";
@@ -35,7 +36,10 @@ export default async function AdminLessonsPage({
 }: PageProps<"/admin/lessons">) {
   const user = await requireTeacher();
   const filters = parseAdminListParams(await searchParams);
-  const all = await getAdminLessons(user, filters);
+  const [all, shareClasses] = await Promise.all([
+    getAdminLessons(user, filters),
+    getShareClasses(user),
+  ]);
   const rows = sortAdminRows(all, filters.sort, filters.dir);
   const searching = isFiltered(filters);
   const reorderable = canReorder(filters);
@@ -84,6 +88,7 @@ export default async function AdminLessonsPage({
             )}
           </div>
           <LessonTable
+            shareClasses={shareClasses}
             order={reorderable ? all.map((r) => r.id) : null}
             offset={slice.offset}
             sort={{

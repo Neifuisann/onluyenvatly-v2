@@ -20,6 +20,7 @@ import {
   hashPassword,
   passwordIssue,
 } from "../src/features/auth/core/password.ts";
+import { generateJoinCode } from "../src/features/classes/domain/invite.ts";
 import { serializeLesson } from "../src/features/lessons/domain/serializer.ts";
 import { summarizeLesson } from "../src/features/lessons/domain/summary.ts";
 import { LessonConfigSchema } from "../src/features/lessons/schema.ts";
@@ -389,7 +390,7 @@ async function seedClass(ownerId: string) {
       (
         await db
           .insert(schema.classes)
-          .values({ ownerId, name })
+          .values({ ownerId, name, joinCode: generateJoinCode() })
           .returning({ id: schema.classes.id })
       )[0]?.id;
     if (!id) throw new Error("Class seed failed");

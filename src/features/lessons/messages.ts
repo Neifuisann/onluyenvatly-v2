@@ -55,6 +55,10 @@ export const overviewCopy = {
   notFoundTitle: "Không tìm thấy bài tập",
   notFoundBody:
     "Bài tập không tồn tại hoặc chưa được xuất bản. Bạn chọn bài khác nhé.",
+  notInClassTitle: "Bài này chưa được giao cho lớp của bạn",
+  notInClassBody:
+    "Bạn chỉ làm được bài giáo viên đã giao cho lớp mình. Hãy mở liên kết mời vào lớp mà giáo viên gửi, hoặc nhờ giáo viên giao bài này cho lớp của bạn.",
+  toClasses: "Lớp học của tôi",
   errorTitle: "Không tải được thông tin bài tập",
 } as const;
 
@@ -171,11 +175,22 @@ export const adminLessonsCopy = {
   cancel: "Hủy",
   close: "Đóng",
   view: "Xem bài",
-  copyLink: "Sao chép liên kết cho học sinh",
-  linkCopied: (title: string) =>
-    `Đã sao chép liên kết “${title}”. Gửi cho học sinh qua Zalo, Messenger…`,
-  linkCopyFailed: (url: string) =>
-    `Không sao chép được, bạn tự sao chép liên kết này: ${url}`,
+  share: "Chia sẻ cho học sinh",
+  shareTitle: "Chia sẻ bài cho học sinh",
+  shareLead:
+    "Chọn lớp nhận bài. Bài được giao cho lớp đó (nếu chưa giao), và liên kết mời đưa học sinh vào lớp rồi mở thẳng bài này.",
+  shareClass: "Lớp nhận bài",
+  shareNoClasses:
+    "Bạn chưa có lớp nào. Tạo lớp trước, rồi chia sẻ bài qua lớp đó.",
+  shareToClasses: "Tạo lớp",
+  shareCopy: "Sao chép liên kết",
+  shareWorking: "Đang chuẩn bị…",
+  shareLink: "Liên kết gửi học sinh",
+  shareCopied: (assigned: boolean, className: string) =>
+    assigned
+      ? `Đã giao bài cho lớp “${className}” và sao chép liên kết. Gửi cho học sinh qua Zalo, Messenger…`
+      : `Đã sao chép liên kết. Bài đã có trong lớp “${className}”.`,
+  shareCopyFailed: "Không sao chép được, bạn tự sao chép liên kết ở trên.",
   staleList:
     "Danh sách bài đã thay đổi ở nơi khác. Tải lại trang rồi sắp xếp lại.",
   emptyTitle: "Chưa có bài tập nào",

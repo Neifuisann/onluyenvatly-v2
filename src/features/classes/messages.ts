@@ -51,7 +51,7 @@ export const classesCopy = {
   settingsSection: "Thông tin lớp",
   membersSection: "Học sinh",
   membersLead:
-    "Học sinh tự đăng ký tài khoản bằng số điện thoại, rồi bạn thêm em vào lớp. Một học sinh có thể ở nhiều lớp.",
+    "Học sinh vào lớp bằng liên kết mời ở trên, hoặc bạn thêm em bằng số điện thoại em đã đăng ký. Một học sinh có thể ở nhiều lớp.",
   addMembers: "Thêm học sinh",
   addMembersLabel: "Số điện thoại học sinh",
   addMembersHint:
@@ -87,6 +87,35 @@ export const classesCopy = {
       : "Không có thay đổi.",
   selectedLessons: (n: number) => `Đã chọn ${n} bài`,
   filterLessons: "Tìm bài",
+
+  inviteSection: "Liên kết mời vào lớp",
+  inviteLead:
+    "Gửi liên kết này qua Zalo hoặc Messenger. Học sinh đăng nhập (hoặc đăng ký) rồi bấm “Vào lớp” là vào lớp ngay, không cần bạn thêm số điện thoại.",
+  inviteCode: "Mã lớp",
+  inviteLink: "Liên kết mời",
+  copyInvite: "Sao chép liên kết",
+  inviteCopied: "Đã sao chép liên kết mời.",
+  inviteCopyFailed: "Không sao chép được, bạn tự sao chép liên kết ở trên.",
+  resetInvite: "Đổi liên kết",
+  resetInviteConfirm:
+    "Đổi liên kết mời? Liên kết và mã cũ sẽ không dùng được nữa; học sinh đã vào lớp vẫn ở trong lớp.",
+  resetInviteDone: "Đã đổi liên kết mời. Liên kết cũ không còn dùng được.",
+
+  join: {
+    title: "Vào lớp học",
+    lead: (teacher: string) => `${teacher} mời bạn vào lớp:`,
+    lessonNote:
+      "Sau khi vào lớp, bạn sẽ được chuyển thẳng tới bài giáo viên đã gửi.",
+    join: "Vào lớp",
+    joining: "Đang vào lớp…",
+    notFoundTitle: "Liên kết mời không còn dùng được",
+    notFoundBody:
+      "Lớp này không tồn tại, đã lưu trữ hoặc giáo viên đã đổi liên kết. Bạn xin giáo viên liên kết mới nhé.",
+    staff:
+      "Tài khoản giáo viên không vào lớp bằng liên kết mời. Đăng nhập bằng tài khoản học sinh để vào lớp.",
+    staffTitle: "Đây là liên kết dành cho học sinh",
+    toHome: "Về trang của tôi",
+  },
 
   dangerSection: "Lưu trữ hoặc xóa lớp",
   archive: "Lưu trữ lớp",

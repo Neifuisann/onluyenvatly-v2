@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { requireTeacher } from "@/features/auth/guards";
 import { fieldErrorsOf } from "@/features/auth/schemas";
 import { tags } from "@/lib/cache-tags";
-import { err, type Result } from "@/lib/result";
+import { err, ok, type Result } from "@/lib/result";
 import {
   AddMembersSchema,
   ArchiveClassSchema,
@@ -16,13 +16,16 @@ import {
   SetLessonsSchema,
   UpdateClassSchema,
 } from "./domain/classes";
+import { joinPath, ShareLessonSchema } from "./domain/invite";
 import {
   addMembers as addMembersService,
   createClass as createClassService,
   deleteClass as deleteClassService,
   removeMember as removeMemberService,
+  resetJoinCode as resetJoinCodeService,
   setClassArchived,
   setClassLessons,
+  shareLessonToClass,
   updateClass as updateClassService,
 } from "./service";
 
@@ -140,4 +143,36 @@ export async function setLessons(
     refresh();
   }
   return result;
+}
+
+/** "Đổi liên kết mời": links already sent stop working. */
+export async function resetJoinCode(
+  input: unknown,
+): Promise<Result<{ joinCode: string }>> {
+  const user = await requireTeacher();
+  const id = ClassIdSchema.safeParse(input);
+  if (!id.success) return err("VALIDATION");
+  const result = await resetJoinCodeService(user, id.data);
+  if (result.ok) refresh();
+  return result;
+}
+
+/**
+ * "Chia sẻ" a lesson through a class: gives the lesson to the class if
+ * needed and returns the invite path (`/join/<code>?bai=<id>`) to copy.
+ */
+export async function shareLesson(
+  input: unknown,
+): Promise<Result<{ path: string; assigned: boolean }>> {
+  const user = await requireTeacher();
+  const parsed = ShareLessonSchema.safeParse(input);
+  if (!parsed.success) return err("VALIDATION");
+  const { lessonId, classId } = parsed.data;
+  const result = await shareLessonToClass(user, lessonId, classId);
+  if (!result.ok) return result;
+  if (result.data.assigned) updateTag(tags.classLessons(classId));
+  return ok({
+    path: joinPath(result.data.joinCode, lessonId),
+    assigned: result.data.assigned,
+  });
 }

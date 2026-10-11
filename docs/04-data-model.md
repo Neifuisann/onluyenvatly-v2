@@ -231,13 +231,14 @@ As built (S7-02, migration `0008`): also `prompt_version` text (09 §5) and `rev
 | subject | text not null default `physics` | `lib/subjects.ts` code |
 | grade | smallint null | 10–12 (check) |
 | description | text null | ≤ 300 characters (Zod), shown on the student's class card |
+| join_code | text not null, unique | Migration `0020`: the invite code of `/join/<code>`, 8 characters from `23456789ABCDEFGHJKMNPQRSTUVWXYZ` (31^8 values, `classes/domain/invite.ts`). Drawn on create (the migration drew one per existing class); "Đổi liên kết" replaces it, killing links already sent |
 | archived_at | timestamptz null | Archived: hidden from its students, its lessons no longer open through it, no member or lesson changes until restored |
 | created_at, updated_at | timestamptz | |
 
-Index `(owner_id, created_at DESC)` for `/admin/classes`.
+Index `(owner_id, created_at DESC)` for `/admin/classes`; unique index `classes_join_code_uq` for the invite lookup.
 
 ### `class_members` (B-03)
-`(class_id, user_id)` PK (→ `classes`, `users`, both `CASCADE`), `added_by` uuid null (`SET NULL`), `created_at`. Index `(user_id)`: a student's classes and the lesson access check. Only `role = student` accounts that aren't rejected are added (`addMembers`, by phone). Removing a member or deleting the class leaves the student's attempts, ratings and mistakes alone.
+`(class_id, user_id)` PK (→ `classes`, `users`, both `CASCADE`), `added_by` uuid null (`SET NULL`), `created_at`. Index `(user_id)`: a student's classes and the lesson access check. Students get in two ways: the teacher adds `role = student` accounts that aren't rejected by phone (`addMembers`, `added_by` = the teacher), or the student opens the class's invite link and confirms (`joinClass`, `added_by` = the student). Removing a member or deleting the class leaves the student's attempts, ratings and mistakes alone.
 
 ### `class_lessons` (B-03)
 `(class_id, lesson_id)` PK (→ `classes`, `lessons`, both `CASCADE`), `created_at`. Index `(lesson_id)`. The lessons given to a class; students see the published ones. A lesson can be given to several classes of its owner.

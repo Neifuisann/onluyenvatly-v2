@@ -798,12 +798,18 @@ export const classes = pgTable(
     subject: text("subject").notNull().default("physics"),
     grade: smallint("grade"),
     description: text("description"),
+    /**
+     * Invite code for `/join/<code>` (8 chars, `domain/invite.ts`). The
+     * teacher can replace it, which kills links already sent.
+     */
+    joinCode: text("join_code").notNull(),
     archivedAt: timestamptz("archived_at"),
     createdAt: timestamptz("created_at").notNull().defaultNow(),
     updatedAt: timestamptz("updated_at").notNull().defaultNow(),
   },
   (t) => [
     index("classes_owner_created_idx").on(t.ownerId, t.createdAt.desc()),
+    uniqueIndex("classes_join_code_uq").on(t.joinCode),
     check(
       "classes_grade_check",
       sql`${t.grade} is null or ${t.grade} between 10 and 12`,

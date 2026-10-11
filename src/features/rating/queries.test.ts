@@ -67,8 +67,8 @@ beforeAll(async () => {
   const made = await tdb
     .insert(classes)
     .values([
-      { ownerId: teacher?.id ?? "", name: "A" },
-      { ownerId: teacher?.id ?? "", name: "B" },
+      { ownerId: teacher?.id ?? "", name: "A", joinCode: "AAAAAAAA" },
+      { ownerId: teacher?.id ?? "", name: "B", joinCode: "BBBBBBBB" },
     ])
     .returning({ id: classes.id });
   classA = made[0]?.id ?? 0;

@@ -1,6 +1,9 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
+import { EmptyState } from "@/components/empty-state";
+import { buttonVariants } from "@/components/ui/button";
 import {
   LessonAttemptPanel,
   LessonAttemptPanelSkeleton,
@@ -21,7 +24,14 @@ export default async function LessonPage({
   const parsed = LessonIdSchema.safeParse((await params).id);
   if (!parsed.success) notFound();
   // B-03: a student needs a class that has the lesson; a teacher must own it.
-  if (!(await canOpenLesson(user.id, user.role, parsed.data))) notFound();
+  if (!(await canOpenLesson(user.id, user.role, parsed.data))) {
+    // A published lesson outside the student's classes (usually not given
+    // to the class yet) says so, instead of claiming it doesn't exist. The
+    // overview read is shared-cached, so this costs no extra query.
+    if (user.role === "student" && (await getLessonOverview(parsed.data)))
+      return <NotInClass />;
+    notFound();
+  }
   const owner = user.role !== "student";
   // Owners may open their unpublished lessons ("Làm thử", 06 §2).
   const lesson = await getLessonOverview(parsed.data, owner);
@@ -44,6 +54,25 @@ export default async function LessonPage({
             game={lesson.game !== null}
           />
         </Suspense>
+      }
+    />
+  );
+}
+
+function NotInClass() {
+  return (
+    <EmptyState
+      mascot="telescope"
+      title={overviewCopy.notInClassTitle}
+      description={overviewCopy.notInClassBody}
+      action={
+        <Link
+          href="/classes"
+          prefetch={false}
+          className={buttonVariants({ variant: "secondary" })}
+        >
+          {overviewCopy.toClasses}
+        </Link>
       }
     />
   );

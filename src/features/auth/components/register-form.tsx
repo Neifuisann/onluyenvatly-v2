@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { useActionState, useRef } from "react";
 import { FormField, fieldA11y } from "@/components/form-field";
 import { Alert } from "@/components/ui/alert";
@@ -14,6 +15,8 @@ import { useFocusError } from "./use-focus-error";
 export function RegisterForm() {
   const [state, action, pending] = useActionState(register, null);
   const formRef = useRef<HTMLFormElement>(null);
+  // An invite link (`/join/...`) survives registering; checked on the server.
+  const next = useSearchParams().get("next") ?? "";
   useFocusError(formRef, state);
   const failed = state && !state.ok ? state : null;
   const fe = failed?.fieldErrors ?? {};
@@ -26,6 +29,7 @@ export function RegisterForm() {
       noValidate
       className="grid grid-cols-2 gap-x-3 gap-y-2.5 [&_[data-slot=input]]:h-11 [&_[data-slot=select]]:h-11"
     >
+      <input type="hidden" name="next" value={next} />
       {failed && !failed.fieldErrors && (
         <Alert
           variant="danger"
@@ -142,7 +146,7 @@ export function RegisterForm() {
       <p className="col-span-2 text-center text-muted-foreground text-sm">
         {authCopy.haveAccount}{" "}
         <Link
-          href="/login"
+          href={next ? `/login?next=${encodeURIComponent(next)}` : "/login"}
           className="font-medium text-primary underline-offset-4 hover:underline"
           prefetch={false}
         >

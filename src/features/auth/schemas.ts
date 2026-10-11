@@ -77,6 +77,8 @@ export const RegisterSchema = z
     dateOfBirth: dateOfBirthField,
     grade: gradeField,
     className: classNameField,
+    /** Where to go afterwards (an invite link); checked with `safeNextPath`. */
+    next: z.string().max(512).optional(),
     // Field-level rules run even when other fields are invalid, so the
     // student sees every problem at once.
     password: newPasswordField,

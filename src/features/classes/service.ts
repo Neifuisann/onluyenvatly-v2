@@ -8,6 +8,7 @@ import {
   lessons,
   users,
 } from "@/db/schema";
+import type { Role } from "@/features/auth/core/login-policy";
 import { type Owner, ownedBy } from "@/features/lessons/ownership";
 import { writeAudit } from "@/lib/audit";
 import { err, ok, type Result } from "@/lib/result";
@@ -18,6 +19,7 @@ import {
   type MemberChange,
   parsePhoneList,
 } from "./domain/classes";
+import { generateJoinCode } from "./domain/invite";
 import { classesCopy as M } from "./messages";
 
 /**
@@ -52,7 +54,13 @@ export async function createClass(
   return db.transaction(async (tx) => {
     const [row] = await tx
       .insert(classes)
-      .values({ ownerId: actor.id, ...form, createdAt: now, updatedAt: now })
+      .values({
+        ownerId: actor.id,
+        ...form,
+        joinCode: generateJoinCode(),
+        createdAt: now,
+        updatedAt: now,
+      })
       .returning({ id: classes.id });
     if (!row) throw new Error("class insert returned no row");
     await writeAudit(tx, {
@@ -292,5 +300,143 @@ export async function setClassLessons(
         data: { added: add, removed: remove },
       });
     return ok({ added: add.length, removed: remove.length });
+  });
+}
+
+/** "Đổi liên kết": a new invite code; links already sent stop working. */
+export async function resetJoinCode(
+  actor: Actor,
+  id: number,
+  now = new Date(),
+): Promise<Result<{ joinCode: string }>> {
+  return db.transaction(async (tx) => {
+    if (!(await lockClass(tx, actor, id))) return err("NOT_FOUND");
+    const joinCode = generateJoinCode();
+    await tx
+      .update(classes)
+      .set({ joinCode, updatedAt: now })
+      .where(eq(classes.id, id));
+    await writeAudit(tx, {
+      actorId: actor.id,
+      action: "class.reset_code",
+      targetType: "class",
+      targetId: id,
+    });
+    return ok({ joinCode });
+  });
+}
+
+/**
+ * "Chia sẻ" on a lesson: gives it to one of the actor's classes (if it isn't
+ * there yet) and returns that class's invite code, so the copied link lets
+ * any student who opens it into a class that has the lesson. Same rules as
+ * "Giao bài": the actor's own published lesson, a class that isn't archived.
+ */
+export async function shareLessonToClass(
+  actor: Actor,
+  lessonId: number,
+  classId: number,
+  now = new Date(),
+): Promise<Result<{ joinCode: string; assigned: boolean }>> {
+  return db.transaction(async (tx) => {
+    const [cls] = await tx
+      .select({ archivedAt: classes.archivedAt, joinCode: classes.joinCode })
+      .from(classes)
+      .where(and(eq(classes.id, classId), classOwnedBy(actor)))
+      .for("update")
+      .limit(1);
+    if (!cls) return err("NOT_FOUND");
+    if (cls.archivedAt) return err("CONFLICT", { message: M.errors.archived });
+    const [lesson] = await tx
+      .select({ id: lessons.id })
+      .from(lessons)
+      .where(
+        and(
+          eq(lessons.id, lessonId),
+          ownedBy(actor),
+          eq(lessons.status, "published"),
+          isNull(lessons.deletedAt),
+        ),
+      )
+      .limit(1);
+    if (!lesson) return err("NOT_FOUND");
+    const inserted = await tx
+      .insert(classLessons)
+      .values({ classId, lessonId, createdAt: now })
+      .onConflictDoNothing()
+      .returning({ lessonId: classLessons.lessonId });
+    const assigned = inserted.length > 0;
+    if (assigned)
+      await writeAudit(tx, {
+        actorId: actor.id,
+        action: "class.lessons",
+        targetType: "class",
+        targetId: classId,
+        data: { added: [lessonId], removed: [] },
+      });
+    return ok({ joinCode: cls.joinCode, assigned });
+  });
+}
+
+export type JoinOutcome = {
+  classId: number;
+  /** False when the student was already in the class. */
+  joined: boolean;
+  /** Whether the class has the lesson the link pointed at. */
+  hasLesson: boolean;
+};
+
+/**
+ * A student opens an invite link and confirms: they join the class (once;
+ * joining again changes nothing). Archived classes and unknown codes read
+ * as NOT_FOUND. Teachers and admins don't join classes.
+ */
+export async function joinClass(
+  user: { id: string; role: Role },
+  code: string,
+  lessonId?: number,
+  now = new Date(),
+): Promise<Result<JoinOutcome>> {
+  if (user.role !== "student") return err("FORBIDDEN");
+  return db.transaction(async (tx) => {
+    const [cls] = await tx
+      .select({ id: classes.id })
+      .from(classes)
+      .where(and(eq(classes.joinCode, code), isNull(classes.archivedAt)))
+      .limit(1);
+    if (!cls) return err("NOT_FOUND");
+    const inserted = await tx
+      .insert(classMembers)
+      .values({
+        classId: cls.id,
+        userId: user.id,
+        addedBy: user.id,
+        createdAt: now,
+      })
+      .onConflictDoNothing()
+      .returning({ userId: classMembers.userId });
+    const joined = inserted.length > 0;
+    if (joined)
+      await writeAudit(tx, {
+        actorId: user.id,
+        action: "class.join",
+        targetType: "class",
+        targetId: cls.id,
+      });
+    const hasLesson = lessonId
+      ? (
+          await tx
+            .select({ lessonId: classLessons.lessonId })
+            .from(classLessons)
+            .where(
+              and(
+                eq(classLessons.classId, cls.id),
+                eq(classLessons.lessonId, lessonId),
+              ),
+            )
+            .limit(1)
+        ).length > 0
+      : false;
+    return ok({ classId: cls.id, joined, hasLesson });
   });
 }

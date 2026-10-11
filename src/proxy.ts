@@ -54,5 +54,6 @@ export const config = {
     "/admin/:path*",
     "/play/:path*",
     "/host/:path*",
+    "/join/:path*",
   ],
 };

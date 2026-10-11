@@ -9,8 +9,8 @@ import {
   ChartColumn,
   Copy,
   GripVertical,
-  Link2,
   PenLine,
+  Share2,
   Trash2,
 } from "lucide-react";
 import Link from "next/link";
@@ -45,6 +45,7 @@ import { lessonTopic } from "../../domain/topic";
 import { statsCopy, adminLessonsCopy as t } from "../../messages";
 import { TopicGlyph } from "../topic-glyph";
 import { LessonStatusBadge } from "./lesson-status-badge";
+import { type ShareClass, ShareLessonDialog } from "./share-lesson-dialog";
 
 export type LessonTableRow = {
   id: number;
@@ -95,8 +96,11 @@ export function LessonTable({
   order: fullOrder,
   offset,
   sort,
+  shareClasses,
 }: {
   rows: LessonTableRow[];
+  /** The teacher's open classes, for "Chia sẻ cho học sinh". */
+  shareClasses: readonly ShareClass[];
   sort: TableSort;
   /** The whole list's ids in order; `null` when filtered (no reordering). */
   order: number[] | null;
@@ -108,6 +112,7 @@ export function LessonTable({
   const [message, setMessage] = useState<{ text: string; error: boolean }>();
   const [pending, startTransition] = useTransition();
   const [confirm, setConfirm] = useState<LessonTableRow | null>(null);
+  const [sharing, setSharing] = useState<LessonTableRow | null>(null);
   const [dragId, setDragId] = useState<number | null>(null);
   const rowRefs = useRef(new Map<number, HTMLTableRowElement>());
   const dragStart = useRef<number[]>([]);
@@ -219,18 +224,6 @@ export function LessonTable({
       window.removeEventListener("pointercancel", up);
     };
   }, [dragId]);
-
-  /** The public `/share/lessons/[id]` link (S8-03) for a student to open. */
-  const copyLink = async (row: LessonTableRow) => {
-    const url = new URL(`/share/lessons/${row.id}`, window.location.origin)
-      .href;
-    try {
-      await navigator.clipboard.writeText(url);
-      setMessage({ text: t.linkCopied(row.title), error: false });
-    } catch {
-      setMessage({ text: t.linkCopyFailed(url), error: true });
-    }
-  };
 
   const confirmDelete = (row: LessonTableRow) =>
     run(
@@ -392,10 +385,10 @@ export function LessonTable({
                   <div className="ml-auto flex w-33 flex-wrap justify-end sm:w-auto sm:flex-nowrap">
                     {row.status === "published" && (
                       <IconButton
-                        label={`${t.copyLink}: ${row.title}`}
-                        onClick={() => copyLink(row)}
+                        label={`${t.share}: ${row.title}`}
+                        onClick={() => setSharing(row)}
                       >
-                        <Link2 aria-hidden />
+                        <Share2 aria-hidden />
                       </IconButton>
                     )}
                     <Link
@@ -470,6 +463,16 @@ export function LessonTable({
           </tbody>
         </table>
       </div>
+
+      {/* Mounted only while open: a fresh form each time, and no second
+          `<output>` in the page while closed. */}
+      {sharing && (
+        <ShareLessonDialog
+          lesson={sharing}
+          classes={shareClasses}
+          onClose={() => setSharing(null)}
+        />
+      )}
 
       <Dialog
         open={confirm !== null}

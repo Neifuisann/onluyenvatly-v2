@@ -25,3 +25,6 @@ Option 2.
 - The global rating mixes subjects; a per-subject rating is future work.
 - Teachers can't share lessons with each other yet (no co-ownership or lesson copy between teachers); grade checks stay 10–12 (THPT).
 - Branding ("Ôn Luyện Vật Lý") and the theory pages are still physics-only.
+
+## Amendment (2026-10-11): invite links
+Adding students by phone alone left two gaps in practice: a teacher who sent a lesson link reached students who weren't in a class with that lesson (new lessons are in no class until "Giao bài"), and those students got a "doesn't exist" page. Classes now carry an invite code (`classes.join_code`, migration `0020`). `/join/<code>?bai=<lessonId>` lets a signed-in student join the class with one confirm and lands them on the lesson. "Chia sẻ cho học sinh" on a lesson asks which class, gives the lesson to it if needed, and copies that link, so a shared link always leads into a class that has the lesson. Access still flows only through class membership (`canOpenLesson` is unchanged), and a student outside the lesson's classes is told so instead of getting a 404. Codes are 8 characters from a 31-symbol alphabet, rate limited per student, and replaceable by the teacher.
