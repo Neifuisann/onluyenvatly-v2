@@ -31,6 +31,29 @@ export const PACES = {
 export type Pace = keyof typeof PACES;
 export const PACE_NAMES = Object.keys(PACES) as Pace[];
 
+/** Lives a teacher may give when misses knock players out (B-12). */
+export const MIN_LIVES = 1;
+export const MAX_LIVES = 5;
+export const DEFAULT_LIVES = 3;
+
+/**
+ * Room settings the teacher picks at creation (B-12). Everything off is the
+ * B-05 race: own order, late joins welcome, nobody knocked out.
+ */
+export type GameSettings = {
+  /** Everyone answers the same question at the same time. */
+  sameQuestion: boolean;
+  /** No new players once the race has started. */
+  lockJoin: boolean;
+  /** Misses allowed before a player is out; null when off. */
+  lives: number | null;
+};
+export const DEFAULT_SETTINGS: GameSettings = {
+  sameQuestion: false,
+  lockJoin: false,
+  lives: null,
+};
+
 /** "3, 2, 1, Chạy!" before the first question. */
 export const COUNTDOWN_MS = 4_000;
 /** How long the right/wrong card stays before the next question. */

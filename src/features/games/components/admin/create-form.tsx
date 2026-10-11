@@ -1,7 +1,7 @@
 "use client";
 
 import { Check, EyeOff, Search, X } from "lucide-react";
-import { useActionState, useMemo, useState } from "react";
+import { type ReactNode, useActionState, useMemo, useState } from "react";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,8 +10,11 @@ import type { QuestionType } from "@/features/lessons/schema";
 import { cn } from "@/lib/utils";
 import { createGameAction } from "../../admin-actions";
 import {
+  DEFAULT_LIVES,
   DEFAULT_QUESTIONS,
   MAX_LESSONS,
+  MAX_LIVES,
+  MIN_LIVES,
   MIN_QUESTIONS,
   PACE_NAMES,
   PACES,
@@ -33,6 +36,10 @@ export type LessonChoice = {
 
 const SIZES = [5, 10, 15, 20, 30, 40] as const;
 const TYPES: QuestionType[] = ["mcq", "tf", "short"];
+const LIFE_CHOICES = Array.from(
+  { length: MAX_LIVES - MIN_LIVES + 1 },
+  (_, i) => MIN_LIVES + i,
+);
 
 /** Lowercase without Vietnamese marks, so "dao dong" finds "Dao động". */
 const fold = (s: string) =>
@@ -42,6 +49,49 @@ const fold = (s: string) =>
     .replace(/đ/g, "d")
     .replace(/Đ/g, "D")
     .toLowerCase();
+
+/**
+ * One room rule (B-12): a checkbox posted as `name=on`, styled as a switch.
+ * Uncontrolled unless `checked` is given; `children` show under it.
+ */
+function RuleToggle({
+  name,
+  label,
+  hint,
+  checked,
+  onChange,
+  children,
+}: {
+  name: string;
+  label: string;
+  hint: string;
+  checked?: boolean;
+  onChange?: (on: boolean) => void;
+  children?: ReactNode;
+}) {
+  return (
+    <div className="rounded-md border border-border px-3.5 py-2.5 has-[:checked]:border-primary has-[:checked]:bg-primary-soft">
+      <label className="flex cursor-pointer items-start gap-3">
+        <input
+          type="checkbox"
+          name={name}
+          checked={checked}
+          onChange={onChange && ((e) => onChange(e.target.checked))}
+          className="peer sr-only"
+        />
+        <span
+          aria-hidden
+          className="relative mt-0.5 h-5 w-9 shrink-0 rounded-full bg-input transition-colors after:absolute after:top-0.5 after:left-0.5 after:size-4 after:rounded-full after:bg-surface after:shadow-card after:transition-transform peer-checked:bg-primary peer-checked:after:translate-x-4 peer-focus-visible:ring-2 peer-focus-visible:ring-ring"
+        />
+        <span className="flex-1">
+          <span className="block font-semibold text-sm">{label}</span>
+          <span className="block text-muted-foreground text-xs">{hint}</span>
+        </span>
+      </label>
+      {children}
+    </div>
+  );
+}
 
 /**
  * "Tạo phòng thi đấu" (B-05): lessons, question types, size and pace, with a
@@ -55,6 +105,8 @@ export function CreateGameForm({ lessons }: { lessons: LessonChoice[] }) {
   const [types, setTypes] = useState<QuestionType[]>(["mcq"]);
   const [count, setCount] = useState<number>(DEFAULT_QUESTIONS);
   const [pace, setPace] = useState<Pace>("normal");
+  const [livesOn, setLivesOn] = useState(false);
+  const [lives, setLives] = useState<number>(DEFAULT_LIVES);
   const failed = state && !state.ok ? state : null;
 
   const shown = useMemo(() => {
@@ -355,6 +407,57 @@ export function CreateGameForm({ lessons }: { lessons: LessonChoice[] }) {
                 </span>
               </label>
             ))}
+          </fieldset>
+
+          <fieldset className="grid gap-2">
+            <legend className="mb-2 font-medium text-sm">{t.rulesLabel}</legend>
+            <RuleToggle
+              name="sameQuestion"
+              label={t.sameQuestion}
+              hint={t.sameQuestionHint}
+            />
+            <RuleToggle
+              name="lockJoin"
+              label={t.lockJoin}
+              hint={t.lockJoinHint}
+            />
+            <RuleToggle
+              name="livesOn"
+              label={t.lives}
+              hint={t.livesHint(lives)}
+              checked={livesOn}
+              onChange={setLivesOn}
+            >
+              {livesOn && (
+                <div
+                  role="radiogroup"
+                  aria-label={t.livesCount}
+                  className="mt-1 grid grid-cols-5 gap-1 rounded-full bg-muted p-1"
+                >
+                  {LIFE_CHOICES.map((n) => (
+                    <label
+                      key={n}
+                      className={cn(
+                        "num flex h-8 cursor-pointer items-center justify-center rounded-full font-semibold text-sm transition-colors has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ring",
+                        lives === n
+                          ? "bg-surface text-foreground shadow-card"
+                          : "text-muted-foreground hover:text-foreground",
+                      )}
+                    >
+                      <input
+                        type="radio"
+                        name="lives"
+                        value={n}
+                        checked={lives === n}
+                        onChange={() => setLives(n)}
+                        className="sr-only"
+                      />
+                      {n}
+                    </label>
+                  ))}
+                </div>
+              )}
+            </RuleToggle>
           </fieldset>
 
           <output className="block rounded-md bg-muted px-3.5 py-3 text-sm">

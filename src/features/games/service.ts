@@ -32,18 +32,23 @@ import {
   playerPlan,
 } from "./domain/bank";
 import {
+  DEFAULT_SETTINGS,
   generatePin,
   MAX_PLAYERS,
   MIN_QUESTIONS,
   type Pace,
 } from "./domain/rules";
 import {
+  costsLife,
   effectiveStatus,
   type GameMark,
   limitMs,
-  questionShownAt,
+  livesLeft,
+  passedMarks,
+  playerShownAt,
   raceHardEnd,
   scoreAnswer,
+  sharedPosition,
 } from "./domain/scoring";
 import {
   playerView,
@@ -157,6 +162,9 @@ export async function createGame(
             bank,
             bankTypes,
             lessonIds: chosen.map((l) => l.id),
+            sameQuestion: input.sameQuestion ?? DEFAULT_SETTINGS.sameQuestion,
+            lockJoin: input.lockJoin ?? DEFAULT_SETTINGS.lockJoin,
+            lives: input.lives ?? DEFAULT_SETTINGS.lives,
             createdAt: now,
           })
           .returning({ id: gameRooms.id });
@@ -183,8 +191,9 @@ const bumpRev = { rev: sql`${gameRooms.rev} + 1` };
 
 /**
  * Joins a room, or changes racer while still in the lobby. Joining a race
- * already running is allowed: the late player starts with their own
- * countdown. A player the host removed can't come back.
+ * already running is allowed unless the room locks joins (B-12): the late
+ * player starts with their own countdown, or on the class's current question
+ * in a same-question race. A player the host removed can't come back.
  */
 export async function joinGame(
   user: { id: string },
@@ -218,6 +227,8 @@ export async function joinGame(
     forgetSnapshot(room.id);
     return ok({ playerId: existing.id });
   }
+  if (room.lockJoin && room.status !== "lobby")
+    return err("FORBIDDEN", { message: t.play.lockedBody });
 
   const [players] = await db
     .select({ n: count() })
@@ -369,7 +380,7 @@ export async function removePlayer(
   return removed ? ok(null) : err("NOT_FOUND");
 }
 
-function toStanding(p: SnapshotPlayer): StandingInput {
+function toStanding(p: SnapshotPlayer, lives: number | null): StandingInput {
   return {
     id: p.id,
     name: p.name,
@@ -380,15 +391,25 @@ function toStanding(p: SnapshotPlayer): StandingInput {
     correct: p.correct,
     bestStreak: p.bestStreak,
     finishedAt: p.finishedAt,
+    eliminatedAt: p.eliminatedAt,
+    lives: livesLeft(lives, p.misses),
   };
 }
+
+/** A same-question answer this far ahead of its question is refused. */
+const EARLY_SLACK_MS = 1_000;
 
 /**
  * One answer in a race (ADR-004 still holds: the key comes back only for
  * the question just answered). Server-timed, graded with `gradeItem`, and
- * written with `WHERE answered = index`, so a retry counts once and gets the
- * same result back. The room row is locked first, which also refuses an
- * answer after the host ended the race.
+ * written with `WHERE answered = <what I read>`, so a retry counts once and
+ * gets the same result back. The room row is locked first, which also
+ * refuses an answer after the host ended the race.
+ *
+ * Room settings (B-12): in a same-question race the clock is the class's,
+ * and a player coming back after a closed tab answers the current question,
+ * the ones they let pass counting as timeouts. With lives, a wrong, blank or
+ * timed-out answer costs one; the last one ends this player's race.
  */
 export async function answerQuestion(
   userId: string,
@@ -404,13 +425,17 @@ export async function answerQuestion(
       pace: gameRooms.pace,
       bank: gameRooms.bank,
       bankTypes: gameRooms.bankTypes,
+      sameQuestion: gameRooms.sameQuestion,
+      lives: gameRooms.lives,
       playerId: gamePlayers.id,
       seed: gamePlayers.seed,
       answered: gamePlayers.answered,
       streak: gamePlayers.streak,
+      misses: gamePlayers.misses,
       marks: gamePlayers.marks,
       joinedAt: gamePlayers.joinedAt,
       lastAnsweredAt: gamePlayers.lastAnsweredAt,
+      eliminatedAt: gamePlayers.eliminatedAt,
       removedAt: gamePlayers.removedAt,
     })
     .from(gamePlayers)
@@ -420,13 +445,29 @@ export async function answerQuestion(
   if (!row) return err("NOT_FOUND");
   if (row.removedAt) return err("FORBIDDEN", { message: t.play.removed });
   const size = row.bank.length;
+  const pace = row.pace as Pace;
   if (input.index >= size) return err("VALIDATION");
-  if (input.index > row.answered) return err("CONFLICT");
+  const isRetry = input.index < row.answered;
+  if (!isRetry && row.eliminatedAt) return err("GAME_OVER");
+  if (input.index > row.answered) {
+    // Only a same-question race moves on without you, and only past
+    // questions whose answers are closed.
+    if (
+      !row.sameQuestion ||
+      !row.startedAt ||
+      sharedPosition(row.startedAt, row.bankTypes, pace, now) < input.index
+    )
+      return err("CONFLICT");
+  }
 
   // The whole bank (from the shared lesson cache) rebuilds this player's plan.
   const questions = await bankQuestions(row.bank);
   if (!questions) return err("INTERNAL");
-  const plan = playerPlan(optionCounts(questions), createRng(row.seed));
+  const plan = playerPlan(
+    optionCounts(questions),
+    createRng(row.seed),
+    row.sameQuestion,
+  );
   const bankIndex = plan.order[input.index] as number;
   const bankItem = row.bank[bankIndex] as BankItem;
   const question = questions[bankIndex] as Question;
@@ -439,12 +480,14 @@ export async function answerQuestion(
     answered: number;
     correct: number;
     streak: number;
+    misses: number;
     lastAnsweredAt: Date | null;
     finishedAt: Date | null;
+    eliminatedAt: Date | null;
   } | null = null;
   let raceOver = false;
 
-  if (input.index < row.answered) {
+  if (isRetry) {
     // A retry of an answer already counted: the stored mark is the truth.
     mark = row.marks[bankIndex] ?? { k: "blank", s: 0 };
   } else {
@@ -454,44 +497,57 @@ export async function answerQuestion(
       effectiveStatus(row, now) !== "running"
     )
       return err("GAME_OVER");
+    const room = {
+      startedAt: row.startedAt,
+      sameQuestion: row.sameQuestion,
+      bankTypes: row.bankTypes,
+      pace,
+    };
+    const shownAt = playerShownAt(room, row, input.index);
+    if (row.sameQuestion && now.getTime() < shownAt.getTime() - EARLY_SLACK_MS)
+      return err("CONFLICT");
+    // Same-question races only: positions are bank indexes there.
+    const passed = passedMarks(room, row.joinedAt, row.answered, input.index);
     const graded = gradeItem(question, item, input.answer, "proportional");
-    const shownAt = questionShownAt({
-      raceStartedAt: row.startedAt,
-      joinedAt: row.joinedAt,
-      lastAnsweredAt: row.lastAnsweredAt,
-    });
     const scored = scoreAnswer({
       share: graded.max > 0 ? graded.earned / graded.max : 0,
       blank: isBlank(input.answer),
       elapsedMs: now.getTime() - shownAt.getTime(),
-      limitMs: limitMs(question.type, row.pace as Pace),
-      streakBefore: row.streak,
+      limitMs: limitMs(question.type, pace),
+      streakBefore: passed.some((m) => m !== null) ? 0 : row.streak,
     });
     mark = { k: scored.k, s: scored.s };
-    const done = input.index + 1 >= size;
+    const marks = [...row.marks];
+    for (const [i, m] of passed.entries()) marks[row.answered + i] = m;
+    marks[bankIndex] = mark;
+    const missed = [...passed, mark].filter((m) => m && costsLife(m.k)).length;
+    const eliminated = row.lives !== null && row.misses + missed >= row.lives;
+    const done = input.index + 1 >= size || eliminated;
     const result = await db.transaction(async (tx) => {
-      const [room] = await tx
+      const [locked] = await tx
         .update(gameRooms)
         .set(bumpRev)
         .where(and(eq(gameRooms.id, roomId), eq(gameRooms.status, "running")))
         .returning({ id: gameRooms.id });
-      if (!room) return "over" as const;
+      if (!locked) return "over" as const;
       const [player] = await tx
         .update(gamePlayers)
         .set({
-          answered: sql`${gamePlayers.answered} + 1`,
+          answered: input.index + 1,
           score: sql`${gamePlayers.score} + ${mark.s}`,
           correct: sql`${gamePlayers.correct} + ${mark.k === "correct" ? 1 : 0}`,
           streak: scored.streak,
           bestStreak: sql`greatest(${gamePlayers.bestStreak}, ${scored.streak})`,
-          marks: sql`jsonb_set(${gamePlayers.marks}, ${`{${bankIndex}}`}::text[], ${JSON.stringify(mark)}::jsonb)`,
+          misses: sql`${gamePlayers.misses} + ${missed}`,
+          marks,
           lastAnsweredAt: now,
           ...(done && { finishedAt: now }),
+          ...(eliminated && { eliminatedAt: now }),
         })
         .where(
           and(
             eq(gamePlayers.id, row.playerId),
-            eq(gamePlayers.answered, input.index),
+            eq(gamePlayers.answered, row.answered),
           ),
         )
         .returning({
@@ -499,8 +555,10 @@ export async function answerQuestion(
           answered: gamePlayers.answered,
           correct: gamePlayers.correct,
           streak: gamePlayers.streak,
+          misses: gamePlayers.misses,
           lastAnsweredAt: gamePlayers.lastAnsweredAt,
           finishedAt: gamePlayers.finishedAt,
+          eliminatedAt: gamePlayers.eliminatedAt,
         });
       if (!player) return "raced" as const;
       const closed = done ? await finishIfAllDone(tx, roomId, now) : false;
@@ -521,13 +579,18 @@ export async function answerQuestion(
   const snapshot = await getRoomSnapshot(roomId, now.getTime());
   // The snapshot may be up to a second old: my own row is fresh.
   const rows = (snapshot?.players ?? []).map((p) =>
-    p.id === row.playerId ? toStanding({ ...p, ...me }) : toStanding(p),
+    toStanding(p.id === row.playerId ? { ...p, ...me } : p, row.lives),
   );
-  const nextShownAt = questionShownAt({
-    raceStartedAt: row.startedAt ?? now,
-    joinedAt: row.joinedAt,
-    lastAnsweredAt: me.lastAnsweredAt,
-  });
+  const nextShownAt = playerShownAt(
+    {
+      startedAt: row.startedAt ?? now,
+      sameQuestion: row.sameQuestion,
+      bankTypes: row.bankTypes,
+      pace,
+    },
+    { joinedAt: row.joinedAt, lastAnsweredAt: me.lastAnsweredAt },
+    me.answered,
+  );
   return ok({
     index: input.index,
     mark,
@@ -536,6 +599,8 @@ export async function answerQuestion(
     answered: me.answered,
     correct: me.correct,
     streak: me.streak,
+    lives: livesLeft(row.lives, me.misses),
+    eliminated: me.eliminatedAt !== null,
     finished: me.finishedAt !== null,
     raceOver:
       raceOver ||
@@ -594,8 +659,13 @@ export function roomState(
     questionCount: room.bankTypes.length,
     startedAt: room.startedAt?.toISOString() ?? null,
     serverNow: now.toISOString(),
-    players: rankPlayers(players.map(toStanding)),
+    players: rankPlayers(players.map((p) => toStanding(p, room.lives))),
     meId,
+    settings: {
+      sameQuestion: room.sameQuestion,
+      lockJoin: room.lockJoin,
+      lives: room.lives,
+    },
   };
 }
 

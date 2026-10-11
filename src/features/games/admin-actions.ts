@@ -4,6 +4,7 @@ import { refresh } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireTeacher } from "@/features/auth/guards";
 import { err, type FormState, ok, type Result } from "@/lib/result";
+import { DEFAULT_LIVES } from "./domain/rules";
 import { getRoom } from "./queries";
 import { CreateGameSchema, RemovePlayerSchema, RoomIdSchema } from "./schemas";
 import { createGame, endGame, hosts, removePlayer, startGame } from "./service";
@@ -25,6 +26,12 @@ export async function createGameAction(
     count: formData.get("count"),
     pace: formData.get("pace"),
     types: formData.getAll("types"),
+    sameQuestion: formData.get("sameQuestion") === "on",
+    lockJoin: formData.get("lockJoin") === "on",
+    lives:
+      formData.get("livesOn") === "on"
+        ? (formData.get("lives") ?? DEFAULT_LIVES)
+        : null,
   });
   if (!parsed.success) return err("VALIDATION");
   const result = await createGame(user, parsed.data);
@@ -32,7 +39,7 @@ export async function createGameAction(
   redirect(`/host/${result.data.roomId}`);
 }
 
-/** "Chơi lại": a new room with the same lessons, size, pace and types. */
+/** "Chơi lại": a new room with the same lessons, size, pace, types and settings. */
 export async function replayGameAction(roomId: unknown): Promise<Result<null>> {
   const user = await requireTeacher();
   const id = RoomIdSchema.safeParse(roomId);
@@ -45,6 +52,9 @@ export async function replayGameAction(roomId: unknown): Promise<Result<null>> {
     count: room.bankTypes.length,
     pace: room.pace,
     types: [...new Set(room.bankTypes)],
+    sameQuestion: room.sameQuestion,
+    lockJoin: room.lockJoin,
+    lives: room.lives,
   });
   if (!result.ok) return result;
   redirect(`/host/${result.data.roomId}`);

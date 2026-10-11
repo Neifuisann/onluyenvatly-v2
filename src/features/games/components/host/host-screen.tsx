@@ -80,6 +80,7 @@ export function HostScreen({
     });
 
   const done = room.players.filter((p) => p.finished).length;
+  const out = room.players.filter((p) => p.eliminated).length;
 
   return (
     <div className="flex min-h-dvh flex-col">
@@ -195,6 +196,7 @@ export function HostScreen({
             <h1 className="font-bold font-display text-2xl">{t.track}</h1>
             <output className="num text-ink-muted text-lg">
               {t.finishedCount(done, room.players.length)}
+              {out > 0 && ` · ${t.eliminatedCount(out)}`}
             </output>
           </div>
           <RaceTrack
