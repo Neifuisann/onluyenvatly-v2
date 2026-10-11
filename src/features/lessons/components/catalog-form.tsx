@@ -7,9 +7,11 @@ import type { CatalogFilters } from "../domain/catalog";
 /** Keep only URL synchronization and debouncing in the client bundle. */
 export function CatalogForm({
   filters,
+  basePath,
   children,
 }: {
   filters: CatalogFilters;
+  basePath: string;
   children: ReactNode;
 }) {
   const formRef = useRef<HTMLFormElement>(null);
@@ -36,7 +38,7 @@ export function CatalogForm({
   return (
     <Form
       ref={formRef}
-      action="/lessons"
+      action={basePath}
       prefetch={false}
       scroll={false}
       role="search"

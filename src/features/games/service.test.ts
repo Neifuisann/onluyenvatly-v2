@@ -66,7 +66,7 @@ const tf: Question = {
   ],
 };
 
-let host: { id: string };
+let host: { id: string; role: "teacher" | "admin" };
 let students: string[];
 let lessonA: number;
 let lessonB: number;
@@ -74,7 +74,7 @@ const questionsOf = new Map<number, Question[]>();
 
 async function addUser(
   phone: string,
-  role: "student" | "admin" = "student",
+  role: "student" | "teacher" | "admin" = "student",
   fullName = "Học Sinh",
 ) {
   const [u] = await tdb
@@ -100,6 +100,7 @@ async function addLesson(
       title: `Bài ${questions.length}`,
       status: "published",
       config: { ...DEFAULT_LESSON_CONFIG, ...config },
+      ownerId: host.id,
     })
     .returning({ id: lessons.id });
   const id = lesson?.id ?? 0;
@@ -176,7 +177,10 @@ function wrong(key: AttemptAnswer): AttemptAnswer {
 beforeEach(async () => {
   await resetDb(tdb);
   questionsOf.clear();
-  host = { id: await addUser("0900000000", "admin", "Cô Giáo") };
+  host = {
+    id: await addUser("0900000000", "teacher", "Cô Giáo"),
+    role: "teacher",
+  };
   students = [
     await addUser("0900000001", "student", "Nguyễn Văn An"),
     await addUser("0900000002", "student", "Trần Thị Bình"),
@@ -248,7 +252,7 @@ describe("createGame", () => {
     const pin = () => "444444";
     const a = await createGame(host, input(), { now: NOW, pin });
     if (!a.ok) throw new Error();
-    await endGame(a.data.roomId, NOW);
+    await endGame(host, a.data.roomId, NOW);
     const b = await createGame(host, input(), { now: NOW, pin });
     expect(b).toMatchObject({ ok: true, data: { pin: "444444" } });
   });
@@ -297,7 +301,7 @@ describe("joinGame", () => {
       await joinGame({ id: students[1] as string }, { roomId, ...look }, NOW),
     ).toMatchObject({ ok: false, code: "GAME_FULL" });
 
-    await endGame(roomId, NOW);
+    await endGame(host, roomId, NOW);
     expect(
       await joinGame({ id: students[1] as string }, { roomId, ...look }, NOW),
     ).toMatchObject({ ok: false, code: "GAME_OVER" });
@@ -314,17 +318,52 @@ describe("joinGame", () => {
   });
 });
 
+describe("other teachers (B-03)", () => {
+  it("can't draw from another teacher's lessons or control their room", async () => {
+    const other = {
+      id: await addUser("0900000088", "teacher", "Thầy khác"),
+      role: "teacher" as const,
+    };
+    expect(
+      await createGame(other, input(), { now: NOW, seed: 1 }),
+    ).toMatchObject({ ok: false, code: "VALIDATION" });
+    const roomId = await newRoom();
+    await join(roomId, students[0] as string);
+    expect(await startGame(other, roomId, NOW)).toMatchObject({
+      code: "NOT_FOUND",
+    });
+    expect(await endGame(other, roomId, NOW)).toMatchObject({
+      code: "NOT_FOUND",
+    });
+    const [player] = await tdb.select().from(gamePlayers);
+    expect(
+      await removePlayer(other, roomId, player?.id ?? 0, NOW),
+    ).toMatchObject({ code: "NOT_FOUND" });
+    expect(await pollRoom(other, roomId, -1, NOW)).toMatchObject({
+      code: "FORBIDDEN",
+    });
+    const [room] = await tdb.select().from(gameRooms);
+    expect(room?.status).toBe("lobby");
+    // An admin runs any room.
+    const admin = {
+      id: await addUser("0900000089", "admin", "Quản trị"),
+      role: "admin" as const,
+    };
+    expect(await startGame(admin, roomId, NOW)).toMatchObject({ ok: true });
+  });
+});
+
 describe("startGame and endGame", () => {
   it("needs a player, then runs with a hard end", async () => {
     const roomId = await newRoom();
-    expect(await startGame(roomId, NOW)).toMatchObject({
+    expect(await startGame(host, roomId, NOW)).toMatchObject({
       ok: false,
       code: "VALIDATION",
     });
     await join(roomId, students[0] as string);
-    expect(await startGame(roomId, NOW)).toMatchObject({ ok: true });
+    expect(await startGame(host, roomId, NOW)).toMatchObject({ ok: true });
     // A second click is harmless.
-    expect(await startGame(roomId, at(500))).toMatchObject({
+    expect(await startGame(host, roomId, at(500))).toMatchObject({
       ok: true,
       data: { startedAt: NOW.toISOString() },
     });
@@ -334,12 +373,12 @@ describe("startGame and endGame", () => {
       .where(eq(gameRooms.id, roomId));
     expect(room?.status).toBe("running");
     expect(room?.hardEndAt?.getTime()).toBeGreaterThan(NOW.getTime());
-    expect(await endGame(roomId, at(1000))).toMatchObject({ ok: true });
-    expect(await startGame(roomId, at(2000))).toMatchObject({
+    expect(await endGame(host, roomId, at(1000))).toMatchObject({ ok: true });
+    expect(await startGame(host, roomId, at(2000))).toMatchObject({
       ok: false,
       code: "GAME_OVER",
     });
-    expect(await endGame(crypto.randomUUID())).toMatchObject({
+    expect(await endGame(host, crypto.randomUUID())).toMatchObject({
       ok: false,
       code: "NOT_FOUND",
     });
@@ -350,7 +389,7 @@ describe("answerQuestion", () => {
   async function runningRoom(players = 1) {
     const roomId = await newRoom();
     for (const s of students.slice(0, players)) await join(roomId, s);
-    await startGame(roomId, NOW);
+    await startGame(host, roomId, NOW);
     return roomId;
   }
 
@@ -468,7 +507,7 @@ describe("answerQuestion", () => {
         at(Q1),
       ),
     ).toMatchObject({ ok: false, code: "NOT_FOUND" });
-    await endGame(roomId, at(Q1));
+    await endGame(host, roomId, at(Q1));
     expect(
       await answerQuestion(me, roomId, { index: 0, answer: "A" }, at(Q1 + 10)),
     ).toMatchObject({ ok: false, code: "GAME_OVER" });
@@ -580,12 +619,7 @@ describe("pollRoom", () => {
     expect(
       await pollRoom(student(students[1] as string), roomId, -1, at(0)),
     ).toMatchObject({ ok: false, code: "FORBIDDEN" });
-    const asHost = await pollRoom(
-      { id: host.id, role: "admin" },
-      roomId,
-      -1,
-      at(0),
-    );
+    const asHost = await pollRoom(host, roomId, -1, at(0));
     expect(asHost).toMatchObject({
       ok: true,
       data: { kind: "state", state: { meId: null, players: [] } },
@@ -598,7 +632,7 @@ describe("pollRoom", () => {
   it("a player who joined on another instance is found fresh", async () => {
     const roomId = await newRoom();
     // Prime the snapshot without the player, then join "elsewhere".
-    await pollRoom({ id: host.id, role: "admin" }, roomId, -1, at(0));
+    await pollRoom(host, roomId, -1, at(0));
     await tdb.insert(gamePlayers).values({
       roomId,
       userId: students[0] as string,
@@ -619,7 +653,7 @@ describe("pollRoom", () => {
   it("a race past its hard end reads as finished", async () => {
     const roomId = await newRoom();
     await join(roomId, students[0] as string);
-    await startGame(roomId, NOW);
+    await startGame(host, roomId, NOW);
     const [room] = await tdb.select().from(gameRooms);
     const r = await pollRoom(
       student(students[0] as string),

@@ -1,7 +1,7 @@
 "use server";
 
 import { updateTag } from "next/cache";
-import { requireAdmin } from "@/features/auth/guards";
+import { requireTeacher } from "@/features/auth/guards";
 import { tags } from "@/lib/cache-tags";
 import { err, type Result } from "@/lib/result";
 import {
@@ -11,7 +11,8 @@ import {
 import { AttemptIdSchema } from "./schemas";
 
 /**
- * `deleteAttempt(id)` (05 §2, S6-04): `requireAdmin()` first, the id, then
+ * `deleteAttempt(id)` (05 §2, S6-04): `requireTeacher()` first (the service
+ * also checks the teacher owns the lesson), the id, then
  * one transaction (delete, rating replay, attempt count, audit). Invalidates
  * the leaderboard when a rating changed, and the lesson's statistics and the
  * admin dashboard (S6-06) when a submitted attempt went. No `refresh()`:
@@ -21,7 +22,7 @@ import { AttemptIdSchema } from "./schemas";
 export async function deleteAttempt(
   input: unknown,
 ): Promise<Result<DeletedAttempt>> {
-  const user = await requireAdmin();
+  const user = await requireTeacher();
   const id = AttemptIdSchema.safeParse(input);
   if (!id.success) return err("VALIDATION");
   const result = await deleteAttemptService(user, id.data);

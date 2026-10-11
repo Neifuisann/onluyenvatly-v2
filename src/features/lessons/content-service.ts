@@ -17,6 +17,7 @@ import { checkPublishable, draftContent } from "./domain/content";
 import { serializeLesson } from "./domain/serializer";
 import { liveQuestions, summarizeLesson } from "./domain/summary";
 import { composeCopy, publishCopy } from "./messages";
+import { ownedBy } from "./ownership";
 import {
   DEFAULT_LESSON_CONFIG,
   LessonConfigSchema,
@@ -35,10 +36,11 @@ import {
  *   content it was started on. The one exception: a teacher's correction
  *   to the current version (`correction-service.ts`, 04 §3.4) changes it
  *   in place and regrades its attempts.
- * Callers check `requireAdmin()` first.
+ * Callers check `requireTeacher()` first; only the actor's own lessons are
+ * found (B-03).
  */
 
-async function lockLesson(tx: Tx, id: number) {
+async function lockLesson(tx: Tx, actor: Actor, id: number) {
   const [row] = await tx
     .select({
       status: lessons.status,
@@ -47,7 +49,7 @@ async function lockLesson(tx: Tx, id: number) {
       draftVersionId: lessons.draftVersionId,
     })
     .from(lessons)
-    .where(and(eq(lessons.id, id), isNull(lessons.deletedAt)))
+    .where(and(eq(lessons.id, id), ownedBy(actor), isNull(lessons.deletedAt)))
     .for("update")
     .limit(1);
   return row ?? null;
@@ -197,7 +199,11 @@ export async function composeLesson(
         ),
       )
       .where(
-        and(inArray(lessons.id, input.lessonIds), isNull(lessons.deletedAt)),
+        and(
+          inArray(lessons.id, input.lessonIds),
+          ownedBy(actor),
+          isNull(lessons.deletedAt),
+        ),
       );
     if (sources.length !== input.lessonIds.length)
       return err("NOT_FOUND", { message: composeCopy.sourcesGone });
@@ -260,7 +266,7 @@ export async function saveDraft(
   sourceText: string,
 ): Promise<Result<SaveDraftResult>> {
   return db.transaction(async (tx) => {
-    const lesson = await lockLesson(tx, id);
+    const lesson = await lockLesson(tx, actor, id);
     if (!lesson) return err("NOT_FOUND");
     if (!lesson.draftVersionId && lesson.currentVersionId) {
       const current = await readVersion(tx, lesson.currentVersionId);
@@ -303,7 +309,7 @@ export async function publishLesson(
   sourceText?: string,
 ): Promise<Result<PublishResult>> {
   return db.transaction(async (tx) => {
-    const lesson = await lockLesson(tx, id);
+    const lesson = await lockLesson(tx, actor, id);
     if (!lesson) return err("NOT_FOUND");
     if (lesson.status === "archived")
       return err("CONFLICT", { message: publishCopy.archived });
@@ -426,6 +432,7 @@ export async function unpublishLesson(
       .where(
         and(
           eq(lessons.id, id),
+          ownedBy(actor),
           isNull(lessons.deletedAt),
           eq(lessons.status, "published"),
         ),
@@ -448,7 +455,7 @@ export async function discardDraft(
   id: number,
 ): Promise<Result<{ id: number }>> {
   return db.transaction(async (tx) => {
-    const lesson = await lockLesson(tx, id);
+    const lesson = await lockLesson(tx, actor, id);
     if (!lesson) return err("NOT_FOUND");
     if (!lesson.draftVersionId || !lesson.currentVersionId)
       return err("CONFLICT", { message: publishCopy.noDraft });

@@ -4,6 +4,7 @@ import { db } from "@/db/client";
 import {
   attemptOverrides,
   attempts,
+  classes,
   lessons,
   lessonVersions,
   mistakes,
@@ -16,6 +17,7 @@ import {
   type LessonConfig,
   type Question,
 } from "@/features/lessons/schema";
+import { enrol, shareLesson } from "@/test/classes";
 import { resetDb, type TestDb } from "@/test/db";
 import { MAX_GUARD_EVENTS } from "./domain/guard";
 import {
@@ -71,6 +73,8 @@ async function addUser(role: "student" | "admin", phone: string) {
       passwordHash: "x",
     })
     .returning({ id: users.id });
+  // B-03: students reach the admin's lessons through a class.
+  if (u && role === "student") await enrol(tdb, u.id);
   return u?.id ?? "";
 }
 
@@ -95,6 +99,7 @@ async function addLesson(
     })
     .returning({ id: lessons.id });
   const id = lesson?.id ?? 0;
+  await shareLesson(tdb, id, admin.id);
   if (!withVersion) return id;
   const [version] = await tdb
     .insert(lessonVersions)
@@ -246,6 +251,37 @@ describe("startAttempt", () => {
       code: "NOT_FOUND",
     });
     expect(await startAttempt(admin, draft, ctx)).toMatchObject({ ok: true });
+  });
+
+  it("needs a class that has the lesson, and an archived class doesn't count (B-03)", async () => {
+    const lessonId = await addLesson();
+    // A student outside every class, and another teacher.
+    const [outsider] = await tdb
+      .insert(users)
+      .values({ fullName: "Ngoài lớp", phone: "0900000077", passwordHash: "x" })
+      .returning({ id: users.id });
+    const other = {
+      id: await addUser("admin", "0900000078"),
+      role: "teacher" as const,
+    };
+    expect(
+      await startAttempt(
+        { id: outsider?.id ?? "", role: "student" },
+        lessonId,
+        ctx,
+      ),
+    ).toMatchObject({ code: "NOT_FOUND" });
+    expect(await startAttempt(other, lessonId, ctx)).toMatchObject({
+      code: "NOT_FOUND",
+    });
+    await tdb.update(classes).set({ archivedAt: NOW });
+    expect(await startAttempt(student, lessonId, ctx)).toMatchObject({
+      code: "NOT_FOUND",
+    });
+    await tdb.update(classes).set({ archivedAt: null });
+    expect(await startAttempt(student, lessonId, ctx)).toMatchObject({
+      ok: true,
+    });
   });
 
   it("refuses missing lessons, lessons without content and empty pools", async () => {

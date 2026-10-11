@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
 import { PageHeader } from "@/components/page-header";
-import { requireAdmin } from "@/features/auth/guards";
+import { requireTeacher } from "@/features/auth/guards";
 import { getLessonForCorrection } from "@/features/lessons/admin-queries";
 import { QuestionTextEditor } from "@/features/lessons/components/corrections/question-text-editor";
 import { LessonIdSchema } from "@/features/lessons/domain/admin-list";
@@ -20,12 +20,12 @@ export const metadata: Metadata = { title: t.editMeta };
 export default async function EditQuestionPage({
   params,
 }: PageProps<"/admin/lessons/[id]/questions/[questionId]">) {
-  await requireAdmin();
+  const user = await requireTeacher();
   const raw = await params;
   const id = LessonIdSchema.safeParse(raw.id);
   const questionId = QuestionIdSchema.safeParse(raw.questionId);
   if (!id.success || !questionId.success) notFound();
-  const lesson = await getLessonForCorrection(id.data);
+  const lesson = await getLessonForCorrection(user, id.data);
   if (!lesson) notFound();
   const back = `/admin/lessons/${lesson.id}/questions`;
   if (lesson.hasDraft || lesson.status === "archived") redirect(back);

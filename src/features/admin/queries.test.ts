@@ -14,6 +14,7 @@ const NOW = new Date("2026-09-29T05:00:00Z");
 
 let lessonId = 0;
 let versionId = 0;
+let ownerId = "";
 
 beforeAll(async () => {
   await resetDb(tdb);
@@ -39,6 +40,7 @@ beforeAll(async () => {
       passwordHash: "x",
     })
     .returning({ id: users.id });
+  ownerId = admin?.id ?? "";
   const ls = await tdb
     .insert(lessons)
     .values([
@@ -46,11 +48,13 @@ beforeAll(async () => {
         title: "Dòng điện",
         status: "published",
         config: DEFAULT_LESSON_CONFIG,
+        ownerId: admin?.id ?? null,
       },
       {
         title: "Từ trường",
         status: "published",
         config: DEFAULT_LESSON_CONFIG,
+        ownerId: admin?.id ?? null,
       },
     ])
     .returning({ id: lessons.id });
@@ -109,7 +113,8 @@ beforeAll(async () => {
       submittedAt: null,
       earned: null,
     },
-    // Personalized practice: an attempt, but no lesson to rank.
+    // Personalized practice: the student's own, not on a teacher's lesson
+    // (B-03), so it counts nowhere.
     {
       userId: s(2),
       lessonId: null,
@@ -138,11 +143,11 @@ beforeAll(async () => {
 });
 
 describe("loadAdminOverview", () => {
-  it("counts students' submitted attempts in Vietnam days", async () => {
-    const o = await loadAdminOverview(NOW);
+  it("counts students' submitted attempts on the teacher's lessons in Vietnam days", async () => {
+    const o = await loadAdminOverview(NOW, ownerId);
     expect(o.activeStudents).toBe(5);
     expect(o.attemptsToday).toBe(1);
-    expect(o.attemptsWeek).toBe(7);
+    expect(o.attemptsWeek).toBe(6);
     expect(o.perDay).toHaveLength(30);
     expect(o.perDay.at(-1)).toEqual({ day: "2026-09-29", count: 1 });
     expect(o.perDay.filter((d) => d.count > 0)).toEqual([
@@ -150,13 +155,13 @@ describe("loadAdminOverview", () => {
       { day: "2026-09-23", count: 1 },
       { day: "2026-09-25", count: 1 },
       { day: "2026-09-27", count: 1 },
-      { day: "2026-09-28", count: 3 },
+      { day: "2026-09-28", count: 2 },
       { day: "2026-09-29", count: 1 },
     ]);
   });
 
   it("ranks this week's hardest questions with their position", async () => {
-    const { hardest } = await loadAdminOverview(NOW);
+    const { hardest } = await loadAdminOverview(NOW, ownerId);
     expect(hardest).toEqual([
       {
         lessonId,
@@ -181,8 +186,23 @@ describe("loadAdminOverview", () => {
     ]);
   });
 
+  it("is empty for another teacher (B-03)", async () => {
+    const o = await loadAdminOverview(
+      NOW,
+      "00000000-0000-4000-8000-000000000009",
+    );
+    expect(o).toMatchObject({
+      activeStudents: 0,
+      attemptsWeek: 0,
+      hardest: [],
+    });
+  });
+
   it("is empty on a quiet month", async () => {
-    const o = await loadAdminOverview(new Date("2027-06-01T00:00:00Z"));
+    const o = await loadAdminOverview(
+      new Date("2027-06-01T00:00:00Z"),
+      ownerId,
+    );
     expect(o).toMatchObject({
       activeStudents: 0,
       attemptsToday: 0,

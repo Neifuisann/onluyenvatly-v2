@@ -25,15 +25,18 @@ const GRADES = [null, 10, 11, 12] as const;
 export function FilterBar({
   filters,
   facets,
+  basePath = "/lessons",
 }: {
   filters: CatalogFilters;
   facets: CatalogFacets;
+  /** Where the filters navigate: a class page (B-03). */
+  basePath?: string;
 }) {
   const extraFilters = [filters.chapter, filters.tag].filter(Boolean).length;
 
   return (
     <div className="sticky top-14 z-20 -mx-4 bg-background/85 px-4 py-3 backdrop-blur-xl sm:-mx-6 sm:px-6 lg:top-3 lg:-mx-10 lg:bg-panel/85 lg:px-10">
-      <CatalogForm filters={filters}>
+      <CatalogForm filters={filters} basePath={basePath}>
         {filters.grade && (
           <input type="hidden" name="grade" value={filters.grade} />
         )}
@@ -76,7 +79,7 @@ export function FilterBar({
               return (
                 <li key={g ?? "all"}>
                   <Link
-                    href={catalogHref(filters, { grade: g, page: 1 })}
+                    href={catalogHref(filters, { grade: g, page: 1 }, basePath)}
                     prefetch={false}
                     scroll={false}
                     aria-current={active ? "page" : undefined}
@@ -159,7 +162,7 @@ export function FilterBar({
               {hasFilters(filters) && (
                 <div className="sm:col-span-3">
                   <Link
-                    href={catalogHref(DEFAULT_FILTERS)}
+                    href={catalogHref(DEFAULT_FILTERS, {}, basePath)}
                     prefetch={false}
                     className={buttonVariants({ variant: "link", size: "sm" })}
                   >

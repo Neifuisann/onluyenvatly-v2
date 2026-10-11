@@ -11,7 +11,7 @@ export default function NotFound() {
       description={t.notFoundBody}
       action={
         <Link
-          href="/lessons"
+          href="/classes"
           className={buttonVariants({ variant: "secondary" })}
           prefetch={false}
         >

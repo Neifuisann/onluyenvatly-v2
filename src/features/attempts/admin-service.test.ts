@@ -18,6 +18,7 @@ import {
   type LessonConfig,
   type Question,
 } from "@/features/lessons/schema";
+import { enrol, shareLesson } from "@/test/classes";
 import { resetDb, type TestDb } from "@/test/db";
 import {
   getResultLessons,
@@ -65,7 +66,7 @@ const PERFECT: AttemptAnswer[] = ["A", [true, false, true, false], "0.63"];
 const POOR: AttemptAnswer[] = ["B", [false, true, false, true], "1"];
 const PARTIAL: AttemptAnswer[] = ["A", [true, false, null, null], null];
 
-let admin: { id: string };
+let admin: { id: string; role: "admin" };
 let phoneSeq = 0;
 
 async function addUser(
@@ -96,6 +97,7 @@ async function addLesson(
       title,
       status: "published",
       config: { ...DEFAULT_LESSON_CONFIG, ...config },
+      ownerId: admin.id,
     })
     .returning({ id: lessons.id });
   const id = lesson?.id ?? 0;
@@ -118,6 +120,9 @@ async function take(
   minute: number,
   guardEvents: { t: number; k: GuardKind }[] = [],
 ) {
+  // B-03: through the admin's class (the admin's own try too, as a member).
+  await shareLesson(tdb, lessonId, admin.id);
+  await enrol(tdb, userId);
   const started = await startAttempt(
     { id: userId, role: "student" },
     lessonId,
@@ -176,7 +181,7 @@ const attemptCount = async (lessonId: number) =>
 
 beforeEach(async () => {
   await resetDb(tdb);
-  admin = { id: await addUser("admin") };
+  admin = { id: await addUser("admin"), role: "admin" };
 });
 
 describe("deleteAttempt: replay equals a fresh computation", () => {
@@ -354,7 +359,7 @@ describe("results queries", () => {
 
   it("lists students' submitted attempts, newest first, with details", async () => {
     const s = await seedResults();
-    const { rows, hasMore } = await getResults(f({}));
+    const { rows, hasMore } = await getResults(admin, f({}));
     expect(rows.map((r) => r.id)).toEqual([s.a3, s.a2, s.a1]);
     expect(hasMore).toBe(false);
     expect(rows[2]).toEqual({
@@ -375,7 +380,7 @@ describe("results queries", () => {
   it("filters by lesson, accent-free name words and Vietnam days", async () => {
     const s = await seedResults();
     const ids = async (params: Record<string, string>) =>
-      (await getResults(f(params))).rows.map((r) => r.id);
+      (await getResults(admin, f(params))).rows.map((r) => r.id);
     expect(await ids({ lesson: String(s.song) })).toEqual([s.a3, s.a2]);
     expect(await ids({ q: "an nguyen" })).toEqual([s.a3, s.a1]);
     expect(await ids({ q: "BINH" })).toEqual([s.a2]);
@@ -400,11 +405,11 @@ describe("results queries", () => {
       submittedAt: at(i),
     }));
     await tdb.insert(attempts).values(rows);
-    const page1 = await getResults(f({}));
+    const page1 = await getResults(admin, f({}));
     expect(page1.rows).toHaveLength(50);
     expect(page1.hasMore).toBe(true);
     expect(page1.rows[0]?.submittedAt).toEqual(at(50));
-    const page2 = await getResults(f({ page: "2" }));
+    const page2 = await getResults(admin, f({ page: "2" }));
     expect(page2.rows).toHaveLength(51);
     expect(page2.hasMore).toBe(false);
   });
@@ -412,6 +417,7 @@ describe("results queries", () => {
   it("exports the same rows with scores, never the phone or birth date", async () => {
     const s = await seedResults();
     const { rows, truncated } = await getResultsForExport(
+      admin,
       f({ lesson: String(s.dao) }),
     );
     expect(truncated).toBe(false);
@@ -437,9 +443,29 @@ describe("results queries", () => {
       .update(lessons)
       .set({ deletedAt: T0 })
       .where(eq(lessons.id, s.song));
-    expect(await getResultLessons()).toEqual([
+    expect(await getResultLessons(admin)).toEqual([
       { id: s.dao, title: "Dao động", deleted: false },
       { id: s.song, title: "Sóng cơ", deleted: true },
     ]);
+  });
+});
+
+describe("another teacher's results (B-03)", () => {
+  it("are neither listed nor deletable", async () => {
+    const lessonId = await addLesson();
+    const id = await take(await addUser(), lessonId, PERFECT, 0);
+    const other = {
+      id: await addUser("admin", { fullName: "Thầy khác" }),
+      role: "teacher" as const,
+    };
+    const f = parseResultsParams({});
+    expect((await getResults(other, f)).rows).toEqual([]);
+    expect((await getResultsForExport(other, f)).rows).toEqual([]);
+    expect(await getResultLessons(other)).toEqual([]);
+    expect(await deleteAttempt(other, id, at(30))).toMatchObject({
+      ok: false,
+      code: "NOT_FOUND",
+    });
+    expect((await getResults(admin, f)).rows.map((r) => r.id)).toEqual([id]);
   });
 });

@@ -2,6 +2,7 @@ import "server-only";
 import { and, asc, desc, eq, gte, lt, type SQL, sql } from "drizzle-orm";
 import { db } from "@/db/client";
 import { attempts, lessons, users } from "@/db/schema";
+import { type Owner, ownedBy } from "@/features/lessons/ownership";
 import type { ResultCsvRow } from "./domain/csv";
 import type { LessonStudent } from "./domain/lesson-results";
 import {
@@ -17,7 +18,8 @@ import {
  * teacher reads them and a deleted attempt must disappear at once. Newest
  * first through `attempts_submitted_idx` (migration 0007, `submitted_at DESC
  * NULLS LAST WHERE status = 'submitted'`); the ORDER BY matches it exactly.
- * Students' attempts only (an admin's own tries are not results).
+ * Students' attempts only (an admin's own tries are not results), on the
+ * teacher's own lessons (B-03); personalized practice belongs to the student.
  */
 
 const newestFirst = [
@@ -25,9 +27,10 @@ const newestFirst = [
   desc(attempts.id),
 ];
 
-function resultsWhere(f: ResultsFilters): SQL | undefined {
+function resultsWhere(owner: Owner, f: ResultsFilters): SQL | undefined {
   const { since, before } = submittedRange(f);
   return and(
+    ownedBy(owner),
     eq(attempts.status, "submitted"),
     eq(users.role, "student"),
     f.lessonId ? eq(attempts.lessonId, f.lessonId) : undefined,
@@ -61,6 +64,7 @@ export type ResultRow = {
  * extra row says whether there are more (no `count(*)` over the table).
  */
 export async function getResults(
+  owner: Owner,
   f: ResultsFilters,
 ): Promise<{ rows: ResultRow[]; hasMore: boolean }> {
   const limit = f.page * RESULTS_PAGE_SIZE;
@@ -80,8 +84,8 @@ export async function getResults(
     })
     .from(attempts)
     .innerJoin(users, eq(users.id, attempts.userId))
-    .leftJoin(lessons, eq(lessons.id, attempts.lessonId))
-    .where(resultsWhere(f))
+    .innerJoin(lessons, eq(lessons.id, attempts.lessonId))
+    .where(resultsWhere(owner, f))
     .orderBy(...newestFirst)
     .limit(limit + 1);
   return { rows: rows.slice(0, limit), hasMore: rows.length > limit };
@@ -92,6 +96,7 @@ export async function getResults(
  * Never the phone or the date of birth (06 §5).
  */
 export async function getResultsForExport(
+  owner: Owner,
   f: ResultsFilters,
 ): Promise<{ rows: ResultCsvRow[]; truncated: boolean }> {
   const rows = await db
@@ -109,8 +114,8 @@ export async function getResultsForExport(
     })
     .from(attempts)
     .innerJoin(users, eq(users.id, attempts.userId))
-    .leftJoin(lessons, eq(lessons.id, attempts.lessonId))
-    .where(resultsWhere(f))
+    .innerJoin(lessons, eq(lessons.id, attempts.lessonId))
+    .where(resultsWhere(owner, f))
     .orderBy(...newestFirst)
     .limit(EXPORT_LIMIT + 1);
   return {
@@ -125,8 +130,10 @@ export type ResultLessonOption = {
   deleted: boolean;
 };
 
-/** The lesson filter: every lesson (~170) in the teacher's order. */
-export async function getResultLessons(): Promise<ResultLessonOption[]> {
+/** The lesson filter: every lesson of the teacher, in their order. */
+export async function getResultLessons(
+  owner: Owner,
+): Promise<ResultLessonOption[]> {
   return db
     .select({
       id: lessons.id,
@@ -134,6 +141,7 @@ export async function getResultLessons(): Promise<ResultLessonOption[]> {
       deleted: sql<boolean>`${lessons.deletedAt} is not null`,
     })
     .from(lessons)
+    .where(ownedBy(owner))
     .orderBy(asc(lessons.sortOrder), asc(lessons.id));
 }
 

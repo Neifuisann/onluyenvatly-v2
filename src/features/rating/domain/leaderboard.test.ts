@@ -109,36 +109,37 @@ describe("leaderboardHref", () => {
   });
 
   it("applies a patch over the current filters", () => {
-    const f = { grade: 12, period: "week" } as const;
-    expect(leaderboardHref(f)).toBe("/leaderboard?grade=12&period=week");
-    expect(leaderboardHref(f, { grade: null })).toBe(
+    const f = { classId: 7, period: "week" } as const;
+    expect(leaderboardHref(f)).toBe("/leaderboard?class=7&period=week");
+    expect(leaderboardHref(f, { classId: null })).toBe(
       "/leaderboard?period=week",
     );
-    expect(leaderboardHref(f, { period: "all" })).toBe("/leaderboard?grade=12");
+    expect(leaderboardHref(f, { period: "all" })).toBe("/leaderboard?class=7");
   });
 });
 
 describe("parseLeaderboardParams", () => {
   it("reads valid params", () => {
-    expect(parseLeaderboardParams({ grade: "11", period: "week" })).toEqual({
-      grade: 11,
+    expect(parseLeaderboardParams({ class: "11", period: "week" })).toEqual({
+      classId: 11,
       period: "week",
     });
-    expect(parseLeaderboardParams({ grade: ["10", "12"] })).toEqual({
-      grade: 10,
+    expect(parseLeaderboardParams({ class: ["10", "12"] })).toEqual({
+      classId: 10,
       period: "all",
     });
   });
 
   it.each([
     {},
-    { grade: "9", period: "month" },
-    { grade: "abc", period: "" },
-    { grade: "", period: ["x"] },
-    { grade: "12.5" },
+    { class: "0", period: "month" },
+    { class: "abc", period: "" },
+    { class: "", period: ["x"] },
+    { class: "12.5" },
+    { class: "-3" },
   ])("falls back to defaults for %j", (params) => {
     const parsed = parseLeaderboardParams(params);
     expect(parsed.period).toBe("all");
-    expect(parsed.grade).toBeNull();
+    expect(parsed.classId).toBeNull();
   });
 });

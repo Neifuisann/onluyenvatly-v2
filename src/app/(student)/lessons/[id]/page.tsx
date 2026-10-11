@@ -6,6 +6,7 @@ import {
   LessonAttemptPanelSkeleton,
 } from "@/features/attempts/components/lesson-attempt-panel";
 import { requireStudent } from "@/features/auth/guards";
+import { canOpenLesson } from "@/features/classes/queries";
 import { LessonOverviewContent } from "@/features/lessons/components/lesson-overview";
 import { LessonIdSchema } from "@/features/lessons/domain/lesson-params";
 import { overviewCopy } from "@/features/lessons/messages";
@@ -19,7 +20,11 @@ export default async function LessonPage({
   const user = await requireStudent();
   const parsed = LessonIdSchema.safeParse((await params).id);
   if (!parsed.success) notFound();
-  const lesson = await getLessonOverview(parsed.data, user.role === "admin");
+  // B-03: a student needs a class that has the lesson; a teacher must own it.
+  if (!(await canOpenLesson(user.id, user.role, parsed.data))) notFound();
+  const owner = user.role !== "student";
+  // Owners may open their unpublished lessons ("Làm thử", 06 §2).
+  const lesson = await getLessonOverview(parsed.data, owner);
   if (!lesson) notFound();
   return (
     <LessonOverviewContent
@@ -35,7 +40,7 @@ export default async function LessonPage({
               revealAnswers: lesson.revealAnswers,
               maxAttempts: lesson.maxAttempts,
             }}
-            unlimited={user.role === "admin"}
+            unlimited={owner}
           />
         </Suspense>
       }

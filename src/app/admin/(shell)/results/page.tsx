@@ -16,7 +16,7 @@ import {
   resultsHref,
 } from "@/features/attempts/domain/results";
 import { resultsCopy as t } from "@/features/attempts/messages";
-import { requireAdmin } from "@/features/auth/guards";
+import { requireTeacher } from "@/features/auth/guards";
 
 export const metadata: Metadata = { title: t.title };
 
@@ -27,11 +27,11 @@ export const metadata: Metadata = { title: t.title };
 export default async function AdminResultsPage({
   searchParams,
 }: PageProps<"/admin/results">) {
-  await requireAdmin();
+  const user = await requireTeacher();
   const filters = parseResultsParams(await searchParams);
   const [{ rows, hasMore }, lessons] = await Promise.all([
-    getResults(filters),
-    getResultLessons(),
+    getResults(user, filters),
+    getResultLessons(user),
   ]);
   const filtered = hasFilters(filters);
   return (

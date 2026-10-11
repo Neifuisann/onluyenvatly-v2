@@ -21,6 +21,7 @@ import {
   type Question,
 } from "@/features/lessons/schema";
 import { startReviewPractice } from "@/features/review/practice-service";
+import { enrol, shareLesson } from "@/test/classes";
 import { resetDb, type TestDb } from "@/test/db";
 import { PROMPT_VERSION, questionHash } from "./domain/explain";
 import {
@@ -86,7 +87,11 @@ function fakeAi(
 }
 
 let phoneSeq = 0;
+/** The lessons' owner (B-03): "admin" in these tests is the lesson's teacher. */
+let teacher: SessionUser;
+
 async function addUser(role: "student" | "admin" = "student") {
+  if (role === "admin" && teacher) return teacher;
   const [u] = await tdb
     .insert(users)
     .values({
@@ -118,6 +123,7 @@ async function addLesson(config: Partial<LessonConfig> = {}) {
     })
     .returning({ id: lessons.id });
   const id = lesson?.id ?? 0;
+  await shareLesson(tdb, id, teacher.id);
   const [version] = await tdb
     .insert(lessonVersions)
     .values({ lessonId: id, version: 1, sourceText: "", questions })
@@ -131,6 +137,7 @@ async function addLesson(config: Partial<LessonConfig> = {}) {
 
 /** A submitted attempt, and the index of each question in it. */
 async function take(user: SessionUser, lessonId: number, submit = true) {
+  if (user.role === "student") await enrol(tdb, user.id);
   const started = await startAttempt(user, lessonId, {
     ip: null,
     now: NOW,
@@ -184,6 +191,8 @@ const mcqHash = questionHash(questions[0] as Question);
 
 beforeEach(async () => {
   await resetDb(tdb);
+  teacher = undefined as unknown as SessionUser;
+  teacher = await addUser("admin");
 });
 
 describe("explainQuestion", () => {
@@ -345,7 +354,7 @@ describe("explainQuestion", () => {
     expect(client.generateContentStream).not.toHaveBeenCalled();
   });
 
-  it("hides other students' attempts but lets an admin ask", async () => {
+  it("hides other students' attempts but lets the lesson's teacher ask", async () => {
     const lessonId = await addLesson({ revealAnswers: "never" });
     const [owner, other, admin] = [
       await addUser(),
@@ -367,6 +376,23 @@ describe("explainQuestion", () => {
       { ai, now: NOW },
     );
     expect(asAdmin.ok && asAdmin.data.kind).toBe("stream");
+    // Another teacher is a stranger to the lesson (B-03).
+    const [u] = await tdb
+      .insert(users)
+      .values({
+        role: "teacher",
+        fullName: "Thầy khác",
+        username: "teacher2",
+        passwordHash: "x",
+      })
+      .returning({ id: users.id });
+    expect(
+      await explainQuestion(
+        { ...admin, id: u?.id ?? "", role: "teacher" },
+        { attemptId: t.id, index: t.mcq },
+        { ai, now: NOW },
+      ),
+    ).toMatchObject({ ok: false, code: "NOT_FOUND" });
   });
 
   it("refuses unknown attempts, items and teacher-explained questions", async () => {
