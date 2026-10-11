@@ -28,6 +28,7 @@ export function CreateAdminForm() {
       fullName: String(data.get("fullName") ?? ""),
       username: String(data.get("username") ?? ""),
       password: String(data.get("password") ?? ""),
+      role: data.get("role") === "admin" ? "admin" : "teacher",
     };
     setMessage(undefined);
     startTransition(async () => {
@@ -95,6 +96,34 @@ export function CreateAdminForm() {
           required
         />
       </FormField>
+      <fieldset className="grid gap-2">
+        <legend className="mb-1 font-medium text-sm">{t.role}</legend>
+        {(
+          [
+            ["teacher", t.roleTeacher, t.roleTeacherHint],
+            ["admin", t.roleAdmin, t.roleAdminHint],
+          ] as const
+        ).map(([value, label, hint]) => (
+          <label
+            key={value}
+            className="flex min-h-11 cursor-pointer items-start gap-3 rounded-md border border-border/70 px-3 py-2.5 has-[:checked]:border-primary has-[:checked]:bg-primary-soft dark:border-border"
+          >
+            <input
+              type="radio"
+              name="role"
+              value={value}
+              defaultChecked={value === "teacher"}
+              className="mt-1 size-4 accent-primary"
+            />
+            <span>
+              <span className="block font-medium text-sm">{label}</span>
+              <span className="block text-muted-foreground text-xs">
+                {hint}
+              </span>
+            </span>
+          </label>
+        ))}
+      </fieldset>
       <div className="flex flex-wrap items-center gap-3">
         <Button type="submit" disabled={pending}>
           {pending ? t.creating : t.create}

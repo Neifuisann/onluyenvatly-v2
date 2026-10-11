@@ -11,6 +11,7 @@ import {
   STATS_ATTEMPT_CAP,
   type StatsVersion,
 } from "./domain/stats";
+import { type Owner, ownedBy } from "./ownership";
 import { getLessonWithAnswers } from "./queries";
 import type { Question } from "./schema";
 
@@ -39,8 +40,15 @@ export type StatsLesson = {
   current: Omit<StatsVersion, "attempts"> | null;
 };
 
-/** The page header: one primary-key read, per request. */
-export async function getStatsLesson(id: number): Promise<StatsLesson | null> {
+/**
+ * The page header: one primary-key read, per request. It is also the gate
+ * of the lesson's stats and results pages: null for another teacher's
+ * lesson (B-03).
+ */
+export async function getStatsLesson(
+  owner: Owner,
+  id: number,
+): Promise<StatsLesson | null> {
   const [row] = await db
     .select({
       id: lessons.id,
@@ -52,7 +60,7 @@ export async function getStatsLesson(id: number): Promise<StatsLesson | null> {
     })
     .from(lessons)
     .leftJoin(lessonVersions, eq(lessonVersions.id, lessons.currentVersionId))
-    .where(eq(lessons.id, id))
+    .where(and(eq(lessons.id, id), ownedBy(owner)))
     .limit(1);
   if (!row) return null;
   const { currentId, currentVersion, currentCreatedAt, ...lesson } = row;

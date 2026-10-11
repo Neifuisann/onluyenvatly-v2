@@ -14,6 +14,7 @@ import { Alert } from "@/components/ui/alert";
 import { Input, Select } from "@/components/ui/input";
 import { mergeTags } from "@/features/ai/domain/lesson-helpers";
 import { lessonHelpersCopy } from "@/features/ai/messages";
+import { SUBJECT_CODES, SUBJECTS, type Subject } from "@/lib/subjects";
 import { cn } from "@/lib/utils";
 import { generateDescription, suggestTags } from "../../admin-actions";
 import type {
@@ -159,6 +160,20 @@ export function SettingsStep({
           }}
         />
         <div className="grid gap-4 sm:grid-cols-3">
+          <FormField id="settings-subject" label={t.subject}>
+            <Select
+              id="settings-subject"
+              name="subject"
+              value={form.subject}
+              onChange={(e) => onChange({ subject: e.target.value as Subject })}
+            >
+              {SUBJECT_CODES.map((code) => (
+                <option key={code} value={code}>
+                  {SUBJECTS[code]}
+                </option>
+              ))}
+            </Select>
+          </FormField>
           <FormField id="settings-grade" label={t.grade}>
             <Select
               id="settings-grade"
@@ -176,7 +191,7 @@ export function SettingsStep({
               ))}
             </Select>
           </FormField>
-          <div className="sm:col-span-2">
+          <div>
             <FormField
               id="settings-chapter"
               label={t.chapter}

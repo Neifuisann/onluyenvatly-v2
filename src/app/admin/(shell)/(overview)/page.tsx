@@ -11,26 +11,32 @@ import {
 import { overviewCopy as t } from "@/features/admin/messages";
 import { getAdminOverview } from "@/features/admin/queries";
 import { getAiUsageToday } from "@/features/ai/budget";
-import { requireAdmin } from "@/features/auth/guards";
+import { requireTeacher } from "@/features/auth/guards";
+import {
+  countTeacherStudents,
+  getTeacherClasses,
+} from "@/features/classes/queries";
 import { createLesson } from "@/features/lessons/admin-actions";
 import { adminLessonsCopy } from "@/features/lessons/messages";
-import { getPendingCount } from "@/features/students/admin-queries";
 
 export const metadata: Metadata = { title: t.title };
 
 /**
- * `/admin` (S6-06). Both reads are shared caches: the overview (tag
- * `adminOverview`, 5 minutes, one SQL statement) and the nav badge's pending
- * count (tag `pendingStudents`). The AI tile (S7-01) reads today's budget
- * counter on each view: one primary-key lookup, admins only.
+ * `/admin` (S6-06, B-03): the teacher's own dashboard. The overview is a
+ * shared cache per teacher (tag `adminOverview`, 5 minutes, one SQL
+ * statement); the class and student counts are two small per-request reads
+ * on the teacher's classes. The AI tile (S7-01) reads today's budget
+ * counter on each view: one primary-key lookup.
  */
 export default async function AdminHomePage() {
-  const user = await requireAdmin();
-  const [overview, pending, ai] = await Promise.all([
-    getAdminOverview(),
-    getPendingCount(),
+  const user = await requireTeacher();
+  const [overview, classes, students, ai] = await Promise.all([
+    getAdminOverview(user.role === "admin" ? null : user.id),
+    getTeacherClasses(user),
+    countTeacherStudents(user),
     getAiUsageToday(),
   ]);
+  const activeClasses = classes.filter((c) => !c.archivedAt).length;
   const firstName = user.fullName.trim().split(/\s+/).at(-1) ?? "";
   return (
     <div className="mx-auto flex max-w-6xl flex-col gap-6 sm:gap-8">
@@ -46,9 +52,13 @@ export default async function AdminHomePage() {
           </form>
         }
       />
-      <OverviewHero pending={pending} attemptsToday={overview.attemptsToday} />
+      <OverviewHero
+        classes={activeClasses}
+        attemptsToday={overview.attemptsToday}
+      />
       <OverviewTiles
-        pending={pending}
+        classes={activeClasses}
+        students={students}
         activeStudents={overview.activeStudents}
         attemptsToday={overview.attemptsToday}
         attemptsWeek={overview.attemptsWeek}

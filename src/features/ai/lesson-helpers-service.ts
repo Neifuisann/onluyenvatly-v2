@@ -1,6 +1,5 @@
 import "server-only";
 import { parseLessonText } from "@/features/lessons/domain/parser";
-import { getCatalogFacets } from "@/features/lessons/queries";
 import { err, ok, type Result } from "@/lib/result";
 import { ai as defaultAi } from "./client";
 import {
@@ -74,9 +73,9 @@ export async function suggestTags(
 ): Promise<Result<{ tags: string[] }>> {
   const topic = topicOf(input);
   if (!topic) return err("VALIDATION", { message: t.noQuestions });
-  const known = await (
-    deps.knownTags ?? (async () => (await getCatalogFacets()).tags)
-  )();
+  const known =
+    await // The teacher's own tags (B-03); the action passes them in.
+    (deps.knownTags ?? (async () => []))();
   const out = await (deps.ai ?? defaultAi).generateText(
     request("tags", tagsPrompt(topic, known)),
   );

@@ -1,22 +1,25 @@
 /** `/admin` dashboard (S6-06). */
 export const overviewCopy = {
   title: "Tổng quan",
-  lead: "Hoạt động của học sinh, cập nhật tối đa 5 phút một lần.",
+  lead: "Hoạt động trên các bài của bạn, cập nhật tối đa 5 phút một lần.",
   greetingLead: (name: string) =>
-    `Chào ${name}. Hoạt động của học sinh, cập nhật tối đa 5 phút một lần.`,
-  heroPendingLabel: "Cần xử lý",
-  heroPending: (n: number) => `${n} học sinh đang chờ duyệt`,
-  heroPendingBody: "Duyệt tài khoản để các em bắt đầu luyện đề.",
-  heroPendingCta: "Duyệt ngay",
+    `Chào ${name}. Hoạt động trên các bài của bạn, cập nhật tối đa 5 phút một lần.`,
+  heroSetupLabel: "Bắt đầu",
+  heroSetup: "Tạo lớp đầu tiên của bạn",
+  heroSetupBody:
+    "Tạo lớp, thêm học sinh bằng số điện thoại, rồi giao bài cho lớp.",
+  heroSetupCta: "Tạo lớp",
   heroTodayLabel: "Hôm nay",
   heroToday: (n: number) =>
     n
       ? `${n.toLocaleString("vi-VN")} lượt nộp bài hôm nay`
       : "Chưa có lượt nộp hôm nay",
-  heroTodayBody: "Không có tài khoản nào chờ duyệt.",
+  heroTodayBody: "Bài nộp trên các bài của bạn, ở mọi lớp.",
   heroTodayCta: "Xem kết quả",
-  pending: "Chờ duyệt",
-  pendingLink: (n: number) => `Chờ duyệt: ${n} học sinh, mở hàng đợi`,
+  classes: "Lớp học",
+  classesLink: (n: number, students: number) =>
+    `${n} lớp, ${students} học sinh: mở danh sách lớp`,
+  classesStudents: (n: number) => `${n} học sinh`,
   active: "Học sinh hoạt động (7 ngày)",
   today: "Lượt nộp hôm nay",
   week: "Lượt nộp (7 ngày)",

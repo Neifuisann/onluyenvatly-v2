@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { PageHeader } from "@/components/page-header";
 import { ImportPanel } from "@/features/ai/components/admin/import-panel";
 import { importCopy } from "@/features/ai/messages";
-import { requireAdmin } from "@/features/auth/guards";
+import { requireTeacher } from "@/features/auth/guards";
 import { getComposeSources } from "@/features/lessons/admin-queries";
 import { ComposePanel } from "@/features/lessons/components/admin/compose-panel";
 import { CreateChoices } from "@/features/lessons/components/admin/create-choices";
@@ -20,11 +20,11 @@ export const metadata: Metadata = { title: t.title };
 export default async function CreateLessonPage({
   searchParams,
 }: PageProps<"/admin/lessons/create">) {
-  await requireAdmin();
+  const user = await requireTeacher();
   const { mode } = await searchParams;
 
   if (mode === "compose") {
-    const sources = await getComposeSources();
+    const sources = await getComposeSources(user);
     return (
       <div className="mx-auto flex max-w-6xl flex-col gap-6">
         <PageHeader

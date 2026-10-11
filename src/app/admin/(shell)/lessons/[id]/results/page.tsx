@@ -12,7 +12,7 @@ import {
 import { LessonStudents } from "@/features/attempts/components/admin/lesson-students";
 import { summarizeStudents } from "@/features/attempts/domain/lesson-results";
 import { lessonResultsCopy as t } from "@/features/attempts/messages";
-import { requireAdmin } from "@/features/auth/guards";
+import { requireTeacher } from "@/features/auth/guards";
 import { editHref, LessonIdSchema } from "@/features/lessons/domain/admin-list";
 import { getStatsLesson } from "@/features/lessons/stats-queries";
 import { formatClock, formatDateTime, formatScore } from "@/lib/dates";
@@ -36,11 +36,11 @@ function Tile({ label, value }: { label: string; value: string }) {
 export default async function LessonResultsPage({
   params,
 }: PageProps<"/admin/lessons/[id]/results">) {
-  await requireAdmin();
+  const user = await requireTeacher();
   const id = LessonIdSchema.safeParse((await params).id);
   if (!id.success) notFound();
   const [lesson, rows] = await Promise.all([
-    getStatsLesson(id.data),
+    getStatsLesson(user, id.data),
     getLessonStudents(id.data),
   ]);
   if (!lesson) notFound();

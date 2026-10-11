@@ -35,6 +35,7 @@ import {
   e2eQuestions,
   flaggedExplanations,
   IMPORTED_TITLE_PREFIX,
+  TEACHER_LESSON_PREFIX,
 } from "../tests/e2e/fixtures/lessons.ts";
 import { e2eResultAttempts } from "../tests/e2e/fixtures/results.ts";
 import {
@@ -45,11 +46,16 @@ import {
 } from "../tests/e2e/fixtures/stats.ts";
 import {
   CREATED_ADMIN_PREFIX,
+  CREATED_CLASS_PREFIX,
+  E2E_CLASS_11_NAME,
+  E2E_CLASS_NAME,
   E2E_PASSWORD,
   e2eAdmin,
   e2eRatings,
   e2eSpecAdminUsernames,
+  e2eStudent,
   e2eStudents,
+  e2eTeacherUsernames,
   REGISTERED_NAME_PREFIX,
 } from "../tests/e2e/fixtures/users.ts";
 
@@ -88,12 +94,13 @@ async function upsertAdmin(
   username: string,
   fullName: string,
   password: string | null,
+  role: "admin" | "teacher" = "admin",
 ) {
   const passwordHash = password ? await hashPassword(password) : null;
   const [row] = await db
     .insert(users)
     .values({
-      role: "admin",
+      role,
       status: "active",
       username,
       fullName,
@@ -105,7 +112,7 @@ async function upsertAdmin(
     .onConflictDoUpdate({
       target: users.username,
       set: {
-        role: "admin",
+        role,
         status: "active",
         ...(passwordHash && { passwordHash, mustChangePassword: false }),
         updatedAt: new Date(),
@@ -147,9 +154,26 @@ async function main() {
   }
 
   // e2e: fixed test accounts, passwords reset on every run.
-  await upsertAdmin(e2eAdmin.username, e2eAdmin.fullName, E2E_PASSWORD);
+  const owner = await upsertAdmin(
+    e2eAdmin.username,
+    e2eAdmin.fullName,
+    E2E_PASSWORD,
+  );
+  if (!owner) throw new Error("Admin seed failed");
   for (const username of e2eSpecAdminUsernames)
     await upsertAdmin(username, e2eAdmin.fullName, E2E_PASSWORD);
+  // B-03 teachers, each the owner of their project's teacher lesson.
+  const teacherIds = new Map<string, string>();
+  for (const username of e2eTeacherUsernames) {
+    const teacher = await upsertAdmin(
+      username,
+      `Cô giáo ${username.slice(-1).toUpperCase()}`,
+      E2E_PASSWORD,
+      "teacher",
+    );
+    if (!teacher) throw new Error("Teacher seed failed");
+    teacherIds.set(username.slice(-1), teacher.id);
+  }
   // Admins the settings spec created in earlier runs (S6-03).
   await db
     .delete(users)
@@ -248,11 +272,17 @@ async function main() {
   // Fresh rate-limit counters so reruns within a minute stay under the limits.
   const seeded: number[] = [];
   for (const { questions = e2eQuestions, ...lesson } of e2eLessons) {
+    const lessonOwner = lesson.legacyId?.startsWith(TEACHER_LESSON_PREFIX)
+      ? (teacherIds.get(lesson.legacyId.slice(-1)) ?? owner.id)
+      : owner.id;
     await db.transaction(async (tx) => {
       const values = {
         ...lesson,
         ...summarizeLesson(questions, LessonConfigSchema.parse(lesson.config)),
         publishedAt: new Date("2026-01-01"),
+        // B-03: the e2e admin owns the fixtures, the teachers their own.
+        ownerId: lessonOwner,
+        createdBy: lessonOwner,
       };
       const [row] = await tx
         .insert(schema.lessons)
@@ -325,6 +355,7 @@ async function main() {
       ),
     );
   await seedStats(passwordHash);
+  await seedClass(owner.id);
   // Tests assume the defaults.
   await db.update(settings).set({
     registrationOpen: true,
@@ -334,8 +365,82 @@ async function main() {
     announcement: null,
   });
   console.log(
-    `e2e profile: ${1 + e2eSpecAdminUsernames.length} admins, ${e2eStudents.length} students.`,
+    `e2e profile: ${1 + e2eSpecAdminUsernames.length} admins, ${e2eTeacherUsernames.length} teachers, ${e2eStudents.length} students.`,
   );
+}
+
+/**
+ * B-03: students reach lessons through a class. One class of the e2e admin
+ * holds every seeded student and every lesson not deleted, so the student
+ * specs see the fixture catalog as before. Classes a class spec made in an
+ * earlier run go (their names carry the spec prefix).
+ */
+async function seedClass(ownerId: string) {
+  await db
+    .delete(schema.classes)
+    .where(like(schema.classes.name, `${CREATED_CLASS_PREFIX}%`));
+  const upsertClass = async (name: string) => {
+    const existing = await db.query.classes.findFirst({
+      columns: { id: true },
+      where: (c, { and, eq }) => and(eq(c.ownerId, ownerId), eq(c.name, name)),
+    });
+    const id =
+      existing?.id ??
+      (
+        await db
+          .insert(schema.classes)
+          .values({ ownerId, name })
+          .returning({ id: schema.classes.id })
+      )[0]?.id;
+    if (!id) throw new Error("Class seed failed");
+    await db
+      .update(schema.classes)
+      .set({ archivedAt: null })
+      .where(eq(schema.classes.id, id));
+    return id;
+  };
+  const classId = await upsertClass(E2E_CLASS_NAME);
+  const class11 = await upsertClass(E2E_CLASS_11_NAME);
+  await db
+    .delete(schema.classMembers)
+    .where(eq(schema.classMembers.classId, class11));
+  const eleven = await db
+    .select({ id: users.id })
+    .from(users)
+    .where(
+      and(
+        eq(users.role, "student"),
+        or(eq(users.grade, 11), eq(users.phone, e2eStudent("active").phone)),
+      ),
+    );
+  if (eleven.length)
+    await db
+      .insert(schema.classMembers)
+      .values(eleven.map((s) => ({ classId: class11, userId: s.id })));
+  const students = await db
+    .select({ id: users.id })
+    .from(users)
+    .where(eq(users.role, "student"));
+  if (students.length)
+    await db
+      .insert(schema.classMembers)
+      .values(students.map((s) => ({ classId, userId: s.id })))
+      .onConflictDoNothing();
+  // The admin's lessons only: the teachers' stay theirs (B-03).
+  const lessons = await db
+    .select({ id: schema.lessons.id })
+    .from(schema.lessons)
+    .where(
+      and(
+        isNull(schema.lessons.deletedAt),
+        eq(schema.lessons.ownerId, ownerId),
+      ),
+    );
+  if (lessons.length)
+    await db
+      .insert(schema.classLessons)
+      .values(lessons.map((l) => ({ classId, lessonId: l.id })))
+      .onConflictDoNothing();
 }
 
 /**

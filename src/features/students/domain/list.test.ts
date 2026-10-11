@@ -8,7 +8,6 @@ import {
 } from "./list";
 
 const defaults: StudentListFilters = {
-  view: "pending",
   q: null,
   status: null,
   grade: null,
@@ -16,21 +15,19 @@ const defaults: StudentListFilters = {
 };
 
 describe("parseStudentListParams", () => {
-  it("defaults to the pending queue with no filter", () => {
+  it("defaults to every student with no filter", () => {
     expect(parseStudentListParams({})).toEqual(defaults);
   });
 
   it("reads every filter, normalizing the search text", () => {
     expect(
       parseStudentListParams({
-        view: "all",
         q: "  Nguyễn   An ",
         status: "active",
         grade: "11",
         page: "3",
       }),
     ).toEqual({
-      view: "all",
       q: "Nguyễn An",
       status: "active",
       grade: 11,
@@ -39,15 +36,14 @@ describe("parseStudentListParams", () => {
   });
 
   it("takes the first of repeated params", () => {
-    expect(parseStudentListParams({ view: ["all", "pending"] }).view).toBe(
-      "all",
-    );
+    expect(
+      parseStudentListParams({ status: ["active", "disabled"] }).status,
+    ).toBe("active");
   });
 
   it("falls back to defaults for anything invalid", () => {
     expect(
       parseStudentListParams({
-        view: "everything",
         status: "banned",
         grade: "9",
         page: "0",
@@ -60,31 +56,28 @@ describe("parseStudentListParams", () => {
 });
 
 describe("studentsHref", () => {
-  const all: StudentListFilters = { ...defaults, view: "all" };
-
   it("leaves defaults out", () => {
     expect(studentsHref(defaults)).toBe("/admin/students");
-    expect(studentsHref(all)).toBe("/admin/students?view=all");
   });
 
-  it("keeps filters on the all view only", () => {
+  it("keeps every filter", () => {
     expect(
-      studentsHref({ ...all, q: "an", status: "active", grade: 12, page: 2 }),
-    ).toBe("/admin/students?view=all&q=an&status=active&grade=12&page=2");
-    expect(studentsHref({ ...defaults, q: "an", status: "active" })).toBe(
-      "/admin/students",
-    );
+      studentsHref({
+        ...defaults,
+        q: "an",
+        status: "active",
+        grade: 12,
+        page: 2,
+      }),
+    ).toBe("/admin/students?q=an&status=active&grade=12&page=2");
   });
 
   it("starts from page 1 when a filter changes, unless a page is given", () => {
-    const f = { ...all, q: "an", page: 4 };
-    expect(studentsHref(f, { status: "pending" })).toBe(
-      "/admin/students?view=all&q=an&status=pending",
+    const f = { ...defaults, q: "an", page: 4 };
+    expect(studentsHref(f, { status: "disabled" })).toBe(
+      "/admin/students?q=an&status=disabled",
     );
-    expect(studentsHref(f, { page: 5 })).toBe(
-      "/admin/students?view=all&q=an&page=5",
-    );
-    expect(studentsHref(f, { view: "pending" })).toBe("/admin/students");
+    expect(studentsHref(f, { page: 5 })).toBe("/admin/students?q=an&page=5");
   });
 });
 

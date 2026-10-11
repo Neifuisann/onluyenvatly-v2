@@ -9,6 +9,7 @@ import { copyTitle, isReorderOf } from "./domain/admin-list";
 import { fromSettingsForm, type SettingsForm } from "./domain/settings-form";
 import { countByType, summarizeLesson } from "./domain/summary";
 import { adminLessonsCopy, settingsCopy } from "./messages";
+import { type Owner, ownedBy } from "./ownership";
 import {
   DEFAULT_LESSON_CONFIG,
   LessonConfigSchema,
@@ -18,12 +19,14 @@ import {
 /**
  * Lesson list mutations for `/admin/lessons` (S5-01, 05 §2
  * `features/lessons/admin-actions.ts`). Each one writes its audit entry in
- * the same transaction. Callers check `requireAdmin()` first.
+ * the same transaction. Callers check `requireTeacher()` first; every
+ * statement is limited to the actor's own lessons (B-03).
  */
 
-export type Actor = { id: string };
+export type Actor = Owner;
 
-const notDeleted = isNull(lessons.deletedAt);
+/** The actor's own lessons that aren't deleted (B-03, `ownership.ts`). */
+const live = (actor: Actor) => and(ownedBy(actor), isNull(lessons.deletedAt));
 
 /**
  * Saves the manual order. `ids` must be every lesson in the list (not
@@ -38,7 +41,7 @@ export async function reorderLessons(
     const current = await tx
       .select({ id: lessons.id })
       .from(lessons)
-      .where(notDeleted)
+      .where(live(actor))
       .for("update");
     if (
       !isReorderOf(
@@ -47,12 +50,13 @@ export async function reorderLessons(
       )
     )
       return err("CONFLICT", { message: adminLessonsCopy.staleList });
+    const mine = ownedBy(actor);
     const values = sql.join(
       ids.map((id, i) => sql`(${id}::bigint, ${i}::int)`),
       sql`, `,
     );
     await tx.execute(
-      sql`update ${lessons} set sort_order = v.ord from (values ${values}) as v(id, ord) where ${lessons.id} = v.id and ${lessons.sortOrder} <> v.ord`,
+      sql`update ${lessons} set sort_order = v.ord from (values ${values}) as v(id, ord) where ${lessons.id} = v.id and ${lessons.sortOrder} <> v.ord${mine ? sql` and ${mine}` : sql``}`,
     );
     await writeAudit(tx, {
       actorId: actor.id,
@@ -80,6 +84,7 @@ export async function duplicateLesson(
         description: lessons.description,
         grade: lessons.grade,
         chapter: lessons.chapter,
+        subject: lessons.subject,
         tags: lessons.tags,
         coverPath: lessons.coverPath,
         config: lessons.config,
@@ -89,7 +94,7 @@ export async function duplicateLesson(
         >`coalesce(${lessons.draftVersionId}, ${lessons.currentVersionId})`,
       })
       .from(lessons)
-      .where(and(eq(lessons.id, id), notDeleted))
+      .where(and(eq(lessons.id, id), live(actor)))
       .limit(1);
     if (!src) return err("NOT_FOUND");
 
@@ -112,9 +117,12 @@ export async function duplicateLesson(
         sortOrder: sql`case when ${lessons.sortOrder} > ${src.sortOrder} then ${lessons.sortOrder} + 2 else ${src.sortOrder + 2} end`,
       })
       .where(
-        or(
-          gt(lessons.sortOrder, src.sortOrder),
-          and(eq(lessons.sortOrder, src.sortOrder), gt(lessons.id, id)),
+        and(
+          ownedBy(actor),
+          or(
+            gt(lessons.sortOrder, src.sortOrder),
+            and(eq(lessons.sortOrder, src.sortOrder), gt(lessons.id, id)),
+          ),
         ),
       );
 
@@ -131,12 +139,14 @@ export async function duplicateLesson(
         description: src.description,
         grade: src.grade,
         chapter: src.chapter,
+        subject: src.subject,
         tags: src.tags,
         coverPath: src.coverPath,
         config: src.config,
         status: "draft",
         sortOrder: src.sortOrder + 1,
         createdBy: actor.id,
+        ownerId: actor.id,
         ...summary,
       })
       .returning({ id: lessons.id });
@@ -186,7 +196,7 @@ export async function setArchived(
       .where(
         and(
           eq(lessons.id, id),
-          notDeleted,
+          live(actor),
           archived
             ? sql`${lessons.status} <> 'archived'`
             : eq(lessons.status, "archived"),
@@ -217,7 +227,7 @@ export async function deleteLesson(
     const [lesson] = await tx
       .select({ id: lessons.id, title: lessons.title })
       .from(lessons)
-      .where(and(eq(lessons.id, id), notDeleted))
+      .where(and(eq(lessons.id, id), live(actor)))
       .for("update")
       .limit(1);
     if (!lesson) return err("NOT_FOUND");
@@ -244,8 +254,7 @@ export async function deleteLesson(
   });
 }
 
-/** A new, empty draft at the end of the list; the editor takes it from there. */
-/** A new empty draft, last in the teacher's order. */
+/** A new empty draft, last in the teacher's order, owned by them (B-03). */
 export async function insertLesson(
   tx: Tx,
   actor: Actor,
@@ -253,7 +262,8 @@ export async function insertLesson(
 ): Promise<number> {
   const [last] = await tx
     .select({ max: sql<number | null>`max(${lessons.sortOrder})` })
-    .from(lessons);
+    .from(lessons)
+    .where(ownedBy(actor));
   const [row] = await tx
     .insert(lessons)
     .values({
@@ -262,6 +272,7 @@ export async function insertLesson(
       config: DEFAULT_LESSON_CONFIG,
       sortOrder: (last?.max ?? -1) + 1,
       createdBy: actor.id,
+      ownerId: actor.id,
     })
     .returning({ id: lessons.id });
   if (!row) throw new Error("lesson insert returned no row");
@@ -299,7 +310,7 @@ export async function updateLessonSettings(
         draftVersionId: lessons.draftVersionId,
       })
       .from(lessons)
-      .where(and(eq(lessons.id, id), notDeleted))
+      .where(and(eq(lessons.id, id), live(actor)))
       .for("update")
       .limit(1);
     if (!lesson) return err("NOT_FOUND");
@@ -359,7 +370,7 @@ export async function setLessonCover(
     const [row] = await tx
       .update(lessons)
       .set({ coverPath: path, updatedAt: sql`now()` })
-      .where(and(eq(lessons.id, id), notDeleted))
+      .where(and(eq(lessons.id, id), live(actor)))
       .returning({ id: lessons.id });
     if (!row) return err("NOT_FOUND");
     await writeAudit(tx, {

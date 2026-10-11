@@ -9,7 +9,8 @@ import { err } from "@/lib/result";
 
 /**
  * `GET /admin/results/export` (S6-04): the results of the page's filters as
- * CSV, up to 10,000 rows. The admin check comes first and answers JSON (401
+ * CSV, up to 10,000 rows, of the teacher's own lessons (B-03). The teacher
+ * check comes first and answers JSON (401
  * signed out, 403 otherwise, also for an admin who must change the
  * password), never a redirect a download would follow. No phone or date of
  * birth (06 §5); cells are guarded against formula injection (`toCsv`).
@@ -17,13 +18,13 @@ import { err } from "@/lib/result";
 export async function GET(request: NextRequest) {
   const user = await getCurrentUser();
   if (!user) return jsonResult(err("UNAUTHENTICATED"));
-  if (user.role !== "admin" || user.mustChangePassword)
+  if (user.role === "student" || user.mustChangePassword)
     return jsonResult(err("FORBIDDEN"));
 
   const filters = parseResultsParams(
     Object.fromEntries(request.nextUrl.searchParams),
   );
-  const { rows, truncated } = await getResultsForExport(filters);
+  const { rows, truncated } = await getResultsForExport(user, filters);
   const now = new Date();
   return new Response(resultsCsv(rows, resultsCopy.review), {
     headers: {

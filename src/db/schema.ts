@@ -35,7 +35,11 @@ import {
 const timestamptz = (name: string) =>
   timestamp(name, { withTimezone: true, mode: "date" });
 
-export const userRole = pgEnum("user_role", ["student", "admin"]);
+/**
+ * `teacher` owns classes and lessons (B-03); `admin` is a teacher who also
+ * runs the platform (settings, teachers, audit, AI review).
+ */
+export const userRole = pgEnum("user_role", ["student", "teacher", "admin"]);
 export const userStatus = pgEnum("user_status", [
   "pending",
   "active",
@@ -198,6 +202,8 @@ export const lessons = pgTable(
     /** e.g. "Dao động cơ" (v1 `subject`). */
     chapter: text("chapter"),
     tags: text("tags").array().notNull().default(sql`'{}'::text[]`),
+    /** Subject code (`lib/subjects.ts`), B-03. */
+    subject: text("subject").notNull().default("physics"),
     coverPath: text("cover_path"),
     status: lessonStatus("status").notNull().default("draft"),
     sortOrder: integer("sort_order").notNull().default(0),
@@ -228,6 +234,14 @@ export const lessons = pgTable(
     createdBy: uuid("created_by").references(() => users.id, {
       onDelete: "set null",
     }),
+    /**
+     * The teacher who owns the lesson (B-03): only they see and manage it,
+     * and only their classes can be given it. Null only for a lesson whose
+     * owner was deleted; such a lesson is reachable by nobody.
+     */
+    ownerId: uuid("owner_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
     createdAt: timestamptz("created_at").notNull().defaultNow(),
     updatedAt: timestamptz("updated_at").notNull().defaultNow(),
     publishedAt: timestamptz("published_at"),
@@ -239,6 +253,8 @@ export const lessons = pgTable(
   },
   (t) => [
     index("lessons_status_sort_idx").on(t.status, t.sortOrder),
+    // A teacher's lesson list, in their order (B-03).
+    index("lessons_owner_sort_idx").on(t.ownerId, t.sortOrder),
     index("lessons_tags_idx").using("gin", t.tags),
     index("lessons_search_text_trgm_idx").using(
       "gin",
@@ -718,6 +734,79 @@ export const gamePlayers = pgTable(
   ],
 ).enableRLS();
 
+/**
+ * A teacher's class (B-03). Students join only when the teacher adds them;
+ * they see the lessons given to the class. `archived_at` hides the class
+ * from its students and stops its lessons from being opened through it.
+ */
+export const classes = pgTable(
+  "classes",
+  {
+    id: bigint("id", { mode: "number" })
+      .primaryKey()
+      .generatedAlwaysAsIdentity(),
+    ownerId: uuid("owner_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    /** Subject code (`lib/subjects.ts`). */
+    subject: text("subject").notNull().default("physics"),
+    grade: smallint("grade"),
+    description: text("description"),
+    archivedAt: timestamptz("archived_at"),
+    createdAt: timestamptz("created_at").notNull().defaultNow(),
+    updatedAt: timestamptz("updated_at").notNull().defaultNow(),
+  },
+  (t) => [
+    index("classes_owner_created_idx").on(t.ownerId, t.createdAt.desc()),
+    check(
+      "classes_grade_check",
+      sql`${t.grade} is null or ${t.grade} between 10 and 12`,
+    ),
+    check("classes_name_check", sql`char_length(${t.name}) between 1 and 80`),
+  ],
+).enableRLS();
+
+/** Students of a class, added by its teacher (B-03). */
+export const classMembers = pgTable(
+  "class_members",
+  {
+    classId: bigint("class_id", { mode: "number" })
+      .notNull()
+      .references(() => classes.id, { onDelete: "cascade" }),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    addedBy: uuid("added_by").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    createdAt: timestamptz("created_at").notNull().defaultNow(),
+  },
+  (t) => [
+    primaryKey({ columns: [t.classId, t.userId] }),
+    // A student's classes, and "may this student open this lesson".
+    index("class_members_user_idx").on(t.userId),
+  ],
+).enableRLS();
+
+/** Lessons given to a class (B-03). Only the class owner's own lessons. */
+export const classLessons = pgTable(
+  "class_lessons",
+  {
+    classId: bigint("class_id", { mode: "number" })
+      .notNull()
+      .references(() => classes.id, { onDelete: "cascade" }),
+    lessonId: bigint("lesson_id", { mode: "number" })
+      .notNull()
+      .references(() => lessons.id, { onDelete: "cascade" }),
+    createdAt: timestamptz("created_at").notNull().defaultNow(),
+  },
+  (t) => [
+    primaryKey({ columns: [t.classId, t.lessonId] }),
+    index("class_lessons_lesson_idx").on(t.lessonId),
+  ],
+).enableRLS();
+
 export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
 export type Session = typeof sessions.$inferSelect;
@@ -734,3 +823,5 @@ export type Mistake = typeof mistakes.$inferSelect;
 export type AttemptOverride = typeof attemptOverrides.$inferSelect;
 export type GameRoom = typeof gameRooms.$inferSelect;
 export type GamePlayer = typeof gamePlayers.$inferSelect;
+export type Class = typeof classes.$inferSelect;
+export type ClassMember = typeof classMembers.$inferSelect;

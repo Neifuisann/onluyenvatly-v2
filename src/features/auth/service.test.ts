@@ -311,13 +311,16 @@ describe("login rate limits (06 §4)", () => {
 });
 
 describe("registerStudent", () => {
-  it("creates a pending student", async () => {
+  it("creates an active student and signs them in (B-03)", async () => {
     const result = await registerStudent(registration("0912345678"), meta);
     expect(result.ok).toBe(true);
     const [user] = await tdb.select().from(users);
+    const [session] = await tdb.select().from(sessions);
+    expect(session?.userId).toBe(user?.id);
+    if (result.ok) expect(result.data.token).toEqual(expect.any(String));
     expect(user).toMatchObject({
       role: "student",
-      status: "pending",
+      status: "active",
       phone: "0912345678",
       grade: 12,
       className: "12A1",

@@ -120,6 +120,13 @@
       "when": 1791376855712,
       "tag": "0016_lesson_version_index",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1791688434274,
+      "tag": "0017_classes",
+      "breakpoints": true
     }
   ]
 }

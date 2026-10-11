@@ -270,11 +270,12 @@ export function RatingCard({
 export function StatTiles({
   openMistakes,
   rank,
-  grade,
+  className,
 }: {
   openMistakes: number;
   rank: number | null;
-  grade: number | null;
+  /** The class the rank is in (B-03); null without a class. */
+  className: string | null;
 }) {
   return (
     <>
@@ -286,11 +287,11 @@ export function StatTiles({
         sub={openMistakes ? t.mistakesSub : t.noMistakesSub}
       />
       <Tile
-        href={grade ? `/leaderboard?grade=${grade}` : "/leaderboard"}
+        href="/leaderboard"
         tone="bg-primary-soft text-primary"
         icon={<Trophy aria-hidden className="size-5" strokeWidth={2} />}
         title={rank ? t.rank(rank) : t.notRanked}
-        sub={t.rankSub(grade)}
+        sub={t.rankSub(className)}
       />
     </>
   );

@@ -3,6 +3,7 @@ import { and, eq, ne } from "drizzle-orm";
 import { db, type Executor } from "@/db/client";
 import { sessions, users } from "@/db/schema";
 import { env } from "@/lib/env.server";
+import type { Role } from "./core/login-policy";
 import { checkSession, sessionExpiry } from "./core/session-policy";
 import {
   generateSessionToken,
@@ -15,7 +16,7 @@ export type SessionMeta = { ip: string | null; userAgent: string | null };
 /** What the rest of the app knows about the logged-in user. No secrets. */
 export type SessionUser = {
   id: string;
-  role: "student" | "admin";
+  role: Role;
   fullName: string;
   grade: number | null;
   mustChangePassword: boolean;

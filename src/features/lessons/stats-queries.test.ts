@@ -26,15 +26,28 @@ const hour = 60 * 60 * 1000;
 let lessonId = 0;
 let v1 = 0;
 let v2 = 0;
+const owner = { id: "", role: "teacher" as const };
 
 beforeAll(async () => {
   await resetDb(tdb);
+  const [teacher] = await tdb
+    .insert(users)
+    .values({
+      role: "teacher",
+      status: "active",
+      fullName: "Cô giáo",
+      username: "teacher",
+      passwordHash: "x",
+    })
+    .returning({ id: users.id });
+  owner.id = teacher?.id ?? "";
   const [lesson] = await tdb
     .insert(lessons)
     .values({
       title: STATS_LESSON.title,
       status: "published",
       config: DEFAULT_LESSON_CONFIG,
+      ownerId: owner.id,
     })
     .returning({ id: lessons.id });
   lessonId = lesson?.id ?? 0;
@@ -105,13 +118,20 @@ beforeAll(async () => {
 
 describe("lesson stats queries", () => {
   it("reads the header with the current version", async () => {
-    expect(await getStatsLesson(lessonId)).toMatchObject({
+    expect(await getStatsLesson(owner, lessonId)).toMatchObject({
       id: lessonId,
       title: STATS_LESSON.title,
       tfScoring: "thpt2025",
       current: { id: v2, version: 2 },
     });
-    expect(await getStatsLesson(lessonId + 999)).toBeNull();
+    expect(await getStatsLesson(owner, lessonId + 999)).toBeNull();
+    // Another teacher's lesson is not theirs to read (B-03).
+    expect(
+      await getStatsLesson(
+        { id: "00000000-0000-4000-8000-000000000009", role: "teacher" },
+        lessonId,
+      ),
+    ).toBeNull();
   });
 
   it("lists versions with students' submitted attempts, newest first", async () => {

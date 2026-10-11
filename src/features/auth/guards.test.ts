@@ -3,6 +3,7 @@ import {
   requireAdmin,
   requireSessionUser,
   requireStudent,
+  requireTeacher,
   requireUser,
 } from "./guards";
 import type { SessionUser } from "./session";
@@ -41,6 +42,7 @@ describe("guards", () => {
     for (const guard of [
       requireUser,
       requireStudent,
+      requireTeacher,
       requireAdmin,
       requireSessionUser,
     ])
@@ -51,20 +53,30 @@ describe("guards", () => {
     current.user = user();
     expect(await target(requireUser)).toBeNull();
     expect(await target(requireStudent)).toBeNull();
+    expect(await target(requireTeacher)).toBe("/dashboard");
     expect(await target(requireAdmin)).toBe("/dashboard");
   });
 
-  it("let admins into both", async () => {
+  it("let teachers into the teacher workspace but not platform pages (B-03)", async () => {
+    current.user = user({ role: "teacher" });
+    expect(await target(requireStudent)).toBeNull();
+    expect(await target(requireTeacher)).toBeNull();
+    expect(await target(requireAdmin)).toBe("/admin");
+  });
+
+  it("let admins into everything", async () => {
     current.user = user({ role: "admin" });
     expect(await target(requireStudent)).toBeNull();
+    expect(await target(requireTeacher)).toBeNull();
     expect(await target(requireAdmin)).toBeNull();
   });
 
   it("send a user with must_change_password to the change page, from every guard but the change page's own", async () => {
-    for (const role of ["student", "admin"] as const) {
+    for (const role of ["student", "teacher", "admin"] as const) {
       current.user = user({ role, mustChangePassword: true });
       expect(await target(requireUser)).toBe("/change-password");
       expect(await target(requireStudent)).toBe("/change-password");
+      expect(await target(requireTeacher)).toBe("/change-password");
       expect(await target(requireAdmin)).toBe("/change-password");
       // The change page and its action use this one.
       expect(await target(requireSessionUser)).toBeNull();

@@ -2,10 +2,10 @@ import "server-only";
 import { and, asc, desc, eq, isNotNull, sql } from "drizzle-orm";
 import { cacheLife, cacheTag } from "next/cache";
 import { db } from "@/db/client";
-import { ratingEvents, ratings, users } from "@/db/schema";
+import { classMembers, ratingEvents, ratings, users } from "@/db/schema";
 import { tags } from "@/lib/cache-tags";
 import {
-  type LeaderboardFilters,
+  type LeaderboardPeriod,
   MAX_ROWS,
   publicName,
   type RankedEntry,
@@ -34,14 +34,16 @@ export type AttemptRatingEvent = NonNullable<
 >;
 
 /**
- * The ranked leaderboard (05 §4), shared by every student: tag `leaderboard`,
- * regenerated at most once a minute, so a burst of submits never recomputes
- * it (08 §2). Active students with a rating only; never the phone or DOB
- * (06 §5). User ids stay on the server: the page uses them to find "me".
+ * A class's ranked leaderboard (05 §4, B-03), shared by every student of the
+ * class: tag `leaderboard`, regenerated at most once a minute, so a burst of
+ * submits never recomputes it (08 §2). The page checks the viewer is in the
+ * class. Active students with a rating only; never the phone or DOB (06 §5).
+ * User ids stay on the server: the page uses them to find "me".
  */
-export async function getLeaderboard(
-  f: LeaderboardFilters,
-): Promise<RankedEntry[]> {
+export async function getLeaderboard(f: {
+  classId: number;
+  period: LeaderboardPeriod;
+}): Promise<RankedEntry[]> {
   "use cache";
   cacheTag(tags.leaderboard);
   cacheLife({ stale: 30, revalidate: 60, expire: 300 });
@@ -66,14 +68,15 @@ export async function getLeaderboard(
       rating: ratings.rating,
       weekDelta,
     })
-    .from(ratings)
+    .from(classMembers)
+    .innerJoin(ratings, eq(ratings.userId, classMembers.userId))
     .innerJoin(users, eq(users.id, ratings.userId))
     .leftJoin(week, eq(week.userId, ratings.userId))
     .where(
       and(
+        eq(classMembers.classId, f.classId),
         eq(users.role, "student"),
         eq(users.status, "active"),
-        f.grade ? eq(users.grade, f.grade) : undefined,
         // "Most improved" lists only students who did a rated test this week.
         byWeek ? isNotNull(week.userId) : undefined,
       ),

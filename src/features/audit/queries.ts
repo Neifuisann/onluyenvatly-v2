@@ -39,7 +39,7 @@ export type AuditRow = {
   actorId: string | null;
   /** null once the account was deleted (`actor_id` set null). */
   actorName: string | null;
-  actorRole: "student" | "admin" | null;
+  actorRole: "student" | "teacher" | "admin" | null;
 };
 
 /** One page of entries; exported for the EXPLAIN test. */

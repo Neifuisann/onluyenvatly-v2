@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { EmptyState } from "@/components/empty-state";
 import { PageHeader } from "@/components/page-header";
-import { requireAdmin } from "@/features/auth/guards";
+import { requireTeacher } from "@/features/auth/guards";
 import { QuestionStatsCard } from "@/features/lessons/components/stats/question-stats-card";
 import {
   SortToggle,
@@ -38,11 +38,11 @@ export default async function LessonStatsPage({
   params,
   searchParams,
 }: PageProps<"/admin/lessons/[id]/stats">) {
-  await requireAdmin();
+  const user = await requireTeacher();
   const id = LessonIdSchema.safeParse((await params).id);
   if (!id.success) notFound();
   const [lesson, withAttempts] = await Promise.all([
-    getStatsLesson(id.data),
+    getStatsLesson(user, id.data),
     getStatsVersions(id.data),
   ]);
   if (!lesson) notFound();

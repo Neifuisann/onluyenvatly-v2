@@ -12,7 +12,7 @@ flowchart TD
   F --> P{bcrypt.compare}
   P -- no --> E2
   P -- yes --> S{status}
-  S -- pending --> E3[ACCOUNT_PENDING]
+  S -- pending (pre-B-03 rows only) --> E3[ACCOUNT_PENDING]
   S -- rejected/disabled --> E4[ACCOUNT_REJECTED]
   S -- active --> D{device_policy = bind_first AND role = student}
   D -- yes, no device bound --> BIND[bind ovl_device cookie id]
@@ -48,6 +48,24 @@ flowchart TD
 - Admin reset: generates a 10-character temporary password and sets `must_change_password = true`. The student has to change it on next login. As built (S6-02): the reset also deletes every session of the student and shows the password to the teacher once (never stored in clear, logged or audited). While the flag is set, login sends the user to `/change-password` (carrying `?next=`), and `requireUser()` (so also `requireStudent()` and `requireAdmin()`) redirects there from every page and action. Only the change page and `changePassword`, which use `requireSessionUser()`, plus `logout`, are exempt. `changePassword` needs the current (temporary) password, is rate limited (5 per 10 minutes per user), applies the policy, clears the flag and revokes the other sessions. A unit test (`auth/authz.test.ts`) calls every export of every `features/*/admin-actions.ts` (and the media actions) as a student, a visitor and an admin who must change the password: each redirects (`/dashboard`, `/login`, `/change-password`) before reading input, writes nothing and invalidates no tag.
 
 ## 2. Authorization matrix
+
+> **B-03 (2026-10-11, ADR-009): multiple teachers and classes.** Roles are `student`, `teacher` and `admin`. Registration makes an **active** account at once and signs it in (no approval queue; `pending` only exists on old rows, which migration `0017` activated). Guards: `requireStudent()` (anyone signed in), `requireTeacher()` (teacher or admin: the `/admin` workspace), `requireAdmin()` (platform: settings and staff accounts, audit, AI review, student account tools). Ownership is enforced in the queries and services, not only the pages: `lessons/ownership.ts` (`ownedBy`, `ownsLesson`, `teachesLesson`), `classes/service.ts` (`classOwnedBy`, the class row locked in every mutation), `students/admin-queries.ts` (`visibleTo`), `games/service.ts` (`hosts`). Another teacher's lesson, class, student or room reads as `NOT_FOUND` / 404, never FORBIDDEN. A student reaches a lesson only through a non-archived class that has it (`canOpenLesson`, checked by the lesson page and `startAttempt`). The table below is the pre-B-03 matrix with these changes:
+>
+> | Resource / action | Student | Teacher | Admin |
+> |---|---|---|---|
+> | `/classes`, `/classes/[id]` (lessons of a class) | ✅ their classes only | — | — |
+> | Lesson overview, start an attempt | ✅ via one of their classes | ✅ own lessons (unpublished too, no limits) | ✅ any |
+> | Result page of someone else's attempt, guard timeline, "Xóa bài làm", explanations | ❌ | ✅ own lessons | ✅ any |
+> | Leaderboard | ✅ classmates of one of their classes | — | — |
+> | `/admin` workspace: dashboard, lessons, results, stats, games, AI import, media uploads | ❌ | ✅ own data only | ✅ everything |
+> | `/admin/classes` (create, add students by phone, give lessons, archive, delete) | ❌ | ✅ own classes | ✅ any |
+> | `/admin/students` list and detail | ❌ | ✅ students of their classes; attempts on their lessons | ✅ every student |
+> | Extra tries (`grantExtraAttempts`) | ❌ | ✅ own lesson, own students | ✅ |
+> | Reset password, revoke sessions, disable, delete a student; sessions list | ❌ | ❌ | ✅ |
+> | `/admin/settings` (incl. creating teacher/admin accounts), `/admin/audit`, `/admin/explanations` | ❌ | ❌ → `/admin` | ✅ |
+> | Results CSV export | 403 | ✅ own lessons | ✅ |
+>
+> `auth/authz.test.ts` calls every staff action as a visitor, a student and a staff user who must change the password (each redirected before reading input), and every platform action as a teacher (redirected to `/admin`, nothing written).
 
 | Resource / action | Visitor | Student (pending) | Student (active) | Admin |
 |---|---|---|---|---|

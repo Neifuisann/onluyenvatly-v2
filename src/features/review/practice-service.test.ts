@@ -24,6 +24,7 @@ import {
   type LessonConfig,
   type Question,
 } from "@/features/lessons/schema";
+import { shareLesson } from "@/test/classes";
 import { resetDb, type TestDb } from "@/test/db";
 import { summarizeBank } from "./domain/practice";
 import { reviewCopy } from "./messages";
@@ -71,6 +72,7 @@ const short: Question = { id: "q_3", type: "short", stem: "T?", answer: "0.5" };
 
 let student: string;
 let other: string;
+let teacher: string;
 let lessonA: number;
 let lessonB: number;
 let lessonC: number;
@@ -114,6 +116,8 @@ async function addLesson(
     .update(lessons)
     .set({ currentVersionId: versionId })
     .where(eq(lessons.id, id));
+  // B-03: the students reach it through the teacher's class.
+  await shareLesson(tdb, id, teacher);
   versionOf.set(versionId, new Map(questions.map((q) => [q.id, q])));
   return id;
 }
@@ -187,6 +191,17 @@ beforeEach(async () => {
   versionOf = new Map();
   student = await addUser("0900000001");
   other = await addUser("0900000002");
+  const [t] = await tdb
+    .insert(users)
+    .values({
+      role: "teacher",
+      status: "active",
+      fullName: "Cô giáo",
+      username: "teacher",
+      passwordHash: "x",
+    })
+    .returning({ id: users.id });
+  teacher = t?.id ?? "";
   // A and C share a question id: the bank keys by lesson too.
   lessonA = await addLesson("Sóng cơ", [mcq("q_1"), tf, short]);
   lessonB = await addLesson("Dao động cơ", [mcq("q_1")], {

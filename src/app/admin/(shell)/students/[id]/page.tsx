@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { PageHeader, SectionCard } from "@/components/page-header";
-import { requireAdmin } from "@/features/auth/guards";
+import { requireTeacher } from "@/features/auth/guards";
 import {
   getGrantableLessons,
   getStudentAttempts,
@@ -22,26 +22,34 @@ import { formatDateTime } from "@/lib/dates";
 
 export const metadata: Metadata = { title: t.title };
 
-/** `/admin/students/[id]` (S6-01/02): profile, rating, actions, sessions, attempts. */
+/**
+ * `/admin/students/[id]` (S6-01/02, B-03): profile, rating, extra tries and
+ * attempts on the viewer's own lessons. A teacher opens only students of
+ * their classes; the account tools (password, sessions, status, deletion)
+ * are an admin's.
+ */
 export default async function AdminStudentPage({
   params,
 }: PageProps<"/admin/students/[id]">) {
-  await requireAdmin();
+  const user = await requireTeacher();
   const id = StudentIdSchema.safeParse((await params).id);
   if (!id.success) notFound();
-  const [student, attempts, sessions, overrides, lessons] = await Promise.all([
-    getStudentDetail(id.data),
-    getStudentAttempts(id.data),
-    getStudentSessions(id.data),
-    getStudentOverrides(id.data),
-    getGrantableLessons(id.data),
-  ]);
+  const admin = user.role === "admin";
+  // The detail read is the gate: nothing below renders for a student the
+  // teacher can't see.
+  const student = await getStudentDetail(user, id.data);
   if (!student) notFound();
+  const [attempts, sessions, overrides, lessons] = await Promise.all([
+    getStudentAttempts(user, id.data),
+    admin ? getStudentSessions(id.data) : [],
+    getStudentOverrides(user, id.data),
+    getGrantableLessons(user, id.data),
+  ]);
 
   return (
     <div className="mx-auto flex max-w-4xl flex-col gap-6">
       <PageHeader
-        back={{ href: "/admin/students?view=all", label: t.back }}
+        back={{ href: "/admin/students", label: t.back }}
         title={student.fullName}
         badges={
           <>
@@ -62,14 +70,16 @@ export default async function AdminStudentPage({
 
       <StudentProfile student={student} />
 
-      <SectionCard id="student-actions" title={t.actionsSection}>
-        <StudentActions
-          id={student.id}
-          fullName={student.fullName}
-          status={student.status}
-          attemptTotal={student.attemptTotal}
-        />
-      </SectionCard>
+      {admin && (
+        <SectionCard id="student-actions" title={t.actionsSection}>
+          <StudentActions
+            id={student.id}
+            fullName={student.fullName}
+            status={student.status}
+            attemptTotal={student.attemptTotal}
+          />
+        </SectionCard>
+      )}
 
       <SectionCard id="student-grants" title={t.grantSection}>
         <GrantAttempts
@@ -79,16 +89,18 @@ export default async function AdminStudentPage({
         />
       </SectionCard>
 
-      <section aria-labelledby="student-sessions" className="space-y-3">
-        <h2 id="student-sessions" className="heading-section">
-          {t.sessionsSection}
-        </h2>
-        {sessions.length ? (
-          <StudentSessions rows={sessions} />
-        ) : (
-          <p className="text-muted-foreground text-sm">{t.sessionsEmpty}</p>
-        )}
-      </section>
+      {admin && (
+        <section aria-labelledby="student-sessions" className="space-y-3">
+          <h2 id="student-sessions" className="heading-section">
+            {t.sessionsSection}
+          </h2>
+          {sessions.length ? (
+            <StudentSessions rows={sessions} />
+          ) : (
+            <p className="text-muted-foreground text-sm">{t.sessionsEmpty}</p>
+          )}
+        </section>
+      )}
 
       <section aria-labelledby="student-attempts" className="space-y-3">
         <h2 id="student-attempts" className="heading-section">

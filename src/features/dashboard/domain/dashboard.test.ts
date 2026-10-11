@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { continueSummary, recommendLessons } from "./dashboard";
 
 describe("recommendLessons", () => {
-  const lessons = [1, 2, 3, 4, 5, 6, 7].map((id) => ({ id }));
+  const lessons = [1, 2, 3, 4, 5, 6, 7].map((id) => ({ id, grade: null }));
 
   it("skips finished lessons and keeps the catalog order", () => {
     expect(recommendLessons(lessons, [2, 3, 9]).map((l) => l.id)).toEqual([
@@ -11,12 +11,30 @@ describe("recommendLessons", () => {
   });
 
   it("returns fewer when most are done, none when all are", () => {
-    expect(recommendLessons(lessons, [1, 2, 3, 4, 5, 6])).toEqual([{ id: 7 }]);
+    expect(recommendLessons(lessons, [1, 2, 3, 4, 5, 6])).toEqual([
+      { id: 7, grade: null },
+    ]);
     expect(recommendLessons(lessons, [1, 2, 3, 4, 5, 6, 7])).toEqual([]);
   });
 
   it("honours a custom count", () => {
-    expect(recommendLessons(lessons, [], 2)).toHaveLength(2);
+    expect(recommendLessons(lessons, [], null, 2)).toHaveLength(2);
+  });
+
+  it("puts my grade's lessons first, keeping the order within each (B-03)", () => {
+    const mixed = [
+      { id: 1, grade: 12 },
+      { id: 2, grade: null },
+      { id: 3, grade: 11 },
+      { id: 4, grade: 12 },
+      { id: 5, grade: 11 },
+    ];
+    expect(recommendLessons(mixed, [5], 11).map((l) => l.id)).toEqual([
+      3, 1, 2, 4,
+    ]);
+    expect(recommendLessons(mixed, [], null).map((l) => l.id)).toEqual([
+      1, 2, 3, 4,
+    ]);
   });
 });
 

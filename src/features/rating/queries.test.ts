@@ -1,7 +1,13 @@
 import { eq } from "drizzle-orm";
 import { beforeAll, describe, expect, it, vi } from "vitest";
 import { db } from "@/db/client";
-import { ratingEvents, ratings, users } from "@/db/schema";
+import {
+  classes,
+  classMembers,
+  ratingEvents,
+  ratings,
+  users,
+} from "@/db/schema";
 import type { TestDb } from "@/test/db";
 import { getLeaderboard } from "./queries";
 
@@ -43,8 +49,30 @@ const seeds: Seed[] = [
 ];
 
 const ids = new Map<string, string>();
+/** Everyone is in class A; only An and Bảo are also in class B (B-03). */
+let classA = 0;
+let classB = 0;
+const IN_B = new Set(["An", "Bảo"]);
 
 beforeAll(async () => {
+  const [teacher] = await tdb
+    .insert(users)
+    .values({
+      role: "teacher",
+      fullName: "GV",
+      username: "gv",
+      passwordHash: "x",
+    })
+    .returning({ id: users.id });
+  const made = await tdb
+    .insert(classes)
+    .values([
+      { ownerId: teacher?.id ?? "", name: "A" },
+      { ownerId: teacher?.id ?? "", name: "B" },
+    ])
+    .returning({ id: classes.id });
+  classA = made[0]?.id ?? 0;
+  classB = made[1]?.id ?? 0;
   for (const [i, s] of seeds.entries()) {
     const [u] = await tdb
       .insert(users)
@@ -60,6 +88,12 @@ beforeAll(async () => {
       .returning({ id: users.id });
     if (!u) throw new Error("seed");
     ids.set(s.name, u.id);
+    await tdb
+      .insert(classMembers)
+      .values([
+        { classId: classA, userId: u.id },
+        ...(IN_B.has(s.name) ? [{ classId: classB, userId: u.id }] : []),
+      ]);
     await tdb
       .insert(ratings)
       .values({ userId: u.id, rating: s.rating, peak: s.rating });
@@ -88,7 +122,7 @@ const names = (rows: { fullName: string }[]) =>
 
 describe("getLeaderboard", () => {
   it("ranks active students by rating, ties sharing a rank", async () => {
-    const rows = await getLeaderboard({ grade: null, period: "all" });
+    const rows = await getLeaderboard({ classId: classA, period: "all" });
     expect(names(rows)).toEqual(["An", "Bảo", "Bình", "Cường"]);
     expect(rows.map((r) => r.rank)).toEqual([1, 2, 2, 4]);
     expect(rows[0]).toEqual({
@@ -104,7 +138,7 @@ describe("getLeaderboard", () => {
   });
 
   it("never exposes contact details", async () => {
-    const [row] = await getLeaderboard({ grade: null, period: "all" });
+    const [row] = await getLeaderboard({ classId: classA, period: "all" });
     expect(Object.keys(row ?? {}).sort()).toEqual([
       "className",
       "fullName",
@@ -115,21 +149,25 @@ describe("getLeaderboard", () => {
     ]);
   });
 
-  it("filters by grade and ranks within it", async () => {
-    const rows = await getLeaderboard({ grade: 12, period: "all" });
+  it("ranks a class's own students only (B-03)", async () => {
+    const rows = await getLeaderboard({ classId: classB, period: "all" });
     expect(names(rows)).toEqual(["An", "Bảo"]);
     expect(rows.map((r) => r.rank)).toEqual([1, 2]);
-    expect(await getLeaderboard({ grade: 11, period: "all" })).toHaveLength(1);
+    expect(
+      await getLeaderboard({ classId: classB + 999, period: "all" }),
+    ).toEqual([]);
   });
 
   it("lists the most improved of the last 7 days", async () => {
-    const rows = await getLeaderboard({ grade: null, period: "week" });
+    const rows = await getLeaderboard({ classId: classA, period: "week" });
     expect(names(rows)).toEqual(["Bình", "An"]);
     expect(rows.map((r) => [r.weekDelta, r.rank])).toEqual([
       [60, 1],
       [15, 2],
     ]);
-    expect(await getLeaderboard({ grade: 10, period: "week" })).toEqual([]);
+    expect(
+      names(await getLeaderboard({ classId: classB, period: "week" })),
+    ).toEqual(["An"]);
   });
 });
 
@@ -141,7 +179,7 @@ describe("getLeaderboard privacy (S8-04)", () => {
       .set({ leaderboardInitials: true })
       .where(eq(users.id, id));
     try {
-      const rows = await getLeaderboard({ grade: null, period: "all" });
+      const rows = await getLeaderboard({ classId: classA, period: "all" });
       const row = rows.find((r) => r.userId === id);
       expect(row?.fullName).toBe("H. S. C.");
       expect(JSON.stringify(rows)).not.toContain("Cường");

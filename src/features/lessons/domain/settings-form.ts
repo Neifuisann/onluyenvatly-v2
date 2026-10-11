@@ -5,6 +5,11 @@
  * Vietnamese messages per field; nothing invalid reaches the database.
  */
 import { z } from "zod";
+import {
+  DEFAULT_SUBJECT,
+  type Subject,
+  SubjectSchema,
+} from "../../../lib/subjects.ts";
 import { settingsCopy as M } from "../messages.ts";
 import {
   type LessonConfig,
@@ -21,6 +26,8 @@ export type SettingsForm = {
   title: string;
   description: string;
   grade: "" | "10" | "11" | "12";
+  /** Subject code (B-03). */
+  subject: Subject;
   chapter: string;
   /** Comma-separated. */
   tags: string;
@@ -54,6 +61,8 @@ export type LessonMeta = {
   title: string;
   description: string | null;
   grade: number | null;
+  /** Stored code; an unknown one (a removed subject) shows as the default. */
+  subject: string;
   chapter: string | null;
   tags: string[];
 };
@@ -99,6 +108,7 @@ export function toSettingsForm(
     title: meta.title,
     description: meta.description ?? "",
     grade: meta.grade ? (String(meta.grade) as SettingsForm["grade"]) : "",
+    subject: SubjectSchema.catch(DEFAULT_SUBJECT).parse(meta.subject),
     chapter: meta.chapter ?? "",
     tags: meta.tags.join(", "),
     timeLimitMin:
@@ -270,6 +280,7 @@ export function fromSettingsForm(
       title,
       description: description || null,
       grade: f.grade ? Number(f.grade) : null,
+      subject: f.subject,
       chapter: chapter || null,
       tags,
     },
@@ -289,6 +300,7 @@ export const SettingsFormSchema = z.strictObject({
   title: field(1000),
   description: field(5000),
   grade: z.enum(["", "10", "11", "12"]),
+  subject: SubjectSchema,
   chapter: field(500),
   tags: field(2000),
   timeLimitMin: field(20),
