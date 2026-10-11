@@ -30,7 +30,8 @@ const LANE = {
  * The race (B-05): one ticker-tape lane per player, ordered by rank. Lanes
  * sit at absolute offsets, so an overtake glides instead of jumping, and a
  * racer's position is its points against a perfect, instant race. A list for
- * screen readers too: each lane reads as rank, name and points.
+ * screen readers too: each lane reads as rank, name and points. A player
+ * knocked out (B-12) is greyed out and labelled.
  */
 export function RaceTrack({
   players,
@@ -58,7 +59,10 @@ export function RaceTrack({
         return (
           <li
             key={p.id}
-            className="absolute inset-x-0 flex items-center gap-2 transition-[top] duration-700 ease-out-soft sm:gap-3"
+            className={clsx(
+              "absolute inset-x-0 flex items-center gap-2 transition-[top,opacity] duration-700 ease-out-soft sm:gap-3",
+              p.eliminated && "opacity-45 grayscale",
+            )}
             style={{ top: i * (lane.h + lane.gap), height: lane.h }}
           >
             <span
@@ -79,6 +83,7 @@ export function RaceTrack({
               {me ? t.you : p.name}
               <span className="sr-only">
                 {me && ` (${p.name})`}, {t.points(p.score)}
+                {p.eliminated && `, ${t.eliminated}`}
               </span>
             </span>
             <span

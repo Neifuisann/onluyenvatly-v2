@@ -15,34 +15,48 @@ export type StandingInput = {
   correct: number;
   bestStreak: number;
   finishedAt: Date | null;
+  /** Out of lives (B-12). */
+  eliminatedAt: Date | null;
+  /** Lives still left; null when the room has none. */
+  lives: number | null;
 };
 
-export type Standing = Omit<StandingInput, "finishedAt"> & {
+export type Standing = Omit<StandingInput, "finishedAt" | "eliminatedAt"> & {
   rank: number;
   finished: boolean;
+  eliminated: boolean;
 };
 
 /**
  * Highest score first; equal scores share a rank ("1, 2, 2, 4"). Inside a
  * tie, more correct answers, then whoever crossed the line first, are listed
- * first, but the rank stays shared.
+ * first, but the rank stays shared. Players knocked out (B-12) rank below
+ * everyone still in, whatever their points.
  */
 export function rankPlayers(rows: readonly StandingInput[]): Standing[] {
   const finishMs = (r: StandingInput) =>
     r.finishedAt?.getTime() ?? Number.POSITIVE_INFINITY;
+  const out = (r: StandingInput) => (r.eliminatedAt ? 1 : 0);
   const sorted = [...rows].sort(
     (a, b) =>
+      out(a) - out(b) ||
       b.score - a.score ||
       b.correct - a.correct ||
       finishMs(a) - finishMs(b) ||
       a.id - b.id,
   );
   let rank = 0;
-  let previous: number | undefined;
-  return sorted.map(({ finishedAt, ...row }, i) => {
-    if (row.score !== previous) rank = i + 1;
-    previous = row.score;
-    return { ...row, rank, finished: finishedAt !== null };
+  let previous: string | undefined;
+  return sorted.map(({ finishedAt, eliminatedAt, ...row }, i) => {
+    const key = `${eliminatedAt ? 1 : 0}:${row.score}`;
+    if (key !== previous) rank = i + 1;
+    previous = key;
+    return {
+      ...row,
+      rank,
+      finished: finishedAt !== null,
+      eliminated: eliminatedAt !== null,
+    };
   });
 }
 

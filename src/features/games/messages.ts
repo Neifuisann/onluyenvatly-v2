@@ -98,6 +98,16 @@ export const gameCopy = {
     } as const,
     countLabel: "Số câu trong bộ đề",
     paceLabel: "Nhịp độ",
+    rulesLabel: "Luật chơi",
+    sameQuestion: "Cả lớp làm cùng một câu",
+    sameQuestionHint:
+      "Mọi người cùng thấy một câu, cùng lúc. Trả lời xong thì chờ hết giờ để sang câu tiếp.",
+    lockJoin: "Khóa phòng khi bắt đầu",
+    lockJoinHint: "Học sinh không vào thêm được sau khi cuộc đua bắt đầu.",
+    lives: "Loại khi sai nhiều",
+    livesHint: (n: number) =>
+      `Sai, bỏ trống hoặc hết giờ ${vi(n)} lần là bị loại.`,
+    livesCount: "Số lần sai được phép",
     available: (n: number) => `${vi(n)} câu phù hợp trong các bài đã chọn`,
     summary: (count: number, pool: number) =>
       pool >= count
@@ -148,8 +158,21 @@ export const gameCopy = {
     replay: "Chơi lại",
     replaying: "Đang tạo phòng…",
     backToList: "Danh sách phòng",
-    settings: (count: number, pace: string) =>
-      `${vi(count)} câu · Nhịp ${pace}`,
+    settings: (
+      count: number,
+      pace: string,
+      rules: { sameQuestion: boolean; lockJoin: boolean; lives: number | null },
+    ) =>
+      [
+        `${vi(count)} câu`,
+        `Nhịp ${pace}`,
+        rules.sameQuestion && "Cùng một câu",
+        rules.lockJoin && "Khóa phòng khi bắt đầu",
+        rules.lives !== null && `Sai ${vi(rules.lives)} lần bị loại`,
+      ]
+        .filter(Boolean)
+        .join(" · "),
+    eliminatedCount: (n: number) => `${vi(n)} bị loại`,
     elapsed: "Thời gian",
     nobody: "Không có ai về đích.",
     connection: "Mất kết nối, đang thử lại…",
@@ -167,6 +190,17 @@ export const gameCopy = {
     removed: "Giáo viên đã mời bạn rời phòng này.",
     finishedTitle: "Cuộc đua đã kết thúc",
     finishedBody: "Phòng này không nhận thêm người chơi.",
+    lockedTitle: "Cuộc đua đã bắt đầu",
+    lockedBody: "Phòng đã khóa, không nhận thêm người chơi.",
+    lives: (n: number) => `Còn ${vi(n)} mạng`,
+    lifeLost: (n: number) =>
+      n > 0 ? `Mất một mạng, còn ${vi(n)}.` : "Bạn đã hết mạng.",
+    eliminatedTitle: "Bị loại!",
+    eliminatedBody: "Bạn đã hết lượt sai. Xem các bạn khác đua tiếp nhé.",
+    eliminated: "Bị loại",
+    waitNext: (s: number) => `Câu tiếp theo sau ${vi(s)} giây`,
+    rulesSameQuestion: "Cả lớp làm cùng một câu, cùng lúc.",
+    rulesLives: (n: number) => `Sai ${vi(n)} lần là bị loại.`,
     back: "Về trang chủ",
     joinTitle: "Chọn tay đua của bạn",
     joinLead: (title: string) => `Phòng “${title}”`,

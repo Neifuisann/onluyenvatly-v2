@@ -1,6 +1,6 @@
 "use client";
 
-import { Flag } from "lucide-react";
+import { Flag, HeartCrack } from "lucide-react";
 import Link from "next/link";
 import { buttonVariants } from "@/components/ui/button";
 import { gameCopy } from "../../messages";
@@ -37,6 +37,7 @@ export function Finish({
   const room = state ?? initial;
   const over = room.status === "finished";
   const me = room.players.find((p) => p.id === room.meId) ?? null;
+  const knockedOut = !over && Boolean(me?.eliminated);
 
   if (problem === "removed")
     return <StageMessage pose="sleeping" title={t.removed} />;
@@ -54,14 +55,20 @@ export function Finish({
             <h1 className="font-bold font-display text-3xl">{t.finalTitle}</h1>
           ) : (
             <>
-              <Flag aria-hidden className="size-10 fill-accent text-accent" />
+              {knockedOut ? (
+                <HeartCrack aria-hidden className="size-10 text-danger" />
+              ) : (
+                <Flag aria-hidden className="size-10 fill-accent text-accent" />
+              )}
               <h1 className="font-bold font-display text-4xl">
-                {t.finishTitle}
+                {knockedOut ? t.eliminatedTitle : t.finishTitle}
               </h1>
               <output className="block text-ink-muted">
                 {problem === "offline"
                   ? gameCopy.host.connection
-                  : t.finishWait}
+                  : knockedOut
+                    ? t.eliminatedBody
+                    : t.finishWait}
               </output>
             </>
           )}

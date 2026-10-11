@@ -13,7 +13,9 @@ import { defaultRacer } from "@/features/games/domain/rules";
 import {
   effectiveStatus,
   limitMs,
-  questionShownAt,
+  livesLeft,
+  playerShownAt,
+  sharedPosition,
 } from "@/features/games/domain/scoring";
 import { playerView } from "@/features/games/domain/standings";
 import { gameCopy } from "@/features/games/messages";
@@ -70,6 +72,14 @@ export default async function PlayPage({ params }: PageProps<"/play/[pin]">) {
           pose="sleeping"
           title={t.finishedTitle}
           body={t.finishedBody}
+        />
+      );
+    if (status === "running" && room.lockJoin)
+      return (
+        <StageMessage
+          pose="sleeping"
+          title={t.lockedTitle}
+          body={t.lockedBody}
         />
       );
     const snapshot = await getRoomSnapshot(room.id, now.getTime());
@@ -137,10 +147,27 @@ export default async function PlayPage({ params }: PageProps<"/play/[pin]">) {
   const publicQuestions = bank && (await bankPublicQuestions(bank));
   if (!publicQuestions)
     return <StageMessage pose="broken" title={gameCopy.create.errorTitle} />;
+  // A same-question race (B-12) may have moved on while this tab was closed.
+  const startIndex = room.sameQuestion
+    ? Math.max(
+        player.answered,
+        sharedPosition(room.startedAt, room.bankTypes, room.pace, now),
+      )
+    : player.answered;
+  if (startIndex >= publicQuestions.length)
+    return (
+      <PlayScreen
+        phase="finish"
+        roomId={room.id}
+        title={room.title}
+        initial={state}
+      />
+    );
   const remaining = remainingQuestions(
     publicQuestions,
     player.seed,
-    player.answered,
+    startIndex,
+    room.sameQuestion,
   );
   const questions: RaceQuestion[] = remaining.map((q) => {
     const { type, stem, options, statements } = toRunnerQuestion(q, 1);
@@ -156,20 +183,22 @@ export default async function PlayPage({ params }: PageProps<"/play/[pin]">) {
     <PlayScreen
       phase="race"
       // A refresh after a resync starts again from the server's position.
-      key={`${room.id}:${player.answered}`}
+      key={`${room.id}:${startIndex}`}
       roomId={room.id}
       title={room.title}
       questions={questions}
-      startIndex={player.answered}
+      startIndex={startIndex}
       total={publicQuestions.length}
-      shownAt={questionShownAt({
-        raceStartedAt: room.startedAt,
-        joinedAt: player.joinedAt,
-        lastAnsweredAt: player.lastAnsweredAt,
-      }).toISOString()}
+      shownAt={playerShownAt(
+        { ...room, startedAt: room.startedAt },
+        player,
+        startIndex,
+      ).toISOString()}
       serverNow={now.toISOString()}
       initialScore={player.score}
       initialStreak={player.streak}
+      initialLives={livesLeft(room.lives, player.misses)}
+      sameQuestion={room.sameQuestion}
       initialView={playerView(state.players, player.id)}
     />
   );

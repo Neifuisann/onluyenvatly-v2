@@ -68,12 +68,17 @@ export type PlayerPlan = {
  * A player's order and option shuffles from their seed. Deterministic: the
  * page and the answer handler rebuild the same plan without storing it.
  * `optionCounts[i]` is the bank question's option count (0 for tf/short).
+ * In a same-question race (B-12) everyone keeps the bank's drawn order (it
+ * is already random); the options are still shuffled per player.
  */
 export function playerPlan(
   optionCounts: readonly number[],
   rng: Rng,
+  sameOrder = false,
 ): PlayerPlan {
-  const order = shuffle(identityOrder(optionCounts.length), rng);
+  const order = sameOrder
+    ? identityOrder(optionCounts.length)
+    : shuffle(identityOrder(optionCounts.length), rng);
   const options = optionCounts.map((n) =>
     n > 0 ? shuffle(identityOrder(n), rng) : undefined,
   );

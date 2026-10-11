@@ -89,7 +89,11 @@ export default async function HostPage({ params }: PageProps<"/host/[id]">) {
       qr={
         <QrCode text={joinUrl} label={t.qrLabel(joinUrl)} className="w-full" />
       }
-      settings={t.settings(room.bankTypes.length, paceCopy[room.pace].name)}
+      settings={t.settings(
+        room.bankTypes.length,
+        paceCopy[room.pace].name,
+        room,
+      )}
       initial={state}
       report={report}
     />
