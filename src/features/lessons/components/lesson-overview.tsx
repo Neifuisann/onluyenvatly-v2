@@ -71,7 +71,7 @@ export function LessonOverviewContent({
   return (
     <article className="mx-auto grid max-w-6xl gap-6 lg:grid-cols-[minmax(0,1fr)_22rem] lg:gap-x-10">
       <Link
-        href="/lessons"
+        href="/classes"
         className="-ml-2 inline-flex min-h-11 lg:col-start-1 w-fit items-center gap-1 rounded-full pr-3 pl-1.5 font-medium text-muted-foreground text-sm transition-colors hover:bg-muted hover:text-foreground"
         prefetch={false}
       >

@@ -10,6 +10,7 @@ import {
   users,
 } from "@/db/schema";
 import { startAttempt, submitAttempt } from "@/features/attempts/service";
+import { shareLesson } from "@/test/classes";
 import { resetDb, type TestDb } from "@/test/db";
 import { getComposeSources } from "./admin-queries";
 import {
@@ -65,8 +66,15 @@ async function addUser(role: "student" | "admin", phone: string) {
 async function addLesson(status: "draft" | "published" | "archived" = "draft") {
   const [row] = await tdb
     .insert(lessons)
-    .values({ title: "Bài", status, config: DEFAULT_LESSON_CONFIG })
+    .values({
+      title: "Bài",
+      status,
+      config: DEFAULT_LESSON_CONFIG,
+      ownerId: admin.id,
+    })
     .returning({ id: lessons.id });
+  // B-03: the student reaches it through the admin's class.
+  if (row) await shareLesson(tdb, row.id, admin.id);
   return row?.id ?? 0;
 }
 
@@ -368,7 +376,13 @@ describe("composeLesson / getComposeSources", () => {
   ) {
     const [row] = await tdb
       .insert(lessons)
-      .values({ title, grade, status: "draft", config: DEFAULT_LESSON_CONFIG })
+      .values({
+        title,
+        grade,
+        status: "draft",
+        config: DEFAULT_LESSON_CONFIG,
+        ownerId: admin.id,
+      })
       .returning({ id: lessons.id });
     const id = row?.id ?? 0;
     const [v] = await tdb
@@ -407,7 +421,7 @@ describe("composeLesson / getComposeSources", () => {
     await saveDraft(admin, published, V1);
     const draftOnly = await sourceWith("Nháp", [mcq("Câu A"), tf]);
     await addLesson(); // no version at all
-    const sources = await getComposeSources();
+    const sources = await getComposeSources(admin);
     expect(sources.map((s) => s.id).sort()).toEqual(
       [published, draftOnly].sort(),
     );

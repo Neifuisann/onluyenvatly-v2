@@ -7,39 +7,12 @@ export const studentsCopy = {
   deletionAt: (when: string) => `Gửi lúc ${when}`,
   deletionBadge: "Đã yêu cầu xóa tài khoản",
   title: "Học sinh",
-  lead: "Duyệt tài khoản mới và quản lý học sinh.",
+  lead: "Học sinh trong các lớp của bạn. Thêm học sinh vào lớp ở mục Lớp học.",
+  leadAdmin:
+    "Mọi tài khoản học sinh: đặt lại mật khẩu, khóa hoặc xóa tài khoản.",
   loading: "Đang tải danh sách học sinh",
   errorTitle: "Không tải được danh sách học sinh",
-  tabsLabel: "Chế độ xem",
-  tabPending: "Chờ duyệt",
-  tabAll: "Tất cả",
-
-  // Pending queue
-  pendingCount: (n: number) => `${n} học sinh đang chờ duyệt`,
-  pendingMore: (n: number) =>
-    `Đang hiển thị ${n} học sinh đăng ký sớm nhất. Duyệt xong sẽ thấy tiếp.`,
-  pendingEmptyTitle: "Không có ai đang chờ duyệt",
-  pendingEmptyBody: "Học sinh đăng ký mới sẽ xuất hiện ở đây.",
-  pendingListLabel: "Học sinh chờ duyệt",
-  selectAll: "Chọn tất cả",
-  selectedCount: (n: number) => `Đã chọn ${n}`,
-  selectStudent: (name: string) => `Chọn ${name}`,
-  approve: "Duyệt",
-  reject: "Từ chối",
-  registeredAt: "Đăng ký",
   dateOfBirth: "Ngày sinh",
-  approved: (done: number, skipped: number) =>
-    skipped > 0
-      ? `Đã duyệt ${done} học sinh. Bỏ qua ${skipped} (đã được xử lý).`
-      : `Đã duyệt ${done} học sinh.`,
-  rejected: (done: number, skipped: number) =>
-    skipped > 0
-      ? `Đã từ chối ${done} học sinh. Bỏ qua ${skipped} (đã được xử lý).`
-      : `Đã từ chối ${done} học sinh.`,
-  rejectTitle: "Từ chối đăng ký?",
-  rejectBody: (n: number) =>
-    `${n} học sinh sẽ không đăng nhập được. Bạn vẫn có thể mở lại tài khoản sau ở trang chi tiết.`,
-  rejectConfirm: "Từ chối",
   cancel: "Hủy",
   close: "Đóng",
 
@@ -64,7 +37,8 @@ export const studentsCopy = {
   noMatchTitle: "Không có học sinh phù hợp",
   noMatchBody: "Thử từ khóa khác hoặc bỏ bộ lọc.",
   emptyTitle: "Chưa có học sinh nào",
-  emptyBody: "Học sinh tự đăng ký tại trang đăng ký và chờ bạn duyệt.",
+  emptyBody:
+    "Học sinh tự đăng ký tài khoản, rồi bạn thêm các em vào lớp bằng số điện thoại ở mục Lớp học.",
   clear: "Xóa bộ lọc",
   loadMore: "Xem thêm",
   rating: (r: number) => `${r} điểm`,

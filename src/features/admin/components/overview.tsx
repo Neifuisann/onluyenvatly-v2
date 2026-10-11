@@ -3,9 +3,9 @@ import {
   ChevronRight,
   ClipboardList,
   type LucideIcon,
+  School,
   Send,
   Sparkles,
-  UserCheck,
   Users,
 } from "lucide-react";
 import Link from "next/link";
@@ -24,17 +24,17 @@ import {
 import { overviewCopy as t } from "../messages";
 
 /**
- * The navy hero (the student dashboard's "continue" surface): the approval
- * queue when someone waits, else today's activity.
+ * The navy hero (the student dashboard's "continue" surface): "create your
+ * first class" for a new teacher (B-03), else today's activity.
  */
 export function OverviewHero({
-  pending,
+  classes,
   attemptsToday,
 }: {
-  pending: number;
+  classes: number;
   attemptsToday: number;
 }) {
-  const waiting = pending > 0;
+  const setup = classes === 0;
   return (
     <section
       aria-labelledby="overview-hero"
@@ -47,19 +47,19 @@ export function OverviewHero({
       <div className="min-w-0 flex-1 space-y-3">
         <p className="eyebrow inline-flex items-center gap-2 text-ink-muted">
           <span aria-hidden className="size-2 rounded-full bg-accent" />
-          {waiting ? t.heroPendingLabel : t.heroTodayLabel}
+          {setup ? t.heroSetupLabel : t.heroTodayLabel}
         </p>
         <h2
           id="overview-hero"
           className="font-display font-semibold text-2xl leading-tight tracking-tight sm:text-[1.75rem]"
         >
-          {waiting ? t.heroPending(pending) : t.heroToday(attemptsToday)}
+          {setup ? t.heroSetup : t.heroToday(attemptsToday)}
         </h2>
         <p className="max-w-md text-ink-muted">
-          {waiting ? t.heroPendingBody : t.heroTodayBody}
+          {setup ? t.heroSetupBody : t.heroTodayBody}
         </p>
         <Link
-          href={waiting ? "/admin/students?view=pending" : "/admin/results"}
+          href={setup ? "/admin/classes" : "/admin/results"}
           prefetch={false}
           className={buttonVariants({
             variant: "ink",
@@ -67,12 +67,12 @@ export function OverviewHero({
             className: "mt-1",
           })}
         >
-          {waiting ? t.heroPendingCta : t.heroTodayCta}
+          {setup ? t.heroSetupCta : t.heroTodayCta}
           <ArrowRight aria-hidden />
         </Link>
       </div>
       <Mascot
-        pose={waiting ? "waiting" : "graph"}
+        pose={setup ? "teacher" : "graph"}
         size={150}
         priority
         className="-mb-2 hidden shrink-0 sm:block"
@@ -123,15 +123,18 @@ function Tile({
   );
 }
 
-/** The headline numbers; the pending tile opens the approval queue. */
+/** The headline numbers; the classes tile opens the class list. */
 export function OverviewTiles({
-  pending,
+  classes,
+  students,
   activeStudents,
   attemptsToday,
   attemptsWeek,
   ai,
 }: {
-  pending: number;
+  classes: number;
+  /** Distinct students across the teacher's classes. */
+  students: number;
   activeStudents: number;
   attemptsToday: number;
   attemptsWeek: number;
@@ -143,28 +146,31 @@ export function OverviewTiles({
         className={cn(
           tileBox,
           "relative col-span-2 focus-within:ring-2 focus-within:ring-ring hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-raised lg:col-span-1",
-          pending > 0 &&
-            "border-accent/60 bg-accent-soft dark:border-accent/40",
         )}
       >
         <span
           aria-hidden
           className="flex size-10 items-center justify-center rounded-full bg-accent text-accent-foreground"
         >
-          <UserCheck className="size-5" strokeWidth={2} />
+          <School className="size-5" strokeWidth={2} />
         </span>
         <dt className="text-muted-foreground text-sm">
           <Link
-            href="/admin/students?view=pending"
+            href="/admin/classes"
             prefetch={false}
-            aria-label={t.pendingLink(pending)}
+            aria-label={t.classesLink(classes, students)}
             className="after:absolute after:inset-0 after:rounded-lg focus-visible:outline-none"
           >
-            {t.pending}
+            {t.classes}
           </Link>
         </dt>
         <dd className="num mt-auto flex items-center justify-between font-bold font-display text-3xl leading-none tracking-tight">
-          {pending}
+          <span>
+            {classes}
+            <span className="ml-2 font-medium font-sans text-muted-foreground text-sm tracking-normal">
+              {t.classesStudents(students)}
+            </span>
+          </span>
           <ChevronRight aria-hidden className="size-5 text-muted-foreground" />
         </dd>
       </div>

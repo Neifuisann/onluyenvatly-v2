@@ -30,7 +30,7 @@ export const parseIssueMessages = {
 
 export const overviewCopy = {
   title: "Thông tin bài tập",
-  back: "Về danh sách bài tập",
+  back: "Về lớp học",
   structure: "Cấu trúc đề",
   rules: "Trước khi làm bài",
   duration: "Thời gian",
@@ -334,6 +334,7 @@ export const settingsCopy = {
   grade: "Khối",
   gradeNone: "Không chọn",
   gradeOption: (g: number) => `Lớp ${g}`,
+  subject: "Môn học",
   chapter: "Chương",
   chapterHint: "Ví dụ: Dao động cơ.",
   tags: "Thẻ",

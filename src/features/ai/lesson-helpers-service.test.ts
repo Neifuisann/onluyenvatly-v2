@@ -7,10 +7,6 @@ import { type AiGate, createAi, type GeminiModels } from "./gemini";
 import { generateDescription, suggestTags } from "./lesson-helpers-service";
 import { lessonHelpersCopy } from "./messages";
 
-vi.mock("@/features/lessons/queries", () => ({
-  getCatalogFacets: async () => ({ chapters: [], tags: ["Dao động"] }),
-}));
-
 /** Answers every call with `reply` (`null` = truncated). */
 function fakeAi(reply: string | null, gate?: AiGate) {
   const client = {
@@ -103,9 +99,12 @@ describe("generateDescription", () => {
 });
 
 describe("suggestTags", () => {
-  it("reuses the catalog's tags", async () => {
+  it("reuses the teacher's own tags", async () => {
     const { ai, client } = fakeAi("dao động, con lắc lò xo, ôn tập");
-    const result = await suggestTags(input, { ai });
+    const result = await suggestTags(input, {
+      ai,
+      knownTags: async () => ["Dao động"],
+    });
     expect(result).toEqual({
       ok: true,
       data: { tags: ["Dao động", "con lắc lò xo", "ôn tập"] },

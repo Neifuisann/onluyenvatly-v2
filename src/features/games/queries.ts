@@ -2,6 +2,7 @@ import "server-only";
 import { and, asc, count, desc, eq, isNotNull, isNull, sql } from "drizzle-orm";
 import { db } from "@/db/client";
 import { gamePlayers, gameRooms, lessons, users } from "@/db/schema";
+import { type Owner, ownedBy } from "@/features/lessons/ownership";
 import type { QuestionType } from "@/features/lessons/schema";
 import { publicName } from "@/features/rating/domain/leaderboard";
 import type { Pace } from "./domain/rules";
@@ -242,11 +243,13 @@ export type GameLessonChoice = {
 };
 
 /**
- * Published lessons the create form offers, with every question of the
- * published version counted by type (not the test's pool size). Admin only,
- * ~170 small rows; the question JSON never leaves the database here.
+ * Published lessons the create form offers: the host's own (B-03), with
+ * every question of the published version counted by type (not the test's
+ * pool size). Small rows; the question JSON never leaves the database here.
  */
-export async function getGameLessonChoices(): Promise<GameLessonChoice[]> {
+export async function getGameLessonChoices(
+  owner: Owner,
+): Promise<GameLessonChoice[]> {
   const typeCount = (type: QuestionType) =>
     sql<number>`(select count(*)::int from lesson_versions v,
       jsonb_array_elements(v.questions) q
@@ -266,6 +269,7 @@ export async function getGameLessonChoices(): Promise<GameLessonChoice[]> {
     .from(lessons)
     .where(
       and(
+        ownedBy(owner),
         eq(lessons.status, "published"),
         isNull(lessons.deletedAt),
         isNotNull(lessons.currentVersionId),

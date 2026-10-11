@@ -20,6 +20,12 @@ erDiagram
   users ||--o{ game_rooms : hosts
   game_rooms ||--o{ game_players : has
   users ||--o{ game_players : plays
+  users ||--o{ classes : teaches
+  users ||--o{ lessons : owns
+  classes ||--o{ class_members : has
+  users ||--o{ class_members : "is in"
+  classes ||--o{ class_lessons : gives
+  lessons ||--o{ class_lessons : "given to"
   settings
   rate_limits
   media
@@ -32,8 +38,8 @@ erDiagram
 |---|---|---|
 | id | uuid PK default `gen_random_uuid()` | |
 | legacy_id | text unique null | v1 `students.id` |
-| role | enum `user_role` (`student`,`admin`) | |
-| status | enum `user_status` (`pending`,`active`,`rejected`,`disabled`) | Only `active` can log in |
+| role | enum `user_role` (`student`,`teacher`,`admin`) | B-03 (migration `0017`): a `teacher` owns classes and lessons and sees only their own; an `admin` is a teacher who also runs the platform and reaches everything |
+| status | enum `user_status` (`pending`,`active`,`rejected`,`disabled`) | Only `active` can log in. Since B-03 registration creates `active` accounts (no approval); `pending` is kept for old rows, which migration `0017` activated |
 | full_name | text not null | |
 | phone | text unique null | Normalized `0xxxxxxxxx` (10 digits). Required for students |
 | username | text unique null | Admins may log in with a username |
@@ -83,6 +89,7 @@ Edited on `/admin/settings` (S6-03, `updateSettings`): only the keys whose value
 | description | text null | |
 | grade | smallint null | 10/11/12 |
 | chapter | text null | e.g. "Dao động cơ" (was `subject`) |
+| subject | text not null default `physics` | B-03: the school subject, a code of `src/lib/subjects.ts` (`physics`, `math`, `chemistry`, …; validated with `SubjectSchema`, no DB check so a subject is added in code) |
 | tags | text[] default `{}` | GIN index |
 | cover_path | text null | |
 | status | enum `lesson_status` (`draft`,`published`,`archived`) | |
@@ -95,6 +102,7 @@ Edited on `/admin/settings` (S6-03, `updateSettings`): only the keys whose value
 | attempt_count | int default 0 | Denormalized; S9-01 records it after the grading transaction in an atomic, retry-safe statement. Daily maintenance repairs interrupted recording |
 | search_text | text generated | `lesson_search_text(title, description, tags)` = `lower(immutable_unaccent(concat_ws(' ', title, description, array_to_string(tags, ' '))))`. Both helpers are `IMMUTABLE` SQL functions created in migration `0002_lessons` (with a pinned `search_path` so they work whether the extensions live in `public` or Supabase's `extensions` schema) |
 | created_by | uuid FK | |
+| owner_id | uuid FK → users `SET NULL`, null | B-03: the teacher who owns the lesson; only they (and admins) see and manage it, and only their classes can be given it. Set on every insert (create, duplicate, compose, import). Migration `0017` set it to `created_by`, else the first admin. Index `(owner_id, sort_order)` for the teacher's list |
 | created_at, updated_at, published_at | timestamptz | |
 | deleted_at | timestamptz null | Soft delete (S5-01, migration `0006`): deleting a lesson that has attempts archives it and sets this, so it leaves the admin list but its attempts keep their review. Lessons without attempts are deleted for real (versions cascade) |
 
@@ -212,6 +220,28 @@ As built (S7-02, migration `0008`): also `prompt_version` text (09 §5) and `rev
 - An answer is one `UPDATE … WHERE answered = i`. A retry or parallel copy matches nothing and gets the stored mark back.
 - `removed_at`: the host removed the player. They're hidden from standings and can't rejoin.
 
+### `classes` (B-03, migration `0017`)
+| Column | Type | Notes |
+|---|---|---|
+| id | bigint identity PK | `/classes/7`, `/admin/classes/7` |
+| owner_id | uuid FK → users `CASCADE` | The class's teacher |
+| name | text not null | 1–80 characters (check) |
+| subject | text not null default `physics` | `lib/subjects.ts` code |
+| grade | smallint null | 10–12 (check) |
+| description | text null | ≤ 300 characters (Zod), shown on the student's class card |
+| archived_at | timestamptz null | Archived: hidden from its students, its lessons no longer open through it, no member or lesson changes until restored |
+| created_at, updated_at | timestamptz | |
+
+Index `(owner_id, created_at DESC)` for `/admin/classes`.
+
+### `class_members` (B-03)
+`(class_id, user_id)` PK (→ `classes`, `users`, both `CASCADE`), `added_by` uuid null (`SET NULL`), `created_at`. Index `(user_id)`: a student's classes and the lesson access check. Only `role = student` accounts that aren't rejected are added (`addMembers`, by phone). Removing a member or deleting the class leaves the student's attempts, ratings and mistakes alone.
+
+### `class_lessons` (B-03)
+`(class_id, lesson_id)` PK (→ `classes`, `lessons`, both `CASCADE`), `created_at`. Index `(lesson_id)`. The lessons given to a class; students see the published ones. A lesson can be given to several classes of its owner.
+
+**Access (B-03).** A student may open and start a lesson iff a class they belong to, not archived, has it (`classes/queries.ts` `canOpenLesson`: one join over the two primary keys and `class_members_user_idx`, per request). Leaderboards rank one class's members. Migration `0017` kept every deployment working as before: one class "Lớp Vật lý" per lesson owner, holding every active student and every lesson of that owner not deleted.
+
 ### `rate_limits`
 `key` text PK (e.g. `login:ip:1.2.3.4@10m`; the window is part of the key so one logical key can carry several limits), `window_start` timestamptz, `count` int. Identifiers such as phone numbers are hashed before they go into a key. Windows are fixed and UTC-aligned (`1m`, `10m`, `1h`, `1d`), computed in `src/lib/rate-limit.ts`.
 Implemented as one atomic upsert:
@@ -229,7 +259,7 @@ RETURNING count;
 As built (S5-05): `createUploadUrl` writes the row when it signs the upload, with the size the browser reported, so the quota check (`sum(bytes)` + the new file ≤ 900 MB) counts uploads in flight. Paths are `yyyy/mm/<uuid>.webp` (`.jpg` from browsers that can't encode WebP). A row whose object never arrived is an orphan for the daily cron (S9-05) to remove. `lessons.cover_path` only accepts a path that has a `media` row.
 
 ### `audit_log`
-`id` bigint, `actor_id` uuid, `action` text (`student.approve`, `lesson.publish`, `attempt.delete`…), `target_type`, `target_id`, `data` jsonb, `created_at`. Kept for 180 days. Indexes: `audit_log_created_at_idx` (`created_at`; retention and `/admin/audit` unfiltered, scanned backward) and `audit_log_area_created_idx` on `(split_part(action, '.', 1), created_at DESC NULLS FIRST, id DESC NULLS FIRST)` (migration 0011, `/admin/audit?area=`). Read only by `/admin/audit` (05 §1). Student actions (S6): `student.approve`, `student.reject`, `student.reset_password`, `student.revoke_sessions`, `student.disable`, `student.enable`, `student.delete` (`{ attempts, lessons }`), `student.grant_attempts`, `student.revoke_attempts`, `admin.create`; settings (S6-03): `settings.update` (`{ changed }`, the keys only); results (S6-04): `attempt.delete` (`{ userId, lessonId, status, rated }`); `data` carries ids and counts only, never a name, phone or password.
+`id` bigint, `actor_id` uuid, `action` text (`student.approve`, `lesson.publish`, `attempt.delete`…), `target_type`, `target_id`, `data` jsonb, `created_at`. Kept for 180 days. Indexes: `audit_log_created_at_idx` (`created_at`; retention and `/admin/audit` unfiltered, scanned backward) and `audit_log_area_created_idx` on `(split_part(action, '.', 1), created_at DESC NULLS FIRST, id DESC NULLS FIRST)` (migration 0011, `/admin/audit?area=`). Read only by `/admin/audit` (05 §1). Student actions (S6): `student.approve`, `student.reject`, `student.reset_password`, `student.revoke_sessions`, `student.disable`, `student.enable`, `student.delete` (`{ attempts, lessons }`), `student.grant_attempts`, `student.revoke_attempts`, `admin.create`, `teacher.create` (B-03); classes (B-03): `class.create`, `class.update`, `class.archive`, `class.restore`, `class.delete` (`{ members }`), `class.add_members` (`{ added }`), `class.remove_member` (`{ userId }`), `class.lessons` (`{ added, removed }`); settings (S6-03): `settings.update` (`{ changed }`, the keys only); results (S6-04): `attempt.delete` (`{ userId, lessonId, status, rated }`); `data` carries ids and counts only, never a name, phone or password.
 
 ## 3. JSON contracts (Zod schemas in `src/features/lessons/schema.ts`)
 

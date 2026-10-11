@@ -7,6 +7,7 @@ import { revealFor } from "@/features/attempts/domain/review";
 import { revealAt } from "@/features/attempts/domain/schedule";
 import { getAttempt } from "@/features/attempts/queries";
 import type { SessionUser } from "@/features/auth/session";
+import { teachesLesson } from "@/features/lessons/ownership";
 import {
   getLessonOverview,
   getLessonWithAnswers,
@@ -37,7 +38,7 @@ type Target = { question: Question; hash: string; lessonId: number };
 
 /**
  * `{ attemptId, index }` → the question, only if this user may see its
- * answer now: the attempt's owner (or an admin), submitted, and the lesson's
+ * answer now: the attempt's owner (or the lesson's teacher), submitted, and the lesson's
  * `revealAnswers` allows it (ADR-004). Everything else is `NOT_FOUND` /
  * `FORBIDDEN`, so the endpoint can't be used to fish for answers. A review
  * attempt (S7-06) is open once submitted: it was built only from questions
@@ -50,8 +51,11 @@ async function resolveTarget(
   now: Date,
 ): Promise<Result<Target>> {
   const attempt = await getAttempt(attemptId);
-  if (!attempt || (attempt.userId !== user.id && user.role !== "admin"))
-    return err("NOT_FOUND");
+  if (!attempt) return err("NOT_FOUND");
+  // The student, or the teacher who owns the lesson (B-03).
+  const teacher =
+    attempt.userId !== user.id && (await teachesLesson(user, attempt.lessonId));
+  if (attempt.userId !== user.id && !teacher) return err("NOT_FOUND");
   const item = attempt.items[index];
   if (!item) return err("NOT_FOUND");
   if (attempt.status === "in_progress") return err("FORBIDDEN");
@@ -63,7 +67,7 @@ async function resolveTarget(
       lesson?.revealAnswers ?? "never",
       lesson ? revealAt(lesson) : null,
       now,
-      user.role === "admin",
+      teacher,
     );
     if (reveal.kind !== "shown") return err("FORBIDDEN");
   }
@@ -137,7 +141,7 @@ const failure = (f: AiFailure) =>
 
 /**
  * `explainQuestion` (05 §2, S7-02): cache first, and a hit costs nothing.
- * A miss counts against the student's 20 a day (admins are exempt), then
+ * A miss counts against the student's 20 a day (teachers are exempt), then
  * the global gate (inside the wrapper), then streams from Gemini. The text
  * is stored only when complete.
  */
@@ -152,7 +156,7 @@ export async function explainQuestion(
   const cached = await findContent(target.data.hash);
   if (cached) return ok({ kind: "cached", contentMd: cached });
 
-  if (user.role !== "admin") {
+  if (user.role === "student") {
     const limit = await rateLimit(
       `ai:explain:${user.id}`,
       EXPLAIN_PER_USER_DAY,

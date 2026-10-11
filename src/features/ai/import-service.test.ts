@@ -125,7 +125,7 @@ async function drain(chunks: AsyncIterable<string>) {
 }
 
 const PATH = "2026/10/0b5f2d4e-8c1a-4f7e-9d3b-2a6c8e1f0a9b.pdf";
-let admin: { id: string };
+let admin: { id: string; role: "admin" };
 
 beforeEach(async () => {
   await resetDb(tdb);
@@ -139,7 +139,7 @@ beforeEach(async () => {
       passwordHash: "x",
     })
     .returning({ id: users.id });
-  admin = { id: u?.id ?? "" };
+  admin = { id: u?.id ?? "", role: "admin" };
 });
 
 describe("createImportUpload", () => {

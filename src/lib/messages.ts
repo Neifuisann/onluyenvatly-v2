@@ -69,7 +69,8 @@ export const authCopy = {
   noAccount: "Chưa có tài khoản?",
   registerLink: "Đăng ký",
   registerTitle: "Đăng ký tài khoản",
-  registerLead: "Tài khoản cần giáo viên duyệt trước khi đăng nhập.",
+  registerLead:
+    "Đăng ký xong là dùng được ngay. Giáo viên thêm bạn vào lớp bằng số điện thoại.",
   fullName: "Họ và tên",
   phone: "Số điện thoại",
   dateOfBirth: "Ngày sinh",
@@ -87,10 +88,6 @@ export const authCopy = {
   agreeAnd: "và",
   agreePrivacy: "Quyền riêng tư",
   loginLink: "Đăng nhập",
-  pendingTitle: "Đã gửi đăng ký",
-  pendingBody:
-    "Tài khoản của bạn đang chờ giáo viên duyệt. Khi được duyệt, bạn đăng nhập bằng số điện thoại và mật khẩu vừa tạo.",
-  pendingBack: "Về trang đăng nhập",
   logout: "Đăng xuất",
   logoutAll: "Đăng xuất khỏi mọi thiết bị",
   changePasswordTitle: "Đổi mật khẩu",
@@ -122,13 +119,14 @@ export const shellCopy = {
   greeting: (name: string) => `Chào ${name}`,
   studentNav: {
     dashboard: "Trang chủ",
-    lessons: "Bài tập",
+    lessons: "Lớp học",
     review: "Ôn tập",
     leaderboard: "Xếp hạng",
     profile: "Tôi",
   },
   adminNavItems: {
     overview: "Tổng quan",
+    classes: "Lớp học",
     lessons: "Bài tập",
     students: "Học sinh",
     results: "Kết quả",
@@ -136,13 +134,15 @@ export const shellCopy = {
     games: "Thi đấu",
     settings: "Cài đặt",
     audit: "Nhật ký",
+    teachers: "Giáo viên",
   },
   navBadge: (n: number) => ` (${n} mục cần xử lý)`,
   toStudentView: "Xem trang học sinh",
   toAdmin: "Trang quản trị",
   adminBadge: "Quản trị",
   roleStudent: "Học sinh",
-  roleAdmin: "Giáo viên",
+  roleTeacher: "Giáo viên",
+  roleAdmin: "Quản trị viên",
   accountMenu: "Tài khoản",
   accountSettings: "Cài đặt tài khoản",
 } as const;
@@ -177,13 +177,13 @@ export const onboardingCopy = {
     },
   },
   stepsLabel: "Các bước bắt đầu",
-  steps: ["Đăng ký", "Giáo viên duyệt", "Luyện đề"],
+  steps: ["Đăng ký", "Vào lớp", "Luyện đề"],
   welcomeTitle: "Bắt đầu thế nào?",
   welcomeLead: "Ba bước để làm quen với Ôn Luyện Vật Lý:",
   welcomeSteps: [
     {
-      title: "Chọn một bài",
-      body: "Vào mục Bài tập, chọn đề hợp với lớp của bạn.",
+      title: "Chọn lớp của bạn",
+      body: "Vào mục Lớp học, chọn lớp giáo viên đã thêm bạn vào để thấy các bài.",
     },
     {
       title: "Làm và nộp bài",
@@ -194,7 +194,7 @@ export const onboardingCopy = {
       body: "Mục Ôn tập gom các câu bạn làm sai để luyện lại.",
     },
   ],
-  welcomeCta: "Chọn bài đầu tiên",
+  welcomeCta: "Xem lớp của tôi",
 } as const;
 
 /** Error boundaries without a feature of their own (root, global, public). */
@@ -226,8 +226,8 @@ export const landingCopy = {
       body: "Điền họ tên, số điện thoại, lớp và đặt mật khẩu.",
     },
     {
-      title: "Giáo viên duyệt",
-      body: "Giáo viên xác nhận tài khoản để lớp học luôn đúng người.",
+      title: "Vào lớp",
+      body: "Giáo viên thêm bạn vào lớp bằng số điện thoại; bài của lớp hiện ra ngay.",
     },
     {
       title: "Luyện đề",

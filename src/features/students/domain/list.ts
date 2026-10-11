@@ -4,9 +4,6 @@
  */
 import { z } from "zod";
 
-export const STUDENT_VIEWS = ["pending", "all"] as const;
-export type StudentView = (typeof STUDENT_VIEWS)[number];
-
 export const STUDENT_STATUSES = [
   "pending",
   "active",
@@ -21,11 +18,10 @@ export type StudentGrade = (typeof STUDENT_GRADES)[number];
 /** Rows per "Xem thêm" step of the "Tất cả" tab. */
 export const PAGE_SIZE = 50;
 export const MAX_PAGE = 20;
-/** One bulk approve/reject and the pending tab show at most this many. */
+/** The deletion requests box shows at most this many. */
 export const BULK_LIMIT = 200;
 
 export type StudentListFilters = {
-  view: StudentView;
   q: string | null;
   status: StudentStatus | null;
   grade: StudentGrade | null;
@@ -38,7 +34,6 @@ const first = (v: string | string[] | undefined) =>
   (Array.isArray(v) ? v[0] : v)?.normalize("NFC").replace(/\s+/g, " ").trim();
 
 const FiltersSchema = z.object({
-  view: z.enum(STUDENT_VIEWS).catch("pending"),
   q: z
     .string()
     .max(80)
@@ -57,7 +52,6 @@ const FiltersSchema = z.object({
 /** Never throws. */
 export function parseStudentListParams(params: RawParams): StudentListFilters {
   return FiltersSchema.parse({
-    view: first(params.view) || "pending",
     q: first(params.q) || null,
     status: first(params.status) || null,
     grade: first(params.grade) || null,
@@ -76,13 +70,10 @@ export function studentsHref(
   const changed = Object.keys(patch).some((k) => k !== "page");
   const next = { ...f, ...patch, page: patch.page ?? (changed ? 1 : f.page) };
   const params = new URLSearchParams();
-  if (next.view !== "pending") params.set("view", next.view);
-  if (next.view === "all") {
-    if (next.q) params.set("q", next.q);
-    if (next.status) params.set("status", next.status);
-    if (next.grade) params.set("grade", String(next.grade));
-    if (next.page > 1) params.set("page", String(next.page));
-  }
+  if (next.q) params.set("q", next.q);
+  if (next.status) params.set("status", next.status);
+  if (next.grade) params.set("grade", String(next.grade));
+  if (next.page > 1) params.set("page", String(next.page));
   const qs = params.toString();
   return qs ? `/admin/students?${qs}` : "/admin/students";
 }

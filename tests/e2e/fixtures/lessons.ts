@@ -179,6 +179,9 @@ export const gameQuestions = (project: "d" | "m"): Question[] =>
 
 export type E2eLesson = NewLesson & { questions?: Question[] };
 
+/** `legacyId` prefix of the teacher-owned lessons (B-03), then `d`/`m`. */
+export const TEACHER_LESSON_PREFIX = "e2e-teacher-";
+
 export const e2eLessons: E2eLesson[] = [
   {
     legacyId: "1720000000000",
@@ -395,6 +398,21 @@ export const e2eLessons: E2eLesson[] = [
       config: { ...DEFAULT_LESSON_CONFIG, countsForRating: false },
       status: "published",
       questions: gameQuestions(p),
+    }),
+  ),
+  // B-03 classes journey: one per project, owned by that project's teacher
+  // (fixtures/users `e2eTeacherUsername`), so it is in no seeded class and
+  // only that teacher sees it.
+  ...(["d", "m"] as const).map(
+    (p): E2eLesson => ({
+      legacyId: `${TEACHER_LESSON_PREFIX}${p}`,
+      title: `E2E – Bài của cô (${p})`,
+      chapter: `Lớp học E2E (${p})`,
+      tags: ["e2e-class"],
+      sortOrder: 504,
+      config: { ...DEFAULT_LESSON_CONFIG, countsForRating: false },
+      status: "published",
+      questions: runnerQuestions.slice(0, 2),
     }),
   ),
   // S6-05 statistics: archived (off the catalog and every student page);

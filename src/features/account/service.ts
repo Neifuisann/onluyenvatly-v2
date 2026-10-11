@@ -3,6 +3,7 @@ import { randomUUID } from "node:crypto";
 import { and, eq, like, ne, sql } from "drizzle-orm";
 import { db } from "@/db/client";
 import { media, sessions, users } from "@/db/schema";
+import type { Role } from "@/features/auth/core/login-policy";
 import { verifyPassword } from "@/features/auth/core/password";
 import { MEDIA_QUOTA_BYTES } from "@/features/media/domain/upload";
 import {
@@ -33,7 +34,7 @@ import {
  * rows carry the changed keys only, never the values.
  */
 
-export type Me = { id: string; role: "student" | "admin"; sessionId: string };
+export type Me = { id: string; role: Role; sessionId: string };
 
 /** 06 §4: a few tries an hour is plenty for a profile picture. */
 export const AVATAR_LIMIT = [10, "1h"] as const;

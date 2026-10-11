@@ -3,6 +3,7 @@ import Link from "next/link";
 import { EmptyState } from "@/components/empty-state";
 import { buttonVariants } from "@/components/ui/button";
 import { requireStudent } from "@/features/auth/guards";
+import { getStudentClasses } from "@/features/classes/queries";
 import {
   ContinueCard,
   NextLessonCard,
@@ -32,30 +33,41 @@ import { shellCopy } from "@/lib/messages";
 
 export const metadata: Metadata = { title: shellCopy.studentNav.dashboard };
 
+/** Classes whose lessons feed the recommendations (the first ones by name). */
+const RECOMMEND_CLASSES = 4;
+
 /**
- * Student home (07 §5.1). Per-user: the session, `getDashboardStats` and
- * `getContinueAttempt` (3 queries). The rank and the recommendations come
- * from the shared leaderboard and catalog caches.
+ * Student home (07 §5.1). Per-user: the session, `getDashboardStats`,
+ * `getContinueAttempt` and the student's classes (4 queries). The rank (in
+ * the first class) and the recommendations (lessons of their classes) come
+ * from the per-class shared leaderboard and catalog caches (B-03).
  */
 export default async function DashboardPage() {
   const user = await requireStudent();
-  const grade =
-    user.grade === 10 || user.grade === 11 || user.grade === 12
-      ? user.grade
-      : null;
-  const [stats, open, board, catalog] = await Promise.all([
+  const [stats, open, classes] = await Promise.all([
     getDashboardStats(user.id),
     getContinueAttempt(user.id),
-    getLeaderboard({ grade, period: "all" }),
-    // Every lesson of my grade in the teacher's order; cached for all students.
-    getCatalog({ ...DEFAULT_FILTERS, grade, page: MAX_PAGE }),
+    getStudentClasses(user.id),
   ]);
+  const home = classes[0] ?? null;
+  const [board, ...catalogs] = await Promise.all([
+    home ? getLeaderboard({ classId: home.id, period: "all" }) : [],
+    // Each class's lessons in the teacher's order; cached per class.
+    ...classes
+      .slice(0, RECOMMEND_CLASSES)
+      .map((c) => getCatalog(c.id, { ...DEFAULT_FILTERS, page: MAX_PAGE })),
+  ]);
+  const seen = new Set<number>();
+  const lessons = catalogs
+    .flatMap((c) => c.items)
+    .filter((l) => !seen.has(l.id) && seen.add(l.id));
   const rank = leaderboardView(board, user.id).me?.rank ?? null;
   // The test in progress already has its own card.
-  const recommended = recommendLessons(catalog.items, [
-    ...stats.doneLessonIds,
-    ...(open ? [open.lessonId] : []),
-  ]);
+  const recommended = recommendLessons(
+    lessons,
+    [...stats.doneLessonIds, ...(open ? [open.lessonId] : [])],
+    user.grade,
+  );
   const firstName = user.fullName.trim().split(/\s+/).at(-1) ?? "";
   // Nothing in progress: the first recommendation becomes the one big action.
   const featured = open ? null : (recommended[0] ?? null);
@@ -92,7 +104,7 @@ export default async function DashboardPage() {
         <StatTiles
           openMistakes={stats.openMistakes}
           rank={rank}
-          grade={grade}
+          className={home?.name ?? null}
         />
       </div>
       <JoinBanner />
@@ -102,7 +114,7 @@ export default async function DashboardPage() {
             {t.recommended}
           </h2>
           <Link
-            href={grade ? `/lessons?grade=${grade}` : "/lessons"}
+            href="/classes"
             prefetch={false}
             className="shrink-0 font-semibold text-primary text-sm hover:underline"
           >
@@ -120,14 +132,14 @@ export default async function DashboardPage() {
               </div>
             )}
           </>
-        ) : catalog.items.length ? (
+        ) : lessons.length ? (
           <EmptyState
             mascot="all-clear"
             title={t.allDoneTitle}
             description={t.allDoneBody}
             action={
               <Link
-                href="/lessons"
+                href="/classes"
                 className={buttonVariants({ variant: "secondary" })}
                 prefetch={false}
               >
@@ -137,9 +149,20 @@ export default async function DashboardPage() {
           />
         ) : (
           <EmptyState
-            mascot="studying"
-            title={t.noLessonsTitle}
-            description={t.noLessonsBody}
+            mascot={classes.length ? "studying" : "waiting"}
+            title={classes.length ? t.noLessonsTitle : t.noClassTitle}
+            description={classes.length ? t.noLessonsBody : t.noClassBody}
+            action={
+              classes.length ? undefined : (
+                <Link
+                  href="/classes"
+                  className={buttonVariants({ variant: "secondary" })}
+                  prefetch={false}
+                >
+                  {t.seeClasses}
+                </Link>
+              )
+            }
           />
         )}
       </section>

@@ -14,7 +14,7 @@ const ImportInputSchema = z.strictObject({
 });
 
 /**
- * `POST /api/ai/import` `{ path }` (05 §3, S7-04): admin only. Reads the
+ * `POST /api/ai/import` `{ path }` (05 §3, S7-04): teachers and admins. Reads the
  * file the browser uploaded to `imports`, then streams Gemini's lesson text
  * as plain chunks. Errors known before the first byte are `Result` JSON
  * with a status (401, 403, 404 file missing, 400 unreadable, 429, 503); a
@@ -25,7 +25,7 @@ export async function POST(req: Request) {
   if (!isSameOrigin(req.headers, req.url)) return jsonResult(err("FORBIDDEN"));
   const user = await getCurrentUser();
   if (!user) return jsonResult(err("UNAUTHENTICATED"));
-  if (user.role !== "admin" || user.mustChangePassword)
+  if (user.role === "student" || user.mustChangePassword)
     return jsonResult(err("FORBIDDEN"));
 
   const body = await readJsonBody(req, 1024);

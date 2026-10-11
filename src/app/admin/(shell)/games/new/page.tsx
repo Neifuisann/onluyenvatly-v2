@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { PageHeader } from "@/components/page-header";
-import { requireAdmin } from "@/features/auth/guards";
+import { requireTeacher } from "@/features/auth/guards";
 import { CreateGameForm } from "@/features/games/components/admin/create-form";
 import { lessonAllowsGame } from "@/features/games/domain/bank";
 import { gameCopy } from "@/features/games/messages";
@@ -16,9 +16,9 @@ export const metadata: Metadata = { title: t.title };
  * whose keys are hidden right now are listed but can't be chosen.
  */
 export default async function NewGamePage() {
-  await requireAdmin();
+  const user = await requireTeacher();
   const now = new Date();
-  const lessons = (await getGameLessonChoices()).map(
+  const lessons = (await getGameLessonChoices(user)).map(
     ({ config, versionId: _versionId, ...l }) => {
       const parsed = LessonConfigSchema.safeParse(config);
       return {

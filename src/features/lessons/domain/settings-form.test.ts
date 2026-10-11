@@ -13,6 +13,7 @@ const meta: LessonMeta = {
   title: "Đề ôn GK1",
   description: null,
   grade: 12,
+  subject: "physics",
   chapter: "Dao động cơ",
   tags: ["giữa kì", "ôn tập"],
 };
@@ -85,6 +86,17 @@ describe("round trip", () => {
       ok: true,
       config: { pool: { enabled: true, size: 20 } },
     });
+  });
+
+  it("keeps the subject, and reads a removed subject as the default (B-03)", () => {
+    expect(fromSettingsForm(form({ subject: "math" }))).toMatchObject({
+      ok: true,
+      meta: { subject: "math" },
+    });
+    expect(
+      toSettingsForm({ ...meta, subject: "alchemy" }, DEFAULT_LESSON_CONFIG)
+        .subject,
+    ).toBe("physics");
   });
 
   it("cleans metadata: spaces, empty values, duplicate tags", () => {

@@ -8,6 +8,8 @@ import {
   type GuardEvent,
   lessons,
 } from "@/db/schema";
+import type { Role } from "@/features/auth/core/login-policy";
+import { canOpenLesson } from "@/features/classes/queries";
 import { grade } from "@/features/grading/domain/grade";
 import { toCents } from "@/features/grading/domain/points";
 import {
@@ -60,7 +62,7 @@ export const ATTEMPT_LIMITS = {
   startPerUser: [10, "1m"],
 } as const;
 
-export type AttemptActor = { id: string; role: "student" | "admin" };
+export type AttemptActor = { id: string; role: Role };
 
 /** Who is starting, where from, and when (injectable for tests). */
 export type StartContext = {
@@ -106,11 +108,12 @@ async function startOnce(
   const lesson = await (fresh
     ? getFreshLessonForStarting(lessonId)
     : getLessonForStarting(lessonId));
-  // Admins may try unpublished lessons that have a version (06 §2).
-  if (
-    !lesson?.versionId ||
-    (lesson.status !== "published" && user.role !== "admin")
-  )
+  // The lesson's owner may try it unpublished, with no limits (06 §2); a
+  // student needs a class that has it (B-03).
+  const owner = user.role !== "student" && lesson?.ownerId === user.id;
+  if (!lesson?.versionId || (lesson.status !== "published" && !owner))
+    return err("NOT_FOUND");
+  if (!owner && !(await canOpenLesson(user.id, user.role, lessonId)))
     return err("NOT_FOUND");
 
   // An attempt whose time ran out while the student was away is graded now
@@ -123,7 +126,7 @@ async function startOnce(
   const config = LessonConfigSchema.safeParse(lesson.config);
   if (!config.success) return err("INTERNAL");
 
-  if (user.role !== "admin") {
+  if (!owner) {
     const check = canStart(
       config.data,
       await startCounts(user.id, lessonId, config.data),

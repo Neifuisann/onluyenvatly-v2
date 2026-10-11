@@ -5,7 +5,7 @@ import { EmptyState } from "@/components/empty-state";
 import { PageHeader } from "@/components/page-header";
 import { Pagination } from "@/components/pagination";
 import { buttonVariants } from "@/components/ui/button";
-import { requireAdmin } from "@/features/auth/guards";
+import { requireTeacher } from "@/features/auth/guards";
 import { getAdminLessons } from "@/features/lessons/admin-queries";
 import { AdminListFilterBar } from "@/features/lessons/components/admin/admin-list-filters";
 import { LessonTable } from "@/features/lessons/components/admin/lesson-table";
@@ -33,9 +33,9 @@ export const metadata: Metadata = { title: t.title };
 export default async function AdminLessonsPage({
   searchParams,
 }: PageProps<"/admin/lessons">) {
-  await requireAdmin();
+  const user = await requireTeacher();
   const filters = parseAdminListParams(await searchParams);
-  const all = await getAdminLessons(filters);
+  const all = await getAdminLessons(user, filters);
   const rows = sortAdminRows(all, filters.sort, filters.dir);
   const searching = isFiltered(filters);
   const reorderable = canReorder(filters);

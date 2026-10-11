@@ -2,11 +2,12 @@ import "server-only";
 import { asc, eq, sql } from "drizzle-orm";
 import { db } from "@/db/client";
 import { attempts, lessons, ratingEvents, ratings } from "@/db/schema";
+import { type Owner, teachesLesson } from "@/features/lessons/ownership";
 import { replayWithout } from "@/features/rating/domain/rating";
 import { writeAudit } from "@/lib/audit";
 import { err, ok, type Result } from "@/lib/result";
 
-export type Actor = { id: string };
+export type Actor = Owner;
 
 export type DeletedAttempt = {
   userId: string;
@@ -48,7 +49,9 @@ export async function deleteAttempt(
       .where(eq(attempts.id, id))
       .for("update")
       .limit(1);
-    if (!attempt) return err("NOT_FOUND");
+    // Only the teacher who owns the lesson (B-03).
+    if (!attempt || !(await teachesLesson(actor, attempt.lessonId, tx)))
+      return err("NOT_FOUND");
     const { userId, lessonId, status } = attempt;
 
     await tx

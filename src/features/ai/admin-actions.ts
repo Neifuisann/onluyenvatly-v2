@@ -2,7 +2,7 @@
 
 import { refresh } from "next/cache";
 import { z } from "zod";
-import { requireAdmin } from "@/features/auth/guards";
+import { requireAdmin, requireTeacher } from "@/features/auth/guards";
 import { createImportedLesson as createImportedLessonService } from "@/features/lessons/content-service";
 import { SourceTextSchema } from "@/features/lessons/domain/content";
 import { MAX_QUESTIONS, QuestionIdSchema } from "@/features/lessons/schema";
@@ -27,7 +27,8 @@ import { ExplanationHashSchema } from "./schemas";
 /**
  * Admin actions of `/admin/explanations` (05 §2, S7-03). Each starts with
  * `requireAdmin()`, then Zod, then one service call; the page is read per
- * request, so `refresh()` re-renders it. Explanations are never
+ * request, so `refresh()` re-renders it. The AI import steps are a
+ * teacher's (`requireTeacher()`, B-03). Explanations are never
  * shared-cached, so there is no tag to invalidate.
  */
 
@@ -109,7 +110,7 @@ const ImportUploadSchema = z.strictObject({
 export async function createImportUpload(
   input: unknown,
 ): Promise<Result<{ path: string; uploadUrl: string }>> {
-  const user = await requireAdmin();
+  const user = await requireTeacher();
   const parsed = ImportUploadSchema.safeParse(input);
   if (!parsed.success) return err("VALIDATION");
   return createImportUploadService(user, parsed.data);
@@ -127,7 +128,7 @@ const ImportedLessonSchema = z.strictObject({
 export async function createImportedLesson(
   input: unknown,
 ): Promise<Result<{ id: number; questions: number; errors: number }>> {
-  const user = await requireAdmin();
+  const user = await requireTeacher();
   const parsed = ImportedLessonSchema.safeParse(input);
   if (!parsed.success) return err("VALIDATION");
   // A draft is invisible to students: no shared tag changes (the admin

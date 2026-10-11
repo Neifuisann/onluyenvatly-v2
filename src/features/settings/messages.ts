@@ -32,16 +32,19 @@ export const settingsCopy = {
   notInScope:
     "Không có cài đặt thiết bị và công thức xếp hạng: trang không giới hạn thiết bị và chỉ dùng một công thức xếp hạng.",
 
-  adminsSection: "Quản trị viên",
-  adminsLead: "Các tài khoản có quyền quản trị.",
-  adminsLabel: "Danh sách quản trị viên",
-  adminsEmpty: "Chưa có quản trị viên nào.",
+  adminsSection: "Giáo viên và quản trị viên",
+  adminsLead:
+    "Mỗi giáo viên quản lý lớp và bài của riêng mình; giáo viên khác không thấy. Quản trị viên còn quản lý cài đặt, tài khoản và nhật ký.",
+  adminsLabel: "Danh sách giáo viên và quản trị viên",
+  adminsEmpty: "Chưa có tài khoản nào.",
+  roleTeacher: "Giáo viên",
+  roleAdmin: "Quản trị viên",
   you: "Bạn",
   username: (u: string) => `Tên đăng nhập ${u}`,
   lastLogin: (when: string) => `Đăng nhập gần nhất ${when}`,
   neverLoggedIn: "Chưa đăng nhập",
 
-  createSection: "Thêm quản trị viên",
+  createSection: "Thêm giáo viên",
   createLead:
     "Tài khoản mới đăng nhập bằng tên đăng nhập và mật khẩu bạn đặt. Hãy đưa mật khẩu cho người đó qua kênh riêng.",
   fullName: "Họ và tên",
@@ -49,7 +52,10 @@ export const settingsCopy = {
   usernameHint: "3–32 ký tự: chữ thường, số, dấu . _ -, bắt đầu bằng chữ.",
   password: "Mật khẩu",
   passwordHint: "Ít nhất 8 ký tự, không chỉ gồm chữ số.",
-  create: "Thêm quản trị viên",
+  role: "Vai trò",
+  roleTeacherHint: "Giáo viên: tạo lớp, thêm học sinh, soạn và giao bài.",
+  roleAdminHint: "Quản trị viên: như giáo viên, thêm quản lý toàn trang.",
+  create: "Tạo tài khoản",
   creating: "Đang tạo…",
-  created: (name: string) => `Đã thêm quản trị viên ${name}.`,
+  created: (name: string) => `Đã tạo tài khoản cho ${name}.`,
 } as const;

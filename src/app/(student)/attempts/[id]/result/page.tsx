@@ -26,6 +26,7 @@ import { getAttemptForResult } from "@/features/attempts/queries";
 import { AttemptIdSchema } from "@/features/attempts/schemas";
 import { requireStudent } from "@/features/auth/guards";
 import { withOptionOrder } from "@/features/lessons/domain/public-question";
+import { teachesLesson } from "@/features/lessons/ownership";
 import { getLessonOverview } from "@/features/lessons/queries";
 import { reviewCopy as practiceCopy } from "@/features/review/messages";
 import { getSettings } from "@/features/settings/queries";
@@ -37,9 +38,10 @@ export const metadata: Metadata = {
 };
 
 /**
- * `/attempts/[id]/result`: owner or admin (05 §1). The answer key is read
+ * `/attempts/[id]/result`: the student, or the teacher who owns the lesson
+ * (05 §1, B-03). The answer key is read
  * and rendered only when the lesson's `revealAnswers` allows it (ADR-004).
- * Admins also get the exam-guard timeline and "Xóa bài làm" (S6-04).
+ * That teacher also gets the exam-guard timeline and "Xóa bài làm" (S6-04).
  * With the review come the stored AI explanations (S7-02): one lookup by
  * question hash, never before the answers may be shown.
  */
@@ -51,8 +53,11 @@ export default async function AttemptResultPage({
   if (!parsed.success) notFound();
   const result = await getAttemptForResult(parsed.data);
   const attempt = result?.attempt;
-  if (!attempt || (attempt.userId !== user.id && user.role !== "admin"))
-    notFound();
+  if (!attempt) notFound();
+  // The student, or the teacher who owns the lesson (B-03).
+  const teacher =
+    attempt.userId !== user.id && (await teachesLesson(user, attempt.lessonId));
+  if (attempt.userId !== user.id && !teacher) notFound();
   if (attempt.status === "in_progress") {
     if (attempt.userId === user.id) redirect(`/attempts/${attempt.id}`);
     notFound();
@@ -72,7 +77,7 @@ export default async function AttemptResultPage({
           lesson?.revealAnswers ?? "never",
           lesson ? revealAt(lesson) : null,
           new Date(),
-          user.role === "admin",
+          teacher,
         );
   const shown = reveal.kind === "shown";
   // Hidden: only the answer-free view is read, never the key.
@@ -163,7 +168,7 @@ export default async function AttemptResultPage({
           })}
         </section>
       )}
-      {user.role === "admin" && (
+      {teacher && (
         <>
           <GuardTimeline events={attempt.guardEvents} />
           <DeleteAttempt attemptId={attempt.id} />

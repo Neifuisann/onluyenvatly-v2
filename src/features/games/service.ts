@@ -10,6 +10,7 @@ import {
   isBlank,
 } from "@/features/grading/domain/grade";
 import { liveQuestions } from "@/features/lessons/domain/summary";
+import type { Owner } from "@/features/lessons/ownership";
 import { getLessonWithAnswers } from "@/features/lessons/queries";
 import {
   LessonConfigSchema,
@@ -76,7 +77,16 @@ export const GAME_LIMITS = {
 
 const UNIQUE_VIOLATION = "23505";
 
-type Actor = { id: string };
+type Actor = Owner;
+
+/**
+ * A room is run by the teacher who created it (B-03); an admin may run any
+ * room, as before B-03.
+ */
+export const hosts = (user: Owner, hostId: string) =>
+  user.role === "admin" || user.id === hostId;
+const hostedBy = (user: Owner) =>
+  user.role === "admin" ? undefined : eq(gameRooms.hostId, user.id);
 
 /**
  * "Tạo phòng" (B-05): draws the bank from the chosen lessons and opens a
@@ -100,7 +110,7 @@ export async function createGame(
   if (!limit.ok) return err("RATE_LIMITED");
 
   const wanted = new Set(input.lessonIds);
-  const chosen = (await getGameLessonChoices()).filter((l) => {
+  const chosen = (await getGameLessonChoices(host)).filter((l) => {
     if (!wanted.has(l.id)) return false;
     const config = LessonConfigSchema.safeParse(l.config);
     return config.success && lessonAllowsGame(config.data, now);
@@ -177,7 +187,7 @@ const bumpRev = { rev: sql`${gameRooms.rev} + 1` };
  * countdown. A player the host removed can't come back.
  */
 export async function joinGame(
-  user: Actor,
+  user: { id: string },
   input: JoinGameInput,
   now = new Date(),
 ): Promise<Result<{ playerId: number }>> {
@@ -240,13 +250,14 @@ export async function joinGame(
   return winner ? ok({ playerId: winner.id }) : err("CONFLICT");
 }
 
-/** "Bắt đầu": lobby → running, with at least one player. */
+/** "Bắt đầu": lobby → running, with at least one player. The host only. */
 export async function startGame(
+  host: Actor,
   roomId: string,
   now = new Date(),
 ): Promise<Result<{ startedAt: string }>> {
   const room = await getRoom(roomId);
-  if (!room) return err("NOT_FOUND");
+  if (!room || !hosts(host, room.hostId)) return err("NOT_FOUND");
   if (room.status !== "lobby")
     return room.status === "running" && room.startedAt
       ? ok({ startedAt: room.startedAt.toISOString() })
@@ -271,6 +282,7 @@ export async function startGame(
 
 /** "Kết thúc": the race is over for everyone, whatever they were doing. */
 export async function endGame(
+  host: Actor,
   roomId: string,
   now = new Date(),
 ): Promise<Result<null>> {
@@ -278,12 +290,17 @@ export async function endGame(
     .update(gameRooms)
     .set({ ...bumpRev, status: "finished", finishedAt: now })
     .where(
-      and(eq(gameRooms.id, roomId), sql`${gameRooms.status} <> 'finished'`),
+      and(
+        eq(gameRooms.id, roomId),
+        hostedBy(host),
+        sql`${gameRooms.status} <> 'finished'`,
+      ),
     )
     .returning({ id: gameRooms.id });
   forgetSnapshot(roomId);
   if (ended) return ok(null);
-  return (await getRoom(roomId)) ? ok(null) : err("NOT_FOUND");
+  const room = await getRoom(roomId);
+  return room && hosts(host, room.hostId) ? ok(null) : err("NOT_FOUND");
 }
 
 /**
@@ -324,7 +341,7 @@ export async function removePlayer(
     const [room] = await tx
       .update(gameRooms)
       .set(bumpRev)
-      .where(eq(gameRooms.id, roomId))
+      .where(and(eq(gameRooms.id, roomId), hostedBy(host)))
       .returning({ id: gameRooms.id });
     if (!room) return false;
     const [player] = await tx
@@ -539,7 +556,7 @@ export type StatePoll =
  * `rev`, which costs no player read on this instance.
  */
 export async function pollRoom(
-  user: { id: string; role: "student" | "admin" },
+  user: Owner,
   roomId: string,
   rev: number,
   now = new Date(),
@@ -548,7 +565,7 @@ export async function pollRoom(
   if (!snapshot) return err("NOT_FOUND");
   const { room, players } = snapshot;
   const me = players.find((p) => p.userId === user.id) ?? null;
-  if (!me && user.role !== "admin") {
+  if (!me && !hosts(user, room.hostId)) {
     // Joined a moment ago on another instance, or removed by the host.
     const fresh = await getPlayer(roomId, user.id);
     if (!fresh || fresh.removedAt)

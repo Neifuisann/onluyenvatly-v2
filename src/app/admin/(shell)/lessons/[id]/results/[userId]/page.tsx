@@ -10,7 +10,7 @@ import {
   resultsCopy,
   lessonResultsCopy as t,
 } from "@/features/attempts/messages";
-import { requireAdmin } from "@/features/auth/guards";
+import { requireTeacher } from "@/features/auth/guards";
 import { LessonIdSchema } from "@/features/lessons/domain/admin-list";
 import { getStatsLesson } from "@/features/lessons/stats-queries";
 import { StudentIdSchema } from "@/features/students/domain/input";
@@ -34,13 +34,13 @@ function scoreTone(score: number | null) {
 export default async function LessonStudentPage({
   params,
 }: PageProps<"/admin/lessons/[id]/results/[userId]">) {
-  await requireAdmin();
+  const user = await requireTeacher();
   const raw = await params;
   const id = LessonIdSchema.safeParse(raw.id);
   const userId = StudentIdSchema.safeParse(raw.userId);
   if (!id.success || !userId.success) notFound();
   const [lesson, data] = await Promise.all([
-    getStatsLesson(id.data),
+    getStatsLesson(user, id.data),
     getLessonStudentAttempts(id.data, userId.data),
   ]);
   if (!lesson || !data) notFound();

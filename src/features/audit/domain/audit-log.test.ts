@@ -61,7 +61,8 @@ describe("areaPrefixes", () => {
   it("maps an area to its action prefixes", () => {
     expect(areaPrefixes(null)).toBeNull();
     expect(areaPrefixes("results")).toEqual(["attempt"]);
-    expect(areaPrefixes("settings")).toEqual(["settings", "admin"]);
+    expect(areaPrefixes("settings")).toEqual(["settings", "admin", "teacher"]);
+    expect(areaPrefixes("classes")).toEqual(["class"]);
   });
 });
 
@@ -117,6 +118,10 @@ describe("auditTargetHref", () => {
   });
 
   it("opens lessons, students, attempts, games and settings", () => {
+    expect(auditTargetHref(row("class.lessons", "class", "7"))).toBe(
+      "/admin/classes/7",
+    );
+    expect(auditTargetHref(row("class.delete", "class", "7"))).toBeNull();
     expect(auditTargetHref(row("lesson.publish", "lesson", "12"))).toBe(
       "/admin/lessons/12/edit",
     );

@@ -186,7 +186,7 @@ export default async function ProfilePage({
             description={t.historyEmptyBody}
             action={
               <Link
-                href="/lessons"
+                href="/classes"
                 className={buttonVariants()}
                 prefetch={false}
               >

@@ -38,6 +38,8 @@ export function hasFilters(f: CatalogFilters): boolean {
 export function catalogHref(
   f: CatalogFilters,
   patch: Partial<CatalogFilters> = {},
+  /** The page the catalog lives on: a class page (`/classes/7`, B-03). */
+  base = "/lessons",
 ): string {
   const next = { ...f, ...patch };
   const params = new URLSearchParams();
@@ -48,7 +50,7 @@ export function catalogHref(
   if (next.sort !== "order") params.set("sort", next.sort);
   if (next.page > 1) params.set("page", String(next.page));
   const qs = params.toString();
-  return qs ? `/lessons?${qs}` : "/lessons";
+  return qs ? `${base}?${qs}` : base;
 }
 
 /**

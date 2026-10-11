@@ -4,7 +4,12 @@
  */
 import { normalizePhone } from "./phone";
 
-export type Role = "student" | "admin";
+export type Role = "student" | "teacher" | "admin";
+
+/** Teachers and admins work in `/admin` (the teacher workspace, B-03). */
+export function isStaff(role: Role): role is "teacher" | "admin" {
+  return role !== "student";
+}
 export type UserStatus = "pending" | "active" | "rejected" | "disabled";
 
 export type Identifier =
@@ -44,7 +49,7 @@ export function statusError(
 }
 
 export function homePath(role: Role): "/admin" | "/dashboard" {
-  return role === "admin" ? "/admin" : "/dashboard";
+  return isStaff(role) ? "/admin" : "/dashboard";
 }
 
 /** `next` must already be validated by `safeNextPath`. */

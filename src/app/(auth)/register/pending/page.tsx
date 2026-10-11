@@ -1,30 +1,9 @@
-import type { Metadata } from "next";
-import Link from "next/link";
-import { buttonVariants } from "@/components/ui/button";
-import { AuthScreen } from "@/features/auth/components/auth-screen";
-import { authCopy } from "@/lib/messages";
+import { redirect } from "next/navigation";
 
-export const metadata: Metadata = {
-  title: authCopy.pendingTitle,
-  robots: { index: false },
-};
-
-/** "Chờ duyệt" screen after registering (05 §1). */
+/**
+ * Registration no longer waits for approval (B-03); old links and bookmarks
+ * of the "chờ duyệt" screen land on the student's classes.
+ */
 export default function RegisterPendingPage() {
-  return (
-    <AuthScreen
-      pose="waiting"
-      steps={2}
-      title={authCopy.pendingTitle}
-      lead={authCopy.pendingBody}
-    >
-      <Link
-        href="/login"
-        className={buttonVariants({ size: "lg", className: "w-full" })}
-        prefetch={false}
-      >
-        {authCopy.pendingBack}
-      </Link>
-    </AuthScreen>
-  );
+  redirect("/classes");
 }

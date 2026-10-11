@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { requireAdmin } from "@/features/auth/guards";
+import { requireTeacher } from "@/features/auth/guards";
 import { HostReport } from "@/features/games/components/host/host-report";
 import { HostScreen } from "@/features/games/components/host/host-screen";
 import { QrCode } from "@/features/games/components/host/qr-code";
@@ -18,7 +18,7 @@ import {
   getRoomSnapshot,
 } from "@/features/games/queries";
 import { RoomIdSchema } from "@/features/games/schemas";
-import { roomState } from "@/features/games/service";
+import { hosts, roomState } from "@/features/games/service";
 import { siteUrl } from "@/lib/site";
 
 const t = gameCopy.host;
@@ -32,14 +32,16 @@ export const metadata: Metadata = {
 };
 
 /**
- * `/host/[id]` (B-05): the teacher's projector for one room. Any admin may
- * open it (teachers share classes). Once the race is over the page adds the
- * per-question report, which needs the keys: rendered here, admin only.
+ * `/host/[id]` (B-05): the teacher's projector for one room, for the
+ * teacher who created it (or an admin, B-03). Once the race is over the page adds
+ * the per-question report, which needs the keys: rendered here, host only.
  */
 export default async function HostPage({ params }: PageProps<"/host/[id]">) {
-  await requireAdmin();
+  const user = await requireTeacher();
   const id = RoomIdSchema.safeParse((await params).id);
-  const room = id.success ? await getRoom(id.data) : null;
+  const found = id.success ? await getRoom(id.data) : null;
+  // Only the teacher who created the room hosts it (B-03).
+  const room = found && hosts(user, found.hostId) ? found : null;
   if (!room)
     return (
       <StageMessage

@@ -9,13 +9,17 @@ export const LEADERBOARD_PERIODS = ["all", "week"] as const;
 export type LeaderboardPeriod = (typeof LEADERBOARD_PERIODS)[number];
 
 export type LeaderboardFilters = {
-  grade: 10 | 11 | 12 | null;
+  /**
+   * The class whose students are ranked (B-03): a student only ever sees
+   * classmates. null = the viewer's first class.
+   */
+  classId: number | null;
   /** `all`: by current rating. `week`: most improved over the last 7 days. */
   period: LeaderboardPeriod;
 };
 
 export const DEFAULT_LEADERBOARD: LeaderboardFilters = {
-  grade: null,
+  classId: null,
   period: "all",
 };
 
@@ -116,7 +120,7 @@ export function leaderboardHref(
 ): string {
   const next = { ...filters, ...patch };
   const params = new URLSearchParams();
-  if (next.grade) params.set("grade", String(next.grade));
+  if (next.classId) params.set("class", String(next.classId));
   if (next.period !== "all") params.set("period", next.period);
   const query = params.toString();
   return query ? `/leaderboard?${query}` : "/leaderboard";
@@ -128,9 +132,11 @@ const first = (v: string | string[] | undefined) =>
   (Array.isArray(v) ? v[0] : v)?.trim() || null;
 
 const ParamsSchema = z.object({
-  grade: z.coerce
+  classId: z.coerce
     .number()
-    .pipe(z.union([z.literal(10), z.literal(11), z.literal(12)]))
+    .int()
+    .positive()
+    .max(2 ** 53)
     .nullable()
     .catch(null),
   period: z.enum(LEADERBOARD_PERIODS).catch("all"),
@@ -139,7 +145,7 @@ const ParamsSchema = z.object({
 /** Untrusted search params → filters. Never throws: bad values use defaults. */
 export function parseLeaderboardParams(params: RawParams): LeaderboardFilters {
   return ParamsSchema.parse({
-    grade: first(params.grade),
+    classId: first(params.class),
     period: first(params.period) ?? "all",
   }) as LeaderboardFilters;
 }

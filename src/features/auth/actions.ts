@@ -1,9 +1,7 @@
 "use server";
 
-import { updateTag } from "next/cache";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { tags } from "@/lib/cache-tags";
 import { env } from "@/lib/env.server";
 import { getRequestMeta } from "@/lib/request";
 import { err, type FormState } from "@/lib/result";
@@ -92,9 +90,13 @@ export async function register(
 
   const result = await registerStudent(parsed.data, await getRequestMeta());
   if (!result.ok) return { ...result, values };
-  // The admin nav badge counts pending students.
-  updateTag(tags.pendingStudents);
-  redirect("/register/pending");
+  // Active at once (B-03): signed in, waiting for a teacher to add a class.
+  (await cookies()).set(
+    SESSION_COOKIE,
+    result.data.token,
+    sessionCookieOptions(env.NODE_ENV === "production"),
+  );
+  redirect("/classes");
 }
 
 export async function logout(): Promise<void> {

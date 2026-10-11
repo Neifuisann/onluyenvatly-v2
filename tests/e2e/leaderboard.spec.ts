@@ -7,7 +7,9 @@ import type { StorageState } from "./runner-helpers";
  * S4-05 leaderboard on the seeded ratings (fixtures/users `e2eRatings`):
  * "Học Sinh Một" 2100 (−12 this week, grade 12), "Học Sinh Hai" 1650 (+150,
  * grade 11); pending/rejected accounts have higher ratings but are never
- * listed. Runner students may add rows of their own while this runs.
+ * listed. B-03: a board is one class's; the seed puts every student in "Lớp
+ * E2E", and the grade-11 students plus "Học Sinh Một" in "Lớp E2E 11".
+ * Runner students may add rows of their own while this runs.
  */
 async function loginState(
   browser: Browser,
@@ -47,11 +49,15 @@ const board = (page: Page) =>
 const myRow = (page: Page) =>
   board(page).filter({ has: page.getByText("Bạn", { exact: true }) });
 
-test("ranks active students, marks my row, filters by grade and week", async ({
+test("ranks classmates, marks my row, switches class and week (B-03)", async ({
   page,
 }) => {
   await page.goto("/leaderboard");
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("Xếp hạng");
+  // The first class by name; I'm also in "Lớp E2E 11".
+  await expect(page.getByText(/Các bạn lớp Lớp E2E,/)).toBeVisible();
+  const classes = page.getByRole("list", { name: "Lớp học" });
+  await expect(classes.getByRole("link")).toHaveText(["Lớp E2E", "Lớp E2E 11"]);
 
   // Top of the board, with my rating and 7-day change.
   const first = board(page).first();
@@ -67,26 +73,28 @@ test("ranks active students, marks my row, filters by grade and week", async ({
   for (const hidden of ["Học Sinh Chờ", "Học Sinh Từ Chối"])
     await expect(page.getByText(hidden)).toHaveCount(0);
 
-  // Another grade: I'm not on it, and there's no "not ranked" nudge.
-  await page.getByRole("link", { name: "Lớp 11", exact: true }).click();
-  await expect(page).toHaveURL(/\/leaderboard\?grade=11$/);
-  await expect(board(page)).toHaveCount(1);
-  await expect(board(page).first()).toContainText("Học Sinh Hai");
-  await expect(myRow(page)).toHaveCount(0);
-  await expect(page.getByText(/Bạn chưa/)).toHaveCount(0);
+  // The other class: grade 11 and me, nobody else.
+  await classes.getByRole("link", { name: "Lớp E2E 11" }).click();
+  await expect(page).toHaveURL(/\/leaderboard\?class=\d+$/);
+  await expect(
+    classes.getByRole("link", { name: "Lớp E2E 11" }),
+  ).toHaveAttribute("aria-current", "page");
+  await expect(page.getByRole("list", { name: "Bảng xếp hạng" })).toContainText(
+    "Học Sinh Hai",
+  );
+  await expect(myRow(page)).toHaveCount(1);
+  await expect(
+    page.getByRole("list", { name: "Bảng xếp hạng" }),
+  ).not.toContainText("Học Sinh Ba");
 
-  // Most improved this week, grade 11.
+  // Most improved this week, in that class.
   await page.getByRole("link", { name: "7 ngày qua", exact: true }).click();
-  await expect(page).toHaveURL(/\/leaderboard\?grade=11&period=week$/);
+  await expect(page).toHaveURL(/\/leaderboard\?class=\d+&period=week$/);
   await expect(page.getByRole("link", { name: "7 ngày qua" })).toHaveAttribute(
     "aria-current",
     "page",
   );
   await expect(board(page).first()).toContainText("7 ngày: tăng 150");
-
-  // All grades this week: my row shows my own change.
-  await page.getByRole("link", { name: "Tất cả", exact: true }).click();
-  await expect(page).toHaveURL(/\/leaderboard\?period=week$/);
   await expect(myRow(page)).toContainText("7 ngày: giảm 12");
 });
 
@@ -104,8 +112,8 @@ test("an unrated student is nudged to take a test", async ({ browser }) => {
   await expect(
     page.getByText("Bạn chưa làm bài tính rating nào trong 7 ngày qua."),
   ).toBeVisible();
-  // Garbage params fall back to the defaults.
-  await page.goto("/leaderboard?grade=9&period=year");
+  // Garbage params, and a class I'm not in, fall back to the defaults.
+  await page.goto("/leaderboard?class=999999&period=year");
   await expect(page.getByRole("link", { name: "Tổng" })).toHaveAttribute(
     "aria-current",
     "page",

@@ -103,7 +103,11 @@ export const getAttemptForResult = cache((id: string) =>
  */
 export async function getAttemptByLegacyResultId(legacyResultId: string) {
   const [row] = await db
-    .select({ id: attempts.id, userId: attempts.userId })
+    .select({
+      id: attempts.id,
+      userId: attempts.userId,
+      lessonId: attempts.lessonId,
+    })
     .from(attempts)
     .where(eq(attempts.legacyResultId, legacyResultId))
     .limit(1);

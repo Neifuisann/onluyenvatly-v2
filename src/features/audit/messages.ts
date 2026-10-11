@@ -37,10 +37,21 @@ const actions: Record<string, string> = {
   "account.cancel_deletion": "Hủy yêu cầu xóa tài khoản",
   "settings.update": "Sửa cài đặt chung",
   "admin.create": "Thêm quản trị viên",
+  "teacher.create": "Thêm giáo viên",
+  "class.create": "Tạo lớp",
+  "class.update": "Sửa thông tin lớp",
+  "class.archive": "Lưu trữ lớp",
+  "class.restore": "Khôi phục lớp",
+  "class.delete": "Xóa lớp",
+  "class.add_members": "Thêm học sinh vào lớp",
+  "class.remove_member": "Xóa học sinh khỏi lớp",
+  "class.lessons": "Giao bài cho lớp",
+  "lesson.correct": "Sửa đáp án và chấm lại",
 };
 
 const areas: Record<AuditArea, string> = {
   lessons: "Bài tập",
+  classes: "Lớp học",
   students: "Học sinh",
   results: "Kết quả",
   explanations: "Giải thích AI",
@@ -55,6 +66,7 @@ const targets: Record<string, string> = {
   attempt: "Bài làm",
   explanation: "Giải thích",
   game: "Phòng thi đấu",
+  class: "Lớp",
   settings: "Cài đặt chung",
 };
 
@@ -86,6 +98,7 @@ export const auditCopy = {
   openTarget: (label: string) => `Mở: ${label}`,
   deletedActor: "Tài khoản đã xóa",
   roleAdmin: "Quản trị",
+  roleTeacher: "Giáo viên",
   roleStudent: "Học sinh",
   yes: "có",
   no: "không",

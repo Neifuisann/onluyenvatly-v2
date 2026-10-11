@@ -2,7 +2,7 @@ import "server-only";
 import { and, asc, count, desc, eq, type SQL, sql } from "drizzle-orm";
 import { cacheLife, cacheTag } from "next/cache";
 import { db } from "@/db/client";
-import { lessons, lessonVersions } from "@/db/schema";
+import { classLessons, lessons, lessonVersions } from "@/db/schema";
 import { tags } from "@/lib/cache-tags";
 import { measureOperation } from "@/lib/performance.server";
 import { type CatalogFilters, PAGE_SIZE, searchTerms } from "./domain/catalog";
@@ -45,6 +45,7 @@ export async function getFreshLessonForStarting(id: number) {
         status: lessons.status,
         versionId: lessons.currentVersionId,
         config: lessons.config,
+        ownerId: lessons.ownerId,
       })
       .from(lessons)
       .where(eq(lessons.id, id))
@@ -65,9 +66,16 @@ const cardColumns = {
   timeLimitSec: sql<number | null>`(${lessons.config}->>'timeLimitSec')::int`,
 };
 
-function catalogWhere(f: CatalogFilters): SQL | undefined {
-  return and(
+/** Published lessons given to the class (B-03). */
+const inClass = (classId: number) =>
+  and(
     eq(lessons.status, "published"),
+    sql`exists (select 1 from ${classLessons} where ${classLessons.classId} = ${classId} and ${classLessons.lessonId} = ${lessons.id})`,
+  );
+
+function catalogWhere(classId: number, f: CatalogFilters): SQL | undefined {
+  return and(
+    inClass(classId),
     // Accent-insensitive, every word must match; served by the trigram index (S2-01).
     ...searchTerms(f.q).map(
       (w) =>
@@ -92,14 +100,19 @@ const ORDER = {
 } satisfies Record<CatalogFilters["sort"], SQL[]>;
 
 /**
- * Published lessons for `/lessons`, shared by every student (tag `lessons`,
- * 05 §4). "Xem thêm" is cumulative: page n returns the first n × 24 cards.
+ * A class's published lessons for `/classes/[id]` (B-03), shared by every
+ * student of the class (tags `lessons` and `class:{id}:lessons`, 05 §4). The
+ * page checks membership first. "Xem thêm" is cumulative: page n returns the
+ * first n × 24 cards.
  */
-export async function getCatalog(f: CatalogFilters): Promise<Catalog> {
+export async function getCatalog(
+  classId: number,
+  f: CatalogFilters,
+): Promise<Catalog> {
   "use cache";
-  cacheTag(tags.lessons);
+  cacheTag(tags.lessons, tags.classLessons(classId));
   cacheLife("hours");
-  const where = catalogWhere(f);
+  const where = catalogWhere(classId, f);
   const [items, [total]] = await Promise.all([
     db
       .select(cardColumns)
@@ -114,12 +127,14 @@ export async function getCatalog(f: CatalogFilters): Promise<Catalog> {
 
 export type CatalogFacets = { chapters: string[]; tags: string[] };
 
-/** Chapter and tag choices for the filter sheet (published lessons only). */
-export async function getCatalogFacets(): Promise<CatalogFacets> {
+/** Chapter and tag choices for a class's filter sheet (published lessons only). */
+export async function getCatalogFacets(
+  classId: number,
+): Promise<CatalogFacets> {
   "use cache";
-  cacheTag(tags.lessons);
+  cacheTag(tags.lessons, tags.classLessons(classId));
   cacheLife("hours");
-  const published = eq(lessons.status, "published");
+  const published = inClass(classId);
   const [chapters, tagRows] = await Promise.all([
     db
       .selectDistinct({ chapter: lessons.chapter })

@@ -9,10 +9,13 @@ import {
   sessions,
   users,
 } from "@/db/schema";
+import type { Role } from "@/features/auth/core/login-policy";
 import { hashPassword } from "@/features/auth/core/password";
-import { writeAudit, writeAuditMany } from "@/lib/audit";
+import { ownedBy } from "@/features/lessons/ownership";
+import { writeAudit } from "@/lib/audit";
 import { fieldMessages } from "@/lib/messages";
 import { err, ok, type Result } from "@/lib/result";
+import { visibleTo } from "./admin-queries";
 import type { CreateAdminInput } from "./domain/input";
 import { namesMatch } from "./domain/input";
 import type { StudentStatus } from "./domain/list";
@@ -23,7 +26,8 @@ import { studentsCopy } from "./messages";
 /**
  * Student and admin-account mutations (S6-01/02, 05 §2
  * `features/students/admin-actions.ts`). Each one writes its audit entry in
- * the same transaction. Callers check `requireAdmin()` first; on top of that
+ * the same transaction. Callers check `requireAdmin()` first (extra tries:
+ * `requireTeacher()`, on the teacher's own lesson, B-03); on top of that
  * every function only touches `role = 'student'` rows (except `createAdmin`),
  * so an admin can never act on their own account. Audit `data` holds ids and
  * counts only: never a name, a phone or a password.
@@ -35,73 +39,6 @@ const isStudent = eq(users.role, "student");
 
 /** Belt and braces: an admin is never a `role = student` row anyway. */
 const ownAccount = () => err("FORBIDDEN", { message: studentsCopy.ownAccount });
-
-/** Pending → active. Others (already decided) are skipped and counted. */
-export async function approveStudents(
-  actor: Actor,
-  ids: readonly string[],
-  now = new Date(),
-): Promise<Result<{ done: number; skipped: number }>> {
-  return db.transaction(async (tx) => {
-    const rows = await tx
-      .update(users)
-      .set({
-        status: "active",
-        approvedAt: now,
-        approvedBy: actor.id,
-        updatedAt: now,
-      })
-      .where(
-        and(
-          inArray(users.id, [...ids]),
-          isStudent,
-          eq(users.status, "pending"),
-        ),
-      )
-      .returning({ id: users.id });
-    await writeAuditMany(
-      tx,
-      rows.map((r) => ({
-        actorId: actor.id,
-        action: "student.approve",
-        targetType: "user",
-        targetId: r.id,
-      })),
-    );
-    return ok({ done: rows.length, skipped: ids.length - rows.length });
-  });
-}
-
-/** Pending → rejected. Others are skipped and counted. */
-export async function rejectStudents(
-  actor: Actor,
-  ids: readonly string[],
-  now = new Date(),
-): Promise<Result<{ done: number; skipped: number }>> {
-  return db.transaction(async (tx) => {
-    const rows = await tx
-      .update(users)
-      .set({ status: "rejected", updatedAt: now })
-      .where(
-        and(
-          inArray(users.id, [...ids]),
-          isStudent,
-          eq(users.status, "pending"),
-        ),
-      )
-      .returning({ id: users.id });
-    await writeAuditMany(
-      tx,
-      rows.map((r) => ({
-        actorId: actor.id,
-        action: "student.reject",
-        targetType: "user",
-        targetId: r.id,
-      })),
-    );
-    return ok({ done: rows.length, skipped: ids.length - rows.length });
-  });
-}
 
 /**
  * New temporary password (returned once, never stored or logged in clear),
@@ -284,7 +221,7 @@ export async function deleteStudent(
  * removes the grant with 0. A grant replaces the previous one.
  */
 export async function grantExtraAttempts(
-  actor: Actor,
+  actor: Actor & { role: Role },
   input: { userId: string; lessonId: number; extra: number },
   now = new Date(),
 ): Promise<Result<{ extra: number }>> {
@@ -294,13 +231,19 @@ export async function grantExtraAttempts(
     const [student] = await tx
       .select({ id: users.id })
       .from(users)
-      .where(and(eq(users.id, userId), isStudent))
+      .where(and(eq(users.id, userId), isStudent, visibleTo(actor)))
       .limit(1);
     if (!student) return err("NOT_FOUND");
     const [lesson] = await tx
       .select({ id: lessons.id })
       .from(lessons)
-      .where(and(eq(lessons.id, lessonId), sql`${lessons.deletedAt} is null`))
+      .where(
+        and(
+          eq(lessons.id, lessonId),
+          ownedBy(actor),
+          sql`${lessons.deletedAt} is null`,
+        ),
+      )
       .limit(1);
     if (!lesson) return err("NOT_FOUND");
 
@@ -339,7 +282,10 @@ export async function grantExtraAttempts(
   });
 }
 
-/** A new admin account (S6-03 puts the form on `/admin/settings`). */
+/**
+ * A new staff account, teacher or admin (S6-03 puts the form on
+ * `/admin/settings`; B-03 added the role).
+ */
 export async function createAdmin(
   actor: Actor,
   input: CreateAdminInput,
@@ -350,7 +296,7 @@ export async function createAdmin(
     const [created] = await tx
       .insert(users)
       .values({
-        role: "admin",
+        role: input.role,
         status: "active",
         fullName: input.fullName,
         username: input.username,
@@ -368,7 +314,7 @@ export async function createAdmin(
       });
     await writeAudit(tx, {
       actorId: actor.id,
-      action: "admin.create",
+      action: input.role === "admin" ? "admin.create" : "teacher.create",
       targetType: "user",
       targetId: created.id,
     });

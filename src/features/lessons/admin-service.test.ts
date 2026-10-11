@@ -38,7 +38,7 @@ const questions: Question[] = [
   { id: "q_b", type: "short", stem: "T = ?", answer: "2" },
 ];
 
-let admin: { id: string };
+let admin: { id: string; role: "admin" };
 
 async function addLesson(
   title: string,
@@ -59,6 +59,7 @@ async function addLesson(
       status,
       config: DEFAULT_LESSON_CONFIG,
       tags: ["dao động"],
+      ownerId: admin.id,
     })
     .returning({ id: lessons.id });
   const id = row?.id ?? 0;
@@ -116,7 +117,7 @@ beforeEach(async () => {
       passwordHash: "x",
     })
     .returning({ id: users.id });
-  admin = { id: u?.id ?? "" };
+  admin = { id: u?.id ?? "", role: "admin" };
 });
 
 describe("getAdminLessons", () => {
@@ -130,18 +131,22 @@ describe("getAdminLessons", () => {
       .set({ deletedAt: new Date() })
       .where(eq(lessons.id, d));
 
-    const all = await getAdminLessons({ q: null, status: null });
+    const all = await getAdminLessons(admin, { q: null, status: null });
     expect(all.map((r) => r.id)).toEqual([a, b, c]);
     expect(all[0]).toMatchObject({ status: "published", hasDraft: false });
 
     expect(
-      (await getAdminLessons({ q: null, status: "draft" })).map((r) => r.id),
+      (await getAdminLessons(admin, { q: null, status: "draft" })).map(
+        (r) => r.id,
+      ),
     ).toEqual([b]);
     expect(
-      (await getAdminLessons({ q: "song am", status: null })).map((r) => r.id),
+      (await getAdminLessons(admin, { q: "song am", status: null })).map(
+        (r) => r.id,
+      ),
     ).toEqual([b]);
     expect(
-      (await getAdminLessons({ q: "dien", status: "published" })).length,
+      (await getAdminLessons(admin, { q: "dien", status: "published" })).length,
     ).toBe(0);
   });
 });
@@ -317,7 +322,7 @@ describe("deleteLesson", () => {
     expect(row?.status).toBe("archived");
     expect(row?.deletedAt).toBeInstanceOf(Date);
     expect(await tdb.select().from(attempts)).toHaveLength(1);
-    expect(await getAdminLessons({ q: null, status: null })).toEqual([]);
+    expect(await getAdminLessons(admin, { q: null, status: null })).toEqual([]);
     // Already deleted.
     expect(await deleteLesson(admin, a)).toMatchObject({
       ok: false,
@@ -348,7 +353,7 @@ describe("createLesson", () => {
 describe("getLessonForEditing", () => {
   it("opens the draft when there is one, else the published version", async () => {
     const a = await addLesson("A", 0, { withVersion: true });
-    expect(await getLessonForEditing(a)).toMatchObject({
+    expect(await getLessonForEditing(admin, a)).toMatchObject({
       title: "A",
       sourceText: "Câu 1: …",
       questions,
@@ -363,7 +368,7 @@ describe("getLessonForEditing", () => {
       .update(lessons)
       .set({ draftVersionId: draft?.id ?? null })
       .where(eq(lessons.id, a));
-    expect(await getLessonForEditing(a)).toMatchObject({
+    expect(await getLessonForEditing(admin, a)).toMatchObject({
       sourceText: "nháp",
       questions: [],
       hasDraft: true,
@@ -372,7 +377,7 @@ describe("getLessonForEditing", () => {
 
   it("gives an empty text for a new lesson and null for a deleted one", async () => {
     const { id } = await createLesson(admin);
-    expect(await getLessonForEditing(id)).toMatchObject({
+    expect(await getLessonForEditing(admin, id)).toMatchObject({
       sourceText: "",
       questions: [],
       hasDraft: false,
@@ -382,7 +387,7 @@ describe("getLessonForEditing", () => {
       .update(lessons)
       .set({ deletedAt: new Date() })
       .where(eq(lessons.id, id));
-    expect(await getLessonForEditing(id)).toBeNull();
+    expect(await getLessonForEditing(admin, id)).toBeNull();
   });
 });
 
@@ -393,6 +398,7 @@ describe("updateLessonSettings", () => {
         title: "A",
         description: null,
         grade: null,
+        subject: "physics",
         chapter: null,
         tags: [],
       },
@@ -506,5 +512,60 @@ describe("setLessonCover", () => {
     expect(await setLessonCover(admin, 999, null)).toMatchObject({
       code: "NOT_FOUND",
     });
+  });
+});
+
+describe("ownership (B-03)", () => {
+  async function addTeacher() {
+    const [u] = await tdb
+      .insert(users)
+      .values({
+        role: "teacher",
+        status: "active",
+        fullName: "Thầy khác",
+        username: "teacher2",
+        passwordHash: "x",
+      })
+      .returning({ id: users.id });
+    return { id: u?.id ?? "", role: "teacher" as const };
+  }
+
+  it("keeps another teacher's lessons out of sight and out of reach", async () => {
+    const mine = await addLesson("Của cô", 0, { withVersion: true });
+    const other = await addTeacher();
+    expect(await getAdminLessons(other, { q: null, status: null })).toEqual([]);
+    expect(await getLessonForEditing(other, mine)).toBeNull();
+    for (const result of [
+      await setArchived(other, mine, true),
+      await deleteLesson(other, mine),
+      await duplicateLesson(other, mine),
+      await setLessonCover(other, mine, null),
+    ])
+      expect(result).toMatchObject({ ok: false, code: "NOT_FOUND" });
+    expect(await order()).toEqual([mine]);
+    const [row] = await tdb.select().from(lessons);
+    expect(row).toMatchObject({ status: "published", deletedAt: null });
+  });
+
+  it("gives each teacher their own new lessons and their own order", async () => {
+    const mine = await addLesson("Của cô", 0);
+    const other = await addTeacher();
+    const { id } = await createLesson(other);
+    const [created] = await tdb
+      .select({ ownerId: lessons.ownerId, sortOrder: lessons.sortOrder })
+      .from(lessons)
+      .where(eq(lessons.id, id));
+    // First in the other teacher's order, whatever the admin's holds.
+    expect(created).toEqual({ ownerId: other.id, sortOrder: 0 });
+    // A reorder lists only the teacher's own lessons.
+    expect(await reorderLessons(other, [id])).toMatchObject({ ok: true });
+    expect(await reorderLessons(other, [id, mine])).toMatchObject({
+      code: "CONFLICT",
+    });
+    expect(
+      (await getAdminLessons(other, { q: null, status: null })).map(
+        (r) => r.id,
+      ),
+    ).toEqual([id]);
   });
 });
