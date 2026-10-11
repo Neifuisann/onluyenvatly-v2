@@ -3,7 +3,9 @@
  * without a key or quota. The app's SDK points here through GEMINI_BASE_URL.
  * `streamGenerateContent` answers a canned explanation in a few SSE chunks,
  * `generateContent` the same text at once; `GET /__calls` lists the prompts
- * received. In memory; test-only, never deployed.
+ * received. It also stands in for the AI solve endpoint (09 AI8): an
+ * OpenAI-compatible `POST /v1/chat/completions` that streams
+ * `FAKE_SOLVE`. In memory; test-only, never deployed.
  *
  *   node tests/e2e/fake-gemini.ts   (port FAKE_GEMINI_PORT, default 54331)
  */
@@ -14,6 +16,11 @@ export const FAKE_GEMINI_PORT = Number(process.env.FAKE_GEMINI_PORT ?? 54331);
 export const FAKE_GEMINI_URL = `http://localhost:${FAKE_GEMINI_PORT}`;
 export const FAKE_GEMINI_KEY = "e2e-gemini-key";
 export const FAKE_GEMINI_MODEL = "gemini-e2e";
+export const FAKE_SOLVER_KEY = "e2e-solver-key";
+export const FAKE_SOLVER_MODEL = "solver-e2e";
+
+/** AI solve (09 AI8): the answer to the import's unanswered Câu 3. */
+export const FAKE_SOLVE = '{"answers":[{"q":3,"choice":"B"}]}';
 
 /** What every generation says; the formula checks server-side KaTeX. */
 export const FAKE_EXPLANATION = [
@@ -83,6 +90,35 @@ function main() {
 
     if (url.pathname === "/health") return send(200, { ok: true });
     if (url.pathname === "/__calls") return send(200, { calls });
+
+    if (url.pathname === "/v1/chat/completions" && req.method === "POST") {
+      if (req.headers.authorization !== `Bearer ${FAKE_SOLVER_KEY}`)
+        return send(401, { error: { message: "bad key" } });
+      const body = JSON.parse(Buffer.concat(parts).toString() || "{}") as {
+        model?: string;
+        messages?: {
+          content?: string | { type: string; text?: string }[];
+        }[];
+      };
+      const user = body.messages?.at(-1)?.content;
+      const content = Array.isArray(user) ? user : [];
+      calls.push({
+        model: body.model ?? "",
+        method: "chat",
+        prompt: content.map((p) => p.text ?? "").join("\n"),
+        files: content.flatMap((p) => (p.type === "text" ? [] : [p.type])),
+      });
+      res.writeHead(200, { "content-type": "text/event-stream" });
+      const half = Math.ceil(FAKE_SOLVE.length / 2);
+      for (const text of [FAKE_SOLVE.slice(0, half), FAKE_SOLVE.slice(half)]) {
+        res.write(
+          `data: ${JSON.stringify({ choices: [{ delta: { content: text } }] })}\n\n`,
+        );
+        await sleep(150);
+      }
+      res.end("data: [DONE]\n\n");
+      return;
+    }
 
     const match = url.pathname.match(
       /^\/v1beta\/models\/([^/:]+):(streamGenerateContent|generateContent)$/,
