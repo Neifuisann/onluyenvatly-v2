@@ -121,6 +121,19 @@ describe("playerPlan", () => {
     );
     expect(orders.size).toBeGreaterThan(1);
   });
+
+  it("keeps the bank order for everyone in a same-question race (B-12)", () => {
+    for (const seed of [1, 2, 3])
+      expect(playerPlan(counts, createRng(seed), true).order).toEqual([
+        0, 1, 2, 3,
+      ]);
+    const shuffles = new Set(
+      [1, 2, 3, 4, 5, 6, 7, 8].map((s) =>
+        playerPlan(counts, createRng(s), true).options[0]?.join(),
+      ),
+    );
+    expect(shuffles.size).toBeGreaterThan(1);
+  });
 });
 
 describe("gradingItem", () => {

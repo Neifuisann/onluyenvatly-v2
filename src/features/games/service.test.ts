@@ -21,6 +21,7 @@ import {
 import { resetDb, type TestDb } from "@/test/db";
 import { gradingItem, optionCounts, playerPlan } from "./domain/bank";
 import { COUNTDOWN_MS, FEEDBACK_MS, MAX_PLAYERS } from "./domain/rules";
+import { sharedShownAt } from "./domain/scoring";
 import type { CreateGameInput } from "./schemas";
 import {
   answerQuestion,
@@ -146,7 +147,7 @@ async function keyAt(
   index: number,
 ): Promise<AttemptAnswer> {
   const [room] = await tdb
-    .select({ bank: gameRooms.bank })
+    .select({ bank: gameRooms.bank, sameQuestion: gameRooms.sameQuestion })
     .from(gameRooms)
     .where(eq(gameRooms.id, roomId));
   const [player] = await tdb
@@ -160,6 +161,7 @@ async function keyAt(
   const plan = playerPlan(
     optionCounts(questions),
     createRng(player?.seed ?? 0),
+    room?.sameQuestion,
   );
   const bankIndex = plan.order[index] as number;
   return expectedAnswer(
@@ -664,6 +666,220 @@ describe("pollRoom", () => {
     expect(r).toMatchObject({
       ok: true,
       data: { kind: "state", state: { status: "finished" } },
+    });
+  });
+});
+
+describe("room settings (B-12)", () => {
+  const id = (i: number) => students[i] as string;
+
+  it("stores the settings, off by default", async () => {
+    const plain = await newRoom();
+    const strict = await newRoom({
+      sameQuestion: true,
+      lockJoin: true,
+      lives: 3,
+    });
+    const rows = await tdb
+      .select({
+        id: gameRooms.id,
+        sameQuestion: gameRooms.sameQuestion,
+        lockJoin: gameRooms.lockJoin,
+        lives: gameRooms.lives,
+      })
+      .from(gameRooms);
+    expect(rows.find((r) => r.id === plain)).toMatchObject({
+      sameQuestion: false,
+      lockJoin: false,
+      lives: null,
+    });
+    expect(rows.find((r) => r.id === strict)).toMatchObject({
+      sameQuestion: true,
+      lockJoin: true,
+      lives: 3,
+    });
+  });
+
+  it("a locked room takes no new players once started, but lets players back", async () => {
+    const roomId = await newRoom({ lockJoin: true });
+    await join(roomId, id(0));
+    await startGame(host, roomId, NOW);
+    expect(
+      await joinGame({ id: id(1) }, { roomId, ...look }, at(1000)),
+    ).toMatchObject({ ok: false, code: "FORBIDDEN" });
+    expect(
+      await joinGame({ id: id(0) }, { roomId, ...look }, at(1000)),
+    ).toMatchObject({ ok: true });
+  });
+
+  it("an open room still takes late players", async () => {
+    const roomId = await newRoom();
+    await join(roomId, id(0));
+    await startGame(host, roomId, NOW);
+    expect(
+      await joinGame({ id: id(1) }, { roomId, ...look }, at(1000)),
+    ).toMatchObject({ ok: true });
+  });
+
+  it("knocks a player out after their last life, and ranks them last", async () => {
+    const roomId = await newRoom({ lives: 2 });
+    await join(roomId, id(0));
+    await join(roomId, id(1));
+    await startGame(host, roomId, NOW);
+
+    const first = await answerQuestion(
+      id(0),
+      roomId,
+      { index: 0, answer: wrong(await keyAt(roomId, id(0), 0)) },
+      at(Q1 + 1000),
+    );
+    expect(first).toMatchObject({
+      ok: true,
+      data: { lives: 1, eliminated: false, finished: false },
+    });
+    const second = await answerQuestion(
+      id(0),
+      roomId,
+      { index: 1, answer: null },
+      at(Q1 + 1000 + FEEDBACK_MS + 1000),
+    );
+    expect(second).toMatchObject({
+      ok: true,
+      data: { lives: 0, eliminated: true, finished: true, raceOver: false },
+    });
+    expect(
+      await answerQuestion(
+        id(0),
+        roomId,
+        { index: 2, answer: null },
+        at(Q1 + 10_000),
+      ),
+    ).toMatchObject({ ok: false, code: "GAME_OVER" });
+
+    // The other player has no points either but is still in: ranked first.
+    const poll = await pollRoom(
+      { id: id(1), role: "student" },
+      roomId,
+      -1,
+      at(Q1 + 10_000),
+    );
+    if (!poll.ok || poll.data.kind !== "state") throw new Error("no state");
+    expect(
+      poll.data.state.players.map((p) => [p.name, p.eliminated, p.lives]),
+    ).toEqual([
+      ["Trần Thị Bình", false, 2],
+      ["Nguyễn Văn An", true, 0],
+    ]);
+    expect(poll.data.state.settings).toEqual({
+      sameQuestion: false,
+      lockJoin: false,
+      lives: 2,
+    });
+  });
+
+  it("closes the race when the last player still in is knocked out", async () => {
+    const roomId = await newRoom({ lives: 1 });
+    await join(roomId, id(0));
+    await startGame(host, roomId, NOW);
+    const r = await answerQuestion(
+      id(0),
+      roomId,
+      { index: 0, answer: null },
+      at(Q1 + 1000),
+    );
+    expect(r).toMatchObject({
+      ok: true,
+      data: { eliminated: true, raceOver: true },
+    });
+  });
+
+  describe("same question", () => {
+    async function sharedRoom() {
+      const roomId = await newRoom({ sameQuestion: true });
+      await join(roomId, id(0));
+      await join(roomId, id(1));
+      await startGame(host, roomId, NOW);
+      const [room] = await tdb
+        .select({ bankTypes: gameRooms.bankTypes })
+        .from(gameRooms)
+        .where(eq(gameRooms.id, roomId));
+      const shownAt = (i: number) =>
+        sharedShownAt(NOW, room?.bankTypes ?? [], "normal", i);
+      return { roomId, shownAt };
+    }
+
+    it("everyone meets the same question and waits for the class clock", async () => {
+      const { roomId, shownAt } = await sharedRoom();
+      const r = await answerQuestion(
+        id(0),
+        roomId,
+        { index: 0, answer: await keyAt(roomId, id(0), 0) },
+        at(Q1 + 1000),
+      );
+      expect(r).toMatchObject({ ok: true, data: { mark: { k: "correct" } } });
+      if (!r.ok) return;
+      // The next question appears on the shared clock, not 3 s after mine.
+      expect(r.data.nextShownAt).toBe(shownAt(1).toISOString());
+      // Too early for question 2.
+      expect(
+        await answerQuestion(
+          id(0),
+          roomId,
+          { index: 1, answer: null },
+          at(Q1 + 1000 + FEEDBACK_MS),
+        ),
+      ).toMatchObject({ ok: false, code: "CONFLICT" });
+      const other = await answerQuestion(
+        id(1),
+        roomId,
+        { index: 0, answer: await keyAt(roomId, id(1), 0) },
+        at(Q1 + 5000),
+      );
+      expect(other).toMatchObject({
+        ok: true,
+        data: { mark: { k: "correct" } },
+      });
+      // Both answered the same bank question first.
+      const marks = await tdb
+        .select({ marks: gamePlayers.marks })
+        .from(gamePlayers)
+        .where(eq(gamePlayers.roomId, roomId));
+      for (const m of marks) expect(m.marks[0]?.k).toBe("correct");
+    });
+
+    it("a player back from a closed tab answers the current question; the rest time out", async () => {
+      const { roomId, shownAt } = await sharedRoom();
+      // No skipping ahead while question 1 is still open.
+      expect(
+        await answerQuestion(
+          id(1),
+          roomId,
+          { index: 1, answer: null },
+          at(Q1 + 1000),
+        ),
+      ).toMatchObject({ ok: false, code: "CONFLICT" });
+      const r = await answerQuestion(
+        id(1),
+        roomId,
+        { index: 2, answer: await keyAt(roomId, id(1), 2) },
+        new Date(shownAt(2).getTime() + 1000),
+      );
+      expect(r).toMatchObject({
+        ok: true,
+        data: { index: 2, answered: 3, mark: { k: "correct" } },
+      });
+      const [player] = await tdb
+        .select({ marks: gamePlayers.marks, misses: gamePlayers.misses })
+        .from(gamePlayers)
+        .where(
+          and(eq(gamePlayers.roomId, roomId), eq(gamePlayers.userId, id(1))),
+        );
+      expect(player?.marks.slice(0, 3).map((m) => m?.k)).toEqual([
+        "timeout",
+        "timeout",
+        "correct",
+      ]);
+      expect(player?.misses).toBe(2);
     });
   });
 });

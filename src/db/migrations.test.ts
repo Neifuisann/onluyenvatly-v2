@@ -99,7 +99,7 @@ describe("migration 0017_classes", () => {
       ["00000000-0000-4000-8000-0000000000a1", "Lớp Vật lý", "physics"],
       ["00000000-0000-4000-8000-0000000000a2", "Lớp Vật lý", "physics"],
     ]);
-    // 0019: every class gets its own invite code from the invite alphabet.
+    // 0020: every class gets its own invite code from the invite alphabet.
     for (const c of classes)
       expect(JoinCodeSchema.parse(c.joinCode)).toBe(c.joinCode);
     expect(new Set(classes.map((c) => c.joinCode)).size).toBe(classes.length);

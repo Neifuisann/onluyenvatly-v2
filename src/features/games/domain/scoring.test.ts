@@ -1,10 +1,16 @@
 import { describe, expect, it } from "vitest";
 import {
+  costsLife,
   effectiveStatus,
   limitMs,
+  livesLeft,
+  passedMarks,
+  playerShownAt,
   questionShownAt,
   raceHardEnd,
   scoreAnswer,
+  sharedPosition,
+  sharedShownAt,
   speedPoints,
   streakBonus,
   trackProgress,
@@ -140,5 +146,66 @@ describe("trackProgress", () => {
     expect(trackProgress(12_000, 10)).toBe(1);
     expect(trackProgress(-1, 10)).toBe(0);
     expect(trackProgress(100, 0)).toBe(0);
+  });
+});
+
+describe("same-question clock (B-12)", () => {
+  // mcq 20 s, tf 40 s, mcq 20 s at the normal pace; countdown 4 s, feedback 3 s.
+  const types = ["mcq", "tf", "mcq"] as const;
+  const room = {
+    startedAt: at(0),
+    bankTypes: types,
+    pace: "normal" as const,
+    sameQuestion: true,
+  };
+
+  it("shows each question after the previous one plus its feedback", () => {
+    expect(sharedShownAt(at(0), types, "normal", 0)).toEqual(at(4));
+    expect(sharedShownAt(at(0), types, "normal", 1)).toEqual(at(27));
+    expect(sharedShownAt(at(0), types, "normal", 2)).toEqual(at(70));
+  });
+
+  it("is on a question until its time and grace run out", () => {
+    expect(sharedPosition(at(0), types, "normal", at(0))).toBe(0);
+    expect(sharedPosition(at(0), types, "normal", at(26))).toBe(0);
+    expect(sharedPosition(at(0), types, "normal", at(27))).toBe(1);
+    expect(sharedPosition(at(0), types, "normal", at(69))).toBe(1);
+    expect(sharedPosition(at(0), types, "normal", at(93))).toBe(3);
+  });
+
+  it("ignores the player's own answers in a same-question race", () => {
+    const player = { joinedAt: at(0), lastAnsweredAt: at(6) };
+    expect(playerShownAt(room, player, 1)).toEqual(at(27));
+    expect(playerShownAt({ ...room, sameQuestion: false }, player, 1)).toEqual(
+      at(9),
+    );
+  });
+
+  it("times out passed questions, but not ones closed before joining", () => {
+    expect(passedMarks(room, at(30), 0, 2)).toEqual([
+      null,
+      { k: "timeout", s: 0 },
+    ]);
+    expect(passedMarks(room, at(0), 0, 2)).toEqual([
+      { k: "timeout", s: 0 },
+      { k: "timeout", s: 0 },
+    ]);
+    expect(passedMarks(room, at(0), 1, 1)).toEqual([]);
+  });
+});
+
+describe("lives (B-12)", () => {
+  it("costs a life for wrong, blank and timed-out answers only", () => {
+    expect(costsLife("wrong")).toBe(true);
+    expect(costsLife("blank")).toBe(true);
+    expect(costsLife("timeout")).toBe(true);
+    expect(costsLife("partial")).toBe(false);
+    expect(costsLife("correct")).toBe(false);
+  });
+
+  it("counts lives down to zero, or none when off", () => {
+    expect(livesLeft(3, 1)).toBe(2);
+    expect(livesLeft(3, 5)).toBe(0);
+    expect(livesLeft(null, 2)).toBeNull();
   });
 });

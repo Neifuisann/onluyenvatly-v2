@@ -138,8 +138,15 @@
     {
       "idx": 19,
       "version": "7",
-      "when": 1791734964914,
-      "tag": "0019_class_join_codes",
+      "when": 1791731825773,
+      "tag": "0019_game_settings",
+      "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1791737450990,
+      "tag": "0020_class_join_codes",
       "breakpoints": true
     }
   ]

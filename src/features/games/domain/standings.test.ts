@@ -21,10 +21,40 @@ const row = (
   correct: 0,
   bestStreak: 0,
   finishedAt: null,
+  eliminatedAt: null,
+  lives: null,
   ...extra,
 });
 
 describe("rankPlayers", () => {
+  it("ranks knocked-out players below everyone still in (B-12)", () => {
+    const out = new Date("2026-10-11T10:00:00Z");
+    const ranked = rankPlayers([
+      row(1, 2000, { eliminatedAt: out }),
+      row(2, 500),
+      row(3, 900, { eliminatedAt: out }),
+      row(4, 500),
+    ]);
+    expect(ranked.map((r) => [r.id, r.rank, r.eliminated])).toEqual([
+      [2, 1, false],
+      [4, 1, false],
+      [1, 3, true],
+      [3, 4, true],
+    ]);
+  });
+
+  it("keeps an eliminated tie apart from a surviving one", () => {
+    const out = new Date("2026-10-11T10:00:00Z");
+    const ranked = rankPlayers([
+      row(1, 500, { eliminatedAt: out }),
+      row(2, 500),
+    ]);
+    expect(ranked.map((r) => [r.id, r.rank])).toEqual([
+      [2, 1],
+      [1, 2],
+    ]);
+  });
+
   it("orders by score with shared ranks for ties", () => {
     const ranked = rankPlayers([
       row(1, 500),

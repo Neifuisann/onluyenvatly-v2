@@ -22,6 +22,9 @@ const roomColumns = {
   pace: sql<Pace>`${gameRooms.pace}`,
   bankTypes: gameRooms.bankTypes,
   lessonIds: gameRooms.lessonIds,
+  sameQuestion: gameRooms.sameQuestion,
+  lockJoin: gameRooms.lockJoin,
+  lives: gameRooms.lives,
   rev: gameRooms.rev,
   createdAt: gameRooms.createdAt,
   startedAt: gameRooms.startedAt,
@@ -38,6 +41,10 @@ export type RoomRow = {
   pace: Pace;
   bankTypes: QuestionType[];
   lessonIds: number[];
+  /** Settings (B-12, `GameSettings`). */
+  sameQuestion: boolean;
+  lockJoin: boolean;
+  lives: number | null;
   rev: number;
   createdAt: Date;
   startedAt: Date | null;
@@ -56,9 +63,11 @@ export type SnapshotPlayer = {
   correct: number;
   streak: number;
   bestStreak: number;
+  misses: number;
   joinedAt: Date;
   lastAnsweredAt: Date | null;
   finishedAt: Date | null;
+  eliminatedAt: Date | null;
 };
 
 export type RoomSnapshot = { room: RoomRow; players: SnapshotPlayer[] };
@@ -101,9 +110,11 @@ async function loadPlayers(roomId: string): Promise<SnapshotPlayer[]> {
       correct: gamePlayers.correct,
       streak: gamePlayers.streak,
       bestStreak: gamePlayers.bestStreak,
+      misses: gamePlayers.misses,
       joinedAt: gamePlayers.joinedAt,
       lastAnsweredAt: gamePlayers.lastAnsweredAt,
       finishedAt: gamePlayers.finishedAt,
+      eliminatedAt: gamePlayers.eliminatedAt,
     })
     .from(gamePlayers)
     .innerJoin(users, eq(users.id, gamePlayers.userId))
@@ -161,9 +172,11 @@ export async function getPlayer(roomId: string, userId: string) {
       correct: gamePlayers.correct,
       streak: gamePlayers.streak,
       bestStreak: gamePlayers.bestStreak,
+      misses: gamePlayers.misses,
       joinedAt: gamePlayers.joinedAt,
       lastAnsweredAt: gamePlayers.lastAnsweredAt,
       finishedAt: gamePlayers.finishedAt,
+      eliminatedAt: gamePlayers.eliminatedAt,
       removedAt: gamePlayers.removedAt,
     })
     .from(gamePlayers)

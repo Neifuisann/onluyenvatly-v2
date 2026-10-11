@@ -100,7 +100,11 @@ async function race(
 }
 
 /** Opens `/admin/games/new` and creates a 5-question room from the project lesson. */
-async function createRoom(host: Page, p: "d" | "m") {
+async function createRoom(
+  host: Page,
+  p: "d" | "m",
+  rules?: (host: Page) => Promise<void>,
+) {
   await host.goto("/admin/games/new");
   await host.getByLabel("Tìm bài").fill(`dua toc do (${p})`);
   await host.getByText(`E2E – Đua tốc độ (${p})`).click();
@@ -111,7 +115,8 @@ async function createRoom(host: Page, p: "d" | "m") {
     .locator("label", { has: host.locator('input[name="count"][value="5"]') })
     .click();
   await expect(summary).toHaveText("Rút ngẫu nhiên 5 câu từ 5 câu.");
-  await host.getByText("Thong thả").click();
+  if (rules) await rules(host);
+  else await host.getByText("Thong thả").click();
   await host.getByRole("button", { name: "Tạo phòng" }).click();
   await host.waitForURL(/\/host\/[0-9a-f-]{36}$/);
   const pin = await host.locator("[data-pin]").getAttribute("data-pin");
@@ -377,5 +382,69 @@ test("host controls: change racer, remove a player, end mid-race, play again", a
   );
   await expect(host.getByText("Đang chờ học sinh vào phòng…")).toBeVisible();
   await expect(host.getByText("5 câu · Nhịp Thong thả")).toBeVisible();
+  await close();
+});
+
+test("room rules: same question, locked room, knocked out", async ({
+  browser,
+}, info) => {
+  test.setTimeout(180_000);
+  const { p, host, playerA, playerB, close } = await openRoles(browser, info);
+  const pin = await createRoom(host, p, async (page) => {
+    await page.getByText("Nhanh", { exact: true }).click();
+    await page.getByText("Cả lớp làm cùng một câu").click();
+    await page.getByText("Khóa phòng khi bắt đầu").click();
+    await page.getByText("Loại khi sai nhiều").click();
+    await page
+      .locator("label", { has: page.locator('input[name="lives"][value="1"]') })
+      .click();
+    await attachShot(page, info, "host-create-rules");
+  });
+  await expect(
+    host.getByText(
+      "5 câu · Nhịp Nhanh · Cùng một câu · Khóa phòng khi bắt đầu · Sai 1 lần bị loại",
+    ),
+  ).toBeVisible();
+
+  // The lobby tells the player the rules.
+  await joinRoom(playerA, pin);
+  await expect(
+    playerA.getByText("Cả lớp làm cùng một câu, cùng lúc."),
+  ).toBeVisible();
+  await expect(playerA.getByText("Sai 1 lần là bị loại.")).toBeVisible();
+  await attachShot(playerA, info, "player-lobby-rules");
+
+  // Once started, the locked room turns B away.
+  await host.getByRole("button", { name: "Bắt đầu đua" }).click();
+  await playerB.goto(`/play/${pin}`);
+  await expect(playerB.getByText("Cuộc đua đã bắt đầu")).toBeVisible();
+  await expect(
+    playerB.getByText("Phòng đã khóa, không nhận thêm người chơi."),
+  ).toBeVisible();
+
+  // A answers right, then waits for the class clock before question 2.
+  await expect(playerA.getByRole("region", { name: "Câu 1/5" })).toBeVisible({
+    timeout: 20_000,
+  });
+  const tiles = playerA.locator("button[data-option]");
+  await tiles.filter({ hasText: GAME_RIGHT }).click();
+  await expect(playerA.getByText("Chính xác!", { exact: true })).toBeVisible();
+  await expect(playerA.getByText(/Câu tiếp theo sau \d+ giây/)).toBeVisible();
+  await attachShot(playerA, info, "player-wait-next");
+
+  // One wrong answer is the only life: out, and the race is over.
+  await expect(playerA.getByRole("region", { name: "Câu 2/5" })).toBeVisible({
+    timeout: 30_000,
+  });
+  await tiles.filter({ hasNotText: GAME_RIGHT }).first().click();
+  await expect(playerA.getByText("Bị loại!", { exact: true })).toBeVisible();
+  await expect(playerA.getByText("Bạn đã hết mạng.")).toBeVisible();
+  await attachShot(playerA, info, "player-eliminated");
+  await expect(
+    playerA.getByRole("heading", { name: "Kết quả chung cuộc" }),
+  ).toBeVisible({ timeout: 20_000 });
+  await expect(
+    host.getByRole("heading", { name: "Bục vinh quang" }),
+  ).toBeVisible({ timeout: 20_000 });
   await close();
 });

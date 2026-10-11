@@ -2,8 +2,11 @@ import { z } from "zod";
 import { AnswerSchema } from "@/features/attempts/schemas";
 import { QUESTION_TYPES } from "@/features/lessons/schema";
 import {
+  type GameSettings,
   MAX_LESSONS,
+  MAX_LIVES,
   MAX_QUESTIONS,
+  MIN_LIVES,
   MIN_QUESTIONS,
   PACE_NAMES,
   type Pace,
@@ -42,8 +45,23 @@ export const CreateGameSchema = z.object({
   count: z.coerce.number().int().min(MIN_QUESTIONS).max(MAX_QUESTIONS),
   pace: z.enum(PACE_NAMES as [Pace, ...Pace[]]),
   types: z.array(z.enum(QUESTION_TYPES)).min(1).refine(unique),
+  /** Room settings (B-12); off unless the teacher turns them on. */
+  sameQuestion: z.boolean().default(false),
+  lockJoin: z.boolean().default(false),
+  lives: z.coerce
+    .number()
+    .int()
+    .min(MIN_LIVES)
+    .max(MAX_LIVES)
+    .nullable()
+    .default(null),
 });
-export type CreateGameInput = z.infer<typeof CreateGameSchema>;
+/** Settings left out mean "off" (`DEFAULT_SETTINGS`). */
+export type CreateGameInput = Omit<
+  z.infer<typeof CreateGameSchema>,
+  keyof GameSettings
+> &
+  Partial<GameSettings>;
 
 /** Joining, or changing racer while waiting in the lobby. */
 export const JoinGameSchema = z.object({

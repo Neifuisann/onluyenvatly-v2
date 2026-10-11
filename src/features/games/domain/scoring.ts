@@ -42,6 +42,94 @@ export function questionShownAt(p: {
   return new Date(start + COUNTDOWN_MS);
 }
 
+/**
+ * Same-question races (B-12): when bank question `index` appears for
+ * everyone. One clock for the class: the countdown, then each question at
+ * full time plus its feedback card, whoever answered early.
+ */
+export function sharedShownAt(
+  startedAt: Date,
+  types: readonly QuestionType[],
+  pace: Pace,
+  index: number,
+): Date {
+  let at = startedAt.getTime() + COUNTDOWN_MS;
+  for (const type of types.slice(0, index))
+    at += limitMs(type, pace) + FEEDBACK_MS;
+  return new Date(at);
+}
+
+/**
+ * The question a same-question race is on: the first whose answers are
+ * still taken (time plus `LATE_GRACE_MS`). `types.length` once all closed.
+ */
+export function sharedPosition(
+  startedAt: Date,
+  types: readonly QuestionType[],
+  pace: Pace,
+  now: Date,
+): number {
+  let at = startedAt.getTime() + COUNTDOWN_MS;
+  for (const [i, type] of types.entries()) {
+    const closes = at + limitMs(type, pace) + LATE_GRACE_MS;
+    if (now.getTime() <= closes) return i;
+    at += limitMs(type, pace) + FEEDBACK_MS;
+  }
+  return types.length;
+}
+
+/** When this player's question `index` appeared, in either kind of race. */
+export function playerShownAt(
+  room: {
+    startedAt: Date;
+    sameQuestion: boolean;
+    bankTypes: readonly QuestionType[];
+    pace: Pace;
+  },
+  player: { joinedAt: Date; lastAnsweredAt: Date | null },
+  index: number,
+): Date {
+  return room.sameQuestion
+    ? sharedShownAt(room.startedAt, room.bankTypes, room.pace, index)
+    : questionShownAt({
+        raceStartedAt: room.startedAt,
+        joinedAt: player.joinedAt,
+        lastAnsweredAt: player.lastAnsweredAt,
+      });
+}
+
+/**
+ * Same-question races: the questions from `from` up to `to` (exclusive) that
+ * a player let pass, by a closed tab or a late join. One that closed before
+ * they joined stays unreached (null); the rest are timeouts.
+ */
+export function passedMarks(
+  room: { startedAt: Date; bankTypes: readonly QuestionType[]; pace: Pace },
+  joinedAt: Date,
+  from: number,
+  to: number,
+): (GameMark | null)[] {
+  const out: (GameMark | null)[] = [];
+  for (let i = from; i < to; i++) {
+    const type = room.bankTypes[i] as QuestionType;
+    const closes =
+      sharedShownAt(room.startedAt, room.bankTypes, room.pace, i).getTime() +
+      limitMs(type, room.pace);
+    out.push(closes < joinedAt.getTime() ? null : { k: "timeout", s: 0 });
+  }
+  return out;
+}
+
+/** Marks that cost a life (B-12): anything but a full or partial answer. */
+export function costsLife(kind: MarkKind): boolean {
+  return kind === "wrong" || kind === "blank" || kind === "timeout";
+}
+
+/** Lives a player still has; null when the room has none. */
+export function livesLeft(lives: number | null, misses: number) {
+  return lives === null ? null : Math.max(0, lives - misses);
+}
+
 /** 1000 at once, falling linearly to 500 when the time runs out. */
 export function speedPoints(elapsedMs: number, limit: number): number {
   const used = Math.min(1, Math.max(0, elapsedMs / limit));

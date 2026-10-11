@@ -168,3 +168,24 @@ export const importCopy = {
   nothing: "AI chưa trả về câu hỏi nào. Thử lại, hoặc dùng file rõ nét hơn.",
   aiOff: "AI đang tắt trong Cài đặt.",
 } as const;
+
+/** AI solve after an import (09 AI8). */
+export const solveCopy = {
+  title: "Giải câu chưa có đáp án",
+  lead: (n: number) =>
+    `${n} câu chưa có đáp án. AI có thể giải và điền đáp án để bạn kiểm tra lại.`,
+  start: (n: number) => `Giải bằng AI (${n} câu)`,
+  working: "AI đang giải, có thể mất 1–3 phút…",
+  done: (filled: number[]) =>
+    filled.length > 0
+      ? `AI đã điền đáp án cho câu ${filled.join(", ")}. Đáp án do AI giải: hãy kiểm tra lại trước khi xuất bản.`
+      : "AI chưa điền được đáp án nào. Hãy thử lại hoặc tự điền trong trình soạn.",
+  partial: (n: number) =>
+    `Còn ${n} câu AI chưa giải được, hãy tự điền trong trình soạn.`,
+  // Errors
+  unavailable: "AI giải đề chưa được cấu hình hoặc đang tắt.",
+  quota:
+    "Hôm nay đã hết lượt AI (theo giới hạn trong Cài đặt). Thử lại vào ngày mai.",
+  busy: "Máy chủ AI đang quá tải. Thử lại sau ít phút.",
+  failed: "AI chưa giải được lần này. Thử lại sau.",
+} as const;

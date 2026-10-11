@@ -41,16 +41,18 @@ export function bankQuestions(bank: readonly BankItem[]) {
 
 /**
  * The questions a player still has to answer, in their order and with their
- * option shuffles, answer-free.
+ * option shuffles, answer-free. `sameOrder`: a same-question race (B-12).
  */
 export function remainingQuestions(
   publicQuestions: readonly PublicQuestion[],
   seed: number,
   answered: number,
+  sameOrder = false,
 ) {
   const plan = playerPlan(
     publicQuestions.map((q) => (q.type === "mcq" ? q.options.length : 0)),
     createRng(seed),
+    sameOrder,
   );
   return plan.order
     .slice(answered)

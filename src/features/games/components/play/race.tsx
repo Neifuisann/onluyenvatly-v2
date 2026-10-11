@@ -5,6 +5,7 @@ import {
   CircleCheck,
   CircleMinus,
   CircleX,
+  Heart,
   Timer,
   WifiOff,
 } from "lucide-react";
@@ -13,7 +14,7 @@ import type { ReactNode } from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { AttemptAnswer } from "@/db/schema";
 import type { Result } from "@/lib/result";
-import type { MarkKind } from "../../domain/scoring";
+import { costsLife, type MarkKind } from "../../domain/scoring";
 import { gameCopy, markCopy } from "../../messages";
 import type { AnswerOutcome, PlayerView } from "../../types";
 import { RaceTrack, StreakFlame } from "../race-track";
@@ -50,6 +51,8 @@ const MARK_ICON: Record<MarkKind, typeof CircleCheck> = {
  * clock (`shownAt` comes from the server); one tap on a tile answers. The
  * answer's response carries the key, the points and the standings, so this
  * screen never polls. When the time runs out, whatever is chosen is sent.
+ * Room settings (B-12): with lives, hearts show what is left; in a
+ * same-question race the card waits for the class's next question.
  */
 export function Race({
   roomId,
@@ -62,6 +65,8 @@ export function Race({
   initialScore,
   initialStreak,
   initialView,
+  initialLives = null,
+  sameQuestion = false,
 }: {
   roomId: string;
   title: string;
@@ -74,6 +79,9 @@ export function Race({
   initialScore: number;
   initialStreak: number;
   initialView: PlayerView;
+  /** Lives left; null when the room has none. */
+  initialLives?: number | null;
+  sameQuestion?: boolean;
 }) {
   const router = useRouter();
   const offset = useRef(clockOffset(serverNow));
@@ -91,6 +99,7 @@ export function Race({
   const [score, setScore] = useState(initialScore);
   const [streak, setStreak] = useState(initialStreak);
   const [view, setView] = useState(initialView);
+  const [lives, setLives] = useState(initialLives);
   const [offline, setOffline] = useState(false);
   /** When the feedback card gives way to the next question (server clock). */
   const [advanceAt, setAdvanceAt] = useState(0);
@@ -133,6 +142,7 @@ export function Race({
           setOutcome(body.data);
           setScore(body.data.score);
           setStreak(body.data.streak);
+          setLives(body.data.lives);
           setView(body.data.view);
           setPhase("feedback");
           return;
@@ -218,6 +228,7 @@ export function Race({
     <div className="flex min-h-dvh flex-col">
       <StageBar title={title}>
         <StreakFlame streak={streak} />
+        {lives !== null && <Lives lives={lives} />}
         <span className="num rounded-full bg-lane px-3 py-1 font-bold font-display">
           {t.points(score)}
         </span>
@@ -321,7 +332,9 @@ export function Race({
                 strokeWidth={2.5}
               />
               <p className="flex-1 font-bold font-display text-2xl">
-                {markCopy[outcome.mark.k]}
+                {outcome.eliminated
+                  ? t.eliminatedTitle
+                  : markCopy[outcome.mark.k]}
               </p>
               {outcome.mark.s > 0 && (
                 <p className="num animate-pop font-bold font-display text-3xl text-accent">
@@ -329,12 +342,25 @@ export function Race({
                 </p>
               )}
             </div>
+            {outcome.lives !== null && costsLife(outcome.mark.k) && (
+              <p className="flex items-center gap-1.5 font-semibold text-danger text-sm">
+                <Heart aria-hidden className="size-4 fill-current" />
+                {t.lifeLost(outcome.lives)}
+              </p>
+            )}
+            {sameQuestion && !outcome.finished && !outcome.raceOver && (
+              <p className="num text-ink-muted text-sm">
+                {t.waitNext(Math.max(0, Math.ceil((advanceAt - now) / 1000)))}
+              </p>
+            )}
             <p className="text-ink-muted text-sm">
-              {view.me?.rank === 1
-                ? t.leading
-                : view.ahead
-                  ? t.behind(view.ahead.name, view.ahead.gap)
-                  : view.me && t.rankOf(view.me.rank, view.total)}
+              {outcome.eliminated
+                ? t.eliminatedBody
+                : view.me?.rank === 1
+                  ? t.leading
+                  : view.ahead
+                    ? t.behind(view.ahead.name, view.ahead.gap)
+                    : view.me && t.rankOf(view.me.rank, view.total)}
             </p>
             <RaceTrack
               players={standingsAroundMe(view)}
@@ -354,4 +380,15 @@ function standingsAroundMe(view: PlayerView) {
   const { top, me } = view;
   if (!me || top.some((p) => p.id === me.id)) return top;
   return [...top.slice(0, 4), me];
+}
+
+/** Hearts for the lives left (B-12). */
+function Lives({ lives }: { lives: number }) {
+  return (
+    <span className="num inline-flex items-center gap-1 rounded-full bg-lane px-2.5 py-1 font-bold text-sm">
+      <Heart aria-hidden className="size-4 fill-danger text-danger" />
+      {lives}
+      <span className="sr-only">{t.lives(lives)}</span>
+    </span>
+  );
 }

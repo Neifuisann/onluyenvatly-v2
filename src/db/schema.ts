@@ -701,6 +701,15 @@ export const gameRooms = pgTable(
       .notNull(),
     /** The lessons chosen, for "Chơi lại" and the list. */
     lessonIds: bigint("lesson_ids", { mode: "number" }).array().notNull(),
+    /**
+     * Room settings (B-12). `same_question`: everyone meets the bank in its
+     * drawn order on one shared clock. `lock_join`: no new players once
+     * started. `lives`: misses a player may make before elimination, null
+     * when off.
+     */
+    sameQuestion: boolean("same_question").notNull().default(false),
+    lockJoin: boolean("lock_join").notNull().default(false),
+    lives: smallint("lives"),
     rev: integer("rev").notNull().default(0),
     createdAt: timestamptz("created_at").notNull().defaultNow(),
     startedAt: timestamptz("started_at"),
@@ -718,6 +727,10 @@ export const gameRooms = pgTable(
     check(
       "game_rooms_bank_aligned",
       sql`jsonb_array_length(${t.bank}) = cardinality(${t.bankTypes})`,
+    ),
+    check(
+      "game_rooms_lives_check",
+      sql`${t.lives} is null or ${t.lives} between 1 and 5`,
     ),
   ],
 ).enableRLS();
@@ -748,11 +761,15 @@ export const gamePlayers = pgTable(
     score: integer("score").notNull().default(0),
     streak: smallint("streak").notNull().default(0),
     bestStreak: smallint("best_streak").notNull().default(0),
+    /** Wrong, blank or timed-out answers: lives used (B-12). */
+    misses: smallint("misses").notNull().default(0),
     /** Bank-aligned; null where not reached yet. */
     marks: jsonb("marks").$type<(GameMarkRow | null)[]>().notNull(),
     joinedAt: timestamptz("joined_at").notNull().defaultNow(),
     lastAnsweredAt: timestamptz("last_answered_at"),
     finishedAt: timestamptz("finished_at"),
+    /** Out of lives (B-12); `finished_at` is set at the same moment. */
+    eliminatedAt: timestamptz("eliminated_at"),
     /** Removed by the host: hidden from standings, can't rejoin. */
     removedAt: timestamptz("removed_at"),
   },

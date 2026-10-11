@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { PageHeader } from "@/components/page-header";
 import { ImportPanel } from "@/features/ai/components/admin/import-panel";
 import { importCopy } from "@/features/ai/messages";
+import { solverConfig } from "@/features/ai/solve-service";
 import { requireTeacher } from "@/features/auth/guards";
 import { getComposeSources } from "@/features/lessons/admin-queries";
 import { ComposePanel } from "@/features/lessons/components/admin/compose-panel";
@@ -46,7 +47,10 @@ export default async function CreateLessonPage({
           title={t.fileTitle}
           lead={importCopy.lead}
         />
-        <ImportPanel aiEnabled={settings.aiEnabled} />
+        <ImportPanel
+          aiEnabled={settings.aiEnabled}
+          solverEnabled={settings.aiEnabled && solverConfig() !== null}
+        />
       </div>
     );
 
