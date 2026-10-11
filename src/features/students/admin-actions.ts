@@ -1,22 +1,19 @@
 "use server";
 
 import { refresh, updateTag } from "next/cache";
-import { requireAdmin } from "@/features/auth/guards";
+import { requireAdmin, requireTeacher } from "@/features/auth/guards";
 import { fieldErrorsOf } from "@/features/auth/schemas";
 import { tags } from "@/lib/cache-tags";
 import { err, type Result } from "@/lib/result";
 import {
-  approveStudents,
   createAdmin as createAdminService,
   deleteStudent as deleteStudentService,
   grantExtraAttempts as grantExtraAttemptsService,
-  rejectStudents,
   resetStudentPassword,
   revokeStudentSessions,
   setStudentStatus,
 } from "./admin-service";
 import {
-  BulkIdsSchema,
   CreateAdminSchema,
   DeleteStudentSchema,
   GrantAttemptsSchema,
@@ -26,41 +23,12 @@ import {
 import type { StudentStatus } from "./domain/list";
 
 /**
- * Admin student actions (05 §2). Every one: `requireAdmin()` first, Zod, the
+ * Student account actions (05 §2). Every one: `requireAdmin()` first (extra
+ * tries: `requireTeacher()`, on their own lesson, B-03), Zod, the
  * service (one transaction with its audit entry), then the cache tags of what
  * changed and a router refresh for the uncached admin pages. They only ever
  * target `role = 'student'` rows (`createAdmin` excepted).
  */
-
-type Decision = Result<{ done: number; skipped: number }>;
-
-/** `student.approve`: pending → active, in bulk. */
-export async function approve(input: unknown): Promise<Decision> {
-  const user = await requireAdmin();
-  const parsed = BulkIdsSchema.safeParse(input);
-  if (!parsed.success) return err("VALIDATION");
-  const result = await approveStudents(user, parsed.data.ids);
-  if (result.ok) {
-    // The nav badge; an approved student has no rating yet, so the
-    // leaderboard is unchanged.
-    updateTag(tags.pendingStudents);
-    refresh();
-  }
-  return result;
-}
-
-/** `student.reject`: pending → rejected, in bulk. */
-export async function reject(input: unknown): Promise<Decision> {
-  const user = await requireAdmin();
-  const parsed = BulkIdsSchema.safeParse(input);
-  if (!parsed.success) return err("VALIDATION");
-  const result = await rejectStudents(user, parsed.data.ids);
-  if (result.ok) {
-    updateTag(tags.pendingStudents);
-    refresh();
-  }
-  return result;
-}
 
 /**
  * A temporary password, returned once to the caller's dialog. It is never
@@ -125,7 +93,6 @@ export async function deleteStudent(
     parsed.data.confirmName,
   );
   if (result.ok) {
-    updateTag(tags.pendingStudents);
     updateTag(tags.leaderboard);
     // Catalog cards show `attempt_count`.
     if (result.data.lessons > 0) updateTag(tags.lessons);
@@ -137,7 +104,7 @@ export async function deleteStudent(
 export async function grantExtraAttempts(
   input: unknown,
 ): Promise<Result<{ extra: number }>> {
-  const user = await requireAdmin();
+  const user = await requireTeacher();
   const parsed = GrantAttemptsSchema.safeParse(input);
   if (!parsed.success) return err("VALIDATION");
   const result = await grantExtraAttemptsService(user, parsed.data);

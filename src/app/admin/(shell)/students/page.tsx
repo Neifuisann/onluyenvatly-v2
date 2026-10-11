@@ -3,17 +3,14 @@ import Link from "next/link";
 import { EmptyState } from "@/components/empty-state";
 import { PageHeader, SectionCard } from "@/components/page-header";
 import { buttonVariants } from "@/components/ui/button";
-import { requireAdmin } from "@/features/auth/guards";
+import { requireTeacher } from "@/features/auth/guards";
 import {
   getDeletionRequests,
-  getPendingCount,
-  getPendingStudents,
   getStudents,
+  type Viewer,
 } from "@/features/students/admin-queries";
-import { PendingList } from "@/features/students/components/pending-list";
 import { StudentFilterBar } from "@/features/students/components/student-filters";
 import { StudentList } from "@/features/students/components/student-list";
-import { StudentsTabs } from "@/features/students/components/students-tabs";
 import {
   MAX_PAGE,
   parseStudentListParams,
@@ -21,27 +18,26 @@ import {
   studentsHref,
 } from "@/features/students/domain/list";
 import { studentsCopy as t } from "@/features/students/messages";
-import { formatDateOnly, formatDateTime } from "@/lib/dates";
+import { formatDateTime } from "@/lib/dates";
 
 export const metadata: Metadata = { title: t.title };
 
 /**
- * `/admin/students` (S6-01): the pending queue with bulk approve/reject, and
- * every student with search and filters. Per request and uncached; only the
- * count on the tab (and the nav badge) comes from the shared cache.
+ * `/admin/students` (S6-01, B-03): the students of the teacher's classes (an
+ * admin: every student) with search and filters. Registration needs no
+ * approval any more, so there is no queue. Per request and uncached.
  */
 export default async function AdminStudentsPage({
   searchParams,
 }: PageProps<"/admin/students">) {
-  await requireAdmin();
+  const user = await requireTeacher();
   const filters = parseStudentListParams(await searchParams);
-  const pendingCount = await getPendingCount();
+  const admin = user.role === "admin";
   return (
     <div className="mx-auto flex max-w-4xl flex-col gap-6">
-      <PageHeader title={t.title} lead={t.lead} />
-      <DeletionRequests />
-      <StudentsTabs filters={filters} pendingCount={pendingCount} />
-      {filters.view === "pending" ? <PendingView /> : <AllView f={filters} />}
+      <PageHeader title={t.title} lead={admin ? t.leadAdmin : t.lead} />
+      {admin && <DeletionRequests />}
+      <AllView viewer={user} f={filters} />
     </div>
   );
 }
@@ -86,44 +82,14 @@ async function DeletionRequests() {
   );
 }
 
-async function PendingView() {
-  const { rows, hasMore } = await getPendingStudents();
-  if (rows.length === 0)
-    return (
-      <EmptyState
-        mascot="all-clear"
-        title={t.pendingEmptyTitle}
-        description={t.pendingEmptyBody}
-      />
-    );
-  return (
-    <>
-      <p className="text-muted-foreground text-sm">
-        {hasMore ? t.pendingMore(rows.length) : t.pendingCount(rows.length)}
-      </p>
-      <PendingList
-        rows={rows.map((r) => ({
-          id: r.id,
-          fullName: r.fullName,
-          phone: r.phone,
-          details: [
-            r.dateOfBirth &&
-              `${t.dateOfBirth} ${formatDateOnly(r.dateOfBirth)}`,
-            [r.className, r.grade && t.gradeShort(r.grade)]
-              .filter(Boolean)
-              .join(" · "),
-            `${t.registeredAt} ${formatDateTime(r.createdAt)}`,
-          ]
-            .filter(Boolean)
-            .join(" · "),
-        }))}
-      />
-    </>
-  );
-}
-
-async function AllView({ f }: { f: StudentListFilters }) {
-  const { rows, total } = await getStudents(f);
+async function AllView({
+  viewer,
+  f,
+}: {
+  viewer: Viewer;
+  f: StudentListFilters;
+}) {
+  const { rows, total } = await getStudents(viewer, f);
   const filtered = Boolean(f.q || f.status || f.grade);
   return (
     <>

@@ -23,7 +23,6 @@ export function StudentFilterBar({ filters }: { filters: StudentListFilters }) {
         role="search"
         className="relative"
       >
-        <input type="hidden" name="view" value="all" />
         {filters.status && (
           <input type="hidden" name="status" value={filters.status} />
         )}

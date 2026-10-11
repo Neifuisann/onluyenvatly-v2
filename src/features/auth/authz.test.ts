@@ -7,11 +7,12 @@ import { resetDb, type TestDb } from "@/test/db";
 import type { SessionUser } from "./session";
 
 /**
- * 06 §2 / 11 §3 (journey 8): every admin server action refuses anyone who
- * isn't an admin, before it reads its input or writes anything. The actions
- * are found on disk (the `admin-actions.ts` of every feature, plus the media
- * and settings actions, which are admin only), so a new admin action is
- * covered the day it is exported. Student- and visitor-facing actions
+ * 06 §2 / 11 §3 (journey 8): every staff server action refuses anyone who
+ * isn't a teacher or an admin, before it reads its input or writes
+ * anything, and the platform actions also refuse teachers (B-03). The
+ * actions are found on disk (the `admin-actions.ts` of every feature, plus
+ * the class, media and settings actions), so a new staff action is covered
+ * the day it is exported. Student- and visitor-facing actions
  * (`auth/actions`) are not in this list on purpose.
  */
 
@@ -48,10 +49,29 @@ const moduleFiles = [
       ? [`${dir}/admin-actions`]
       : [],
   ),
+  "classes/actions",
   "media/actions",
   // Admin only today; the student settings actions (05 §2) will get their
   // own file.
   "settings/actions",
+];
+
+/**
+ * Platform administration (B-03): an admin's, never a teacher's. Every
+ * other staff action is a teacher's, scoped to their own lessons and
+ * classes by the services.
+ */
+const ADMIN_ONLY = [
+  "ai/admin-actions.pregenerateExplanations",
+  "ai/admin-actions.updateExplanation",
+  "ai/admin-actions.approveExplanation",
+  "ai/admin-actions.regenerateExplanation",
+  "students/admin-actions.resetPassword",
+  "students/admin-actions.revokeSessions",
+  "students/admin-actions.setStatus",
+  "students/admin-actions.deleteStudent",
+  "students/admin-actions.createAdmin",
+  "settings/actions.updateSettings",
 ];
 
 async function load() {
@@ -88,12 +108,13 @@ beforeEach(async () => {
   vi.clearAllMocks();
 });
 
-describe("admin actions require an admin", () => {
-  it("finds the actions of attempts, lessons, students, media and settings", async () => {
+describe("staff actions require a teacher or an admin", () => {
+  it("finds the actions of attempts, classes, lessons, students, media and settings", async () => {
     const names = (await load()).map(([name]) => name);
     expect(moduleFiles).toEqual(
       expect.arrayContaining([
         "attempts/admin-actions",
+        "classes/actions",
         "lessons/admin-actions",
         "students/admin-actions",
         "media/actions",
@@ -102,8 +123,10 @@ describe("admin actions require an admin", () => {
     );
     expect(names).toEqual(
       expect.arrayContaining([
+        ...ADMIN_ONLY,
+        "classes/actions.addMembers",
+        "classes/actions.setLessons",
         "lessons/admin-actions.deleteLesson",
-        "students/admin-actions.approve",
         "students/admin-actions.resetPassword",
         "students/admin-actions.deleteStudent",
         "students/admin-actions.createAdmin",
@@ -173,11 +196,42 @@ describe("admin actions require an admin", () => {
     }
   });
 
+  it("keeps a teacher out of the platform actions, writing nothing (B-03)", async () => {
+    current.user = session({ role: "teacher" });
+    const actions = new Map(await load());
+    for (const name of ADMIN_ONLY) {
+      const action = actions.get(name);
+      expect(action, name).toBeDefined();
+      const error = await action?.({}).then(
+        () => null,
+        (e: unknown) => e,
+      );
+      expect(redirectPath(error), name).toBe("/admin");
+    }
+    expect(await tdb.select().from(auditLog)).toHaveLength(0);
+    expect(cache.updateTag).not.toHaveBeenCalled();
+  });
+
+  it("lets a teacher through to validation on teacher actions", async () => {
+    current.user = session({ role: "teacher" });
+    const actions = new Map(await load());
+    for (const name of [
+      "classes/actions.addMembers",
+      "classes/actions.setLessons",
+      "lessons/admin-actions.reorder",
+      "students/admin-actions.grantExtraAttempts",
+    ])
+      expect(await actions.get(name)?.({ id: "nope" }), name).toMatchObject({
+        ok: false,
+        code: "VALIDATION",
+      });
+  });
+
   it("lets a real admin through to validation", async () => {
     current.user = session({ role: "admin" });
     const actions = new Map(await load());
-    const approve = actions.get("students/admin-actions.approve");
-    expect(await approve?.({ ids: "nope" })).toMatchObject({
+    const grant = actions.get("students/admin-actions.grantExtraAttempts");
+    expect(await grant?.({ userId: "nope" })).toMatchObject({
       ok: false,
       code: "VALIDATION",
     });

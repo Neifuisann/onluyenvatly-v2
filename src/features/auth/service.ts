@@ -87,11 +87,16 @@ export async function loginWithPassword(
   });
 }
 
+/**
+ * Open registration (B-03): the account is active at once and signed in, so
+ * the student lands in the app with no class yet; a teacher adds them to
+ * their classes by phone number.
+ */
 export async function registerStudent(
   input: RegisterInput,
   meta: SessionMeta,
   now = new Date(),
-): Promise<Result<{ id: string }>> {
+): Promise<Result<{ id: string; token: string }>> {
   if (meta.ip) {
     const limit = await rateLimitAll(
       [[`register:ip:${meta.ip}`, ...AUTH_LIMITS.registerPerIp]],
@@ -112,25 +117,32 @@ export async function registerStudent(
   if (existing) return phoneTaken();
 
   const passwordHash = await hashPassword(input.password);
-  const [created] = await db
-    .insert(users)
-    .values({
-      role: "student",
-      status: "pending",
-      fullName: input.fullName,
-      phone: input.phone,
-      dateOfBirth: input.dateOfBirth,
-      grade: input.grade,
-      className: input.className,
-      passwordHash,
-      createdAt: now,
-      updatedAt: now,
-    })
-    .onConflictDoNothing({ target: users.phone })
-    .returning({ id: users.id });
-  // Lost a race with a parallel registration for the same phone.
+  const created = await db.transaction(async (tx) => {
+    const [row] = await tx
+      .insert(users)
+      .values({
+        role: "student",
+        status: "active",
+        fullName: input.fullName,
+        phone: input.phone,
+        dateOfBirth: input.dateOfBirth,
+        grade: input.grade,
+        className: input.className,
+        passwordHash,
+        approvedAt: now,
+        lastLoginAt: now,
+        createdAt: now,
+        updatedAt: now,
+      })
+      .onConflictDoNothing({ target: users.phone })
+      .returning({ id: users.id });
+    // Lost a race with a parallel registration for the same phone.
+    if (!row) return null;
+    const session = await createSession(row.id, meta, now, tx);
+    return { id: row.id, token: session.token };
+  });
   if (!created) return phoneTaken();
-  return ok({ id: created.id });
+  return ok(created);
 }
 
 /**

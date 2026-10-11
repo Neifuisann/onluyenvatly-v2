@@ -56,7 +56,11 @@ export function AppShell({
           aria-label={navLabel}
           className="-mx-1 flex-1 overflow-y-auto px-1"
         >
-          <SidebarNav variant={variant} badges={badges} />
+          <SidebarNav
+            variant={variant}
+            isAdmin={user.role === "admin"}
+            badges={badges}
+          />
         </nav>
         <div className="flex items-center gap-1 rounded-lg border border-border/70 bg-surface p-1.5 shadow-card dark:border-border">
           <div className="min-w-0 flex-1">
@@ -77,7 +81,11 @@ export function AppShell({
           </div>
           {variant === "admin" && (
             <nav aria-label={navLabel}>
-              <MobileNav variant="admin" badges={badges} />
+              <MobileNav
+                variant="admin"
+                isAdmin={user.role === "admin"}
+                badges={badges}
+              />
             </nav>
           )}
         </header>
@@ -112,7 +120,7 @@ export function AppShell({
           aria-label={navLabel}
           className="fixed inset-x-3 bottom-[max(0.75rem,env(safe-area-inset-bottom))] z-30 mx-auto max-w-md lg:hidden"
         >
-          <MobileNav variant="student" />
+          <MobileNav variant="student" isAdmin={false} />
         </nav>
       )}
     </div>

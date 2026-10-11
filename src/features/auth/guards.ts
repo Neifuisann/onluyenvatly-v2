@@ -1,6 +1,6 @@
 import "server-only";
 import { redirect } from "next/navigation";
-import { CHANGE_PASSWORD_PATH, homePath } from "./core/login-policy";
+import { CHANGE_PASSWORD_PATH, homePath, isStaff } from "./core/login-policy";
 import { getCurrentUser } from "./queries";
 import type { SessionUser } from "./session";
 
@@ -30,13 +30,27 @@ export async function requireUser(): Promise<SessionUser> {
   return user;
 }
 
-/** Student pages. Admins may view them too (05 §1). */
+/** Student pages. Teachers and admins may view them too (05 §1). */
 export async function requireStudent(): Promise<SessionUser> {
   return requireUser();
 }
 
-export async function requireAdmin(): Promise<SessionUser> {
+export type StaffUser = SessionUser & { role: "teacher" | "admin" };
+
+/**
+ * The teacher workspace (`/admin`, B-03): teachers and admins. What a
+ * teacher reaches inside it is further limited to their own lessons and
+ * classes by the queries and services (`lessons/ownership.ts`).
+ */
+export async function requireTeacher(): Promise<StaffUser> {
+  const user = await requireUser();
+  if (!isStaff(user.role)) redirect(homePath(user.role));
+  return user as StaffUser;
+}
+
+/** Platform administration: settings, teachers, audit, AI review. */
+export async function requireAdmin(): Promise<StaffUser> {
   const user = await requireUser();
   if (user.role !== "admin") redirect(homePath(user.role));
-  return user;
+  return user as StaffUser;
 }

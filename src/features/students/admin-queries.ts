@@ -12,17 +12,19 @@ import {
   type SQL,
   sql,
 } from "drizzle-orm";
-import { cacheLife, cacheTag } from "next/cache";
 import { db } from "@/db/client";
 import {
   attemptOverrides,
   attempts,
+  classes,
+  classMembers,
   lessons,
   ratings,
   sessions,
   users,
 } from "@/db/schema";
-import { tags } from "@/lib/cache-tags";
+import type { Role } from "@/features/auth/core/login-policy";
+import { ownedBy } from "@/features/lessons/ownership";
 import {
   BULK_LIMIT,
   PAGE_SIZE,
@@ -32,12 +34,31 @@ import {
 } from "./domain/list";
 
 /**
- * Student admin reads (S6-01). Per request and uncached: only the teacher
- * uses them and they must show a decision as soon as it is made. The one
- * exception is the pending count behind the nav badge.
+ * Student admin reads (S6-01). Per request and uncached: only staff use them
+ * and they must show a decision as soon as it is made. B-03: a teacher sees
+ * the students of their own classes and, of each, only what happened on
+ * their own lessons; an admin sees every student account (platform
+ * management: passwords, sessions, deletion).
  */
 
 const isStudent = eq(users.role, "student");
+
+export type Viewer = { id: string; role: Role };
+
+/** A student the viewer may see: any for an admin, their classes' for a teacher. */
+export function visibleTo(viewer: Viewer): SQL | undefined {
+  if (viewer.role === "admin") return undefined;
+  return sql`exists (select 1 from ${classMembers} inner join ${classes} on ${classes.id} = ${classMembers.classId} where ${classMembers.userId} = ${users.id} and ${classes.ownerId} = ${viewer.id})`;
+}
+
+/**
+ * Attempts the viewer may see: a teacher, those on their own lessons
+ * (personalized practice stays the student's); an admin, every attempt.
+ */
+const attemptsVisibleTo = (viewer: Viewer): SQL | undefined =>
+  viewer.role === "admin"
+    ? undefined
+    : sql`exists (select 1 from ${lessons} where ${lessons.id} = ${attempts.lessonId} and ${ownedBy(viewer)})`;
 
 /**
  * Students who asked to delete their account (S8-04, 06 §5), oldest request
@@ -67,50 +88,6 @@ export async function getDeletionRequests(): Promise<
   );
 }
 
-/** Students waiting for approval: the nav badge, on every admin page. */
-export async function getPendingCount(): Promise<number> {
-  "use cache";
-  cacheTag(tags.pendingStudents);
-  cacheLife("hours");
-  const [row] = await db
-    .select({ n: count() })
-    .from(users)
-    .where(and(isStudent, eq(users.status, "pending")));
-  return row?.n ?? 0;
-}
-
-export type PendingStudentRow = {
-  id: string;
-  fullName: string;
-  phone: string | null;
-  dateOfBirth: string | null;
-  grade: number | null;
-  className: string | null;
-  createdAt: Date;
-};
-
-/** Oldest first (filtered by `users_pending_idx`); one extra row tells "more". */
-export async function getPendingStudents(): Promise<{
-  rows: PendingStudentRow[];
-  hasMore: boolean;
-}> {
-  const rows = await db
-    .select({
-      id: users.id,
-      fullName: users.fullName,
-      phone: users.phone,
-      dateOfBirth: users.dateOfBirth,
-      grade: users.grade,
-      className: users.className,
-      createdAt: users.createdAt,
-    })
-    .from(users)
-    .where(and(isStudent, eq(users.status, "pending")))
-    .orderBy(asc(users.createdAt), asc(users.id))
-    .limit(BULK_LIMIT + 1);
-  return { rows: rows.slice(0, BULK_LIMIT), hasMore: rows.length > BULK_LIMIT };
-}
-
 export type StudentListRow = {
   id: string;
   fullName: string;
@@ -122,10 +99,11 @@ export type StudentListRow = {
   rating: number | null;
 };
 
-function listWhere(f: StudentListFilters): SQL | undefined {
+function listWhere(viewer: Viewer, f: StudentListFilters): SQL | undefined {
   const search = parseSearch(f.q);
   return and(
     isStudent,
+    visibleTo(viewer),
     f.status ? eq(users.status, f.status) : undefined,
     f.grade ? eq(users.grade, f.grade) : undefined,
     search?.kind === "phone"
@@ -142,13 +120,14 @@ function listWhere(f: StudentListFilters): SQL | undefined {
 }
 
 /**
- * The "Tất cả" tab. "Xem thêm" is cumulative: page n returns the first
+ * The student list. "Xem thêm" is cumulative: page n returns the first
  * n × 50 students, in accent-free name order.
  */
 export async function getStudents(
+  viewer: Viewer,
   f: StudentListFilters,
 ): Promise<{ rows: StudentListRow[]; total: number }> {
-  const where = listWhere(f);
+  const where = listWhere(viewer, f);
   const [rows, [total]] = await Promise.all([
     db
       .select({
@@ -190,10 +169,16 @@ export type StudentDetail = {
   attemptTotal: number;
 };
 
-/** A student's profile; null for a missing id or an admin's. */
+/**
+ * A student's profile; null for a missing id, a staff account, or (for a
+ * teacher) a student in none of their classes. `attemptTotal` counts the
+ * attempts the viewer may see.
+ */
 export async function getStudentDetail(
+  viewer: Viewer,
   id: string,
 ): Promise<StudentDetail | null> {
+  const mine = attemptsVisibleTo(viewer);
   const [row] = await db
     .select({
       id: users.id,
@@ -211,11 +196,11 @@ export async function getStudentDetail(
       rating: ratings.rating,
       peak: ratings.peak,
       ratedAttempts: ratings.ratedAttempts,
-      attemptTotal: sql<number>`(select count(*)::int from ${attempts} where ${attempts.userId} = ${users.id} and ${attempts.status} = 'submitted')`,
+      attemptTotal: sql<number>`(select count(*)::int from ${attempts} where ${attempts.userId} = ${users.id} and ${attempts.status} = 'submitted'${mine ? sql` and ${mine}` : sql``})`,
     })
     .from(users)
     .leftJoin(ratings, eq(ratings.userId, users.id))
-    .where(and(eq(users.id, id), isStudent))
+    .where(and(eq(users.id, id), isStudent, visibleTo(viewer)))
     .limit(1);
   if (!row) return null;
   const { rating, peak, ratedAttempts, ...profile } = row;
@@ -239,10 +224,15 @@ export type StudentAttemptRow = {
 
 export const STUDENT_ATTEMPTS_LIMIT = 50;
 
-/** Latest submitted attempts (`attempts_user_submitted_idx`). */
+/**
+ * Latest submitted attempts (`attempts_user_submitted_idx`) the viewer may
+ * see. Call after `getStudentDetail`.
+ */
 export async function getStudentAttempts(
+  viewer: Viewer,
   userId: string,
 ): Promise<StudentAttemptRow[]> {
+  const mine = attemptsVisibleTo(viewer);
   return db
     .select({
       id: attempts.id,
@@ -253,7 +243,9 @@ export async function getStudentAttempts(
     })
     .from(attempts)
     .leftJoin(lessons, eq(lessons.id, attempts.lessonId))
-    .where(and(eq(attempts.userId, userId), eq(attempts.status, "submitted")))
+    .where(
+      and(eq(attempts.userId, userId), eq(attempts.status, "submitted"), mine),
+    )
     .orderBy(desc(attempts.submittedAt))
     .limit(STUDENT_ATTEMPTS_LIMIT);
 }
@@ -289,7 +281,9 @@ export type StudentOverrideRow = {
   extraAttempts: number;
 };
 
+/** Extra tries on the viewer's own lessons. */
 export async function getStudentOverrides(
+  viewer: Viewer,
   userId: string,
 ): Promise<StudentOverrideRow[]> {
   return db
@@ -300,7 +294,7 @@ export async function getStudentOverrides(
     })
     .from(attemptOverrides)
     .innerJoin(lessons, eq(lessons.id, attemptOverrides.lessonId))
-    .where(eq(attemptOverrides.userId, userId))
+    .where(and(eq(attemptOverrides.userId, userId), ownedBy(viewer)))
     .orderBy(asc(lessons.title));
 }
 
@@ -311,8 +305,9 @@ export type GrantableLesson = {
   attempted: boolean;
 };
 
-/** Every lesson not deleted (~170), those the student took listed first. */
+/** The viewer's lessons not deleted, those the student took listed first. */
 export async function getGrantableLessons(
+  viewer: Viewer,
   userId: string,
 ): Promise<GrantableLesson[]> {
   return db
@@ -322,6 +317,6 @@ export async function getGrantableLessons(
       attempted: sql<boolean>`exists (select 1 from attempts a where a.user_id = ${userId} and a.lesson_id = lessons.id and a.status = 'submitted')`,
     })
     .from(lessons)
-    .where(isNull(lessons.deletedAt))
+    .where(and(ownedBy(viewer), isNull(lessons.deletedAt)))
     .orderBy(asc(lessons.sortOrder), asc(lessons.id));
 }
