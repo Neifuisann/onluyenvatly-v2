@@ -189,6 +189,7 @@ All env vars are validated at boot by `src/lib/env.ts` (Zod). The build fails if
 | `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` | server | Storage signed URLs only |
 | `NEXT_PUBLIC_MEDIA_BASE_URL` | public | Public bucket base URL |
 | `SESSION_PEPPER` | server | 32+ random bytes, used when hashing session tokens |
+| `SOLVER_API_URL`, `SOLVER_API_KEY`, `SOLVER_MODEL`, `SOLVER_EFFORT` | server | AI8 (09): OpenAI-compatible endpoint (OpenRouter or a gateway) that solves imported questions without a key. Optional: without the first three the button is hidden. Effort defaults to `high` |
 | `GEMINI_API_KEY`, `GEMINI_MODEL_TEXT`, `GEMINI_MODEL_IMPORT` | server | Models are configurable because free-tier models change; each may list comma-separated fallbacks (09 §2). Optional: without them AI answers `AI_UNAVAILABLE` |
 | `GEMINI_BASE_URL` | server, tests only | E2E Gemini stand-in (`tests/e2e/fake-gemini.ts`) |
 | `CRON_SECRET` | server | Vercel cron auth |

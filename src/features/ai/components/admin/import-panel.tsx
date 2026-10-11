@@ -1,6 +1,6 @@
 "use client";
 
-import { FileUp, RotateCcw, Sparkles } from "lucide-react";
+import { FileUp, RotateCcw, Sparkles, WandSparkles } from "lucide-react";
 import { useRouter } from "next/navigation";
 import {
   useDeferredValue,
@@ -25,7 +25,8 @@ import {
   type ImportContentType,
   importTitle,
 } from "../../domain/import";
-import { importCopy as t } from "../../messages";
+import { unansweredQuestions } from "../../domain/solve";
+import { solveCopy, importCopy as t } from "../../messages";
 import { ImportProgress } from "./import-progress";
 
 type Phase = "idle" | "uploading" | "reading" | "done" | "failed";
@@ -53,7 +54,14 @@ function contentTypeOf(file: File): ImportContentType | null {
  * teacher creates a draft and continues in the editor. A stream that stops
  * midway keeps what arrived (09 §6).
  */
-export function ImportPanel({ aiEnabled }: { aiEnabled: boolean }) {
+export function ImportPanel({
+  aiEnabled,
+  solverEnabled = false,
+}: {
+  aiEnabled: boolean;
+  /** AI solve (09 AI8) is configured: offer it for unanswered questions. */
+  solverEnabled?: boolean;
+}) {
   const router = useRouter();
   const fileRef = useRef<HTMLInputElement>(null);
   const [file, setFile] = useState<File | null>(null);
@@ -63,6 +71,9 @@ export function ImportPanel({ aiEnabled }: { aiEnabled: boolean }) {
   const outputRef = useRef<HTMLElement>(null);
   const [text, setText] = useState("");
   const [error, setError] = useState<string>();
+  const [path, setPath] = useState<string>();
+  const [solving, setSolving] = useState(false);
+  const [solved, setSolved] = useState<number[] | null>(null);
   const [creating, startCreate] = useTransition();
   const outputId = useId();
 
@@ -76,16 +87,18 @@ export function ImportPanel({ aiEnabled }: { aiEnabled: boolean }) {
       total: questions.length,
       errors: issues.filter((i) => i.severity === "error").length,
       figures: clean.split("\n").filter((l) => l.trim() === "[Hình]").length,
+      unanswered: unansweredQuestions(clean).length,
     };
   }, [deferred]);
 
-  const busy = phase === "uploading" || phase === "reading";
+  const reading = phase === "uploading" || phase === "reading";
+  const busy = reading || solving;
 
   // Follow the text as it streams in, so the newest question is in view.
   useEffect(() => {
     const box = outputRef.current;
-    if (busy && box && text) box.scrollTop = box.scrollHeight;
-  }, [busy, text]);
+    if (reading && box && text) box.scrollTop = box.scrollHeight;
+  }, [reading, text]);
 
   const pick = (f: File | null) => {
     setFile(f);
@@ -100,6 +113,8 @@ export function ImportPanel({ aiEnabled }: { aiEnabled: boolean }) {
     if (file.size > IMPORT_MAX_BYTES) return setError(t.tooBig);
     setError(undefined);
     setText("");
+    setSolved(null);
+    setPath(undefined);
     setStartedAt(Date.now());
     setPhase("uploading");
     const fail = (message: string) => {
@@ -118,6 +133,7 @@ export function ImportPanel({ aiEnabled }: { aiEnabled: boolean }) {
         body: file,
       }).catch(() => null);
       if (!put?.ok) return fail(t.uploadFailed);
+      setPath(ticket.data.path);
 
       setPhase("reading");
       const res = await fetch("/api/ai/import", {
@@ -151,6 +167,31 @@ export function ImportPanel({ aiEnabled }: { aiEnabled: boolean }) {
     }
   };
 
+  /** AI solve (09 AI8): fills the answers the exam did not have. */
+  const solve = async () => {
+    setError(undefined);
+    setSolving(true);
+    try {
+      const res = await fetch("/api/ai/solve", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ text: cleanImportText(text), path }),
+      });
+      const result = (await res.json().catch(() => null)) as
+        | { ok: true; data: { text: string; filled: number[] } }
+        | { ok: false; message: string }
+        | null;
+      if (!result) return setError(solveCopy.failed);
+      if (!result.ok) return setError(result.message);
+      setText(result.data.text);
+      setSolved(result.data.filled);
+    } catch {
+      setError(solveCopy.failed);
+    } finally {
+      setSolving(false);
+    }
+  };
+
   const create = () =>
     startCreate(async () => {
       const result = await createImportedLesson({
@@ -167,6 +208,8 @@ export function ImportPanel({ aiEnabled }: { aiEnabled: boolean }) {
     setError(undefined);
     setFile(null);
     setTitle("");
+    setPath(undefined);
+    setSolved(null);
     if (fileRef.current) fileRef.current.value = "";
   };
 
@@ -222,10 +265,15 @@ export function ImportPanel({ aiEnabled }: { aiEnabled: boolean }) {
         <div className="flex flex-wrap gap-2">
           <Button type="submit" disabled={busy || !aiEnabled}>
             <Sparkles aria-hidden />
-            {busy ? t.working : t.start}
+            {reading ? t.working : t.start}
           </Button>
           {(phase === "done" || phase === "failed") && (
-            <Button type="button" variant="secondary" onClick={reset}>
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={reset}
+              disabled={solving}
+            >
               <RotateCcw aria-hidden />
               {t.again}
             </Button>
@@ -246,7 +294,7 @@ export function ImportPanel({ aiEnabled }: { aiEnabled: boolean }) {
 
       {hasText && (
         <div className="flex flex-col gap-3">
-          {!busy && (
+          {!reading && (
             <div className="flex flex-col gap-1 rounded-lg border border-success/40 bg-success-soft/60 p-5 text-sm shadow-card sm:p-6">
               {phase === "done" && (
                 <h2 className="heading-section mb-1">{t.doneTitle}</h2>
@@ -261,11 +309,34 @@ export function ImportPanel({ aiEnabled }: { aiEnabled: boolean }) {
               </p>
               <p>{t.issues(parsed.errors)}</p>
               {parsed.figures > 0 && <p>{t.figures(parsed.figures)}</p>}
+              {solved && (
+                <p className="font-medium">{solveCopy.done(solved)}</p>
+              )}
+              {solved && parsed.unanswered > 0 && (
+                <p>{solveCopy.partial(parsed.unanswered)}</p>
+              )}
+              {solverEnabled && !solved && parsed.unanswered > 0 && (
+                <div className="mt-2 flex flex-col gap-2 rounded-md border border-border/70 bg-surface p-3">
+                  <p>{solveCopy.lead(parsed.unanswered)}</p>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    className="w-full sm:w-fit"
+                    onClick={() => void solve()}
+                    disabled={solving || creating}
+                  >
+                    <WandSparkles aria-hidden />
+                    {solving
+                      ? solveCopy.working
+                      : solveCopy.start(parsed.unanswered)}
+                  </Button>
+                </div>
+              )}
               <Button
                 type="button"
                 className="mt-2 w-full sm:w-fit"
                 onClick={create}
-                disabled={creating || parsed.total === 0}
+                disabled={creating || solving || parsed.total === 0}
               >
                 {creating ? t.creating : t.create}
               </Button>

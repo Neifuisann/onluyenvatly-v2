@@ -4,6 +4,8 @@ import {
   FAKE_GEMINI_MODEL,
   FAKE_GEMINI_PORT,
   FAKE_GEMINI_URL,
+  FAKE_SOLVER_KEY,
+  FAKE_SOLVER_MODEL,
 } from "./tests/e2e/fake-gemini";
 import {
   FAKE_STORAGE_KEY,
@@ -60,6 +62,9 @@ export default defineConfig({
           GEMINI_MODEL_TEXT: FAKE_GEMINI_MODEL,
           GEMINI_MODEL_IMPORT: FAKE_GEMINI_MODEL,
           GEMINI_BASE_URL: FAKE_GEMINI_URL,
+          SOLVER_API_URL: `${FAKE_GEMINI_URL}/v1`,
+          SOLVER_API_KEY: FAKE_SOLVER_KEY,
+          SOLVER_MODEL: FAKE_SOLVER_MODEL,
           AI_DAILY_BUDGET: "0",
         },
       },
