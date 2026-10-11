@@ -9,6 +9,7 @@ import {
   ChartColumn,
   Copy,
   GripVertical,
+  Link2,
   PenLine,
   Trash2,
 } from "lucide-react";
@@ -219,6 +220,18 @@ export function LessonTable({
     };
   }, [dragId]);
 
+  /** The public `/share/lessons/[id]` link (S8-03) for a student to open. */
+  const copyLink = async (row: LessonTableRow) => {
+    const url = new URL(`/share/lessons/${row.id}`, window.location.origin)
+      .href;
+    try {
+      await navigator.clipboard.writeText(url);
+      setMessage({ text: t.linkCopied(row.title), error: false });
+    } catch {
+      setMessage({ text: t.linkCopyFailed(url), error: true });
+    }
+  };
+
   const confirmDelete = (row: LessonTableRow) =>
     run(
       () => deleteLesson(row.id),
@@ -375,7 +388,16 @@ export function LessonTable({
                   <DateCell value={row.updated} />
                 </td>
                 <td className="py-1.5 pr-2 pl-1">
-                  <div className="flex justify-end">
+                  {/* Three icons a row on phones, so the table fits 360 px. */}
+                  <div className="ml-auto flex w-33 flex-wrap justify-end sm:w-auto sm:flex-nowrap">
+                    {row.status === "published" && (
+                      <IconButton
+                        label={`${t.copyLink}: ${row.title}`}
+                        onClick={() => copyLink(row)}
+                      >
+                        <Link2 aria-hidden />
+                      </IconButton>
+                    )}
                     <Link
                       href={`/admin/lessons/${row.id}/stats`}
                       prefetch={false}
