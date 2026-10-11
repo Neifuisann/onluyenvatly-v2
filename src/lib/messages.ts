@@ -112,6 +112,7 @@ export const shellCopy = {
   theory: "Lý thuyết",
   login: "Đăng nhập",
   register: "Đăng ký",
+  toHome: "Trang của tôi",
   themeToggle: "Đổi giao diện sáng/tối",
   themeLight: "Sáng",
   themeDark: "Tối",

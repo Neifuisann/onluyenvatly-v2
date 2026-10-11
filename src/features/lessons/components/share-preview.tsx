@@ -23,7 +23,14 @@ const LETTERS = "ABCDEFGH";
  * The public face of a lesson (S8-03): what it is, its first two questions
  * without answers (ADR-004: `toPublicQuestion` only), and a way in.
  */
-export function SharePreviewContent({ lesson }: { lesson: SharePreview }) {
+export function SharePreviewContent({
+  lesson,
+  signedIn,
+}: {
+  lesson: SharePreview;
+  /** A signed-in user goes straight to the lesson, no sign-up prompt. */
+  signedIn: boolean;
+}) {
   return (
     <article className="mx-auto max-w-3xl space-y-8 px-4 py-8 sm:px-6 sm:py-12">
       <header className="animate-rise space-y-4">
@@ -104,7 +111,9 @@ export function SharePreviewContent({ lesson }: { lesson: SharePreview }) {
           <h2 className="font-bold font-display text-2xl tracking-tight">
             {t.ctaTitle}
           </h2>
-          <p className="text-ink-muted">{t.ctaBody}</p>
+          <p className="text-ink-muted">
+            {signedIn ? t.ctaBodySignedIn : t.ctaBody}
+          </p>
         </div>
         <div className="flex flex-col gap-2">
           <Link
@@ -115,13 +124,15 @@ export function SharePreviewContent({ lesson }: { lesson: SharePreview }) {
             {t.ctaStart}
             <ArrowRight aria-hidden />
           </Link>
-          <Link
-            href="/register"
-            prefetch={false}
-            className="inline-flex min-h-11 items-center justify-center font-semibold text-ink-foreground text-sm underline-offset-4 hover:underline"
-          >
-            {t.ctaRegister}
-          </Link>
+          {!signedIn && (
+            <Link
+              href="/register"
+              prefetch={false}
+              className="inline-flex min-h-11 items-center justify-center font-semibold text-ink-foreground text-sm underline-offset-4 hover:underline"
+            >
+              {t.ctaRegister}
+            </Link>
+          )}
         </div>
       </aside>
     </article>

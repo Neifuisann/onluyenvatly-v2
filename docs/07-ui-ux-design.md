@@ -26,7 +26,7 @@ Admin (sidebar)
 ├─ Thi đấu (/admin/games → new → /host/[id], full screen)
 └─ Cài đặt  └─ Nhật ký
 ```
-Public: top bar with logo, "Lý thuyết", "Đăng nhập", and a primary "Đăng ký" button.
+Public: top bar with logo, "Lý thuyết", "Đăng nhập", and a primary "Đăng ký" button; a signed-in user sees "Trang của tôi" (their home: `/dashboard` or `/admin`) instead, in a Suspense hole so the rest of the bar stays static.
 
 ## 3. Visual language
 
