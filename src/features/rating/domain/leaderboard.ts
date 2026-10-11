@@ -35,6 +35,8 @@ export type LeaderboardEntry = {
   userId: string;
   fullName: string;
   className: string | null;
+  /** Profile picture; null when none or the student chose initials only. */
+  avatarPath: string | null;
   rating: number;
   /** Sum of rating changes in the last 7 days. */
   weekDelta: number;

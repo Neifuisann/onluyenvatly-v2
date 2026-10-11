@@ -19,6 +19,8 @@ export type SessionUser = {
   role: Role;
   fullName: string;
   grade: number | null;
+  /** Storage path of the profile picture (shell avatar), or null. */
+  avatarPath: string | null;
   mustChangePassword: boolean;
   sessionId: string;
 };
@@ -66,6 +68,7 @@ export async function validateSessionToken(
       status: users.status,
       fullName: users.fullName,
       grade: users.grade,
+      avatarPath: users.avatarPath,
       mustChangePassword: users.mustChangePassword,
     })
     .from(sessions)
@@ -94,6 +97,7 @@ export async function validateSessionToken(
     role: row.role,
     fullName: row.fullName,
     grade: row.grade,
+    avatarPath: row.avatarPath,
     mustChangePassword: row.mustChangePassword,
     sessionId,
   };

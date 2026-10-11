@@ -1,4 +1,5 @@
 import { Skeleton } from "@/components/ui/skeleton";
+import { mediaUrl } from "@/lib/media";
 import { cn } from "@/lib/utils";
 import {
   initials,
@@ -58,6 +59,7 @@ function Row({
   isMe: boolean;
 }) {
   const byWeek = period === "week";
+  const src = row.avatarPath ? mediaUrl(row.avatarPath) : null;
   return (
     <li
       className={cn(
@@ -80,12 +82,25 @@ function Row({
         <span className="sr-only">{t.rank(row.rank)}</span>
         <span aria-hidden>{row.rank}</span>
       </span>
-      <span
-        aria-hidden
-        className="flex size-9 items-center justify-center rounded-full bg-muted font-medium text-muted-foreground text-xs"
-      >
-        {initials(row.fullName)}
-      </span>
+      {src ? (
+        // biome-ignore lint/performance/noImgElement: ADR-006, pre-sized upload
+        <img
+          src={src}
+          alt=""
+          width={36}
+          height={36}
+          loading="lazy"
+          decoding="async"
+          className="size-9 rounded-full bg-muted object-cover"
+        />
+      ) : (
+        <span
+          aria-hidden
+          className="flex size-9 items-center justify-center rounded-full bg-muted font-medium text-muted-foreground text-xs"
+        >
+          {initials(row.fullName)}
+        </span>
+      )}
       <div className="min-w-0">
         <p className="truncate font-medium">{row.fullName}</p>
         {/* The "Bạn" chip sits here so it never truncates the name at 360 px. */}

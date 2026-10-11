@@ -81,6 +81,7 @@ export const catalogCopy = {
   searchLabel: "Tìm bài tập",
   searchPlaceholder: "Tìm bài tập, ví dụ: dao động",
   searchSubmit: "Tìm",
+  searchClear: "Xóa nội dung tìm kiếm",
   gradeGroup: "Lọc theo khối",
   gradeAll: "Tất cả",
   grade: (g: number) => `Lớp ${g}`,
@@ -97,6 +98,7 @@ export const catalogCopy = {
     title: "Theo tên (A–Z)",
   },
   apply: "Áp dụng",
+  done: "Xong",
   clear: "Xóa bộ lọc",
   showing: (shown: number, total: number) =>
     `Đang hiển thị ${shown}/${total} bài`,
@@ -169,6 +171,11 @@ export const adminLessonsCopy = {
   cancel: "Hủy",
   close: "Đóng",
   view: "Xem bài",
+  copyLink: "Sao chép liên kết cho học sinh",
+  linkCopied: (title: string) =>
+    `Đã sao chép liên kết “${title}”. Gửi cho học sinh qua Zalo, Messenger…`,
+  linkCopyFailed: (url: string) =>
+    `Không sao chép được, bạn tự sao chép liên kết này: ${url}`,
   staleList:
     "Danh sách bài đã thay đổi ở nơi khác. Tải lại trang rồi sắp xếp lại.",
   emptyTitle: "Chưa có bài tập nào",
@@ -588,6 +595,7 @@ export const shareCopy = {
   ctaTitle: "Làm trọn bài này",
   ctaBody:
     "Đăng nhập để làm bài, được chấm điểm ngay khi nộp và ôn lại câu sai.",
+  ctaBodySignedIn: "Làm bài ngay, được chấm điểm khi nộp và ôn lại câu sai.",
   ctaStart: "Làm bài",
   ctaRegister: "Tạo tài khoản",
   imageAlt: (title: string) => `Đề Vật lý: ${title}`,

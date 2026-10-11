@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { getCurrentUser } from "@/features/auth/queries";
 import { SharePreviewContent } from "@/features/lessons/components/share-preview";
 import { shareCopy } from "@/features/lessons/messages";
 import { sharePreviewFor } from "./preview";
@@ -9,9 +10,10 @@ import { sharePreviewFor } from "./preview";
 type Props = PageProps<"/share/lessons/[id]">;
 
 /**
- * `/share/lessons/[id]` (S8-03): public, no session read. The shell is
- * static and the lesson comes from the shared cache (`lesson:{id}` +
- * `lesson:{id}:public`, hours), so a shared link costs no per-visit query.
+ * `/share/lessons/[id]` (S8-03): public. The shell is static and the lesson
+ * comes from the shared cache (`lesson:{id}` + `lesson:{id}:public`, hours),
+ * so a shared link costs a visitor no query; only a signed-in user's session
+ * is looked up, so the call to action stops asking them to sign up.
  * No `generateStaticParams`: that would need the database at build time.
  */
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
@@ -38,7 +40,8 @@ export default function SharePage({ params }: Props) {
 async function Share({ params }: { params: Props["params"] }) {
   const lesson = await sharePreviewFor((await params).id);
   if (!lesson) notFound();
-  return <SharePreviewContent lesson={lesson} />;
+  const user = await getCurrentUser();
+  return <SharePreviewContent lesson={lesson} signedIn={user !== null} />;
 }
 
 function ShareSkeleton() {
