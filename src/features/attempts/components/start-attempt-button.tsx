@@ -7,7 +7,14 @@ import { startCopy as t } from "../messages";
 import { useOpenRunner } from "./use-open-runner";
 
 /** Posts to `/api/attempts/start`; works without JavaScript as a plain form. */
-export function StartAttemptButton({ lessonId }: { lessonId: number }) {
+export function StartAttemptButton({
+  lessonId,
+  game = false,
+}: {
+  lessonId: number;
+  /** A game lesson (B-11): "Chơi ngay". */
+  game?: boolean;
+}) {
   const { onSubmit, pending, error } = useOpenRunner(t.failed);
   return (
     <form
@@ -26,7 +33,7 @@ export function StartAttemptButton({ lessonId }: { lessonId: number }) {
         className="h-13 w-full text-base"
       >
         <Play aria-hidden className="fill-current" />
-        {pending ? t.starting : t.start}
+        {game ? (pending ? t.playing : t.play) : pending ? t.starting : t.start}
       </Button>
     </form>
   );

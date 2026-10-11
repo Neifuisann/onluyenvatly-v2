@@ -1,5 +1,5 @@
 import "server-only";
-import { and, desc, eq, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, sql } from "drizzle-orm";
 import { db } from "@/db/client";
 import { attempts, lessons, ratingEvents, users } from "@/db/schema";
 import {
@@ -86,7 +86,7 @@ export async function getAccuracy(userId: string): Promise<AccuracyRow[]> {
       from attempts a
       join lessons l on l.id = a.lesson_id
       where a.user_id = ${userId} and a.status = 'submitted'
-        and a.mode = 'test' and a.earned is not null
+        and a.mode in ('test', 'game') and a.earned is not null
       order by a.submitted_at desc
       limit ${ACCURACY_WINDOW}
     ), marks as (
@@ -147,7 +147,8 @@ export async function getMyHistory(userId: string, page: number) {
       and(
         eq(attempts.userId, userId),
         eq(attempts.status, "submitted"),
-        eq(attempts.mode, "test"),
+        // A game (B-11) is a test played another way.
+        inArray(attempts.mode, ["test", "game"]),
       ),
     )
     .orderBy(desc(attempts.submittedAt), desc(attempts.id))

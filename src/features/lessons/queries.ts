@@ -12,7 +12,7 @@ import {
 } from "./domain/public-question";
 import { previewQuestions, sharesQuestions } from "./domain/share";
 import { liveQuestions, type TypeCounts } from "./domain/summary";
-import type { LessonConfig, Question } from "./schema";
+import type { GameConfig, LessonConfig, Question } from "./schema";
 
 /** What a lesson card needs, and nothing else (no questions, no config). */
 export type CatalogItem = {
@@ -173,6 +173,8 @@ export async function getLessonOverview(
         LessonConfig["revealAnswers"]
       >`coalesce(${lessons.config}->>'revealAnswers', 'after_submit')`,
       startsAt: sql<string | null>`${lessons.config}->>'startsAt'`,
+      // JSON null and a missing key both read as SQL null.
+      game: sql<GameConfig | null>`nullif(${lessons.config}->'game', 'null'::jsonb)`,
     })
     .from(lessons)
     .where(

@@ -12,6 +12,7 @@ import {
 } from "../../../lib/subjects.ts";
 import { settingsCopy as M } from "../messages.ts";
 import {
+  GAME_SECONDS,
   type LessonConfig,
   LessonConfigSchema,
   QUESTION_TYPES,
@@ -20,6 +21,8 @@ import {
 import type { TypeCounts } from "./summary.ts";
 
 export type PoolMode = "off" | "size" | "byType";
+/** A test, or played as a game (B-11). */
+export type LessonFormat = "test" | "zombie";
 
 /** Everything as the inputs hold it: text for numbers, "" for "none". */
 export type SettingsForm = {
@@ -49,6 +52,10 @@ export type SettingsForm = {
   revealAnswers: LessonConfig["revealAnswers"];
   countsForRating: boolean;
   examGuard: boolean;
+  format: LessonFormat;
+  gameLives: "1" | "3";
+  /** Seconds per question; "" = no clock. */
+  gameSeconds: string;
 };
 
 export type SettingsField =
@@ -135,8 +142,16 @@ export function toSettingsForm(
     revealAnswers: config.revealAnswers,
     countsForRating: config.countsForRating,
     examGuard: config.examGuard,
+    format: config.game ? "zombie" : "test",
+    gameLives: config.game?.lives === 1 ? "1" : "3",
+    gameSeconds: config.game
+      ? num(config.game.secondsPerQuestion)
+      : String(DEFAULT_GAME_SECONDS),
   };
 }
+
+/** What a new game gives each question. */
+export const DEFAULT_GAME_SECONDS = 30;
 
 /** "0,25" or "0.25" → 0.25; "" → undefined; anything else → NaN. */
 function parseNumber(raw: string): number | undefined {
@@ -178,7 +193,26 @@ export function fromSettingsForm(
   if (tags.length > 20 || tags.some((t) => t.length > 50))
     errors.tags = M.errors.tags;
 
-  const minutes = parseNumber(f.timeLimitMin);
+  // A game shows each key at once: no clock, schedule or guard (B-11).
+  const game = f.format === "zombie";
+  let gameConfig: LessonConfig["game"] = null;
+  if (game) {
+    const seconds = parseNumber(f.gameSeconds) ?? null;
+    if (
+      seconds !== null &&
+      !(GAME_SECONDS as readonly number[]).includes(seconds)
+    )
+      errors.gameSeconds = M.errors.invalid;
+    if (available && available.mcq + available.tf === 0)
+      errors.format = M.errors.gameNoQuestions;
+    gameConfig = {
+      kind: "zombie",
+      lives: f.gameLives === "1" ? 1 : 3,
+      secondsPerQuestion: seconds,
+    };
+  }
+
+  const minutes = game ? undefined : parseNumber(f.timeLimitMin);
   // Decimals are fine: v1 limits were set to the second (45,5 phút).
   if (minutes !== undefined && !(minutes >= 1 && minutes <= 360))
     errors.timeLimitMin = M.errors.timeLimit;
@@ -190,8 +224,10 @@ export function fromSettingsForm(
   )
     errors.maxAttempts = M.errors.maxAttempts;
 
-  const startsAt = f.startsAt.trim() ? vnLocalToIso(f.startsAt) : null;
-  if (f.startsAt.trim() && !startsAt) errors.startsAt = M.errors.startsAt;
+  const startsRaw = game ? "" : f.startsAt.trim();
+  const startsAt = startsRaw ? vnLocalToIso(startsRaw) : null;
+  if (startsRaw && !startsAt) errors.startsAt = M.errors.startsAt;
+  const revealAnswers = game ? "after_submit" : f.revealAnswers;
 
   // Pool: one of "total" or "per type", checked against the content.
   const total = available
@@ -251,8 +287,8 @@ export function fromSettingsForm(
   }
 
   // A shared exam window needs a start and a length (04 §3.2).
-  if (f.revealAnswers === "after_deadline") {
-    if (!f.startsAt.trim()) errors.startsAt ??= M.errors.revealNeedsStart;
+  if (revealAnswers === "after_deadline") {
+    if (!startsRaw) errors.startsAt ??= M.errors.revealNeedsStart;
     if (minutes === undefined)
       errors.timeLimitMin ??= M.errors.revealNeedsLimit;
   }
@@ -267,10 +303,11 @@ export function fromSettingsForm(
     points,
     maxAttempts: maxAttempts ?? null,
     startsAt,
-    revealAnswers: f.revealAnswers,
+    revealAnswers,
     countsForRating: f.countsForRating,
-    examGuard: f.examGuard,
+    examGuard: game ? false : f.examGuard,
     tfScoring: f.tfScoring,
+    game: gameConfig,
   });
   // The checks above cover the schema; this only guards against drift.
   if (!config.success) return { ok: false, errors: { form: M.errors.invalid } };
@@ -317,4 +354,7 @@ export const SettingsFormSchema = z.strictObject({
   revealAnswers: z.enum(["after_submit", "after_deadline", "never"]),
   countsForRating: z.boolean(),
   examGuard: z.boolean(),
+  format: z.enum(["test", "zombie"]),
+  gameLives: z.enum(["1", "3"]),
+  gameSeconds: field(20),
 }) satisfies z.ZodType<SettingsForm>;

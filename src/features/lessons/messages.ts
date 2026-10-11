@@ -45,6 +45,13 @@ export const overviewCopy = {
   practice: "Không tính điểm xếp hạng",
   guard: "Chế độ thi: ghi nhận khi rời khỏi bài làm.",
   unpublished: "Bài tập chưa xuất bản",
+  game: "Trò chơi Bắn zombie",
+  perQuestion: (s: number) => `${s} giây/câu`,
+  gameRule: "Bắn zombie cầm đáp án đúng để qua từng đợt.",
+  gameLives: (n: number) =>
+    n === 1
+      ? "1 mạng: bắn nhầm một lần là thua."
+      : `${n} mạng: mỗi lần bắn nhầm hoặc để zombie chạm rào mất một mạng.`,
   notFoundTitle: "Không tìm thấy bài tập",
   notFoundBody:
     "Bài tập không tồn tại hoặc chưa được xuất bản. Bạn chọn bài khác nhé.",
@@ -339,6 +346,30 @@ export const settingsCopy = {
   chapterHint: "Ví dụ: Dao động cơ.",
   tags: "Thẻ",
   tagsHint: "Cách nhau bằng dấu phẩy, ví dụ: giữa kì, ôn tập.",
+  format: "Hình thức",
+  formats: {
+    test: "Bài kiểm tra",
+    zombie: "Trò chơi Bắn zombie",
+  },
+  formatHints: {
+    test: "Học sinh làm như đề thi, nộp bài rồi xem kết quả.",
+    zombie:
+      "Mỗi câu là một đợt zombie cầm đáp án. Bắn trúng đáp án đúng để qua đợt, bắn nhầm mất một mạng. Kết quả lưu như một lần làm bài.",
+  },
+  gameLives: "Số mạng",
+  gameLivesOptions: {
+    "1": "Một mạng: bắn nhầm một lần là thua",
+    "3": "Ba mạng: nhầm đến lần thứ ba thì thua",
+  },
+  gameSeconds: "Thời gian mỗi câu",
+  gameSecondsNone: "Không giới hạn (zombie đứng chờ)",
+  gameSecondsOption: (s: number) => `${s} giây`,
+  gameSecondsHint: "Hết giờ thì zombie chạm hàng rào, học sinh mất một mạng.",
+  gamePlayable: (mcq: number, tf: number) =>
+    `Trò chơi dùng ${mcq} câu trắc nghiệm và ${tf} câu đúng/sai (mỗi ý là một đợt).`,
+  gameSkipsShort: (n: number) => `${n} câu trả lời ngắn được bỏ qua khi chơi.`,
+  gameLocked:
+    "Trò chơi hiện đáp án ngay sau mỗi đợt, nên giới hạn thời gian làm bài, giờ mở bài, chế độ thi và cách công bố đáp án không áp dụng.",
   timing: "Thời gian và lượt làm",
   timeLimit: "Thời gian làm bài (phút)",
   timeLimitHint: "Để trống nếu không giới hạn.",
@@ -409,6 +440,7 @@ export const settingsCopy = {
     revealNeedsStart: "Công bố đáp án sau giờ làm bài chung cần có giờ mở bài.",
     revealNeedsLimit:
       "Công bố đáp án sau giờ làm bài chung cần có thời gian làm bài.",
+    gameNoQuestions: "Trò chơi cần ít nhất một câu trắc nghiệm hoặc đúng/sai.",
     invalid: "Cài đặt không hợp lệ.",
   },
 } as const;

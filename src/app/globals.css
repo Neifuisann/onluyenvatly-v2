@@ -84,6 +84,22 @@
   --racer-6: oklch(0.78 0.11 295);
   --racer-7: oklch(0.8 0.11 345);
 
+  /*
+   * "Bắn zombie" (B-11): a risograph poster, set once for both themes like
+   * the race. Red, ink, bone cream, slate violet; zombie blue-grey.
+   */
+  --zb-red: oklch(0.58 0.215 26);
+  --zb-red-deep: oklch(0.42 0.16 24);
+  --zb-ink: oklch(0.2 0.015 290);
+  --zb-cream: oklch(0.945 0.022 85);
+  --zb-paper: oklch(0.9 0.035 80);
+  --zb-slate: oklch(0.42 0.04 290);
+  --zb-slate-deep: oklch(0.31 0.035 290);
+  --zb-skin: oklch(0.76 0.03 245);
+  --zb-skin-shade: oklch(0.62 0.035 250);
+  --zb-pink: oklch(0.78 0.08 15);
+  --zb-go: oklch(0.72 0.17 145);
+
   --radius: 12px;
   --shadow-card:
     0 1px 2px oklch(0.235 0.045 262 / 0.05),
@@ -199,6 +215,17 @@
   --color-racer-5: var(--racer-5);
   --color-racer-6: var(--racer-6);
   --color-racer-7: var(--racer-7);
+  --color-zb-red: var(--zb-red);
+  --color-zb-red-deep: var(--zb-red-deep);
+  --color-zb-ink: var(--zb-ink);
+  --color-zb-cream: var(--zb-cream);
+  --color-zb-paper: var(--zb-paper);
+  --color-zb-slate: var(--zb-slate);
+  --color-zb-slate-deep: var(--zb-slate-deep);
+  --color-zb-skin: var(--zb-skin);
+  --color-zb-skin-shade: var(--zb-skin-shade);
+  --color-zb-pink: var(--zb-pink);
+  --color-zb-go: var(--zb-go);
 
   /* 07 §3.2: Inter for reading, Bricolage Grotesque for headings and big numbers. */
   --font-sans: var(--font-inter), system-ui, sans-serif;

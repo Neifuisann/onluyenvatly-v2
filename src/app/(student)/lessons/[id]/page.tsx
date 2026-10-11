@@ -41,6 +41,7 @@ export default async function LessonPage({
               maxAttempts: lesson.maxAttempts,
             }}
             unlimited={owner}
+            game={lesson.game !== null}
           />
         </Suspense>
       }
