@@ -388,7 +388,8 @@ export function LessonTable({
                   <DateCell value={row.updated} />
                 </td>
                 <td className="py-1.5 pr-2 pl-1">
-                  <div className="flex justify-end">
+                  {/* Three icons a row on phones, so the table fits 360 px. */}
+                  <div className="ml-auto flex w-33 flex-wrap justify-end sm:w-auto sm:flex-nowrap">
                     {row.status === "published" && (
                       <IconButton
                         label={`${t.copyLink}: ${row.title}`}
