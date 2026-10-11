@@ -464,11 +464,15 @@ export function LessonTable({
         </table>
       </div>
 
-      <ShareLessonDialog
-        lesson={sharing}
-        classes={shareClasses}
-        onClose={() => setSharing(null)}
-      />
+      {/* Mounted only while open: a fresh form each time, and no second
+          `<output>` in the page while closed. */}
+      {sharing && (
+        <ShareLessonDialog
+          lesson={sharing}
+          classes={shareClasses}
+          onClose={() => setSharing(null)}
+        />
+      )}
 
       <Dialog
         open={confirm !== null}

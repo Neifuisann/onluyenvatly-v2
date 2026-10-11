@@ -27,7 +27,7 @@ export function ShareLessonDialog({
   classes,
   onClose,
 }: {
-  lesson: { id: number; title: string } | null;
+  lesson: { id: number; title: string };
   classes: readonly ShareClass[];
   onClose: () => void;
 }) {
@@ -38,15 +38,8 @@ export function ShareLessonDialog({
   const [message, setMessage] = useState<{ text: string; error: boolean }>();
   const [pending, startTransition] = useTransition();
 
-  const close = () => {
-    setUrl("");
-    setMessage(undefined);
-    onClose();
-  };
-
   const share = () =>
     startTransition(async () => {
-      if (!lesson) return;
       const result = await shareLesson({ lessonId: lesson.id, classId });
       if (!result.ok) {
         setMessage({ text: result.message, error: true });
@@ -68,14 +61,14 @@ export function ShareLessonDialog({
 
   return (
     <Dialog
-      open={lesson !== null}
-      onClose={close}
+      open
+      onClose={onClose}
       title={t.shareTitle}
       closeLabel={t.close}
       footer={
         classes.length > 0 ? (
           <>
-            <Button variant="secondary" onClick={close}>
+            <Button variant="secondary" onClick={onClose}>
               {t.close}
             </Button>
             <Button onClick={share} disabled={pending || !classId}>
@@ -87,7 +80,7 @@ export function ShareLessonDialog({
       }
     >
       <div className="grid gap-4">
-        {lesson && <p className="font-semibold">{lesson.title}</p>}
+        <p className="font-semibold">{lesson.title}</p>
         {classes.length === 0 ? (
           <>
             <p className="text-muted-foreground">{t.shareNoClasses}</p>
