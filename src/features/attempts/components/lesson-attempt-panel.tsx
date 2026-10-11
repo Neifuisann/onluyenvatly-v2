@@ -24,12 +24,15 @@ export async function LessonAttemptPanel({
   lessonId,
   schedule,
   unlimited,
+  game = false,
 }: {
   userId: string;
   lessonId: number;
   schedule: Schedule & { maxAttempts: number | null };
   /** Admins are not limited (06 §2). */
   unlimited: boolean;
+  /** Played as a game (B-11). */
+  game?: boolean;
 }) {
   const now = new Date();
   const close = revealAt(schedule);
@@ -105,7 +108,9 @@ export async function LessonAttemptPanel({
             <p className="font-medium text-sm">{t.timeUp}</p>
           ) : (
             <div className="space-y-1 text-sm">
-              <p className="font-medium">{t.inProgress}</p>
+              <p className="font-medium">
+                {game ? t.gameInProgress : t.inProgress}
+              </p>
               {open.deadlineAt && (
                 <p className="text-muted-foreground">
                   {t.timeRunning(formatDateTime(open.deadlineAt))}
@@ -121,12 +126,12 @@ export async function LessonAttemptPanel({
             })}
             prefetch={false}
           >
-            {timeUp ? t.viewResult : t.continue}
+            {timeUp ? t.viewResult : game ? t.continueGame : t.continue}
             <ArrowRight aria-hidden />
           </Link>
         </div>
       ) : check.ok ? (
-        <StartAttemptButton lessonId={lessonId} />
+        <StartAttemptButton lessonId={lessonId} game={game} />
       ) : (
         <div className="flex items-center gap-3 rounded-md bg-muted p-4">
           <Mascot

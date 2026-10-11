@@ -300,6 +300,7 @@ export const attemptMode = pgEnum("attempt_mode", [
   "test",
   "practice",
   "review",
+  "game",
 ]);
 export const attemptStatus = pgEnum("attempt_status", [
   "in_progress",
@@ -315,6 +316,31 @@ export const attemptStatus = pgEnum("attempt_status", [
 export type AttemptItem = { q: string; v?: number; o?: number[]; p: number };
 /** mcq: displayed letter "A"–"F"; tf: one boolean or null per statement; short: text. */
 export type AttemptAnswer = string | (boolean | null)[] | null;
+/**
+ * One wave of a zombie game (B-11): an mcq item, or one statement (`p`) of a
+ * tf item. `n` lanes, the lanes shot in order, how it ended, and its key
+ * (`k`) once it has ended, never before.
+ */
+export type ZombieWave = {
+  i: number;
+  p?: number;
+  n: number;
+  s: number[];
+  e?: "hit" | "miss" | "timeout";
+  k?: number;
+};
+/** A game attempt's state (B-11), written only by the server. */
+export type ZombieState = {
+  lives: 1 | 3;
+  /** Seconds per wave; null = no clock. */
+  sec: number | null;
+  /** Epoch ms when the current wave's clock starts; null before the start. */
+  at: number | null;
+  wave: number;
+  misses: number;
+  over: "won" | "lost" | null;
+  waves: ZombieWave[];
+};
 /** Seconds since start + kind (S4-04). Capped at 200. */
 export type GuardEvent = { t: number; k: string };
 
@@ -353,6 +379,8 @@ export const attempts = pgTable(
      * the submit keep the checked answer.
      */
     checked: smallint("checked").array().notNull().default(sql`'{}'`),
+    /** Game attempts only (B-11); answers are the first shot of each wave. */
+    game: jsonb("game").$type<ZombieState>(),
     guardEvents: jsonb("guard_events")
       .$type<GuardEvent[]>()
       .notNull()

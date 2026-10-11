@@ -232,7 +232,7 @@ export type StudentAttemptRow = {
   id: string;
   /** null for personalized practice. */
   lessonTitle: string | null;
-  mode: "test" | "practice" | "review";
+  mode: "test" | "practice" | "review" | "game";
   score10: number | null;
   submittedAt: Date | null;
 };

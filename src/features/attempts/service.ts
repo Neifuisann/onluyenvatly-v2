@@ -1,6 +1,6 @@
 import "server-only";
 import { randomInt, randomUUID } from "node:crypto";
-import { and, eq, gte, isNull, or, type SQL, sql } from "drizzle-orm";
+import { and, eq, gte, isNull, ne, or, type SQL, sql } from "drizzle-orm";
 import { db } from "@/db/client";
 import {
   attemptOverrides,
@@ -29,13 +29,18 @@ import {
   REVIEW_TF_SCORING,
 } from "@/features/review/domain/practice";
 import { type MistakeTarget, recordMistakes } from "@/features/review/service";
+import {
+  initialState,
+  isPlayable,
+  shapeOf,
+} from "@/features/zombie/domain/engine";
 import type { ErrorCode } from "@/lib/messages";
 import { FOREIGN_KEY_VIOLATION, pgErrorCode } from "@/lib/pg-error";
 import { rateLimit } from "@/lib/rate-limit";
 import { err, ok, type Result } from "@/lib/result";
 import { itemQuestions, itemSources } from "./content";
 import { recordAttemptCount } from "./counter-service";
-import { buildItems } from "./domain/build-items";
+import { buildItems, questionsForItems } from "./domain/build-items";
 import {
   DEADLINE_GRACE_MS,
   isPastGrace,
@@ -133,11 +138,15 @@ async function startOnce(
     if (!check.ok) return err(check.code);
   }
 
-  const questions = await getLessonWithAnswers(lessonId, lesson.versionId);
+  const { game } = config.data;
+  const all = await getLessonWithAnswers(lessonId, lesson.versionId);
+  // A game plays mcq and tf only (B-11); short answers are left out.
+  const questions = game ? all?.filter(isPlayable) : all;
   const items = questions
     ? buildItems(questions, config.data, createRng(seed))
     : [];
   if (items.length === 0) return err("NOT_FOUND");
+  const byId = new Map(questions?.map((q) => [q.id, q]));
 
   const [created] = await db
     .insert(attempts)
@@ -145,9 +154,15 @@ async function startOnce(
       userId: user.id,
       lessonId,
       lessonVersionId: lesson.versionId,
-      mode: "test",
+      mode: game ? "game" : "test",
       items,
       answers: items.map(() => null),
+      ...(game && {
+        game: initialState(
+          game,
+          questionsForItems(items, byId).flatMap((q) => shapeOf(q) ?? []),
+        ),
+      }),
       maxScore: items.reduce((s, i) => s + toCents(i.p), 0) / 100,
       startedAt: now,
       deadlineAt: attemptDeadline(config.data, now),
@@ -188,6 +203,8 @@ export async function saveProgress(
         eq(attempts.id, attemptId),
         eq(attempts.userId, userId),
         eq(attempts.status, "in_progress"),
+        // A game writes its answers with each shot (B-11), never by autosave.
+        ne(attempts.mode, "game"),
         or(isNull(attempts.deadlineAt), gte(attempts.deadlineAt, graceCutoff)),
         sql`jsonb_array_length(${attempts.items}) = ${input.answers.length}`,
       ),
@@ -249,8 +266,10 @@ export async function submitAttempt(
     countsForRating = true,
     timeLimitSec = null,
   } = config.success ? config.data : {};
-  // Practice and review never move the rating (01 Q9).
-  const rated = pre.mode === "test" && lessonId !== null && countsForRating;
+  // Practice and review never move the rating (01 Q9); a game is a test.
+  const game = pre.mode === "game";
+  const rated =
+    (pre.mode === "test" || game) && lessonId !== null && countsForRating;
 
   const outcome = await db.transaction(async (tx) => {
     const [a] = await tx
@@ -282,13 +301,15 @@ export async function submitAttempt(
       });
 
     const late = isPastGrace(a.deadlineAt, now);
-    if (!late && input.answers.length !== a.items.length)
+    // A game's answers are the first shots the server stored (B-11).
+    const stored = late || game;
+    if (!stored && input.answers.length !== a.items.length)
       return err("VALIDATION");
 
-    const answers = late
+    const answers = stored
       ? a.answers
       : lockChecked(input.answers, a.answers, a.checked);
-    const flagged = late
+    const flagged = stored
       ? a.flagged
       : cleanFlags(input.flagged, a.items.length);
     const result = grade(questions, a.items, answers, tfScoring);
@@ -444,7 +465,7 @@ export async function checkPracticeAnswer(
     .where(eq(attempts.id, input.attemptId))
     .limit(1);
   if (!pre || pre.userId !== userId) return err("NOT_FOUND");
-  if (pre.mode === "test") return err("FORBIDDEN");
+  if (pre.mode === "test" || pre.mode === "game") return err("FORBIDDEN");
   if (pre.status !== "in_progress") return err("ATTEMPT_CLOSED");
   const item = pre.items[input.index];
   if (!item) return err("VALIDATION");

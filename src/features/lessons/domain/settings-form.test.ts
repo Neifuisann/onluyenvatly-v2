@@ -67,6 +67,7 @@ describe("round trip", () => {
       countsForRating: false,
       examGuard: true,
       tfScoring: "proportional",
+      game: null,
     };
     const f = toSettingsForm({ ...meta, description: "Mô tả" }, config);
     expect(f.timeLimitMin).toBe("45,5");
@@ -199,6 +200,64 @@ describe("blocked with messages", () => {
         startsAt: "2026-10-20T07:30:00+07:00",
         timeLimitSec: 2700,
       },
+    });
+  });
+});
+
+describe("game format (B-11)", () => {
+  const zombie = { kind: "zombie", lives: 3, secondsPerQuestion: 30 } as const;
+
+  it("round-trips a game and defaults a test to 3 lives, 30 s", () => {
+    expect(base).toMatchObject({
+      format: "test",
+      gameLives: "3",
+      gameSeconds: "30",
+    });
+    const config: LessonConfig = {
+      ...DEFAULT_LESSON_CONFIG,
+      game: { ...zombie, lives: 1, secondsPerQuestion: null },
+    };
+    const f = toSettingsForm(meta, config);
+    expect(f).toMatchObject({
+      format: "zombie",
+      gameLives: "1",
+      gameSeconds: "",
+    });
+    expect(fromSettingsForm(f, available)).toEqual({ ok: true, meta, config });
+  });
+
+  it("drops what a game can't have", () => {
+    expect(
+      fromSettingsForm(
+        form({
+          format: "zombie",
+          timeLimitMin: "45",
+          startsAt: "2026-10-20T07:30",
+          revealAnswers: "after_deadline",
+          examGuard: true,
+        }),
+        available,
+      ),
+    ).toMatchObject({
+      ok: true,
+      config: {
+        timeLimitSec: null,
+        startsAt: null,
+        revealAnswers: "after_submit",
+        examGuard: false,
+        game: zombie,
+      },
+    });
+  });
+
+  it("needs an mcq or tf question and a known clock", () => {
+    expect(
+      errorsOf(form({ format: "zombie" }), { mcq: 0, tf: 0, short: 5 }),
+    ).toEqual({
+      format: "Trò chơi cần ít nhất một câu trắc nghiệm hoặc đúng/sai.",
+    });
+    expect(errorsOf(form({ format: "zombie", gameSeconds: "17" }))).toEqual({
+      gameSeconds: "Cài đặt không hợp lệ.",
     });
   });
 });

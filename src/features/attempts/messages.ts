@@ -169,6 +169,10 @@ export const startCopy = {
   starting: "Đang chuẩn bị đề…",
   failed: "Chưa mở được bài. Kiểm tra mạng rồi thử lại.",
   continue: "Tiếp tục làm bài",
+  play: "Chơi ngay",
+  playing: "Đang gọi zombie…",
+  continueGame: "Chơi tiếp",
+  gameInProgress: "Bạn đang chơi dở. Zombie vẫn chờ ở đợt bạn dừng.",
   inProgress: "Bạn đang làm dở bài này.",
   timeRunning: (when: string) =>
     `Thời gian vẫn đang chạy, hết giờ lúc ${when}. Hết giờ, bài sẽ tự nộp với các câu đã lưu.`,

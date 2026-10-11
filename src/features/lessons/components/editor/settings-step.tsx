@@ -4,6 +4,7 @@ import {
   Calculator,
   Clock,
   FileText,
+  Gamepad2,
   type LucideIcon,
   Send,
   Shuffle,
@@ -17,13 +18,14 @@ import { lessonHelpersCopy } from "@/features/ai/messages";
 import { cn } from "@/lib/utils";
 import { generateDescription, suggestTags } from "../../admin-actions";
 import type {
+  LessonFormat,
   PoolMode,
   SettingsField,
   SettingsForm,
 } from "../../domain/settings-form";
 import type { TypeCounts } from "../../domain/summary";
 import { settingsCopy as t } from "../../messages";
-import { QUESTION_TYPES } from "../../schema";
+import { GAME_SECONDS, QUESTION_TYPES } from "../../schema";
 import { AiHelper } from "./ai-helper";
 
 type Patch = (patch: Partial<SettingsForm>) => void;
@@ -56,6 +58,7 @@ export function SettingsStep({
   sourceText: string;
 }) {
   const total = QUESTION_TYPES.reduce((s, q) => s + available[q], 0);
+  const game = form.format === "zombie";
   const text = (
     field: Exclude<
       SettingsField,
@@ -221,24 +224,86 @@ export function SettingsStep({
         />
       </Section>
 
+      <Section id="settings-format" icon={Gamepad2} title={t.format}>
+        <Choice
+          name="format"
+          legend={t.format}
+          hideLegend
+          value={form.format}
+          options={(["test", "zombie"] as LessonFormat[]).map((m) => [
+            m,
+            t.formats[m],
+            t.formatHints[m],
+          ])}
+          onChange={(format) => onChange({ format })}
+          error={errorOf("format")}
+        />
+        {game && (
+          <>
+            <Choice
+              name="gameLives"
+              legend={t.gameLives}
+              value={form.gameLives}
+              options={(["3", "1"] as const).map((m) => [
+                m,
+                t.gameLivesOptions[m],
+              ])}
+              onChange={(gameLives) => onChange({ gameLives })}
+            />
+            <FormField
+              id="settings-gameSeconds"
+              label={t.gameSeconds}
+              hint={t.gameSecondsHint}
+              error={errorOf("gameSeconds")}
+            >
+              <Select
+                {...fieldA11y(
+                  "settings-gameSeconds",
+                  errorOf("gameSeconds"),
+                  t.gameSecondsHint,
+                )}
+                name="gameSeconds"
+                value={form.gameSeconds}
+                onChange={(e) => onChange({ gameSeconds: e.target.value })}
+                className="sm:max-w-xs"
+              >
+                {GAME_SECONDS.map((s) => (
+                  <option key={s} value={String(s)}>
+                    {t.gameSecondsOption(s)}
+                  </option>
+                ))}
+                <option value="">{t.gameSecondsNone}</option>
+              </Select>
+            </FormField>
+            <p className="text-muted-foreground text-sm">
+              {t.gamePlayable(available.mcq, available.tf)}
+              {available.short > 0 && ` ${t.gameSkipsShort(available.short)}`}
+            </p>
+            <Alert>{t.gameLocked}</Alert>
+          </>
+        )}
+      </Section>
+
       <Section id="settings-timing" icon={Clock} title={t.timing}>
         <div className="grid gap-4 sm:grid-cols-2">
-          <FormField
-            id="settings-timeLimitMin"
-            label={t.timeLimit}
-            hint={t.timeLimitHint}
-            error={errorOf("timeLimitMin")}
-          >
-            <Input
-              {...text("timeLimitMin")}
-              {...fieldA11y(
-                "settings-timeLimitMin",
-                errorOf("timeLimitMin"),
-                t.timeLimitHint,
-              )}
-              inputMode="decimal"
-            />
-          </FormField>
+          {!game && (
+            <FormField
+              id="settings-timeLimitMin"
+              label={t.timeLimit}
+              hint={t.timeLimitHint}
+              error={errorOf("timeLimitMin")}
+            >
+              <Input
+                {...text("timeLimitMin")}
+                {...fieldA11y(
+                  "settings-timeLimitMin",
+                  errorOf("timeLimitMin"),
+                  t.timeLimitHint,
+                )}
+                inputMode="decimal"
+              />
+            </FormField>
+          )}
           <FormField
             id="settings-maxAttempts"
             label={t.maxAttempts}
@@ -256,23 +321,25 @@ export function SettingsStep({
             />
           </FormField>
         </div>
-        <FormField
-          id="settings-startsAt"
-          label={t.startsAt}
-          hint={t.startsAtHint}
-          error={errorOf("startsAt")}
-        >
-          <Input
-            {...text("startsAt")}
-            {...fieldA11y(
-              "settings-startsAt",
-              errorOf("startsAt"),
-              t.startsAtHint,
-            )}
-            type="datetime-local"
-            className="sm:max-w-xs"
-          />
-        </FormField>
+        {!game && (
+          <FormField
+            id="settings-startsAt"
+            label={t.startsAt}
+            hint={t.startsAtHint}
+            error={errorOf("startsAt")}
+          >
+            <Input
+              {...text("startsAt")}
+              {...fieldA11y(
+                "settings-startsAt",
+                errorOf("startsAt"),
+                t.startsAtHint,
+              )}
+              type="datetime-local"
+              className="sm:max-w-xs"
+            />
+          </FormField>
+        )}
       </Section>
 
       <Section id="settings-questions" icon={Shuffle} title={t.questions}>
@@ -365,18 +432,20 @@ export function SettingsStep({
       </Section>
 
       <Section id="settings-after" icon={Send} title={t.after}>
-        <Choice
-          name="revealAnswers"
-          legend={t.revealAnswers}
-          value={form.revealAnswers}
-          options={(["after_submit", "after_deadline", "never"] as const).map(
-            (m) => [m, t.reveals[m]],
-          )}
-          onChange={(revealAnswers) => onChange({ revealAnswers })}
-        />
+        {!game && (
+          <Choice
+            name="revealAnswers"
+            legend={t.revealAnswers}
+            value={form.revealAnswers}
+            options={(["after_submit", "after_deadline", "never"] as const).map(
+              (m) => [m, t.reveals[m]],
+            )}
+            onChange={(revealAnswers) => onChange({ revealAnswers })}
+          />
+        )}
         <div className="grid gap-2">
           {toggle("countsForRating")}
-          {toggle("examGuard")}
+          {!game && toggle("examGuard")}
         </div>
       </Section>
     </form>
@@ -430,7 +499,8 @@ function Choice<V extends string>({
   legend: string;
   hideLegend?: boolean;
   value: V;
-  options: [V, string][];
+  /** Value, label and an optional hint under the label. */
+  options: [V, string, string?][];
   onChange: (value: V) => void;
   error?: string | undefined;
 }) {
@@ -446,17 +516,26 @@ function Choice<V extends string>({
       >
         {legend}
       </legend>
-      {options.map(([v, label]) => (
-        <label key={v} className={cn(rowClass, "items-center")}>
+      {options.map(([v, label, hint]) => (
+        <label key={v} className={cn(rowClass, !hint && "items-center")}>
           <input
             type="radio"
             name={name}
             value={v}
             checked={value === v}
             onChange={() => onChange(v)}
-            className="size-5 shrink-0 accent-primary"
+            className={cn("size-5 shrink-0 accent-primary", hint && "mt-0.5")}
           />
-          {label}
+          {hint ? (
+            <span className="min-w-0">
+              <span className="block font-medium">{label}</span>
+              <span className="mt-0.5 block text-muted-foreground text-sm">
+                {hint}
+              </span>
+            </span>
+          ) : (
+            label
+          )}
         </label>
       ))}
       {error && (

@@ -1,7 +1,10 @@
 import {
   ChevronLeft,
   Clock,
+  Crosshair,
   Dumbbell,
+  Gamepad2,
+  Heart,
   ListChecks,
   type LucideIcon,
   Repeat,
@@ -84,6 +87,12 @@ export function LessonOverviewContent({
             {t.unpublished}
           </p>
         )}
+        {lesson.game && (
+          <p className="ml-2 inline-flex items-center gap-1.5 rounded-full bg-danger-soft px-3 py-1 font-semibold text-danger-text text-sm first:ml-0">
+            <Gamepad2 aria-hidden className="size-4" />
+            {t.game}
+          </p>
+        )}
         <div className="flex items-center gap-3">
           <TopicGlyph
             topic={lessonTopic(lesson.chapter, lesson.title)}
@@ -134,9 +143,13 @@ export function LessonOverviewContent({
           icon={Clock}
           label={t.duration}
           value={
-            lesson.timeLimitSec
-              ? formatDuration(lesson.timeLimitSec)
-              : t.noLimitShort
+            lesson.game
+              ? lesson.game.secondsPerQuestion
+                ? t.perQuestion(lesson.game.secondsPerQuestion)
+                : t.noLimitShort
+              : lesson.timeLimitSec
+                ? formatDuration(lesson.timeLimitSec)
+                : t.noLimitShort
           }
         />
         <Fact
@@ -216,6 +229,24 @@ function StartCard({
       className={cn(cardClass, "space-y-4 p-5 shadow-raised sm:p-6")}
     >
       <ul className="space-y-2.5 text-sm">
+        {lesson.game && (
+          <>
+            <li className="flex items-start gap-3">
+              <Crosshair
+                aria-hidden
+                className="mt-0.5 size-4 shrink-0 text-danger-text"
+              />
+              {t.gameRule}
+            </li>
+            <li className="flex items-start gap-3">
+              <Heart
+                aria-hidden
+                className="mt-0.5 size-4 shrink-0 text-danger-text"
+              />
+              {t.gameLives(lesson.game.lives)}
+            </li>
+          </>
+        )}
         <li className="flex items-start gap-3">
           <Repeat
             aria-hidden

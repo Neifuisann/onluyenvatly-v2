@@ -20,6 +20,8 @@ import {
   practiceFeedback,
 } from "@/features/review/domain/practice";
 import { reviewCopy } from "@/features/review/messages";
+import { ZombieGame } from "@/features/zombie/components/zombie-game";
+import { finishGame } from "@/features/zombie/service";
 
 export const metadata: Metadata = {
   title: runnerCopy.pageTitle,
@@ -51,6 +53,33 @@ export default async function AttemptPage({
     if (closed.ok) redirect(`/attempts/${attempt.id}/result`);
   }
   const { lessonId } = attempt;
+  if (attempt.mode === "game") {
+    // The last move was stored but its grading failed: grade it now.
+    if (!attempt.game || attempt.game.over) {
+      const done = await finishGame(user.id, attempt.id, now);
+      if (done.ok) redirect(`/attempts/${attempt.id}/result`);
+    }
+    const [lesson, questions] = await Promise.all([
+      lessonId ? getLessonOverview(lessonId, true) : null,
+      itemPublicQuestions(attempt),
+    ]);
+    if (!lesson || !questions || !attempt.game) notFound();
+    return (
+      <ZombieGame
+        attemptId={attempt.id}
+        lessonId={lessonId}
+        title={lesson.title}
+        questions={attempt.items.map((item, i) =>
+          toRunnerQuestion(
+            withOptionOrder(questions[i] as (typeof questions)[number], item.o),
+            item.p,
+          ),
+        )}
+        initial={attempt.game}
+        serverNow={now.getTime()}
+      />
+    );
+  }
   const practice = attempt.mode !== "test";
 
   const sources = await itemSources(attempt);

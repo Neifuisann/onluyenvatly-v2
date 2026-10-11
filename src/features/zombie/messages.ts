@@ -1,0 +1,69 @@
+/** "Bắn zombie" (B-11) UI strings. */
+export const zombieCopy = {
+  pageTitle: "Bắn zombie",
+  brand: "BẮN ZOMBIE",
+  exit: "Thoát",
+  exitTitle: "Dừng trò chơi?",
+  exitBody:
+    "Bạn có thể quay lại chơi tiếp sau. Nếu bài có giờ cho mỗi câu, zombie vẫn tiến khi bạn rời đi.",
+  keepPlaying: "Chơi tiếp",
+  leaveLater: "Lưu và thoát",
+  endNow: "Kết thúc và nộp",
+  ending: "Đang nộp…",
+  close: "Đóng",
+  sound: "Âm thanh",
+  soundOn: "Bật âm thanh",
+  soundOff: "Tắt âm thanh",
+  fullscreen: "Toàn màn hình",
+  lives: (left: number, total: number) => `Còn ${left}/${total} mạng`,
+  wave: (n: number, total: number) => `Đợt ${n}/${total}`,
+  question: (n: number) => `Câu ${n}`,
+  statement: (letter: string) => `Ý ${letter})`,
+  true: "Đúng",
+  false: "Sai",
+  laneLabel: (letter: string) => `Bắn zombie ${letter}`,
+  tfLaneLabel: (answer: string) => `Bắn zombie "${answer}"`,
+  secondsLeft: (s: number) => `Còn ${s} giây`,
+  noClock: "Không giới hạn thời gian",
+  // Intro
+  introLead: "Zombie cầm biển đáp án đang kéo tới hàng rào.",
+  rules: [
+    "Chạm vào zombie cầm đáp án đúng để bắn. Trúng là cả đợt bị hạ.",
+    "Bắn nhầm: zombie đó ngã, bạn mất một mạng.",
+  ],
+  ruleClock: (s: number) =>
+    `Mỗi đợt có ${s} giây. Zombie chạm rào cũng mất một mạng.`,
+  ruleNoClock: "Không giới hạn thời gian, cứ bình tĩnh mà bắn.",
+  ruleLives: (n: number) =>
+    n === 1 ? "Chỉ có 1 mạng: bắn nhầm là thua." : `Bạn có ${n} mạng.`,
+  keys: "Phím tắt: A–F hoặc 1–6 để bắn; Đ/S cho câu đúng sai.",
+  start: "Bắt đầu",
+  starting: "Đang chuẩn bị…",
+  go: "BẮN!",
+  // Shouts (big comic text)
+  hit: "TRÚNG!",
+  miss: "TRƯỢT!",
+  timeout: "ÁI!",
+  minusLife: "−1 mạng",
+  answerWas: "Đáp án",
+  // End
+  won: "THOÁT VÒNG VÂY!",
+  wonLead: "Bạn đã hạ hết các đợt zombie.",
+  lost: "BỊ VÂY RỒI!",
+  lostLead: "Hết mạng mất rồi. Xem lại bài rồi thử lần nữa nhé.",
+  score: "Điểm",
+  firstShot: "Trúng ngay phát đầu",
+  cleared: "Đợt đã qua",
+  livesLeft: "Mạng còn lại",
+  grading: "Đang chấm điểm…",
+  viewResult: "Xem bài làm",
+  backToLesson: "Về trang bài",
+  // Phones held upright
+  rotateTitle: "Xoay ngang điện thoại",
+  rotateBody:
+    "Trò chơi cần màn hình ngang để zombie có đường chạy. Nếu máy đang khoá xoay, hãy mở khoá xoay màn hình.",
+  rotateButton: "Toàn màn hình ngang",
+  // Errors
+  offline: "Mất kết nối. Đang thử lại…",
+  failed: "Có lỗi khi gửi phát bắn. Thử lại nhé.",
+} as const;

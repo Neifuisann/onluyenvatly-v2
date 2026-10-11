@@ -187,6 +187,7 @@ describe("lesson overview and legacy lookup", () => {
       countsForRating: true,
       revealAnswers: "after_submit",
       startsAt: null,
+      game: null,
     });
     expect(JSON.stringify(overview)).not.toContain("NEVER_EXPOSE_CONFIG");
   });

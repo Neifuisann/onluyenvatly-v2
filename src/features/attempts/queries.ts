@@ -57,6 +57,7 @@ const attemptColumns = {
   answers: attempts.answers,
   flagged: attempts.flagged,
   checked: attempts.checked,
+  game: attempts.game,
   guardEvents: attempts.guardEvents,
   earned: attempts.earned,
   score: attempts.score,

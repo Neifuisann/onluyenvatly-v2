@@ -160,6 +160,21 @@ export const QuestionsSchema = z
   });
 
 const typeCount = z.number().int().min(0).max(MAX_QUESTIONS);
+
+/** Seconds a game gives each question; null = no clock. */
+export const GAME_SECONDS = [10, 15, 20, 30, 45, 60, 90, 120] as const;
+
+/** B-11 "Bắn zombie": 1 life (the first miss ends it) or 3. */
+export const GameConfigSchema = z.strictObject({
+  kind: z.literal("zombie"),
+  lives: z.union([z.literal(1), z.literal(3)]),
+  secondsPerQuestion: z
+    .number()
+    .int()
+    .refine((n) => (GAME_SECONDS as readonly number[]).includes(n))
+    .nullable(),
+});
+export type GameConfig = z.infer<typeof GameConfigSchema>;
 const typePoints = z.number().min(0).max(100);
 
 export const LessonConfigSchema = z
@@ -205,6 +220,12 @@ export const LessonConfigSchema = z
     /** Copy-block + blur tracking during the test. */
     examGuard: z.boolean(),
     tfScoring: z.enum(["thpt2025", "proportional"]),
+    /**
+     * Played as a game instead of a test (B-11). Every shot is graded on the
+     * server and shows its key, so a game needs `after_submit` answers, no
+     * schedule, no overall time limit and no exam guard.
+     */
+    game: GameConfigSchema.nullable().default(null),
   })
   .refine(
     (c) =>
@@ -226,6 +247,19 @@ export const LessonConfigSchema = z
         "Công bố đáp án sau giờ làm bài cần có giờ bắt đầu và thời gian làm bài.",
       path: ["revealAnswers"],
     },
+  )
+  .refine(
+    (c) =>
+      c.game === null ||
+      (c.revealAnswers === "after_submit" &&
+        c.startsAt === null &&
+        c.timeLimitSec === null &&
+        !c.examGuard),
+    {
+      message:
+        "Trò chơi cần công bố đáp án sau khi nộp, không hẹn giờ, không giới hạn thời gian và không giám sát.",
+      path: ["game"],
+    },
   );
 export type LessonConfig = z.infer<typeof LessonConfigSchema>;
 
@@ -242,4 +276,5 @@ export const DEFAULT_LESSON_CONFIG: LessonConfig = {
   countsForRating: true,
   examGuard: false,
   tfScoring: "thpt2025",
+  game: null,
 };

@@ -123,7 +123,8 @@ As built (S5-04, `features/lessons/content-service.ts`): a lesson has at most on
 | user_id | uuid FK → users ON DELETE CASCADE | |
 | lesson_id | bigint FK null | null for personalized practice |
 | lesson_version_id | bigint FK null | Version for single-lesson attempts (null for `review`, whose items carry `v`). `NO ACTION`, so a version in use can't be deleted except together with its lesson |
-| mode | enum `attempt_mode` (`test`,`practice`,`review`) | `review` = personalized practice from mistakes |
+| mode | enum `attempt_mode` (`test`,`practice`,`review`,`game`) | `review` = personalized practice from mistakes; `game` = a lesson played as "Bắn zombie" (B-11, migration `0017`, ADR-009) |
+| game | jsonb `ZombieState`, nullable | Game attempts only: lives, seconds per wave, the current wave and when its clock starts, and per wave the lanes shot, how it ended and its key (stored only once the wave ended). Written by `POST /api/attempts/[id]/game`; the first shot of each wave is also written to `answers` |
 | status | enum `attempt_status` (`in_progress`,`submitted`,`expired`) | |
 | items | jsonb | Ordered `[{q:"q_ab12", v:57, o:[2,0,3,1], p:0.25}]`: question id, version id (omitted when equal to `lesson_version_id`), mcq option order, and the points fixed at start (so a config edit mid-attempt can't change the marks) |
 | answers | jsonb | Array aligned with `items`: `"B"` \| `[true,false,null,true]` \| `"1,5"` \| `null` |
@@ -284,6 +285,8 @@ type LessonConfig = {
   countsForRating: boolean;
   examGuard: boolean;                   // copy-block + blur tracking during the test
   tfScoring: 'thpt2025' | 'proportional';
+  // B-11 (ADR-009): played as a game; needs after_submit, no startsAt, no time limit, no exam guard
+  game: { kind: 'zombie'; lives: 1 | 3; secondsPerQuestion: 10 | 15 | 20 | 30 | 45 | 60 | 90 | 120 | null } | null;
 };
 ```
 Defaults match v1 behaviour: THPT scoring for tf, `revealAnswers: 'after_submit'`, `countsForRating: true`, `startsAt: null`.
