@@ -18,6 +18,7 @@ const entry = (
   userId,
   fullName: `Học Sinh ${userId}`,
   className: null,
+  avatarPath: null,
   rating,
   weekDelta,
 });
