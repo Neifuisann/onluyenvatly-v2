@@ -129,6 +129,7 @@ describe("getLeaderboard", () => {
       userId: ids.get("An"),
       fullName: "Học Sinh An",
       className: "12A1",
+      avatarPath: null,
       rating: 1800,
       weekDelta: 15,
       rank: 1,
@@ -140,6 +141,7 @@ describe("getLeaderboard", () => {
   it("never exposes contact details", async () => {
     const [row] = await getLeaderboard({ classId: classA, period: "all" });
     expect(Object.keys(row ?? {}).sort()).toEqual([
+      "avatarPath",
       "className",
       "fullName",
       "rank",
@@ -190,6 +192,29 @@ describe("getLeaderboard privacy (S8-04)", () => {
       await tdb
         .update(users)
         .set({ leaderboardInitials: false })
+        .where(eq(users.id, id));
+    }
+  });
+
+  it("shows the profile picture unless the student chose initials", async () => {
+    const id = ids.get("Cường") ?? "";
+    const avatarPath = `avatars/${id}/00000000-0000-4000-8000-000000000000.webp`;
+    await tdb.update(users).set({ avatarPath }).where(eq(users.id, id));
+    try {
+      const find = async () =>
+        (await getLeaderboard({ classId: classA, period: "all" })).find(
+          (r) => r.userId === id,
+        );
+      expect((await find())?.avatarPath).toBe(avatarPath);
+      await tdb
+        .update(users)
+        .set({ leaderboardInitials: true })
+        .where(eq(users.id, id));
+      expect((await find())?.avatarPath).toBeNull();
+    } finally {
+      await tdb
+        .update(users)
+        .set({ avatarPath: null, leaderboardInitials: false })
         .where(eq(users.id, id));
     }
   });
