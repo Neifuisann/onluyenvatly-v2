@@ -42,7 +42,8 @@ const ADMIN_PAGES = [
 const EXPORT = "/admin/results/export?q=an";
 const STUDENT_PAGES = [
   "/dashboard",
-  "/lessons",
+  // B-03: `/lessons` only redirects to the student's class.
+  "/classes",
   "/review",
   "/leaderboard",
   "/profile",

@@ -61,6 +61,8 @@ describe("landingPath", () => {
   it("sends each role home by default", () => {
     expect(homePath("admin")).toBe("/admin");
     expect(landingPath("admin", null)).toBe("/admin");
+    expect(homePath("teacher")).toBe("/admin");
+    expect(landingPath("teacher", "/admin/classes")).toBe("/admin/classes");
     expect(landingPath("student", null)).toBe("/dashboard");
   });
 

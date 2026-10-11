@@ -10,15 +10,22 @@ export const RECOMMENDED_COUNT = 4;
 
 /**
  * Lessons I haven't finished yet, in the catalog's order (the teacher's
- * `sort_order`). `lessons` is already filtered to my grade.
+ * `sort_order`), my grade's first (B-03: my classes' lessons, which may mix
+ * grades or have none).
  */
-export function recommendLessons<T extends { id: number }>(
+export function recommendLessons<
+  T extends { id: number; grade: number | null },
+>(
   lessons: readonly T[],
   doneLessonIds: readonly number[],
+  grade: number | null = null,
   count = RECOMMENDED_COUNT,
 ): T[] {
   const done = new Set(doneLessonIds);
-  return lessons.filter((l) => !done.has(l.id)).slice(0, count);
+  const open = lessons.filter((l) => !done.has(l.id));
+  const mine = (l: T) => (grade !== null && l.grade === grade ? 0 : 1);
+  // Array#sort is stable: within each group the catalog's order stays.
+  return [...open].sort((a, b) => mine(a) - mine(b)).slice(0, count);
 }
 
 export type ContinueSummary = {

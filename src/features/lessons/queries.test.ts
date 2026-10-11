@@ -1,6 +1,6 @@
 import { beforeAll, describe, expect, it, vi } from "vitest";
 import { db } from "@/db/client";
-import { lessons } from "@/db/schema";
+import { classes, classLessons, lessons, users } from "@/db/schema";
 import type { TestDb } from "@/test/db";
 import { DEFAULT_FILTERS, PAGE_SIZE } from "./domain/catalog";
 import {
@@ -20,78 +20,110 @@ const f = (patch: Partial<typeof DEFAULT_FILTERS>) => ({
   ...patch,
 });
 
+/** The class the catalog is read for (B-03). */
+let classId = 0;
+
 beforeAll(async () => {
-  await tdb.insert(lessons).values([
-    {
-      title: "Đề ôn GK1 – Dao động cơ",
-      legacyId: "1720000000000",
-      description: "Ôn tập $T = 2\\pi/\\omega$.",
-      grade: 12,
-      chapter: "Dao động cơ",
-      tags: ["giữa kì"],
-      status: "published",
-      sortOrder: 2,
-      questionCount: 28,
-      typeCounts: { mcq: 18, tf: 4, short: 6 },
-      attemptCount: 5,
-      config: {
-        timeLimitSec: 3000,
-        maxAttempts: 3,
-        examGuard: true,
-        countsForRating: true,
-        answer: "NEVER_EXPOSE_CONFIG",
+  const inserted = await tdb
+    .insert(lessons)
+    .values([
+      {
+        title: "Đề ôn GK1 – Dao động cơ",
+        legacyId: "1720000000000",
+        description: "Ôn tập $T = 2\\pi/\\omega$.",
+        grade: 12,
+        chapter: "Dao động cơ",
+        tags: ["giữa kì"],
+        status: "published",
+        sortOrder: 2,
+        questionCount: 28,
+        typeCounts: { mcq: 18, tf: 4, short: 6 },
+        attemptCount: 5,
+        config: {
+          timeLimitSec: 3000,
+          maxAttempts: 3,
+          examGuard: true,
+          countsForRating: true,
+          answer: "NEVER_EXPOSE_CONFIG",
+        },
+        publishedAt: new Date("2026-01-01"),
       },
-      publishedAt: new Date("2026-01-01"),
-    },
-    {
-      title: "Sóng cơ 100% trắc nghiệm",
-      grade: 12,
-      chapter: "Sóng cơ",
-      tags: ["Lớp 12", "giữa kì"],
-      status: "published",
-      sortOrder: 1,
-      attemptCount: 9,
-      config: { timeLimitSec: null },
-      publishedAt: new Date("2026-02-01"),
-    },
-    {
-      title: "Điện trường",
-      grade: 11,
-      chapter: "Điện trường",
-      status: "published",
-      sortOrder: 3,
-      config: {},
-    },
-    {
-      legacyId: "draft",
-      title: "Nháp dao động",
-      grade: 12,
-      status: "draft",
-      config: {},
-    },
-    {
-      legacyId: "archived",
-      title: "Lưu trữ",
-      status: "archived",
-      chapter: "Cũ",
-      config: {},
-    },
-    ...Array.from({ length: PAGE_SIZE + 2 }, (_, i) => ({
-      title: `Bài luyện ${i}`,
-      grade: 10,
-      status: "published" as const,
-      sortOrder: 100 + i,
-      config: {},
-    })),
-  ]);
+      {
+        title: "Sóng cơ 100% trắc nghiệm",
+        grade: 12,
+        chapter: "Sóng cơ",
+        tags: ["Lớp 12", "giữa kì"],
+        status: "published",
+        sortOrder: 1,
+        attemptCount: 9,
+        config: { timeLimitSec: null },
+        publishedAt: new Date("2026-02-01"),
+      },
+      {
+        title: "Điện trường",
+        grade: 11,
+        chapter: "Điện trường",
+        status: "published",
+        sortOrder: 3,
+        config: {},
+      },
+      {
+        legacyId: "draft",
+        title: "Nháp dao động",
+        grade: 12,
+        status: "draft",
+        config: {},
+      },
+      {
+        legacyId: "archived",
+        title: "Lưu trữ",
+        status: "archived",
+        chapter: "Cũ",
+        config: {},
+      },
+      ...Array.from({ length: PAGE_SIZE + 2 }, (_, i) => ({
+        title: `Bài luyện ${i}`,
+        grade: 10,
+        status: "published" as const,
+        sortOrder: 100 + i,
+        config: {},
+      })),
+    ])
+    .returning({ id: lessons.id });
+  const [teacher] = await tdb
+    .insert(users)
+    .values({
+      role: "teacher",
+      fullName: "GV",
+      username: "gv",
+      passwordHash: "x",
+    })
+    .returning({ id: users.id });
+  const [cls] = await tdb
+    .insert(classes)
+    .values({ ownerId: teacher?.id ?? "", name: "12A1" })
+    .returning({ id: classes.id });
+  classId = cls?.id ?? 0;
+  await tdb
+    .insert(classLessons)
+    .values(inserted.map((l) => ({ classId, lessonId: l.id })));
+  // Published, but given to no class: never in this class's catalog.
+  await tdb.insert(lessons).values({
+    title: "Bài lớp khác",
+    grade: 12,
+    chapter: "Quang học",
+    tags: ["lớp khác"],
+    status: "published",
+    config: {},
+  });
 });
 
 const titles = async (patch: Partial<typeof DEFAULT_FILTERS>) =>
-  (await getCatalog(f(patch))).items.map((i) => i.title);
+  (await getCatalog(classId, f(patch))).items.map((i) => i.title);
 
 describe("getCatalog", () => {
   it("lists published lessons only, in manual order, one page at a time", async () => {
-    const first = await getCatalog(f({}));
+    const first = await getCatalog(classId, f({}));
     expect(first.total).toBe(3 + PAGE_SIZE + 2);
     expect(first.items).toHaveLength(PAGE_SIZE);
     expect(first.items.slice(0, 3).map((i) => i.title)).toEqual([
@@ -99,13 +131,13 @@ describe("getCatalog", () => {
       "Đề ôn GK1 – Dao động cơ",
       "Điện trường",
     ]);
-    expect((await getCatalog(f({ page: 2 }))).items).toHaveLength(
+    expect((await getCatalog(classId, f({ page: 2 }))).items).toHaveLength(
       3 + PAGE_SIZE + 2,
     );
   });
 
   it("returns card fields, including the time limit from config", async () => {
-    const [, gk1] = (await getCatalog(f({}))).items;
+    const [, gk1] = (await getCatalog(classId, f({}))).items;
     expect(gk1).toEqual({
       id: expect.any(Number),
       title: "Đề ôn GK1 – Dao động cơ",
@@ -166,7 +198,7 @@ describe("getCatalog", () => {
 
 describe("getCatalogFacets", () => {
   it("lists chapters and tags of published lessons", async () => {
-    expect(await getCatalogFacets()).toEqual({
+    expect(await getCatalogFacets(classId)).toEqual({
       chapters: ["Dao động cơ", "Điện trường", "Sóng cơ"],
       tags: ["giữa kì", "Lớp 12"],
     });
@@ -179,7 +211,7 @@ describe("lesson overview and legacy lookup", () => {
     expect(id).not.toBeNull();
     const overview = await getLessonOverview(id as number);
     expect(overview).toEqual({
-      ...(await getCatalog(f({ q: "dao dong" }))).items[0],
+      ...(await getCatalog(classId, f({ q: "dao dong" }))).items[0],
       description: "Ôn tập $T = 2\\pi/\\omega$.",
       status: "published",
       maxAttempts: 3,

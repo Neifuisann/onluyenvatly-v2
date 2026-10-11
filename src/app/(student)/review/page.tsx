@@ -99,7 +99,7 @@ export default async function ReviewPage({
           description={t.emptyHint}
           action={
             <Link
-              href="/lessons"
+              href="/classes"
               prefetch={false}
               className={buttonVariants({ variant: "secondary" })}
             >

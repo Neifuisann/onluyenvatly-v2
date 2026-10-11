@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { requireAdmin } from "@/features/auth/guards";
+import { requireTeacher } from "@/features/auth/guards";
 import { getLessonForEditing } from "@/features/lessons/admin-queries";
 import { LessonEditor } from "@/features/lessons/components/editor/lesson-editor";
 import { LessonIdSchema } from "@/features/lessons/domain/admin-list";
@@ -16,10 +16,10 @@ export const metadata: Metadata = { title: editorCopy.metaTitle };
 export default async function EditLessonPage({
   params,
 }: PageProps<"/admin/lessons/[id]/edit">) {
-  await requireAdmin();
+  const user = await requireTeacher();
   const id = LessonIdSchema.safeParse((await params).id);
   if (!id.success) notFound();
-  const lesson = await getLessonForEditing(id.data);
+  const lesson = await getLessonForEditing(user, id.data);
   if (!lesson) notFound();
   const config = LessonConfigSchema.safeParse(lesson.config);
   const previous = Array.isArray(lesson.questions)
@@ -39,6 +39,7 @@ export default async function EditLessonPage({
           title: lesson.title,
           description: lesson.description,
           grade: lesson.grade,
+          subject: lesson.subject,
           chapter: lesson.chapter,
           tags: lesson.tags,
         },

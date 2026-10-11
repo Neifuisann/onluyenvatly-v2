@@ -77,7 +77,11 @@ export function AuditList({ rows }: { rows: readonly AuditRow[] }) {
                 )}
                 {r.actorRole && (
                   <span className="text-muted-foreground text-xs">
-                    {r.actorRole === "admin" ? t.roleAdmin : t.roleStudent}
+                    {r.actorRole === "admin"
+                      ? t.roleAdmin
+                      : r.actorRole === "teacher"
+                        ? t.roleTeacher
+                        : t.roleStudent}
                   </span>
                 )}
               </p>

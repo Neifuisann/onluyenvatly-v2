@@ -9,10 +9,11 @@ import {
   generateDescription as generateDescriptionService,
   suggestTags as suggestTagsService,
 } from "@/features/ai/lesson-helpers-service";
-import { requireAdmin } from "@/features/auth/guards";
+import { requireTeacher } from "@/features/auth/guards";
 import { tags } from "@/lib/cache-tags";
 import { rateLimit } from "@/lib/rate-limit";
 import { err, ok, type Result } from "@/lib/result";
+import { getOwnerTags } from "./admin-queries";
 import {
   createLesson as createLessonService,
   deleteLesson as deleteLessonService,
@@ -40,7 +41,7 @@ import { SettingsFormSchema } from "./domain/settings-form";
 import { MAX_QUESTIONS, MediaPathSchema, QuestionIdSchema } from "./schema";
 
 /**
- * Admin lesson actions (05 §2). Every one: `requireAdmin()` first, Zod, the
+ * Admin lesson actions (05 §2). Every one: `requireTeacher()` first, Zod, the
  * service (one transaction with its audit entry), then the cache tags of what
  * changed and a router refresh for the uncached admin list.
  */
@@ -54,7 +55,7 @@ function invalidateLesson(id: number) {
 export async function reorder(
   input: unknown,
 ): Promise<Result<{ count: number }>> {
-  const user = await requireAdmin();
+  const user = await requireTeacher();
   const parsed = ReorderSchema.safeParse(input);
   if (!parsed.success) return err("VALIDATION");
   const result = await reorderLessons(user, parsed.data.ids);
@@ -69,7 +70,7 @@ export async function reorder(
 export async function duplicate(
   input: unknown,
 ): Promise<Result<{ id: number }>> {
-  const user = await requireAdmin();
+  const user = await requireTeacher();
   const id = LessonIdSchema.safeParse(input);
   if (!id.success) return err("VALIDATION");
   const result = await duplicateLessonService(user, id.data);
@@ -90,7 +91,7 @@ async function changeArchived(
   input: unknown,
   archived: boolean,
 ): Promise<Result<{ id: number }>> {
-  const user = await requireAdmin();
+  const user = await requireTeacher();
   const id = LessonIdSchema.safeParse(input);
   if (!id.success) return err("VALIDATION");
   const result = await setArchived(user, id.data, archived);
@@ -104,7 +105,7 @@ async function changeArchived(
 export async function deleteLesson(
   input: unknown,
 ): Promise<Result<{ id: number; soft: boolean }>> {
-  const user = await requireAdmin();
+  const user = await requireTeacher();
   const id = LessonIdSchema.safeParse(input);
   if (!id.success) return err("VALIDATION");
   const result = await deleteLessonService(user, id.data);
@@ -121,7 +122,7 @@ export async function deleteLesson(
 
 /** Form action on the list: a new empty draft, opened in the editor. */
 export async function createLesson(): Promise<void> {
-  const user = await requireAdmin();
+  const user = await requireTeacher();
   const { id } = await createLessonService(user);
   // Drafts are invisible to students: no shared tag changes.
   redirect(`/admin/lessons/${id}/edit`);
@@ -135,7 +136,7 @@ export async function createLesson(): Promise<void> {
 export async function composeLesson(
   input: unknown,
 ): Promise<Result<{ id: number; questions: number }>> {
-  const user = await requireAdmin();
+  const user = await requireTeacher();
   const parsed = ComposeSchema.safeParse(input);
   if (!parsed.success) return err("VALIDATION");
   return composeLessonService(user, parsed.data);
@@ -152,7 +153,7 @@ const TexBatchSchema = z
 export async function renderTexBatch(
   input: unknown,
 ): Promise<Result<string[]>> {
-  await requireAdmin();
+  await requireTeacher();
   const parsed = TexBatchSchema.safeParse(input);
   if (!parsed.success) return err("VALIDATION");
   return ok(parsed.data.map(({ tex, display }) => renderTex(tex, display)));
@@ -167,7 +168,7 @@ const SaveSettingsSchema = z.strictObject({
 export async function saveSettings(
   input: unknown,
 ): Promise<Result<{ id: number }>> {
-  const user = await requireAdmin();
+  const user = await requireTeacher();
   const parsed = SaveSettingsSchema.safeParse(input);
   if (!parsed.success) return err("VALIDATION");
   const result = await updateLessonSettings(
@@ -196,7 +197,7 @@ const ContentSchema = z.strictObject({
 export async function saveDraft(
   input: unknown,
 ): Promise<Result<SaveDraftResult>> {
-  const user = await requireAdmin();
+  const user = await requireTeacher();
   const parsed = ContentSchema.safeParse(input);
   if (!parsed.success) return err("VALIDATION");
   const result = await saveDraftService(
@@ -215,7 +216,7 @@ const PublishSchema = z.strictObject({
 
 /** "Xuất bản": the draft (or the given text) becomes what students take. */
 export async function publish(input: unknown): Promise<Result<PublishResult>> {
-  const user = await requireAdmin();
+  const user = await requireTeacher();
   const parsed = PublishSchema.safeParse(input);
   if (!parsed.success) return err("VALIDATION");
   const { id, sourceText } = parsed.data;
@@ -235,7 +236,7 @@ export async function publish(input: unknown): Promise<Result<PublishResult>> {
 export async function unpublish(
   input: unknown,
 ): Promise<Result<{ id: number }>> {
-  const user = await requireAdmin();
+  const user = await requireTeacher();
   const id = LessonIdSchema.safeParse(input);
   if (!id.success) return err("VALIDATION");
   const result = await unpublishLesson(user, id.data);
@@ -250,7 +251,7 @@ export async function unpublish(
 export async function discardDraft(
   input: unknown,
 ): Promise<Result<{ id: number }>> {
-  const user = await requireAdmin();
+  const user = await requireTeacher();
   const id = LessonIdSchema.safeParse(input);
   if (!id.success) return err("VALIDATION");
   const result = await discardDraftService(user, id.data);
@@ -267,7 +268,7 @@ const CoverSchema = z.strictObject({
 export async function setCover(
   input: unknown,
 ): Promise<Result<{ id: number }>> {
-  const user = await requireAdmin();
+  const user = await requireTeacher();
   const parsed = CoverSchema.safeParse(input);
   if (!parsed.success) return err("VALIDATION");
   const result = await setLessonCover(user, parsed.data.id, parsed.data.path);
@@ -298,7 +299,7 @@ async function helperLimit(userId: string) {
 export async function generateDescription(
   input: unknown,
 ): Promise<Result<{ description: string }>> {
-  const user = await requireAdmin();
+  const user = await requireTeacher();
   const parsed = HelperSchema.safeParse(input);
   if (!parsed.success) return err("VALIDATION");
   if (!(await helperLimit(user.id)).ok) return err("RATE_LIMITED");
@@ -309,11 +310,13 @@ export async function generateDescription(
 export async function suggestTags(
   input: unknown,
 ): Promise<Result<{ tags: string[] }>> {
-  const user = await requireAdmin();
+  const user = await requireTeacher();
   const parsed = HelperSchema.safeParse(input);
   if (!parsed.success) return err("VALIDATION");
   if (!(await helperLimit(user.id)).ok) return err("RATE_LIMITED");
-  return suggestTagsService(parsed.data);
+  return suggestTagsService(parsed.data, {
+    knownTags: () => getOwnerTags(user),
+  });
 }
 
 const CorrectionInputSchema = z.discriminatedUnion("kind", [
@@ -371,7 +374,7 @@ function invalidateCorrection(id: number, rated: boolean) {
 export async function correctQuestions(
   input: unknown,
 ): Promise<Result<CorrectionOutcome>> {
-  const user = await requireAdmin();
+  const user = await requireTeacher();
   const parsed = CorrectSchema.safeParse(input);
   if (!parsed.success) return err("VALIDATION");
   const result = await correctLesson(
@@ -400,7 +403,7 @@ const QuestionTextSchema = z.strictObject({
 export async function saveQuestionText(
   input: unknown,
 ): Promise<Result<CorrectionOutcome>> {
-  const user = await requireAdmin();
+  const user = await requireTeacher();
   const parsed = QuestionTextSchema.safeParse(input);
   if (!parsed.success) return err("VALIDATION");
   const { id, questionId, sourceText } = parsed.data;

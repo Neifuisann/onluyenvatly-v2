@@ -19,6 +19,7 @@ import {
   INITIAL_RATING,
   performance,
 } from "@/features/rating/domain/rating";
+import { shareLesson } from "@/test/classes";
 import { resetDb, type TestDb } from "@/test/db";
 import { correctLesson } from "./correction-service";
 import { DEFAULT_LESSON_CONFIG, type Question } from "./schema";
@@ -56,7 +57,7 @@ const questions: Question[] = [
 const PERFECT: AttemptAnswer[] = ["A", [true, false, true, false], "0.63"];
 const OTHER: AttemptAnswer[] = ["B", [true, false, true, false], null];
 
-let admin: { id: string };
+let admin: { id: string; role: "admin" };
 let seq = 0;
 
 async function addUser(role: "student" | "admin" = "student") {
@@ -81,6 +82,7 @@ async function addLesson() {
       status: "published",
       config: DEFAULT_LESSON_CONFIG,
       questionCount: 3,
+      ownerId: admin.id,
     })
     .returning({ id: lessons.id });
   const id = lesson?.id ?? 0;
@@ -101,6 +103,8 @@ async function take(
   answers: AttemptAnswer[] | null,
   minute: number,
 ) {
+  // B-03: the student reaches the lesson through the admin's class.
+  await shareLesson(tdb, lessonId, admin.id);
   const started = await startAttempt(
     { id: userId, role: "student" },
     lessonId,
@@ -136,7 +140,7 @@ const attempt = async (id: string) =>
 
 beforeEach(async () => {
   await resetDb(tdb);
-  admin = { id: await addUser("admin") };
+  admin = { id: await addUser("admin"), role: "admin" };
 });
 
 describe("correctLesson (B-10)", () => {

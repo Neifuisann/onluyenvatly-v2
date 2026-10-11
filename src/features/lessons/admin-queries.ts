@@ -5,11 +5,13 @@ import { attempts, lessons, lessonVersions } from "@/db/schema";
 import type { AdminListFilters } from "./domain/admin-list";
 import { searchTerms } from "./domain/catalog";
 import type { ComposeSource } from "./domain/compose";
+import { type Owner, ownedBy } from "./ownership";
 import type { QuestionType } from "./schema";
 
 /**
- * Admin reads (S5-01). Per request and uncached: only the teacher uses them,
- * and the list must show a change as soon as it is made.
+ * Teacher reads (S5-01). Per request and uncached: only the teacher uses them,
+ * and the list must show a change as soon as it is made. Every one is
+ * limited to the teacher's own lessons (B-03, `ownership.ts`).
  */
 
 export type AdminLessonRow = {
@@ -34,6 +36,7 @@ export type AdminLessonRow = {
  * sends the full id order back.
  */
 export async function getAdminLessons(
+  owner: Owner,
   f: Pick<AdminListFilters, "q" | "status">,
 ): Promise<AdminLessonRow[]> {
   return db
@@ -53,6 +56,7 @@ export async function getAdminLessons(
     .from(lessons)
     .where(
       and(
+        ownedBy(owner),
         isNull(lessons.deletedAt),
         f.status ? eq(lessons.status, f.status) : undefined,
         ...searchTerms(f.q).map(
@@ -70,6 +74,7 @@ export type LessonForEditing = {
   description: string | null;
   grade: number | null;
   chapter: string | null;
+  subject: string;
   tags: string[];
   coverPath: string | null;
   status: "draft" | "published" | "archived";
@@ -88,6 +93,7 @@ export type LessonForEditing = {
  * never reachable from student pages.
  */
 export async function getLessonForEditing(
+  owner: Owner,
   id: number,
 ): Promise<LessonForEditing | null> {
   const [row] = await db
@@ -97,6 +103,7 @@ export async function getLessonForEditing(
       description: lessons.description,
       grade: lessons.grade,
       chapter: lessons.chapter,
+      subject: lessons.subject,
       tags: lessons.tags,
       coverPath: lessons.coverPath,
       status: lessons.status,
@@ -114,7 +121,7 @@ export async function getLessonForEditing(
         sql`coalesce(${lessons.draftVersionId}, ${lessons.currentVersionId})`,
       ),
     )
-    .where(and(eq(lessons.id, id), isNull(lessons.deletedAt)))
+    .where(and(eq(lessons.id, id), ownedBy(owner), isNull(lessons.deletedAt)))
     .limit(1);
   if (!row) return null;
   return {
@@ -129,7 +136,7 @@ export async function getLessonForEditing(
  * corrects it, and how many submitted attempts a correction would regrade.
  * Includes answers: admin only. Null without a published version.
  */
-export async function getLessonForCorrection(id: number) {
+export async function getLessonForCorrection(owner: Owner, id: number) {
   const [row] = await db
     .select({
       id: lessons.id,
@@ -143,7 +150,7 @@ export async function getLessonForCorrection(id: number) {
     })
     .from(lessons)
     .innerJoin(lessonVersions, eq(lessonVersions.id, lessons.currentVersionId))
-    .where(and(eq(lessons.id, id), isNull(lessons.deletedAt)))
+    .where(and(eq(lessons.id, id), ownedBy(owner), isNull(lessons.deletedAt)))
     .limit(1);
   if (!row?.versionId) return null;
   // `attempts_lesson_submitted_idx`, then the version filter.
@@ -173,7 +180,9 @@ const countType = (type: QuestionType) =>
  * reads (published, else draft). Counts only: the questions stay in the
  * database until the teacher submits.
  */
-export async function getComposeSources(): Promise<ComposeSource[]> {
+export async function getComposeSources(
+  owner: Owner,
+): Promise<ComposeSource[]> {
   const rows = await db
     .select({
       id: lessons.id,
@@ -192,7 +201,45 @@ export async function getComposeSources(): Promise<ComposeSource[]> {
         sql`coalesce(${lessons.currentVersionId}, ${lessons.draftVersionId})`,
       ),
     )
-    .where(isNull(lessons.deletedAt))
+    .where(and(ownedBy(owner), isNull(lessons.deletedAt)))
     .orderBy(desc(lessons.updatedAt), desc(lessons.id));
   return rows.filter((r) => r.mcq + r.tf + r.short > 0);
 }
+
+/** The teacher's own tags, for the AI tag suggestions (S7-05, B-03). */
+export async function getOwnerTags(owner: Owner): Promise<string[]> {
+  const rows = await db
+    .selectDistinct({ tag: sql<string>`unnest(${lessons.tags})` })
+    .from(lessons)
+    .where(and(ownedBy(owner), isNull(lessons.deletedAt)));
+  const vi = new Intl.Collator("vi").compare;
+  return rows.map((r) => r.tag).sort(vi);
+}
+
+/**
+ * The teacher's published lessons a class can be given (B-03), newest first,
+ * for the class page. Small rows: no content.
+ */
+export async function getAssignableLessons(owner: Owner) {
+  return db
+    .select({
+      id: lessons.id,
+      title: lessons.title,
+      grade: lessons.grade,
+      subject: lessons.subject,
+      questionCount: lessons.questionCount,
+    })
+    .from(lessons)
+    .where(
+      and(
+        ownedBy(owner),
+        eq(lessons.status, "published"),
+        isNull(lessons.deletedAt),
+      ),
+    )
+    .orderBy(asc(lessons.sortOrder), asc(lessons.id));
+}
+
+export type AssignableLesson = Awaited<
+  ReturnType<typeof getAssignableLessons>
+>[number];

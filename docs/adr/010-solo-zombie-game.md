@@ -1,4 +1,4 @@
-# ADR-009: "Bắn zombie", a lesson played as a solo game
+# ADR-010: "Bắn zombie", a lesson played as a solo game
 
 - **Status:** Proposed (owner request 2026-10-11, backlog B-11)
 - **Date:** 2026-10-11
@@ -16,7 +16,7 @@ The hard constraint is ADR-004: no key reaches a student before submit. A game h
 ## Decision
 Option 3.
 - **Config:** `LessonConfig.game = { kind: "zombie", lives: 1 | 3, secondsPerQuestion }` (null = a normal test). A game requires `revealAnswers: "after_submit"`, no `startsAt`, no overall time limit and no exam guard, since every wave shows its key once it ends. That is the same rule `lessonAllowsPractice`/`lessonAllowsGame` apply.
-- **Attempt:** mode `game` (migration `0017`) plus `attempts.game` (jsonb `ZombieState`). Only mcq and tf questions are played. Each mcq is one wave (one lane per option, shuffled per attempt as usual); each tf statement is one wave with two lanes (Đúng, Sai). Short answers are left out at start, and the settings say how many.
+- **Attempt:** mode `game` (migration `0018`) plus `attempts.game` (jsonb `ZombieState`). Only mcq and tf questions are played. Each mcq is one wave (one lane per option, shuffled per attempt as usual); each tf statement is one wave with two lanes (Đúng, Sai). Short answers are left out at start, and the settings say how many.
 - **Rules (pure, `features/zombie/domain/engine.ts`):** the right lane ends the wave. A wrong lane costs a life, and the wave ends when only one lane is left. A zombie reaching the barricade (the server's clock ran out) costs a life and ends the wave. No lives left ends the game. **The first shot of a wave is its answer**, written into `attempts.answers`, so the normal `grade()` scores the attempt, and the result page, rating and mistakes bank work unchanged.
 - **Transport:** `POST /api/attempts/[id]/game` with `{begin}`, `{shoot, wave, lane}` or `{timeout, wave}`. One transaction locks the row per move; a retried or doubled move comes back `stale`. A wave's key is stored and returned only once that wave has ended. The move that ends the game grades the attempt (`submitAttempt`, which reads the stored answers for a game). Should that fail, the runner page grades it on the next visit.
 - **Clock:** the server stores when the current wave's clock starts (`at`: start + 3 s countdown, or the previous wave's end + 1.8 s). A shot arriving after the clock plus 1.5 s grace counts as a timeout. A timeout may arrive at most 1 s early.

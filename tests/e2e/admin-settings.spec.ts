@@ -91,33 +91,41 @@ test("a new admin appears in the list and can log in", async ({
   const fullName = `Quản trị E2E ${username.slice(-6)}`;
   const password = "Qtv-e2e-2026";
   await page.goto("/admin/settings");
-  const create = page.getByRole("region", { name: "Thêm quản trị viên" });
+  const create = page.getByRole("region", { name: "Thêm giáo viên" });
+  // A teacher by default (B-03); this one is an admin.
+  await expect(create.getByRole("radio", { name: /^Giáo viên/ })).toBeChecked();
+  await create.getByRole("radio", { name: /^Quản trị viên/ }).check();
 
   // Policy errors come back on the fields.
   await create.getByLabel("Họ và tên").fill(fullName);
   await create.getByLabel("Tên đăng nhập").fill(username);
   await create.getByLabel("Mật khẩu", { exact: true }).fill("12345678");
-  await create.getByRole("button", { name: "Thêm quản trị viên" }).click();
+  await create.getByRole("button", { name: "Tạo tài khoản" }).click();
   await expect(
     create.getByText("Mật khẩu không được chỉ gồm chữ số."),
   ).toBeVisible();
   await expect(create.getByLabel("Mật khẩu", { exact: true })).toHaveValue("");
 
   await create.getByLabel("Mật khẩu", { exact: true }).fill(password);
-  await create.getByRole("button", { name: "Thêm quản trị viên" }).click();
+  await create.getByRole("button", { name: "Tạo tài khoản" }).click();
   await expect(create.locator("output")).toHaveText(
-    `Đã thêm quản trị viên ${fullName}.`,
+    `Đã tạo tài khoản cho ${fullName}.`,
   );
   await expect(create.getByLabel("Tên đăng nhập")).toHaveValue("");
-  const admins = page.getByRole("list", { name: "Danh sách quản trị viên" });
+  const admins = page.getByRole("list", {
+    name: "Danh sách giáo viên và quản trị viên",
+  });
   await expect(admins.getByText(fullName)).toBeVisible();
+  await expect(
+    admins.getByRole("listitem").filter({ hasText: fullName }),
+  ).toContainText("Quản trị viên");
   await expect(admins).toContainText(`Tên đăng nhập ${username}`);
 
   // The same username again is refused.
   await create.getByLabel("Họ và tên").fill(fullName);
   await create.getByLabel("Tên đăng nhập").fill(username.toUpperCase());
   await create.getByLabel("Mật khẩu", { exact: true }).fill(password);
-  await create.getByRole("button", { name: "Thêm quản trị viên" }).click();
+  await create.getByRole("button", { name: "Tạo tài khoản" }).click();
   await expect(
     create.getByText("Tên đăng nhập này đã được dùng."),
   ).toBeVisible();
@@ -136,7 +144,7 @@ test("a new admin appears in the list and can log in", async ({
   await other.goto("/admin/settings");
   await expect(
     other
-      .getByRole("list", { name: "Danh sách quản trị viên" })
+      .getByRole("list", { name: "Danh sách giáo viên và quản trị viên" })
       .getByRole("listitem")
       .filter({ hasText: fullName }),
   ).toContainText("Bạn");
@@ -155,7 +163,7 @@ test("settings page: accessible in light and dark, fits 360 px", async ({
     form.getByLabel("Số lượt gọi AI tối đa mỗi ngày"),
   ).toHaveAttribute("max", "5000");
   await expect(
-    page.getByRole("list", { name: "Danh sách quản trị viên" }),
+    page.getByRole("list", { name: "Danh sách giáo viên và quản trị viên" }),
   ).toContainText("Bạn");
   await expectNoOverflow(page);
   for (const scheme of ["light", "dark"] as const) {

@@ -28,15 +28,18 @@ export type AdminOverview = {
 };
 
 /**
- * `/admin` (S6-06): shared-cached for 5 minutes under `adminOverview`
- * (deleting an attempt invalidates it; a submit does not). The pending count
- * comes from the nav badge's own cache.
+ * `/admin` (S6-06): a teacher's numbers (B-03: attempts on their own
+ * lessons; `ownerId` null = an admin's, every attempt), cached for 5 minutes
+ * under `adminOverview`, one entry per teacher (the id is part of the cache
+ * key). Deleting an attempt invalidates it; a submit does not.
  */
-export async function getAdminOverview(): Promise<AdminOverview> {
+export async function getAdminOverview(
+  ownerId: string | null,
+): Promise<AdminOverview> {
   "use cache";
   cacheTag(tags.adminOverview);
   cacheLife({ stale: 60, revalidate: 300, expire: 600 });
-  return loadAdminOverview(new Date());
+  return loadAdminOverview(new Date(), ownerId);
 }
 
 // postgres.js returns an array, PGlite returns { rows }.
@@ -55,7 +58,8 @@ const json = <T>(v: unknown, fallback: T): T =>
 
 /**
  * Every dashboard aggregate in ONE statement. Students' submitted attempts
- * only (an admin's own tries are not activity). Both windows are range
+ * only (staff tries are not activity): on the teacher's own lessons, or all
+ * of them for an admin (`ownerId` null). Both windows are range
  * scans of `attempts_submitted_idx` (migration 0007). Hardest questions:
  * this week's lesson attempts, one row per item via
  * `jsonb_array_elements(items) WITH ORDINALITY` joined to `earned[ord]` and
@@ -63,7 +67,10 @@ const json = <T>(v: unknown, fallback: T): T =>
  * with at least 5 answers; only the 5 kept rows look up their position in
  * the version.
  */
-export async function loadAdminOverview(now: Date): Promise<AdminOverview> {
+export async function loadAdminOverview(
+  now: Date,
+  ownerId: string | null,
+): Promise<AdminOverview> {
   const chart = vnWindow(now, CHART_DAYS);
   const week = vnWindow(now, WEEK_DAYS);
   const since30 = chart.since.toISOString();
@@ -73,17 +80,20 @@ export async function loadAdminOverview(now: Date): Promise<AdminOverview> {
       select a.user_id, a.submitted_at
       from attempts a
       join users u on u.id = a.user_id
+      left join lessons ol on ol.id = a.lesson_id
       where a.status = 'submitted'
         and a.submitted_at >= ${since30}::timestamptz
         and u.role = 'student'
+        and (${ownerId}::uuid is null or ol.owner_id = ${ownerId}::uuid)
     ), week as (
       select a.lesson_id, a.lesson_version_id, a.items, a.earned
       from attempts a
       join users u on u.id = a.user_id
+      join lessons ol on ol.id = a.lesson_id
       where a.status = 'submitted'
         and a.submitted_at >= ${since7}::timestamptz
         and u.role = 'student'
-        and a.lesson_id is not null
+        and (${ownerId}::uuid is null or ol.owner_id = ${ownerId}::uuid)
         and a.earned is not null
     ), marks as (
       select w.lesson_id,

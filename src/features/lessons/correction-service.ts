@@ -22,6 +22,7 @@ import { applyCorrections, type Correction } from "./domain/corrections";
 import { serializeLesson } from "./domain/serializer";
 import { summarizeLesson } from "./domain/summary";
 import { correctionCopy as M } from "./messages";
+import { ownedBy } from "./ownership";
 import { LessonConfigSchema, QuestionsSchema } from "./schema";
 
 export type CorrectionOutcome = {
@@ -52,7 +53,8 @@ const BATCH = 100;
  *    (`replayWithPerformance`), each `ratings` row locked after the
  *    attempts, the submit transaction's order;
  * 6. audit `lesson.correct`.
- * Callers check `requireAdmin()` first.
+ * Callers check `requireTeacher()` first; only the actor's own lesson is
+ * found (B-03).
  */
 export async function correctLesson(
   actor: Actor,
@@ -68,7 +70,7 @@ export async function correctLesson(
         draftVersionId: lessons.draftVersionId,
       })
       .from(lessons)
-      .where(and(eq(lessons.id, id), isNull(lessons.deletedAt)))
+      .where(and(eq(lessons.id, id), ownedBy(actor), isNull(lessons.deletedAt)))
       .for("update")
       .limit(1);
     if (!lesson) return err("NOT_FOUND");

@@ -7,6 +7,7 @@ import {
   type LucideIcon,
   MessageSquareText,
   Repeat,
+  School,
   ScrollText,
   Settings,
   Trophy,
@@ -24,6 +25,8 @@ type NavItem = {
   label: string;
   icon: LucideIcon;
   exact?: boolean;
+  /** Platform pages: admins only, hidden from teachers (B-03). */
+  adminOnly?: boolean;
 };
 
 const s = shellCopy.studentNav;
@@ -33,26 +36,38 @@ const a = shellCopy.adminNavItems;
 export const NAV: Record<ShellVariant, NavItem[]> = {
   student: [
     { href: "/dashboard", label: s.dashboard, icon: House },
-    { href: "/lessons", label: s.lessons, icon: BookOpen },
+    { href: "/classes", label: s.lessons, icon: School },
     { href: "/review", label: s.review, icon: Repeat },
     { href: "/leaderboard", label: s.leaderboard, icon: Trophy },
     { href: "/profile", label: s.profile, icon: User },
   ],
   admin: [
     { href: "/admin", label: a.overview, icon: LayoutDashboard, exact: true },
+    { href: "/admin/classes", label: a.classes, icon: School },
     { href: "/admin/lessons", label: a.lessons, icon: BookOpen },
     { href: "/admin/students", label: a.students, icon: Users },
     { href: "/admin/results", label: a.results, icon: ClipboardList },
+    { href: "/admin/games", label: a.games, icon: Flag },
     {
       href: "/admin/explanations",
       label: a.explanations,
       icon: MessageSquareText,
+      adminOnly: true,
     },
-    { href: "/admin/games", label: a.games, icon: Flag },
-    { href: "/admin/settings", label: a.settings, icon: Settings },
-    { href: "/admin/audit", label: a.audit, icon: ScrollText },
+    {
+      href: "/admin/settings",
+      label: a.settings,
+      icon: Settings,
+      adminOnly: true,
+    },
+    { href: "/admin/audit", label: a.audit, icon: ScrollText, adminOnly: true },
   ],
 };
+
+/** The items a user sees: teachers don't get the platform pages. */
+function navItems(variant: ShellVariant, isAdmin: boolean): NavItem[] {
+  return NAV[variant].filter((item) => isAdmin || !item.adminOnly);
+}
 
 /** Counts shown next to nav items, keyed by `href` (only zero-free ones). */
 export type NavBadges = Readonly<Record<string, number>>;
@@ -81,14 +96,16 @@ function itemLabel(item: NavItem, count: number | undefined) {
 /** Vertical list for the desktop sidebar: the current page sits on a raised pill. */
 export function SidebarNav({
   variant,
+  isAdmin,
   badges,
 }: {
   variant: ShellVariant;
+  isAdmin: boolean;
   badges?: NavBadges | undefined;
 }) {
   return (
     <ul className="flex flex-col gap-0.5">
-      {NAV[variant].map((item) => {
+      {navItems(variant, isAdmin).map((item) => {
         return (
           <li key={item.href}>
             <NavLink
@@ -122,15 +139,17 @@ export function SidebarNav({
  */
 export function MobileNav({
   variant,
+  isAdmin,
   badges,
 }: {
   variant: ShellVariant;
+  isAdmin: boolean;
   badges?: NavBadges | undefined;
 }) {
   if (variant === "admin") {
     return (
       <ul className="flex gap-1 overflow-x-auto px-2 pb-2 [scrollbar-width:none]">
-        {NAV.admin.map((item) => {
+        {navItems("admin", isAdmin).map((item) => {
           return (
             <li key={item.href} className="shrink-0">
               <NavLink

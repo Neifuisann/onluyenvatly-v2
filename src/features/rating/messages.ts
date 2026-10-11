@@ -24,13 +24,17 @@ export const ratingCopy = {
 
 export const leaderboardCopy = {
   title: "Xếp hạng",
-  leadAll: "Xếp theo rating hiện tại, cập nhật mỗi phút.",
-  leadWeek: "Ai tăng rating nhiều nhất trong 7 ngày qua.",
+  leadAll: (className: string) =>
+    `Các bạn lớp ${className}, xếp theo rating hiện tại, cập nhật mỗi phút.`,
+  leadWeek: (className: string) =>
+    `Bạn nào lớp ${className} tăng rating nhiều nhất trong 7 ngày qua.`,
   periodGroup: "Khoảng thời gian",
   periods: { all: "Tổng", week: "7 ngày qua" },
-  gradeGroup: "Khối lớp",
-  allGrades: "Tất cả",
-  grade: (g: number) => `Lớp ${g}`,
+  classGroup: "Lớp học",
+  noClassTitle: "Bạn chưa ở lớp nào",
+  noClassBody:
+    "Bảng xếp hạng so sánh bạn với các bạn cùng lớp. Nhờ giáo viên thêm bạn vào lớp trước nhé.",
+  toClasses: "Xem lớp học",
   listLabel: "Bảng xếp hạng",
   rank: (n: number) => `Hạng ${n}`,
   me: "Bạn",

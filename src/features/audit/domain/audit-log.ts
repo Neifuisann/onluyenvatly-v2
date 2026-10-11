@@ -17,12 +17,13 @@ export const AUDIT_COUNT_CAP = AUDIT_PAGE_SIZE * AUDIT_MAX_PAGE;
  */
 export const AUDIT_AREAS = {
   lessons: ["lesson"],
+  classes: ["class"],
   students: ["student"],
   results: ["attempt"],
   explanations: ["explanation"],
   games: ["game"],
   accounts: ["account"],
-  settings: ["settings", "admin"],
+  settings: ["settings", "admin", "teacher"],
 } as const satisfies Record<string, readonly [string, ...string[]]>;
 
 export type AuditArea = keyof typeof AUDIT_AREAS;
@@ -134,6 +135,8 @@ export function auditTargetHref({
       return UUID.test(targetId) ? `/attempts/${targetId}/result` : null;
     case "game":
       return UUID.test(targetId) ? `/host/${targetId}` : null;
+    case "class":
+      return INT.test(targetId) ? `/admin/classes/${targetId}` : null;
     default:
       return null;
   }

@@ -58,6 +58,8 @@ export const CreateAdminSchema = z.strictObject({
     if (issue)
       ctx.addIssue({ code: "custom", message: passwordIssueMessages[issue] });
   }),
+  /** A teacher (own classes and lessons) or an admin (B-03). */
+  role: z.enum(["teacher", "admin"]).default("teacher"),
 });
 export type CreateAdminInput = z.infer<typeof CreateAdminSchema>;
 

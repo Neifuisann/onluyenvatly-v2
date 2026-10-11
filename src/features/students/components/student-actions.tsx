@@ -8,7 +8,6 @@ import {
   LogOut,
   Trash2,
   UserCheck,
-  UserX,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -18,9 +17,7 @@ import { Dialog } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import {
-  approve,
   deleteStudent,
-  reject,
   resetPassword,
   revokeSessions,
   setStatus,
@@ -29,7 +26,7 @@ import type { StudentStatus } from "../domain/list";
 import { studentsCopy as t } from "../messages";
 import { useRun } from "./use-run";
 
-type Confirm = "reset" | "revoke" | "disable" | "reject" | "delete";
+type Confirm = "reset" | "revoke" | "disable" | "delete";
 
 /**
  * The action panel of `/admin/students/[id]` (S6-02). Every destructive
@@ -81,7 +78,7 @@ export function StudentActions({
       }
       close();
       setMessage({ text: t.deleted, error: false });
-      router.replace("/admin/students?view=all");
+      router.replace("/admin/students");
       return;
     }
     close();
@@ -99,15 +96,10 @@ export function StudentActions({
         () => revokeSessions(id),
         (d) => t.revoked(d.revoked),
       );
-    else if (kind === "disable")
+    else
       run(
         () => setStatus({ id, status: "disabled" }),
         () => t.disabled,
-      );
-    else
-      run(
-        () => reject({ ids: [id] }),
-        (d) => t.rejected(d.done, d.skipped),
       );
   };
 
@@ -136,41 +128,11 @@ export function StudentActions({
       confirm: t.disableConfirm,
       danger: true,
     },
-    reject: {
-      title: t.rejectTitle,
-      body: t.rejectBody(1),
-      confirm: t.rejectConfirm,
-      danger: true,
-    },
   };
 
   return (
     <div className="flex flex-col gap-3">
       <div className="grid gap-2 sm:grid-cols-2">
-        {status === "pending" && (
-          <>
-            <Button
-              disabled={pending}
-              onClick={() =>
-                run(
-                  () => approve({ ids: [id] }),
-                  (d) => t.approved(d.done, d.skipped),
-                )
-              }
-            >
-              <UserCheck aria-hidden />
-              {t.approve}
-            </Button>
-            <Button
-              variant="secondary"
-              disabled={pending}
-              onClick={() => setConfirm("reject")}
-            >
-              <UserX aria-hidden />
-              {t.reject}
-            </Button>
-          </>
-        )}
         <Button
           variant="secondary"
           disabled={pending}

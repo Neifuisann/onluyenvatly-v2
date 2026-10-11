@@ -10,7 +10,8 @@
 | [006](006-media-storage.md) | Supabase Storage public bucket, browser-side resize, direct signed uploads | Accepted |
 | [007](007-ai-explanation-cache.md) | AI explanations generated once per question and stored | Accepted |
 | [008](008-game-rooms-bounded-polling.md) | Live game rooms: student-paced race, bounded polling, no realtime service | Proposed |
-| [009](009-solo-zombie-game.md) | "Bắn zombie": a lesson played as a solo game, graded per shot | Proposed |
+| [009](009-multi-teacher-classes.md) | Multiple teachers, classes and subjects: ownership columns, classes as the only bridge to students | Proposed |
+| [010](010-solo-zombie-game.md) | "Bắn zombie": a lesson played as a solo game, graded per shot | Proposed |
 
 To add one, copy the template below to `NNN-short-title.md`, then set Status to `Accepted` when the owner signs off (Sprint 0, task S0-02).
 

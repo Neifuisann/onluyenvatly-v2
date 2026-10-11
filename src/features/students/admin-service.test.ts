@@ -5,6 +5,8 @@ import {
   attemptOverrides,
   attempts,
   auditLog,
+  classes,
+  classMembers,
   lessons,
   lessonVersions,
   mistakes,
@@ -19,7 +21,6 @@ import { DEFAULT_LESSON_CONFIG } from "@/features/lessons/schema";
 import { resetDb, type TestDb } from "@/test/db";
 import {
   getGrantableLessons,
-  getPendingStudents,
   getStudentAttempts,
   getStudentDetail,
   getStudentOverrides,
@@ -27,11 +28,9 @@ import {
   getStudents,
 } from "./admin-queries";
 import {
-  approveStudents,
   createAdmin,
   deleteStudent,
   grantExtraAttempts,
-  rejectStudents,
   resetStudentPassword,
   revokeStudentSessions,
   setStudentStatus,
@@ -45,7 +44,7 @@ vi.mock("next/cache", () => ({ cacheTag: () => {}, cacheLife: () => {} }));
 const tdb = db as unknown as TestDb;
 const meta = { ip: "203.0.113.7", userAgent: "vitest" };
 
-let admin: { id: string };
+let admin: { id: string; role: "admin" };
 
 let phoneSeq = 0;
 async function addStudent(
@@ -73,6 +72,7 @@ async function addLesson(title: string, attemptCount = 0) {
       status: "published",
       config: DEFAULT_LESSON_CONFIG,
       attemptCount,
+      ownerId: admin.id,
     })
     .returning({ id: lessons.id });
   return row?.id ?? 0;
@@ -115,69 +115,7 @@ beforeEach(async () => {
       passwordHash: "x",
     })
     .returning({ id: users.id });
-  admin = { id: a?.id ?? "" };
-});
-
-describe("approveStudents / rejectStudents", () => {
-  it("approves pending students, stamps who and when, one audit row each", async () => {
-    const a = await addStudent("A", { status: "pending" });
-    const b = await addStudent("B", { status: "pending" });
-    const now = new Date("2026-09-29T03:00:00Z");
-    const result = await approveStudents(admin, [a, b], now);
-    expect(result).toEqual({ ok: true, data: { done: 2, skipped: 0 } });
-    const row = await userRow(a);
-    expect(row).toMatchObject({ status: "active", approvedBy: admin.id });
-    expect(row?.approvedAt?.getTime()).toBe(now.getTime());
-    const log = await audits();
-    expect(log.map((r) => [r.action, r.targetType, r.targetId])).toEqual([
-      ["student.approve", "user", a],
-      ["student.approve", "user", b],
-    ]);
-    expect(log.every((r) => r.actorId === admin.id && r.data === null)).toBe(
-      true,
-    );
-  });
-
-  it("skips and counts students who are not pending, and never touches admins", async () => {
-    const pending = await addStudent("P", { status: "pending" });
-    const active = await addStudent("A", { status: "active" });
-    const rejected = await addStudent("R", { status: "rejected" });
-    const result = await approveStudents(admin, [
-      pending,
-      active,
-      rejected,
-      admin.id,
-      "00000000-0000-4000-8000-000000000000",
-    ]);
-    expect(result).toEqual({ ok: true, data: { done: 1, skipped: 4 } });
-    expect((await userRow(rejected))?.status).toBe("rejected");
-    expect((await audits()).map((r) => r.targetId)).toEqual([pending]);
-  });
-
-  it("rejects pending students and writes nothing when there is nothing to do", async () => {
-    const pending = await addStudent("P", { status: "pending" });
-    const active = await addStudent("A");
-    expect(await rejectStudents(admin, [pending, active])).toEqual({
-      ok: true,
-      data: { done: 1, skipped: 1 },
-    });
-    expect((await userRow(pending))?.status).toBe("rejected");
-    expect((await userRow(active))?.status).toBe("active");
-    expect((await audits()).map((r) => r.action)).toEqual(["student.reject"]);
-
-    await rejectStudents(admin, [active]);
-    expect(await audits()).toHaveLength(1);
-  });
-
-  it("a second approve of the same student is a no-op", async () => {
-    const a = await addStudent("A", { status: "pending" });
-    await approveStudents(admin, [a]);
-    expect(await approveStudents(admin, [a])).toEqual({
-      ok: true,
-      data: { done: 0, skipped: 1 },
-    });
-    expect(await audits()).toHaveLength(1);
-  });
+  admin = { id: a?.id ?? "", role: "admin" };
 });
 
 describe("resetStudentPassword", () => {
@@ -497,6 +435,7 @@ describe("createAdmin", () => {
       fullName: "Cô Hoa",
       username: "co.hoa",
       password: "vatly-2026",
+      role: "admin",
     });
     if (!result.ok) throw new Error("expected ok");
     const row = await userRow(result.data.id);
@@ -521,6 +460,7 @@ describe("createAdmin", () => {
       fullName: "Cô Hoa",
       username: "gv",
       password: "vatly-2026",
+      role: "teacher" as const,
     };
     expect(await createAdmin(admin, input)).toMatchObject({
       ok: false,
@@ -532,21 +472,6 @@ describe("createAdmin", () => {
 });
 
 describe("student queries", () => {
-  it("lists pending students oldest first and flags more than 200", async () => {
-    await addStudent("Sau", {
-      status: "pending",
-      createdAt: new Date("2026-09-02T00:00:00Z"),
-    });
-    await addStudent("Trước", {
-      status: "pending",
-      createdAt: new Date("2026-09-01T00:00:00Z"),
-    });
-    await addStudent("Đã duyệt");
-    const { rows, hasMore } = await getPendingStudents();
-    expect(rows.map((r) => r.fullName)).toEqual(["Trước", "Sau"]);
-    expect(hasMore).toBe(false);
-  });
-
   it("searches names without accents and phones by prefix, only among students", async () => {
     await addStudent("Nguyễn Văn An", { phone: "0912345678", grade: 12 });
     await addStudent("Nguyễn Thị Bình", { phone: "0987000111", grade: 11 });
@@ -556,8 +481,8 @@ describe("student queries", () => {
       status: "disabled",
     });
     const list = (params: Record<string, string>) =>
-      getStudents(parseStudentListParams({ view: "all", ...params })).then(
-        (r) => r.rows.map((s) => s.fullName),
+      getStudents(admin, parseStudentListParams(params)).then((r) =>
+        r.rows.map((s) => s.fullName),
       );
 
     expect(await list({})).toEqual([
@@ -587,10 +512,11 @@ describe("student queries", () => {
   it("pages cumulatively and reports the total", async () => {
     for (let i = 0; i < 53; i++)
       await addStudent(`Học sinh ${String(i).padStart(2, "0")}`);
-    const first = await getStudents(parseStudentListParams({ view: "all" }));
+    const first = await getStudents(admin, parseStudentListParams({}));
     expect(first.rows).toHaveLength(50);
     expect(first.total).toBe(53);
     const second = await getStudents(
+      admin,
       parseStudentListParams({ view: "all", page: "2" }),
     );
     expect(second.rows).toHaveLength(53);
@@ -610,7 +536,7 @@ describe("student queries", () => {
       .insert(attemptOverrides)
       .values({ userId: id, lessonId: l2, extraAttempts: 3 });
 
-    expect(await getStudentDetail(id)).toMatchObject({
+    expect(await getStudentDetail(admin, id)).toMatchObject({
       id,
       fullName: "Nguyễn Văn An",
       phone: "0912345678",
@@ -618,24 +544,24 @@ describe("student queries", () => {
       rating: { rating: 1620, peak: 1700, ratedAttempts: 4 },
       attemptTotal: 1,
     });
-    expect((await getStudentAttempts(id)).map((a) => a.lessonTitle)).toEqual([
-      "Bài một",
-    ]);
+    expect(
+      (await getStudentAttempts(admin, id)).map((a) => a.lessonTitle),
+    ).toEqual(["Bài một"]);
     const [session] = await getStudentSessions(id);
     expect(session).toMatchObject({ userAgent: "vitest" });
-    expect(await getStudentOverrides(id)).toEqual([
+    expect(await getStudentOverrides(admin, id)).toEqual([
       { lessonId: l2, lessonTitle: "Bài hai", extraAttempts: 3 },
     ]);
-    expect(await getGrantableLessons(id)).toEqual([
+    expect(await getGrantableLessons(admin, id)).toEqual([
       { id: l1, title: "Bài một", attempted: true },
       { id: l2, title: "Bài hai", attempted: false },
     ]);
   });
 
   it("has no detail for an admin or an unknown id, and hides expired sessions", async () => {
-    expect(await getStudentDetail(admin.id)).toBeNull();
+    expect(await getStudentDetail(admin, admin.id)).toBeNull();
     expect(
-      await getStudentDetail("00000000-0000-4000-8000-000000000000"),
+      await getStudentDetail(admin, "00000000-0000-4000-8000-000000000000"),
     ).toBeNull();
     const id = await addStudent("A");
     await createSession(id, meta, new Date("2026-01-01T00:00:00Z"));
@@ -646,6 +572,86 @@ describe("student queries", () => {
 
   it("gives an unrated student no rating", async () => {
     const id = await addStudent("A");
-    expect((await getStudentDetail(id))?.rating).toBeNull();
+    expect((await getStudentDetail(admin, id))?.rating).toBeNull();
+  });
+});
+
+describe("a teacher's view (B-03)", () => {
+  async function addTeacherWithClass(studentIds: string[]) {
+    const [t] = await tdb
+      .insert(users)
+      .values({
+        role: "teacher",
+        status: "active",
+        fullName: "Cô lớp",
+        username: "colop",
+        passwordHash: "x",
+      })
+      .returning({ id: users.id });
+    const teacher = { id: t?.id ?? "", role: "teacher" as const };
+    const [c] = await tdb
+      .insert(classes)
+      .values({ ownerId: teacher.id, name: "12A1" })
+      .returning({ id: classes.id });
+    if (studentIds.length)
+      await tdb
+        .insert(classMembers)
+        .values(studentIds.map((userId) => ({ classId: c?.id ?? 0, userId })));
+    return teacher;
+  }
+
+  it("lists and opens only the students of their classes, with their own lessons' attempts", async () => {
+    const mine = await addStudent("Trong lớp");
+    const stranger = await addStudent("Ngoài lớp");
+    const teacher = await addTeacherWithClass([mine]);
+    const theirs = await addLesson("Bài của cô");
+    await tdb
+      .update(lessons)
+      .set({ ownerId: teacher.id })
+      .where(eq(lessons.id, theirs));
+    const adminLesson = await addLesson("Bài của admin");
+    await addAttempt(mine, theirs);
+    await addAttempt(mine, adminLesson);
+
+    const names = (
+      await getStudents(teacher, parseStudentListParams({}))
+    ).rows.map((r) => r.fullName);
+    expect(names).toEqual(["Trong lớp"]);
+    expect(await getStudentDetail(teacher, stranger)).toBeNull();
+    expect(await getStudentDetail(teacher, mine)).toMatchObject({
+      attemptTotal: 1,
+    });
+    expect(
+      (await getStudentAttempts(teacher, mine)).map((a) => a.lessonTitle),
+    ).toEqual(["Bài của cô"]);
+    expect(
+      (await getGrantableLessons(teacher, mine)).map((l) => l.title),
+    ).toEqual(["Bài của cô"]);
+    // Grants: on their own lesson, for a student of theirs only.
+    expect(
+      await grantExtraAttempts(teacher, {
+        userId: mine,
+        lessonId: adminLesson,
+        extra: 1,
+      }),
+    ).toMatchObject({ code: "NOT_FOUND" });
+    expect(
+      await grantExtraAttempts(teacher, {
+        userId: stranger,
+        lessonId: theirs,
+        extra: 1,
+      }),
+    ).toMatchObject({ code: "NOT_FOUND" });
+    expect(
+      await grantExtraAttempts(teacher, {
+        userId: mine,
+        lessonId: theirs,
+        extra: 1,
+      }),
+    ).toMatchObject({ ok: true });
+    // The admin manages every account.
+    expect((await getStudents(admin, parseStudentListParams({}))).total).toBe(
+      2,
+    );
   });
 });

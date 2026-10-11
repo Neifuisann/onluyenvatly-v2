@@ -10,7 +10,7 @@ export async function GET(
   const user = await requireStudent();
   const parsed = LegacyLessonIdSchema.safeParse((await params).legacyId);
   const id = parsed.success
-    ? await getLessonIdByLegacyId(parsed.data, user.role === "admin")
+    ? await getLessonIdByLegacyId(parsed.data, user.role !== "student")
     : null;
   // The lookup is shared-cached, but an authenticated response must not be.
   const headers = { "Cache-Control": "private, no-store" };

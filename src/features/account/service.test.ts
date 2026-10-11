@@ -217,7 +217,10 @@ describe("deletion request", () => {
         requestedAt: NOW,
       },
     ]);
-    expect((await getStudentDetail(me.id))?.deletionRequestedAt).toEqual(NOW);
+    expect(
+      (await getStudentDetail({ id: me.id, role: "admin" }, me.id))
+        ?.deletionRequestedAt,
+    ).toEqual(NOW);
 
     expect(await cancelDeletion(me, later)).toEqual({
       ok: true,

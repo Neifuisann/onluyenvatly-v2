@@ -10,7 +10,16 @@ import { logout, logoutAll } from "@/features/auth/actions";
 import { authCopy, shellCopy } from "@/lib/messages";
 import { cn } from "@/lib/utils";
 
-export type ShellUser = { fullName: string; role: "student" | "admin" };
+export type ShellUser = {
+  fullName: string;
+  role: "student" | "teacher" | "admin";
+};
+
+const roleLabel = {
+  student: shellCopy.roleStudent,
+  teacher: shellCopy.roleTeacher,
+  admin: shellCopy.roleAdmin,
+} as const;
 
 export function initials(name: string): string {
   const parts = name.trim().split(/\s+/);
@@ -72,9 +81,7 @@ export function UserMenu({
             {user.fullName}
           </span>
           <span className="block text-muted-foreground text-xs">
-            {user.role === "admin"
-              ? shellCopy.roleAdmin
-              : shellCopy.roleStudent}
+            {roleLabel[user.role]}
           </span>
         </span>
         <ChevronsUpDown
@@ -88,7 +95,7 @@ export function UserMenu({
           align === "end" ? "top-full right-0 mt-2" : "bottom-full left-0 mb-3",
         )}
       >
-        {user.role === "admin" && (
+        {user.role !== "student" && (
           <Link
             href={variant === "admin" ? "/dashboard" : "/admin"}
             className={item}

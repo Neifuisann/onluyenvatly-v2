@@ -3,8 +3,8 @@ import { expectAccessible } from "./a11y";
 import { E2E_PASSWORD, e2eAdmin, e2eStudent } from "./fixtures/users";
 
 /**
- * Journey 1 without the admin-approval step (S1-06): register → pending,
- * login states, role landing, ?next= handling, logout. Needs `pnpm seed
+ * Journey 1 (S1-06, B-03): register → signed in straight away with no class
+ * yet, login states, role landing, ?next= handling, logout. Needs `pnpm seed
  * --profile e2e`.
  */
 
@@ -41,7 +41,7 @@ test("signed-out visitors are sent to login with ?next=", async ({ page }) => {
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("Đăng nhập");
 });
 
-test("register → pending screen → login says the account awaits approval", async ({
+test("register → signed in at once, with no class until a teacher adds one (B-03)", async ({
   page,
 }) => {
   const phone = randomPhone();
@@ -54,17 +54,20 @@ test("register → pending screen → login says the account awaits approval", a
   await page.getByLabel("Mật khẩu", { exact: true }).fill("vatly-e2e-2026");
   await page.getByRole("button", { name: "Đăng ký", exact: true }).click();
 
-  await expect(page).toHaveURL(/\/register\/pending$/);
+  await expect(page).toHaveURL(/\/classes$/);
   await expect(page.getByRole("heading", { level: 1 })).toHaveText(
-    "Đã gửi đăng ký",
+    "Lớp học của tôi",
   );
+  // No class yet: the student is told to give the teacher their phone.
+  await expect(page.getByText("Bạn chưa ở lớp nào")).toBeVisible();
+  await expect(page.getByText(phone)).toBeVisible();
+  // An old bookmark of the "chờ duyệt" screen lands here too.
+  await page.goto("/register/pending");
+  await expect(page).toHaveURL(/\/classes$/);
 
-  await page.getByRole("link", { name: "Về trang đăng nhập" }).click();
+  await logout(page);
   await login(page, phone, "vatly-e2e-2026");
-  await expect(
-    page.getByRole("status").filter({ hasText: /đang chờ giáo viên duyệt/ }),
-  ).toBeVisible();
-  await expect(page).toHaveURL(/\/login/);
+  await expect(page).toHaveURL(/\/dashboard$/);
 });
 
 test("register shows field errors and keeps what was typed", async ({
@@ -119,7 +122,7 @@ test("a student logs in, lands on ?next=, and logs out", async ({ page }) => {
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("Chào Một");
   await expect(
     page
-      .getByRole("link", { name: "Bài tập", exact: true })
+      .getByRole("link", { name: "Lớp học", exact: true })
       .filter({ visible: true }),
   ).toBeVisible();
 

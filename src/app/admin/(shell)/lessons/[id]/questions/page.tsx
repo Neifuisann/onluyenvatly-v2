@@ -5,7 +5,7 @@ import { notFound } from "next/navigation";
 import { PageHeader } from "@/components/page-header";
 import { Alert } from "@/components/ui/alert";
 import { buttonVariants } from "@/components/ui/button";
-import { requireAdmin } from "@/features/auth/guards";
+import { requireTeacher } from "@/features/auth/guards";
 import { getLessonForCorrection } from "@/features/lessons/admin-queries";
 import { QuestionCorrections } from "@/features/lessons/components/corrections/question-corrections";
 import { LessonIdSchema } from "@/features/lessons/domain/admin-list";
@@ -27,10 +27,10 @@ export const metadata: Metadata = { title: t.metaTitle };
 export default async function LessonQuestionsPage({
   params,
 }: PageProps<"/admin/lessons/[id]/questions">) {
-  await requireAdmin();
+  const user = await requireTeacher();
   const id = LessonIdSchema.safeParse((await params).id);
   if (!id.success) notFound();
-  const lesson = await getLessonForCorrection(id.data);
+  const lesson = await getLessonForCorrection(user, id.data);
   if (!lesson) notFound();
   const questions = QuestionsSchema.safeParse(lesson.questions);
   if (!questions.success) notFound();

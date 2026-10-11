@@ -11,8 +11,15 @@ export const tags = {
   /** Admin lesson statistics (S6-05); deleting an attempt invalidates it (S6-04). */
   lessonStats: (id: number) => `lesson:${id}:stats`,
   leaderboard: "leaderboard",
-  /** Admin nav badge: students waiting for approval. */
-  pendingStudents: "pendingStudents",
-  /** Admin dashboard aggregates (S6-06, 5 min); deleting an attempt invalidates it. */
+  /**
+   * A class's lesson list and catalog facets (B-03). Giving or taking back a
+   * lesson invalidates it; lesson changes go through `lessons`, which the
+   * class catalog also carries.
+   */
+  classLessons: (id: number) => `class:${id}:lessons`,
+  /**
+   * Teacher dashboard aggregates (S6-06, 5 min), keyed by the teacher since
+   * B-03; deleting an attempt invalidates it.
+   */
   adminOverview: "adminOverview",
 } as const;
