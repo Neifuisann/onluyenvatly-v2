@@ -48,9 +48,10 @@ test("rating, rank, mistakes, recommendation, then the continue card", async ({
       name: /^Rating các lần gần nhất: 1 500, 1 650$/,
     }),
   ).toBeVisible();
+  // B-03: the rank among the classmates of the first class.
   await expect(
-    page.getByRole("link", { name: /Hạng #1\s*lớp 11/ }),
-  ).toHaveAttribute("href", "/leaderboard?grade=11");
+    page.getByRole("link", { name: /Hạng #\d+\s*Lớp E2E/ }),
+  ).toHaveAttribute("href", "/leaderboard");
   await expect(
     page.getByRole("link", { name: /Không có câu sai/ }),
   ).toBeVisible();

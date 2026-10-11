@@ -35,6 +35,16 @@ export const e2eSpecAdminUsernames = E2E_SPEC_ADMINS.flatMap((spec) =>
   ["chromium", "mobile"].map((p) => e2eSpecAdminUsername(spec, p)),
 );
 
+/**
+ * B-03: one teacher (role `teacher`, not admin) per Playwright project, for
+ * the classes spec. Each owns the lesson `e2e-teacher-d/m` and nothing else.
+ */
+export const e2eTeacherUsername = (project: string) =>
+  `e2e-teacher-${project === "mobile" ? "m" : "d"}`;
+export const e2eTeacherUsernames = ["chromium", "mobile"].map(
+  e2eTeacherUsername,
+);
+
 export const e2eStudents = [
   {
     key: "active",
@@ -294,6 +304,18 @@ export function projectStudentKey(
  * project); the seed removes them.
  */
 export const CREATED_ADMIN_PREFIX = "e2e-new-";
+
+/** The seeded class holding every e2e student and lesson (B-03). */
+export const E2E_CLASS_NAME = "Lớp E2E";
+
+/**
+ * A second seeded class, no lessons: the grade-11 students and "Học Sinh
+ * Một" (the leaderboard spec switches classes with it).
+ */
+export const E2E_CLASS_11_NAME = "Lớp E2E 11";
+
+/** Name prefix of the classes the class spec creates; the seed removes them. */
+export const CREATED_CLASS_PREFIX = "E2E lớp mới";
 
 /** Name prefix of the students the student spec registers; the seed removes them. */
 export const REGISTERED_NAME_PREFIX = "Học Sinh Đăng Ký";

@@ -245,9 +245,10 @@ test("dashboard: tiles, 30-day chart and hardest questions", async ({
       .getByRole("link", { name: "Khó nhất trước" }),
   ).toHaveAttribute("aria-current", "page");
 
+  // B-03: the classes tile (an admin sees every class) opens the class list.
   await page.goto("/admin");
-  await page.getByRole("link", { name: /^Chờ duyệt: \d+ học sinh/ }).click();
-  await expect(page).toHaveURL(/\/admin\/students\?view=pending$/);
+  await page.getByRole("link", { name: /^\d+ lớp, \d+ học sinh/ }).click();
+  await expect(page).toHaveURL(/\/admin\/classes$/);
 });
 
 test("dashboard: accessible in light and dark, fits 360 px", async ({
