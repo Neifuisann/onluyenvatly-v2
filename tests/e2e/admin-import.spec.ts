@@ -10,8 +10,9 @@ import { emulateScheme, type StorageState } from "./runner-helpers";
  * S7-04 AI import against the Storage and Gemini stand-ins, reached from
  * "Tạo bài mới" (S5-07): a PDF goes
  * straight to the private `imports` bucket, `POST /api/ai/import` streams
- * the lesson text (with a missing key and a `[Hình]`), and "Tạo bài nháp"
- * opens the editor on a new draft whose validation flags the missing key.
+ * the lesson text (with a missing key and a `[Hình]`), "Giải bằng AI"
+ * fills the missing key through the solver stand-in (09 AI8), and "Tạo bài
+ * nháp" opens the editor on a new draft.
  * Own admin per project (`e2e-import-d/m`); the seed removes the drafts.
  */
 let storageState: StorageState;
@@ -47,18 +48,22 @@ async function expectAccessible(page: Page) {
   }
 }
 
-test("a PDF becomes a draft lesson through the AI, flagged where the key is missing", async ({
+test("a PDF becomes a draft lesson through the AI, its missing key solved by AI", async ({
   page,
   request,
 }, info) => {
   const p = info.project.name === "mobile" ? "m" : "d";
   const pdf = Buffer.from(`%PDF-1.4\n% E2E exam (${p})\n%%EOF\n`);
-  const importCalls = async () => {
+  const aiCalls = async () => {
     const { calls } = (await (
       await request.get(`${FAKE_GEMINI_URL}/__calls`)
-    ).json()) as { calls: { prompt: string; files: string[] }[] };
-    return calls.filter((c) => c.prompt.includes("Chuyển đề sau"));
+    ).json()) as {
+      calls: { method: string; prompt: string; files: string[] }[];
+    };
+    return calls;
   };
+  const importCalls = async () =>
+    (await aiCalls()).filter((c) => c.prompt.includes("Chuyển đề sau"));
   const before = (await importCalls()).length;
 
   // One of the three ways to create a lesson.
@@ -102,6 +107,17 @@ test("a PDF becomes a draft lesson through the AI, flagged where the key is miss
   expect(stored.some((f) => f.bytes === pdf.byteLength)).toBe(true);
   await expectAccessible(page);
 
+  // AI solve (09 AI8): the unanswered Câu 3, with the PDF for its figure.
+  await expect(page.getByText(/^1 câu chưa có đáp án/)).toBeVisible();
+  await page.getByRole("button", { name: "Giải bằng AI (1 câu)" }).click();
+  await expect(page.getByText(/^AI đã điền đáp án cho câu 3\./)).toBeVisible();
+  await expect(page.getByText(/^Không có lỗi định dạng/)).toBeVisible();
+  await expect(output).toContainText("*B. 2 Hz");
+  const solve = (await aiCalls()).filter((c) => c.method === "chat");
+  expect(solve.at(-1)?.files).toEqual(["file"]);
+  expect(solve.at(-1)?.prompt).toContain("Hãy giải các câu: 3.");
+  await expectAccessible(page);
+
   await page
     .getByRole("button", { name: "Tạo bài nháp và mở trình soạn" })
     .click();
@@ -109,10 +125,9 @@ test("a PDF becomes a draft lesson through the AI, flagged where the key is miss
   await expect(
     page.getByRole("heading", { name: `${IMPORTED_TITLE_PREFIX} (${p})` }),
   ).toBeVisible();
-  // The fence is gone and the missing key is flagged on its line.
+  // The fence is gone and the solved key came along: nothing to fix.
   await expect(page.locator(".cm-content")).not.toContainText("```");
+  await expect(page.locator(".cm-content")).toContainText("*B. 2 Hz");
   // (The issue list sits in the preview pane on phones; step 1's note shows everywhere.)
-  await expect(
-    page.getByText(/^Nội dung còn 1 lỗi\. Sửa hết lỗi/),
-  ).toBeVisible();
+  await expect(page.getByText(/^Nội dung còn \d+ lỗi/)).toHaveCount(0);
 });

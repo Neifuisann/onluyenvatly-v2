@@ -36,6 +36,13 @@ const serverSchema = z.object({
   GEMINI_MODEL_IMPORT: z.string().min(1).optional(),
   // Tests only: E2E's Gemini stand-in (tests/e2e/fake-gemini.ts).
   GEMINI_BASE_URL: z.url().optional(),
+  // AI solve (09 AI8): an OpenAI-compatible chat completions endpoint
+  // (OpenRouter or a gateway) for a stronger model than Gemini. Without the
+  // three, the "solve" button is hidden.
+  SOLVER_API_URL: z.url().optional(),
+  SOLVER_API_KEY: z.string().min(1).optional(),
+  SOLVER_MODEL: z.string().min(1).optional(),
+  SOLVER_EFFORT: z.enum(["low", "medium", "high"]).default("high"),
   CRON_SECRET: z.string().min(16).optional(), // required from S9-05
   SENTRY_DSN: z.url().optional(),
   PERFORMANCE_DIAGNOSTICS: z.enum(["0", "1"]).default("0"),
