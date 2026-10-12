@@ -1,7 +1,8 @@
 import { Plus } from "lucide-react";
 import type { Metadata } from "next";
+import Link from "next/link";
 import { PageHeader } from "@/components/page-header";
-import { Button } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
 import {
   AttemptsChart,
   HardestList,
@@ -16,7 +17,6 @@ import {
   countTeacherStudents,
   getTeacherClasses,
 } from "@/features/classes/queries";
-import { createLesson } from "@/features/lessons/admin-actions";
 import { adminLessonsCopy } from "@/features/lessons/messages";
 
 export const metadata: Metadata = { title: t.title };
@@ -44,12 +44,14 @@ export default async function AdminHomePage() {
         title={t.title}
         lead={firstName ? t.greetingLead(firstName) : t.lead}
         actions={
-          <form action={createLesson}>
-            <Button type="submit">
-              <Plus aria-hidden />
-              {adminLessonsCopy.create}
-            </Button>
-          </form>
+          <Link
+            href="/admin/lessons/create"
+            prefetch={false}
+            className={buttonVariants()}
+          >
+            <Plus aria-hidden />
+            {adminLessonsCopy.create}
+          </Link>
         }
       />
       <OverviewHero
