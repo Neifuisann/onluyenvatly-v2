@@ -9,6 +9,7 @@
  *   Answer: 0,63 ± 0,01    short answer, optional absolute tolerance
  *   [0.25 pts]             points
  *   [Tặng điểm]            everyone gets the points (B-10)
+ *   [Video 1:23]           video lessons: when the question is asked
  *   Giải thích: …          teacher explanation, runs until the next `Câu N:`
  *
  * Any other line continues the previous element. `\` before a line that would
@@ -32,6 +33,7 @@ import {
   TRAILING_POINTS,
   unescapeLine,
 } from "./text-format.ts";
+import { parseVideoTime } from "./video.ts";
 
 export type ParseIssue = {
   /** 1-based line and column in the input text. */
@@ -80,6 +82,7 @@ type Draft = {
   points: number | undefined;
   explanation: string[] | null;
   free: boolean;
+  at: number | undefined;
 };
 
 const ALPHABET =
@@ -155,6 +158,7 @@ export function parseLessonText(
         tolerance: undefined,
         points: undefined,
         free: false,
+        at: undefined,
         explanation: null,
       };
       drafts.push(cur);
@@ -202,6 +206,23 @@ export function parseLessonText(
       case "free":
         q.free = true;
         return;
+      case "video": {
+        const at = parseVideoTime(kind.raw);
+        if (at === null) {
+          issue("INVALID_VIDEO_TIME", lineNo, col, M.INVALID_VIDEO_TIME);
+          return;
+        }
+        if (q.at !== undefined)
+          issue(
+            "DUPLICATE_VIDEO_TIME",
+            lineNo,
+            col,
+            M.DUPLICATE_VIDEO_TIME,
+            "warning",
+          );
+        q.at = at;
+        return;
+      }
       case "explanation":
         q.explanation = [kind.rest];
         return;
@@ -311,6 +332,7 @@ function finalize(
     ...(d.points !== undefined && { points: d.points }),
     ...(d.explanation && { explanation: joinText(d.explanation) }),
     ...(d.free && { free: true as const }),
+    ...(d.at !== undefined && { at: d.at }),
   };
 
   let q: Question;

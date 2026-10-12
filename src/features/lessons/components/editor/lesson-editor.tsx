@@ -23,7 +23,7 @@ import {
 import { Alert } from "@/components/ui/alert";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { saveSettings } from "../../admin-actions";
+import { saveSettings, saveVideoDuration } from "../../admin-actions";
 import { editorStats } from "../../domain/editor-stats";
 import { parseLessonText } from "../../domain/parser";
 import {
@@ -34,6 +34,7 @@ import {
   toSettingsForm,
 } from "../../domain/settings-form";
 import { countByType } from "../../domain/summary";
+import { parseYoutubeId } from "../../domain/video";
 import {
   publishCopy,
   settingsCopy,
@@ -155,6 +156,36 @@ export function LessonEditor({ lesson }: { lesson: EditorLesson }) {
     setServerErrors(result.fieldErrors ?? {});
     setMessage({ text: result.message, error: true });
     return false;
+  };
+
+  // A video lesson's video, as the form has it (saved or not).
+  const videoId =
+    form.format === "video" ? parseYoutubeId(form.videoUrl) : null;
+  const video = useMemo(
+    () => (videoId ? { youtubeId: videoId } : null),
+    [videoId],
+  );
+  /**
+   * The player knows the video's length: kept in the form, and saved at
+   * once when it is the saved video (nothing for the teacher to do).
+   */
+  const onVideoDuration = (seconds: number) => {
+    const value = String(seconds);
+    setForm((f) =>
+      f.format === "video" && f.videoDuration !== value
+        ? { ...f, videoDuration: value }
+        : f,
+    );
+    const savedId =
+      savedForm.format === "video" ? parseYoutubeId(savedForm.videoUrl) : null;
+    if (!savedId || savedId !== videoId || savedForm.videoDuration === value)
+      return;
+    setSavedForm((f) => ({ ...f, videoDuration: value }));
+    void saveVideoDuration({
+      id: lesson.id,
+      youtubeId: savedId,
+      durationSec: seconds,
+    });
   };
 
   const settingsDirty = JSON.stringify(form) !== JSON.stringify(savedForm);
@@ -394,6 +425,8 @@ export function LessonEditor({ lesson }: { lesson: EditorLesson }) {
             onTextChange={setText}
             parsed={parsed}
             config={liveConfig}
+            video={video}
+            onVideoDuration={onVideoDuration}
           />
         </section>
         <div

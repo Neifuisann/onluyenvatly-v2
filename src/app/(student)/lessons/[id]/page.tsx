@@ -51,7 +51,7 @@ export default async function LessonPage({
               maxAttempts: lesson.maxAttempts,
             }}
             unlimited={owner}
-            game={lesson.game !== null}
+            kind={lesson.video ? "video" : lesson.game ? "game" : "test"}
           />
         </Suspense>
       }

@@ -17,6 +17,9 @@ export const QuestionIdSchema = z
   .string()
   .regex(/^q_[A-Za-z0-9_-]{1,32}$/, "Mã câu hỏi không hợp lệ.");
 
+/** 12 hours: longer than any lesson video. */
+export const MAX_VIDEO_SECONDS = 12 * 3600;
+
 const nonBlank = (max: number, message: string) =>
   z
     .string()
@@ -70,6 +73,12 @@ const base = {
    * counts or the editor text.
    */
   removed: z.literal(true).optional(),
+  /**
+   * Video lessons: the second of the video where the question is asked
+   * (`[Video 1:23]`). Questions with the same second are asked together;
+   * without one, the question is asked when the video ends.
+   */
+  at: z.number().int().min(0).max(MAX_VIDEO_SECONDS).optional(),
 };
 
 /** A question needs stem text, an image, or both (like an MCQ option). */
@@ -175,6 +184,33 @@ export const GameConfigSchema = z.strictObject({
     .nullable(),
 });
 export type GameConfig = z.infer<typeof GameConfigSchema>;
+
+/** A YouTube video id: 11 characters of base64url. */
+export const YoutubeIdSchema = z.string().regex(/^[A-Za-z0-9_-]{11}$/);
+
+/**
+ * When a student may seek in a video lesson: `after_first` once they have
+ * finished it once (the default), `never`, or `always`. Rewinding to a part
+ * already watched is always allowed; skipping ahead is what this limits.
+ */
+export const VIDEO_SEEK = ["after_first", "never", "always"] as const;
+export type VideoSeek = (typeof VIDEO_SEEK)[number];
+
+/**
+ * "Học qua video": a YouTube video with the lesson's questions asked along
+ * it (`Question.at`). The video plays at normal speed only.
+ */
+export const VideoConfigSchema = z.strictObject({
+  youtubeId: YoutubeIdSchema,
+  seek: z.enum(VIDEO_SEEK),
+  /**
+   * Length in seconds, read from the player in the editor; null until known.
+   * Questions set after it are asked when the video ends.
+   */
+  durationSec: z.number().int().positive().max(MAX_VIDEO_SECONDS).nullable(),
+});
+export type VideoConfig = z.infer<typeof VideoConfigSchema>;
+
 const typePoints = z.number().min(0).max(100);
 
 export const LessonConfigSchema = z
@@ -226,6 +262,12 @@ export const LessonConfigSchema = z
      * schedule, no overall time limit and no exam guard.
      */
     game: GameConfigSchema.nullable().default(null),
+    /**
+     * Learned along a video instead of a test. The questions are asked in
+     * video order, so a video lesson has no shuffle, pool, time limit, exam
+     * guard or game.
+     */
+    video: VideoConfigSchema.nullable().default(null),
   })
   .refine(
     (c) =>
@@ -260,6 +302,20 @@ export const LessonConfigSchema = z
         "Trò chơi cần công bố đáp án sau khi nộp, không hẹn giờ, không giới hạn thời gian và không giám sát.",
       path: ["game"],
     },
+  )
+  .refine(
+    (c) =>
+      c.video === null ||
+      (c.game === null &&
+        c.timeLimitSec === null &&
+        !c.shuffleQuestions &&
+        !c.pool.enabled &&
+        !c.examGuard),
+    {
+      message:
+        "Bài học qua video không xáo trộn câu hỏi, không chọn ngẫu nhiên, không giới hạn thời gian và không giám sát.",
+      path: ["video"],
+    },
   );
 export type LessonConfig = z.infer<typeof LessonConfigSchema>;
 
@@ -277,4 +333,5 @@ export const DEFAULT_LESSON_CONFIG: LessonConfig = {
   examGuard: false,
   tfScoring: "thpt2025",
   game: null,
+  video: null,
 };

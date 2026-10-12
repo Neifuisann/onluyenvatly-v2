@@ -220,6 +220,7 @@ describe("lesson overview and legacy lookup", () => {
       revealAnswers: "after_submit",
       startsAt: null,
       game: null,
+      video: null,
     });
     expect(JSON.stringify(overview)).not.toContain("NEVER_EXPOSE_CONFIG");
   });

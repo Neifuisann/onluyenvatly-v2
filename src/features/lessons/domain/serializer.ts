@@ -6,6 +6,11 @@
  */
 import type { Media, Question } from "../schema.ts";
 import { escapeLine, formatNumber, TRAILING_POINTS } from "./text-format.ts";
+import { formatVideoTime } from "./video.ts";
+
+/** `[Video 1:23]`: when a video lesson asks the question. */
+export const videoTimeLine = (seconds: number) =>
+  `[Video ${formatVideoTime(seconds)}]`;
 
 function imageLine(m: Media): string {
   const size = m.w !== undefined && m.h !== undefined ? ` =${m.w}x${m.h}` : "";
@@ -58,6 +63,7 @@ export function serializeQuestion(q: Question, index: number): string {
 
   if (q.points !== undefined) lines.push(`[${formatNumber(q.points)} pts]`);
   if (q.free) lines.push("[Tặng điểm]");
+  if (q.at !== undefined) lines.push(videoTimeLine(q.at));
   if (q.explanation) {
     const [first = "", ...rest] = q.explanation.split("\n");
     lines.push(

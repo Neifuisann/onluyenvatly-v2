@@ -7,16 +7,18 @@ import { requireTeacher } from "@/features/auth/guards";
 import { getComposeSources } from "@/features/lessons/admin-queries";
 import { ComposePanel } from "@/features/lessons/components/admin/compose-panel";
 import { CreateChoices } from "@/features/lessons/components/admin/create-choices";
+import { CreateVideoForm } from "@/features/lessons/components/admin/create-video-form";
 import { createCopy as t } from "@/features/lessons/messages";
 import { getSettings } from "@/features/settings/queries";
 
 export const metadata: Metadata = { title: t.title };
 
 /**
- * `/admin/lessons/create[?mode=file|compose]` (S5-07): how a new lesson
- * starts, like Azota's "Tạo đề mới". Without a mode, the three choices;
+ * `/admin/lessons/create[?mode=file|compose|video]` (S5-07): how a new
+ * lesson starts, like Azota's "Tạo đề mới". Without a mode, the choices;
  * `file` is the AI import (S7-04), `compose` draws a review lesson from
- * other lessons. Each mode reads only what it needs.
+ * other lessons, `video` starts a video lesson from a YouTube link. Each
+ * mode reads only what it needs.
  */
 export default async function CreateLessonPage({
   searchParams,
@@ -37,6 +39,18 @@ export default async function CreateLessonPage({
       </div>
     );
   }
+
+  if (mode === "video")
+    return (
+      <div className="mx-auto flex max-w-3xl flex-col gap-6">
+        <PageHeader
+          back={{ href: "/admin/lessons/create", label: t.backToChoices }}
+          title={t.videoTitle}
+          lead={t.video.body}
+        />
+        <CreateVideoForm />
+      </div>
+    );
 
   const settings = await getSettings();
   if (mode === "file")

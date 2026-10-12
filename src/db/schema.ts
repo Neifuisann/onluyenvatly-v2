@@ -317,6 +317,7 @@ export const attemptMode = pgEnum("attempt_mode", [
   "practice",
   "review",
   "game",
+  "video",
 ]);
 export const attemptStatus = pgEnum("attempt_status", [
   "in_progress",
@@ -356,6 +357,23 @@ export type ZombieState = {
   misses: number;
   over: "won" | "lost" | null;
   waves: ZombieWave[];
+};
+/**
+ * One stop of a video lesson: the second it is asked at (null = when the
+ * video ends) and how many items it asks. Cues take the items in order.
+ */
+export type VideoCue = { at: number | null; n: number };
+/** A video attempt's state, written only by the server. */
+export type VideoState = {
+  cues: VideoCue[];
+  /** Cues answered so far; the next one to ask. */
+  done: number;
+  /** May skip ahead (fixed at start from the lesson's seek rule). */
+  seek: boolean;
+  /** Where the student was (s), to resume after a reload. */
+  pos: number;
+  /** The furthest point reached (s): nothing past it without `seek`. */
+  max: number;
 };
 /** Seconds since start + kind (S4-04). Capped at 200. */
 export type GuardEvent = { t: number; k: string };
@@ -397,6 +415,8 @@ export const attempts = pgTable(
     checked: smallint("checked").array().notNull().default(sql`'{}'`),
     /** Game attempts only (B-11); answers are the first shot of each wave. */
     game: jsonb("game").$type<ZombieState>(),
+    /** Video lessons only; answers are stored one cue at a time. */
+    video: jsonb("video").$type<VideoState>(),
     guardEvents: jsonb("guard_events")
       .$type<GuardEvent[]>()
       .notNull()

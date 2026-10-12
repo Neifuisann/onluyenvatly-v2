@@ -1,5 +1,6 @@
 import {
   ChevronLeft,
+  CirclePause,
   Clock,
   Crosshair,
   Dumbbell,
@@ -7,8 +8,10 @@ import {
   Heart,
   ListChecks,
   type LucideIcon,
+  MonitorPlay,
   Repeat,
   ShieldCheck,
+  SkipForward,
   Trophy,
 } from "lucide-react";
 import Link from "next/link";
@@ -93,6 +96,12 @@ export function LessonOverviewContent({
             {t.game}
           </p>
         )}
+        {lesson.video && (
+          <p className="ml-2 inline-flex items-center gap-1.5 rounded-full bg-primary-soft px-3 py-1 font-semibold text-primary text-sm first:ml-0">
+            <MonitorPlay aria-hidden className="size-4" />
+            {t.video}
+          </p>
+        )}
         <div className="flex items-center gap-3">
           <TopicGlyph
             topic={lessonTopic(lesson.chapter, lesson.title)}
@@ -140,16 +149,20 @@ export function LessonOverviewContent({
           value={catalogCopy.questions(total)}
         />
         <Fact
-          icon={Clock}
-          label={t.duration}
+          icon={lesson.video ? MonitorPlay : Clock}
+          label={lesson.video ? t.videoLength : t.duration}
           value={
-            lesson.game
-              ? lesson.game.secondsPerQuestion
-                ? t.perQuestion(lesson.game.secondsPerQuestion)
+            lesson.video
+              ? lesson.video.durationSec
+                ? formatDuration(lesson.video.durationSec)
                 : t.noLimitShort
-              : lesson.timeLimitSec
-                ? formatDuration(lesson.timeLimitSec)
-                : t.noLimitShort
+              : lesson.game
+                ? lesson.game.secondsPerQuestion
+                  ? t.perQuestion(lesson.game.secondsPerQuestion)
+                  : t.noLimitShort
+                : lesson.timeLimitSec
+                  ? formatDuration(lesson.timeLimitSec)
+                  : t.noLimitShort
           }
         />
         <Fact
@@ -244,6 +257,31 @@ function StartCard({
                 className="mt-0.5 size-4 shrink-0 text-danger-text"
               />
               {t.gameLives(lesson.game.lives)}
+            </li>
+          </>
+        )}
+        {lesson.video && (
+          <>
+            <li className="flex items-start gap-3">
+              <MonitorPlay
+                aria-hidden
+                className="mt-0.5 size-4 shrink-0 text-primary"
+              />
+              {t.videoRule}
+            </li>
+            <li className="flex items-start gap-3">
+              <SkipForward
+                aria-hidden
+                className="mt-0.5 size-4 shrink-0 text-muted-foreground"
+              />
+              {t.videoSeek[lesson.video.seek]}
+            </li>
+            <li className="flex items-start gap-3">
+              <CirclePause
+                aria-hidden
+                className="mt-0.5 size-4 shrink-0 text-muted-foreground"
+              />
+              {t.videoFocus}
             </li>
           </>
         )}

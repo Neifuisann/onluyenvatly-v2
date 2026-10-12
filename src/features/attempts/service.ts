@@ -1,6 +1,15 @@
 import "server-only";
 import { randomInt, randomUUID } from "node:crypto";
-import { and, eq, gte, isNull, ne, or, type SQL, sql } from "drizzle-orm";
+import {
+  and,
+  eq,
+  gte,
+  isNull,
+  notInArray,
+  or,
+  type SQL,
+  sql,
+} from "drizzle-orm";
 import { db } from "@/db/client";
 import {
   attemptOverrides,
@@ -12,6 +21,7 @@ import type { Role } from "@/features/auth/core/login-policy";
 import { canOpenLesson } from "@/features/classes/queries";
 import { grade } from "@/features/grading/domain/grade";
 import { toCents } from "@/features/grading/domain/points";
+import { orderByVideoTime, videoTimeOf } from "@/features/lessons/domain/video";
 import {
   getFreshLessonForStarting,
   getLessonForStarting,
@@ -20,6 +30,7 @@ import {
 import {
   type LessonConfig,
   LessonConfigSchema,
+  type VideoConfig,
 } from "@/features/lessons/schema";
 import { rateAttempt } from "@/features/rating/service";
 import { mistakeChanges } from "@/features/review/domain/mistakes";
@@ -31,6 +42,7 @@ import {
   REVIEW_TF_SCORING,
 } from "@/features/review/domain/practice";
 import { type MistakeTarget, recordMistakes } from "@/features/review/service";
+import { buildCues, initialVideoState } from "@/features/video/domain/engine";
 import {
   initialState,
   isPlayable,
@@ -141,15 +153,30 @@ async function startOnce(
     if (!check.ok) return err(check.code);
   }
 
-  const { game } = config.data;
+  const { game, video } = config.data;
   const all = await getLessonWithAnswers(lessonId, lesson.versionId);
-  // A game plays mcq and tf only (B-11); short answers are left out.
-  const questions = game ? all?.filter(isPlayable) : all;
+  // A game plays mcq and tf only (B-11); short answers are left out. A
+  // video lesson asks its questions in video order.
+  const questions = game
+    ? all?.filter(isPlayable)
+    : video && all
+      ? orderByVideoTime(all, video.durationSec)
+      : all;
   const items = questions
     ? buildItems(questions, config.data, createRng(seed))
     : [];
   if (items.length === 0) return err("NOT_FOUND");
   const byId = new Map(questions?.map((q) => [q.id, q]));
+  const videoState =
+    video &&
+    initialVideoState(
+      buildCues(
+        questionsForItems(items, byId).map((q) =>
+          videoTimeOf(q, video.durationSec),
+        ),
+      ),
+      await maySeek(user.id, lessonId, video),
+    );
 
   const [created] = await db
     .insert(attempts)
@@ -157,7 +184,7 @@ async function startOnce(
       userId: user.id,
       lessonId,
       lessonVersionId: lesson.versionId,
-      mode: game ? "game" : "test",
+      mode: game ? "game" : video ? "video" : "test",
       items,
       answers: items.map(() => null),
       ...(game && {
@@ -166,6 +193,7 @@ async function startOnce(
           questionsForItems(items, byId).flatMap((q) => shapeOf(q) ?? []),
         ),
       }),
+      ...(videoState && { video: videoState }),
       maxScore: items.reduce((s, i) => s + toCents(i.p), 0) / 100,
       startedAt: now,
       deadlineAt: attemptDeadline(config.data, now),
@@ -206,8 +234,9 @@ export async function saveProgress(
         eq(attempts.id, attemptId),
         eq(attempts.userId, userId),
         eq(attempts.status, "in_progress"),
-        // A game writes its answers with each shot (B-11), never by autosave.
-        ne(attempts.mode, "game"),
+        // A game writes its answers with each shot (B-11) and a video lesson
+        // with each cue, never by autosave.
+        notInArray(attempts.mode, ["game", "video"]),
         or(isNull(attempts.deadlineAt), gte(attempts.deadlineAt, graceCutoff)),
         sql`jsonb_array_length(${attempts.items}) = ${input.answers.length}`,
       ),
@@ -269,10 +298,11 @@ export async function submitAttempt(
     countsForRating = true,
     timeLimitSec = null,
   } = config.success ? config.data : {};
-  // Practice and review never move the rating (01 Q9); a game is a test.
-  const game = pre.mode === "game";
+  // Practice and review never move the rating (01 Q9); a game or a video
+  // lesson is a test taken another way, with answers the server stored.
+  const stores = pre.mode === "game" || pre.mode === "video";
   const rated =
-    (pre.mode === "test" || game) && lessonId !== null && countsForRating;
+    (pre.mode === "test" || stores) && lessonId !== null && countsForRating;
 
   const outcome = await db.transaction(async (tx) => {
     const [a] = await tx
@@ -304,8 +334,9 @@ export async function submitAttempt(
       });
 
     const late = isPastGrace(a.deadlineAt, now);
-    // A game's answers are the first shots the server stored (B-11).
-    const stored = late || game;
+    // A game's answers are the first shots the server stored (B-11), a
+    // video lesson's the answers of its cues.
+    const stored = late || stores;
     if (!stored && input.answers.length !== a.items.length)
       return err("VALIDATION");
 
@@ -468,7 +499,7 @@ export async function checkPracticeAnswer(
     .where(eq(attempts.id, input.attemptId))
     .limit(1);
   if (!pre || pre.userId !== userId) return err("NOT_FOUND");
-  if (pre.mode === "test" || pre.mode === "game") return err("FORBIDDEN");
+  if (pre.mode !== "practice" && pre.mode !== "review") return err("FORBIDDEN");
   if (pre.status !== "in_progress") return err("ATTEMPT_CLOSED");
   const item = pre.items[input.index];
   if (!item) return err("VALIDATION");
@@ -561,6 +592,31 @@ async function startCounts(
     usedSinceClose: Number(row?.usedSinceClose ?? 0),
     extra: Number(row?.extra ?? 0),
   };
+}
+
+/**
+ * Whether a new video attempt may skip ahead: always, never, or once the
+ * student has finished the video before (a submitted video attempt).
+ */
+async function maySeek(
+  userId: string,
+  lessonId: number,
+  video: VideoConfig,
+): Promise<boolean> {
+  if (video.seek !== "after_first") return video.seek === "always";
+  const [row] = await db
+    .select({ id: attempts.id })
+    .from(attempts)
+    .where(
+      and(
+        eq(attempts.userId, userId),
+        eq(attempts.lessonId, lessonId),
+        eq(attempts.mode, "video"),
+        eq(attempts.status, "submitted"),
+      ),
+    )
+    .limit(1);
+  return row !== undefined;
 }
 
 async function findOpenAttempt(userId: string, lessonId: number) {

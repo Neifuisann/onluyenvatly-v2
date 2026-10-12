@@ -33,6 +33,12 @@ import {
 } from "@/features/media/components/upload-image";
 import { imageMarkup } from "@/features/media/domain/upload";
 import { uploadCopy } from "@/features/media/messages";
+import {
+  createVideoClock,
+  VideoEditorPanel,
+  VideoTimeChip,
+} from "@/features/video/components/video-editor-panel";
+import { videoEditorCopy } from "@/features/video/messages";
 import { formatScore } from "@/lib/dates";
 import { cn } from "@/lib/utils";
 import {
@@ -40,12 +46,14 @@ import {
   mathSnippet,
   questionAtLine,
   renumberQuestions,
+  setVideoTime,
   toggleCorrect,
 } from "../../domain/editor-commands";
 import { editorStats } from "../../domain/editor-stats";
 import { type ParseResult, parseLessonText } from "../../domain/parser";
 import { QUESTION_TYPES } from "../../domain/question-types";
 import { serializeLesson } from "../../domain/serializer";
+import { formatVideoTime } from "../../domain/video";
 import {
   publishCopy,
   questionTypeLabels,
@@ -145,11 +153,16 @@ export function ContentStep({
   onTextChange,
   parsed,
   config,
+  video = null,
+  onVideoDuration,
 }: {
   initialText: string;
   onTextChange: (text: string) => void;
   parsed: ParseResult;
   config: Pick<LessonConfig, "pool" | "points">;
+  /** A video lesson: its YouTube video, for attaching questions along it. */
+  video?: { youtubeId: string } | null;
+  onVideoDuration?: (seconds: number) => void;
 }) {
   const editor = useRef<CodeEditorHandle | null>(null);
   const panes = useRef<HTMLDivElement>(null);
@@ -186,6 +199,7 @@ export function ContentStep({
   const errors = errorList.length;
   const active = questionAtLine(lines, cursor.line);
   const images = useImageUpload(editor, setNote);
+  const [clock] = useState(createVideoClock);
 
   // The preview follows the cursor: its question's card comes into view,
   // also when the preview is opened (phones) or expanded.
@@ -211,6 +225,15 @@ export function ContentStep({
     const text = run(h);
     setNote(text ? { text, error: false } : undefined);
   };
+
+  /** A question's `[Video m:ss]` line: set, or removed (end of video). */
+  const attachVideo = (index: number, seconds: number | null) =>
+    command((h) => {
+      h.apply(setVideoTime(h.text(), index, seconds));
+      return seconds === null
+        ? videoEditorCopy.detached(index + 1)
+        : videoEditorCopy.attached(index + 1, formatVideoTime(seconds));
+    });
 
   const goToQuestion = (n: number) => {
     const line = lines[n - 1];
@@ -356,6 +379,19 @@ export function ContentStep({
             ref={previewScroll}
             className="relative min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 py-4 sm:px-5 lg:px-6"
           >
+            {video && (
+              <div className="mx-auto mb-3 max-w-3xl">
+                <VideoEditorPanel
+                  youtubeId={video.youtubeId}
+                  questions={questions}
+                  active={active}
+                  clock={clock}
+                  onAttach={attachVideo}
+                  onSelect={(i) => goToQuestion(i + 1)}
+                  onDuration={(s) => onVideoDuration?.(s)}
+                />
+              </div>
+            )}
             <div
               style={{ zoom: zoom / 100 }}
               className="mx-auto flex max-w-3xl flex-col gap-3"
@@ -381,6 +417,16 @@ export function ContentStep({
                       active={i === active}
                       showExplanation={explanations}
                       onGoTo={() => goTo(lines[i] ?? 1)}
+                      footer={
+                        video ? (
+                          <VideoTimeChip
+                            question={q}
+                            clock={clock}
+                            onAttach={(s) => attachVideo(i, s)}
+                            onDetach={() => attachVideo(i, null)}
+                          />
+                        ) : undefined
+                      }
                       onMark={
                         q.type === "short"
                           ? undefined

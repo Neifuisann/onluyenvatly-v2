@@ -117,6 +117,13 @@ export default defineConfig({
           branches: 95,
           statements: 95,
         },
+        // Video lesson cues, clock checks and playback rules.
+        "src/features/video/domain/**": {
+          lines: 95,
+          functions: 95,
+          branches: 95,
+          statements: 95,
+        },
         "src/features/auth/core/**": {
           lines: 95,
           functions: 95,

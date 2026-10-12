@@ -5,6 +5,7 @@
  * one undoable change without resetting the document.
  */
 import type { QuestionType } from "../schema.ts";
+import { videoTimeLine } from "./serializer.ts";
 import { classifyLine, unescapeLine } from "./text-format.ts";
 
 /** Replace `[from, to)` (character offsets in the original text) with `insert`. */
@@ -116,6 +117,55 @@ export function toggleCorrect(
   return items.flatMap((item, i) =>
     setStar(item.line, makeKey && i === itemIndex),
   );
+}
+
+/** Removes a whole line, with its line break. */
+function deleteLine(line: Line, textLength: number): TextEdit {
+  const end = line.from + line.text.length;
+  return end < textLength
+    ? { from: line.from, to: end + 1, insert: "" }
+    : { from: Math.max(0, line.from - 1), to: end, insert: "" };
+}
+
+/**
+ * Video lessons: when question `questionIndex` is asked. A number sets its
+ * `[Video m:ss]` line (rewritten in place, or added after the question's
+ * last line before `Giải thích:`); null removes it, so the question is
+ * asked at the end of the video. Empty when nothing changes.
+ */
+export function setVideoTime(
+  text: string,
+  questionIndex: number,
+  seconds: number | null,
+): TextEdit[] {
+  const block = questionBlocks(splitLines(text))[questionIndex];
+  if (!block) return [];
+  const markers: Line[] = [];
+  let last: Line | undefined = block[0];
+  for (const line of block.slice(1)) {
+    const kind = kindOf(line.text, "body").kind;
+    if (kind === "explanation") break;
+    if (kind === "video") markers.push(line);
+    else if (line.text.trim() !== "") last = line;
+  }
+  const marker = seconds === null ? null : videoTimeLine(seconds);
+  const [first, ...rest] = markers;
+  const removals = rest.map((l) => deleteLine(l, text.length));
+  if (marker === null) return markers.map((l) => deleteLine(l, text.length));
+  if (first)
+    return first.text === marker
+      ? removals
+      : [
+          {
+            from: first.from,
+            to: first.from + first.text.length,
+            insert: marker,
+          },
+          ...removals,
+        ];
+  if (!last) return [];
+  const at = last.from + last.text.length;
+  return [{ from: at, to: at, insert: `\n${marker}` }];
 }
 
 const HEADER_NUMBER = /^(\s*câu\s*)(\d+)/iu;

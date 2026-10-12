@@ -1,5 +1,5 @@
 import "server-only";
-import { and, desc, eq, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, sql } from "drizzle-orm";
 import { db } from "@/db/client";
 import { attempts, lessons, users } from "@/db/schema";
 
@@ -59,7 +59,7 @@ export async function getDashboardStats(
 }
 
 /**
- * The test I left most recently, for the "Đang làm dở" card. Answers are
+ * The test (or video lesson) I left most recently, for the "Đang làm dở" card. Answers are
  * read only to count the answered items (never sent to the page).
  */
 export async function getContinueAttempt(userId: string) {
@@ -77,7 +77,7 @@ export async function getContinueAttempt(userId: string) {
       and(
         eq(attempts.userId, userId),
         eq(attempts.status, "in_progress"),
-        eq(attempts.mode, "test"),
+        inArray(attempts.mode, ["test", "video"]),
       ),
     )
     .orderBy(

@@ -8,7 +8,14 @@
  * plus 'unsafe-inline' (needed by Next's inline bootstrap and our theme
  * script). XSS defence rests on React escaping and on having no
  * dangerouslySetInnerHTML except KaTeX output and the constant theme script.
+ *
+ * Video lessons embed YouTube: its player API script, its privacy-enhanced
+ * (no-cookie) player frame and its thumbnails, nothing else from it.
  */
+const YOUTUBE_SCRIPT = "https://www.youtube.com";
+const YOUTUBE_FRAME = "https://www.youtube-nocookie.com";
+const YOUTUBE_IMAGES = "https://i.ytimg.com";
+
 export type HeaderOptions = {
   isDev: boolean;
   /** Supabase Storage/media origin, e.g. https://xyz.supabase.co */
@@ -24,12 +31,13 @@ export function buildCsp({
   const media = mediaOrigin ? ` ${mediaOrigin}` : "";
   const directives = [
     "default-src 'self'",
-    `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ""}`,
+    `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ""} ${YOUTUBE_SCRIPT}`,
     "style-src 'self' 'unsafe-inline'",
-    `img-src 'self' data: blob:${media}`,
+    `img-src 'self' data: blob:${media} ${YOUTUBE_IMAGES}`,
     "font-src 'self'",
     `connect-src 'self'${media}${telemetryOrigin ? ` ${telemetryOrigin}` : ""}`,
     "media-src 'self'",
+    `frame-src ${YOUTUBE_FRAME}`,
     "object-src 'none'",
     "base-uri 'self'",
     "form-action 'self'",

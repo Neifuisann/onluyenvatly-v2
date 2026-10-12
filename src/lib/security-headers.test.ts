@@ -9,7 +9,7 @@ describe("buildCsp", () => {
     const csp = buildCsp({ isDev: false });
     expect(directive(csp, "default-src")).toBe("default-src 'self'");
     expect(directive(csp, "script-src")).toBe(
-      "script-src 'self' 'unsafe-inline'",
+      "script-src 'self' 'unsafe-inline' https://www.youtube.com",
     );
     expect(directive(csp, "object-src")).toBe("object-src 'none'");
     expect(directive(csp, "frame-ancestors")).toBe("frame-ancestors 'none'");
@@ -47,6 +47,18 @@ describe("buildCsp", () => {
       expect(directive(csp, name) ?? "").not.toContain("sentry.io");
     }
     expect(csp).not.toContain("*.sentry.io");
+  });
+});
+
+describe("YouTube for video lessons", () => {
+  it("allows its player script, the no-cookie frame and thumbnails only", () => {
+    const csp = buildCsp({ isDev: false });
+    expect(directive(csp, "frame-src")).toBe(
+      "frame-src https://www.youtube-nocookie.com",
+    );
+    expect(directive(csp, "img-src")).toContain("https://i.ytimg.com");
+    expect(directive(csp, "connect-src")).not.toContain("youtube");
+    expect(directive(csp, "frame-ancestors")).toBe("frame-ancestors 'none'");
   });
 });
 

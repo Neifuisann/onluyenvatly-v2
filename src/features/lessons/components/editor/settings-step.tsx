@@ -26,7 +26,7 @@ import type {
 } from "../../domain/settings-form";
 import type { TypeCounts } from "../../domain/summary";
 import { settingsCopy as t } from "../../messages";
-import { GAME_SECONDS, QUESTION_TYPES } from "../../schema";
+import { GAME_SECONDS, QUESTION_TYPES, VIDEO_SEEK } from "../../schema";
 import { AiHelper } from "./ai-helper";
 
 type Patch = (patch: Partial<SettingsForm>) => void;
@@ -60,6 +60,7 @@ export function SettingsStep({
 }) {
   const total = QUESTION_TYPES.reduce((s, q) => s + available[q], 0);
   const game = form.format === "zombie";
+  const video = form.format === "video";
   const text = (
     field: Exclude<
       SettingsField,
@@ -245,7 +246,7 @@ export function SettingsStep({
           legend={t.format}
           hideLegend
           value={form.format}
-          options={(["test", "zombie"] as LessonFormat[]).map((m) => [
+          options={(["test", "zombie", "video"] as LessonFormat[]).map((m) => [
             m,
             t.formats[m],
             t.formatHints[m],
@@ -297,11 +298,45 @@ export function SettingsStep({
             <Alert>{t.gameLocked}</Alert>
           </>
         )}
+        {video && (
+          <>
+            <FormField
+              id="settings-videoUrl"
+              label={t.videoUrl}
+              hint={t.videoUrlHint}
+              error={errorOf("videoUrl")}
+            >
+              <Input
+                {...text("videoUrl")}
+                {...fieldA11y(
+                  "settings-videoUrl",
+                  errorOf("videoUrl"),
+                  t.videoUrlHint,
+                )}
+                type="url"
+                inputMode="url"
+                autoComplete="off"
+                placeholder="https://www.youtube.com/watch?v=…"
+              />
+            </FormField>
+            <Choice
+              name="videoSeek"
+              legend={t.videoSeek}
+              value={form.videoSeek}
+              options={VIDEO_SEEK.map((m) => [m, t.videoSeeks[m]])}
+              onChange={(videoSeek) => onChange({ videoSeek })}
+            />
+            <p className="-mt-2 text-muted-foreground text-sm">
+              {t.videoSeekHint}
+            </p>
+            <Alert>{t.videoLocked}</Alert>
+          </>
+        )}
       </Section>
 
       <Section id="settings-timing" icon={Clock} title={t.timing}>
         <div className="grid gap-4 sm:grid-cols-2">
-          {!game && (
+          {!game && !video && (
             <FormField
               id="settings-timeLimitMin"
               label={t.timeLimit}
@@ -359,21 +394,23 @@ export function SettingsStep({
 
       <Section id="settings-questions" icon={Shuffle} title={t.questions}>
         <div className="grid gap-2">
-          {toggle("shuffleQuestions", t.shuffleQuestionsHint)}
+          {!video && toggle("shuffleQuestions", t.shuffleQuestionsHint)}
           {toggle("shuffleOptions")}
         </div>
-        <Choice
-          name="poolMode"
-          legend={t.pool}
-          value={form.poolMode}
-          options={(["off", "size", "byType"] as PoolMode[]).map((m) => [
-            m,
-            t.poolModes[m],
-          ])}
-          onChange={(poolMode) => onChange({ poolMode })}
-          error={errorOf("poolMode")}
-        />
-        {form.poolMode === "size" && (
+        {!video && (
+          <Choice
+            name="poolMode"
+            legend={t.pool}
+            value={form.poolMode}
+            options={(["off", "size", "byType"] as PoolMode[]).map((m) => [
+              m,
+              t.poolModes[m],
+            ])}
+            onChange={(poolMode) => onChange({ poolMode })}
+            error={errorOf("poolMode")}
+          />
+        )}
+        {!video && form.poolMode === "size" && (
           <FormField
             id="settings-poolSize"
             label={t.poolSize}
@@ -392,7 +429,7 @@ export function SettingsStep({
             />
           </FormField>
         )}
-        {form.poolMode === "byType" && (
+        {!video && form.poolMode === "byType" && (
           <PerType
             prefix="poolByType"
             values={form.poolByType}
@@ -452,15 +489,16 @@ export function SettingsStep({
             name="revealAnswers"
             legend={t.revealAnswers}
             value={form.revealAnswers}
-            options={(["after_submit", "after_deadline", "never"] as const).map(
-              (m) => [m, t.reveals[m]],
-            )}
+            options={(video
+              ? (["after_submit", "never"] as const)
+              : (["after_submit", "after_deadline", "never"] as const)
+            ).map((m) => [m, t.reveals[m]])}
             onChange={(revealAnswers) => onChange({ revealAnswers })}
           />
         )}
         <div className="grid gap-2">
           {toggle("countsForRating")}
-          {!game && toggle("examGuard")}
+          {!game && !video && toggle("examGuard")}
         </div>
       </Section>
     </form>

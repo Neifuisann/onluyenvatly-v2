@@ -58,6 +58,10 @@ export const workspaceCopy = {
     ["Answer: 0,63 ± 0,01", "Trả lời ngắn, có thể kèm sai số."],
     ["[0.5 pts]", "Điểm của câu (mặc định 1 điểm)."],
     ["Giải thích: …", "Lời giải, hiện sau khi nộp bài."],
+    [
+      "[Video 1:23]",
+      "Bài học qua video: hỏi câu này khi video chạy tới 1:23. Không có thì hỏi cuối video.",
+    ],
     ["$v = s/t$", "Công thức LaTeX; $$…$$ để riêng một dòng."],
     ["![](media:…)", "Ảnh: dán, kéo thả hoặc bấm “Chèn ảnh”."],
     ["\\A. …", "Dấu \\ ở đầu dòng: giữ nguyên là chữ thường."],

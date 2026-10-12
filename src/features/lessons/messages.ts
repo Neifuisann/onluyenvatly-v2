@@ -25,6 +25,9 @@ export const parseIssueMessages = {
   DUPLICATE_IMAGE: "Mỗi câu hỏi hoặc phương án chỉ gắn được một hình.",
   IMAGE_NOT_ALLOWED:
     "Mệnh đề đúng/sai không gắn được hình; hãy đặt hình ở đề bài.",
+  INVALID_VIDEO_TIME:
+    "Mốc video phải có dạng [Video 1:23] hoặc [Video 1:02:03].",
+  DUPLICATE_VIDEO_TIME: "Câu này đã có mốc video; dùng mốc sau cùng.",
   INVALID: (detail: string) => `Câu hỏi không hợp lệ: ${detail}`,
 } as const;
 
@@ -52,6 +55,18 @@ export const overviewCopy = {
     n === 1
       ? "1 mạng: bắn nhầm một lần là thua."
       : `${n} mạng: mỗi lần bắn nhầm hoặc để zombie chạm rào mất một mạng.`,
+  video: "Học qua video",
+  videoLength: "Độ dài video",
+  videoRule:
+    "Video tự dừng ở các mốc có câu hỏi; trả lời xong mới xem tiếp. Xem hết video thì xem được kết quả.",
+  videoSeek: {
+    after_first:
+      "Lần xem đầu không tua tới được. Xem hết một lần thì các lần sau được tua.",
+    never: "Không tua tới được; vẫn xem lại được đoạn đã xem.",
+    always: "Được tua video tự do.",
+  },
+  videoFocus:
+    "Video chạy tốc độ bình thường và tự dừng khi bạn rời khỏi trang.",
   notFoundTitle: "Không tìm thấy bài tập",
   notFoundBody:
     "Bài tập không tồn tại hoặc chưa được xuất bản. Bạn chọn bài khác nhé.",
@@ -243,9 +258,22 @@ export const createCopy = {
     body: "Chọn một hay nhiều bài, đặt số câu mỗi loại. Hệ thống bốc ngẫu nhiên thành một đề ôn tập để bạn xem lại.",
     action: "Chọn bài nguồn",
   },
+  video: {
+    title: "Học qua video",
+    body: "Dán link video YouTube. Video được nhúng vào bài; bạn gắn câu trắc nghiệm, đúng/sai, trả lời ngắn vào các mốc dọc video.",
+    action: "Dán link video",
+    label: "Link video YouTube",
+    hint: "Ví dụ: https://www.youtube.com/watch?v=… hoặc https://youtu.be/…",
+    preview: "Ảnh xem trước của video",
+    submit: "Tạo bài học",
+    submitting: "Đang tạo bài…",
+    unavailable:
+      "Không nhúng được video này: video không tồn tại, để riêng tư hoặc chủ video không cho nhúng.",
+  },
   aiOff: "AI đang tắt",
   fileTitle: "Nhập đề từ file bằng AI",
   composeTitle: "Tạo đề từ bài có sẵn",
+  videoTitle: "Tạo bài học qua video",
 } as const;
 
 /** "Tạo từ bài có sẵn" (S5-07). */
@@ -372,12 +400,28 @@ export const settingsCopy = {
   formats: {
     test: "Bài kiểm tra",
     zombie: "Trò chơi Bắn zombie",
+    video: "Học qua video",
   },
   formatHints: {
     test: "Học sinh làm như đề thi, nộp bài rồi xem kết quả.",
     zombie:
       "Mỗi câu là một đợt zombie cầm đáp án. Bắn trúng đáp án đúng để qua đợt, bắn nhầm mất một mạng. Kết quả lưu như một lần làm bài.",
+    video:
+      "Học sinh xem một video YouTube; video tự dừng ở các mốc để trả lời câu hỏi. Xem hết video thì nộp bài và xem kết quả.",
   },
+  videoUrl: "Link video YouTube",
+  videoUrlHint: "Dán link youtube.com hoặc youtu.be.",
+  videoSeek: "Tua video",
+  videoSeeks: {
+    after_first:
+      "Lần đầu không được tua tới; từ lần xem thứ hai được tua tự do",
+    never: "Không bao giờ được tua tới",
+    always: "Luôn được tua tự do",
+  },
+  videoSeekHint:
+    "Học sinh luôn xem lại được đoạn đã xem. Video luôn chạy tốc độ bình thường và tự dừng khi học sinh rời khỏi trang.",
+  videoLocked:
+    "Câu hỏi được hỏi theo thứ tự mốc trên video, nên trộn câu hỏi, bộ câu hỏi ngẫu nhiên, giới hạn thời gian và chế độ thi không áp dụng. Gắn mốc cho từng câu ở bước Soạn nội dung.",
   gameLives: "Số mạng",
   gameLivesOptions: {
     "1": "Một mạng: bắn nhầm một lần là thua",
@@ -463,6 +507,7 @@ export const settingsCopy = {
     revealNeedsLimit:
       "Công bố đáp án sau giờ làm bài chung cần có thời gian làm bài.",
     gameNoQuestions: "Trò chơi cần ít nhất một câu trắc nghiệm hoặc đúng/sai.",
+    videoUrl: "Dán một link video YouTube hợp lệ.",
     invalid: "Cài đặt không hợp lệ.",
   },
 } as const;

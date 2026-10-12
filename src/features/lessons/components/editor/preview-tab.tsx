@@ -13,7 +13,10 @@ import { buildItems } from "@/features/attempts/domain/build-items";
 import { createRng } from "@/features/attempts/domain/random";
 import { previewCopy } from "@/features/attempts/messages";
 import { expectedAnswer, gradeItem } from "@/features/grading/domain/grade";
+import { VideoLesson } from "@/features/video/components/video-lesson";
+import { buildCues, initialVideoState } from "@/features/video/domain/engine";
 import { toPublicQuestion } from "../../domain/public-question";
+import { orderByVideoTime, videoTimeOf } from "../../domain/video";
 import { editorCopy as t } from "../../messages";
 import type { LessonConfig, Question } from "../../schema";
 import { PreviewMathText } from "./preview-math";
@@ -96,13 +99,18 @@ export function PreviewTab({
 }) {
   const [seed, setSeed] = useState(newSeed);
   const [now] = useState(() => new Date().toISOString());
+  const { video } = config;
   const built = useMemo(() => {
     const byId = new Map(questions.map((q) => [q.id, q]));
-    return buildItems(questions, config, createRng(seed)).flatMap((item) => {
+    // A video lesson asks its questions in video order.
+    const ordered = video
+      ? orderByVideoTime(questions, video.durationSec)
+      : questions;
+    return buildItems(ordered, config, createRng(seed)).flatMap((item) => {
       const q = byId.get(item.q);
       return q ? [{ q, item }] : [];
     });
-  }, [questions, config, seed]);
+  }, [questions, config, video, seed]);
 
   const runner = useMemo(
     () => ({
@@ -161,19 +169,36 @@ export function PreviewTab({
           </span>
         </Alert>
       )}
-      <Runner
-        key={seed}
-        attemptId="preview"
-        lessonId={null}
-        title={title}
-        questions={runner.questions}
-        saved={{ answers: [], flagged: [] }}
-        deadlineAt={null}
-        serverNow={now}
-        startedAt={now}
-        examGuard={false}
-        preview={runner.preview}
-      />
+      {video ? (
+        <VideoLesson
+          key={seed}
+          attemptId="preview"
+          lessonId={null}
+          title={title}
+          youtubeId={video.youtubeId}
+          questions={runner.questions}
+          saved={[]}
+          initial={initialVideoState(
+            buildCues(built.map(({ q }) => videoTimeOf(q, video.durationSec))),
+            true,
+          )}
+          preview={runner.preview}
+        />
+      ) : (
+        <Runner
+          key={seed}
+          attemptId="preview"
+          lessonId={null}
+          title={title}
+          questions={runner.questions}
+          saved={{ answers: [], flagged: [] }}
+          deadlineAt={null}
+          serverNow={now}
+          startedAt={now}
+          examGuard={false}
+          preview={runner.preview}
+        />
+      )}
     </div>
   );
 }

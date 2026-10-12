@@ -30,6 +30,8 @@ import { teachesLesson } from "@/features/lessons/ownership";
 import { getLessonOverview } from "@/features/lessons/queries";
 import { reviewCopy as practiceCopy } from "@/features/review/messages";
 import { getSettings } from "@/features/settings/queries";
+import { VideoReplay } from "@/features/video/components/video-replay";
+import { videoCopy } from "@/features/video/messages";
 import { formatDateTime } from "@/lib/dates";
 
 export const metadata: Metadata = {
@@ -113,6 +115,27 @@ export default async function AttemptResultPage({
         rating={rating}
         hasReview={entries !== null}
       />
+      {attempt.mode === "video" && lesson?.video && (
+        <section
+          aria-labelledby="replay-heading"
+          className="flex flex-col gap-3"
+        >
+          <div>
+            <h2 id="replay-heading" className="heading-section">
+              {videoCopy.replayTitle}
+            </h2>
+            <p className="text-muted-foreground text-sm">
+              {videoCopy.replayLead}
+            </p>
+          </div>
+          <VideoReplay
+            youtubeId={lesson.video.youtubeId}
+            markers={(attempt.video?.cues ?? []).flatMap((c) =>
+              c.at === null ? [] : [{ at: c.at, done: false }],
+            )}
+          />
+        </section>
+      )}
       {entries ? (
         <ReviewList
           items={entries.map((entry, i) => {

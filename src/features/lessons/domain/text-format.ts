@@ -15,6 +15,7 @@ export type LineKind =
   | { kind: "answer"; rest: string }
   | { kind: "points"; raw: string }
   | { kind: "free" }
+  | { kind: "video"; raw: string }
   | { kind: "explanation"; rest: string }
   | {
       kind: "image";
@@ -36,6 +37,8 @@ export const TRAILING_POINTS =
   /\s*\[\s*(\d+(?:[.,]\d+)?)\s*(?:pts?|điểm|đ)\s*\]$/iu;
 /** Everyone gets the points (B-10). */
 const FREE = /^\[\s*(?:tặng điểm|free)\s*\]$/iu;
+/** Video lessons: `[Video 1:23]`, when the question is asked. */
+const VIDEO = /^\[\s*video\s*:?\s*([^\]]*?)\s*\]$/iu;
 const EXPLANATION = /^giải thích\s*:\s*(.*)$/iu;
 const IMAGE =
   /^!\[([^\]\n]*)\]\(media:([A-Za-z0-9][A-Za-z0-9/_.-]*)(?:\s+=(\d+)x(\d+))?\)$/u;
@@ -65,6 +68,8 @@ export function classifyLine(line: string): LineKind {
   m = POINTS.exec(line);
   if (m) return { kind: "points", raw: m[1] ?? "" };
   if (FREE.test(line)) return { kind: "free" };
+  m = VIDEO.exec(line);
+  if (m) return { kind: "video", raw: m[1] ?? "" };
   m = EXPLANATION.exec(line);
   if (m) return { kind: "explanation", rest: m[1] ?? "" };
   m = IMAGE.exec(line);

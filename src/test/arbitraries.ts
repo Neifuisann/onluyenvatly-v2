@@ -75,6 +75,7 @@ const baseFields = {
   points: pointsArb,
   explanation: textArb,
   free: fc.constant(true as const),
+  at: fc.integer({ min: 0, max: 12 * 3600 }),
 };
 
 /** Mostly stems with text; sometimes an image-only stem (v1 had those). */

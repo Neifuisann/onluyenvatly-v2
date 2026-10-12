@@ -131,8 +131,9 @@ As built (S5-04, `features/lessons/content-service.ts`): a lesson has at most on
 | user_id | uuid FK → users ON DELETE CASCADE | |
 | lesson_id | bigint FK null | null for personalized practice |
 | lesson_version_id | bigint FK null | Version for single-lesson attempts (null for `review`, whose items carry `v`). `NO ACTION`, so a version in use can't be deleted except together with its lesson |
-| mode | enum `attempt_mode` (`test`,`practice`,`review`,`game`) | `review` = personalized practice from mistakes; `game` = a lesson played as "Bắn zombie" (B-11, migration `0018`, ADR-010) |
+| mode | enum `attempt_mode` (`test`,`practice`,`review`,`game`,`video`) | `review` = personalized practice from mistakes; `game` = a lesson played as "Bắn zombie" (B-11, migration `0018`, ADR-010); `video` = a video lesson (B-13, migration `0021`, ADR-011) |
 | game | jsonb `ZombieState`, nullable | Game attempts only: lives, seconds per wave, the current wave and when its clock starts, and per wave the lanes shot, how it ended and its key (stored only once the wave ended). Written by `POST /api/attempts/[id]/game`; the first shot of each wave is also written to `answers` |
+| video | jsonb `VideoState`, nullable | Video attempts only (ADR-011): the cues `[{at, n}]` (second, null = end of the video, and how many items, in item order), cues answered, `seek` (fixed at start), the last position and the furthest point (s). Written by `POST /api/attempts/[id]/video`; each cue's answers go into `answers` |
 | status | enum `attempt_status` (`in_progress`,`submitted`,`expired`) | |
 | items | jsonb | Ordered `[{q:"q_ab12", v:57, o:[2,0,3,1], p:0.25}]`: question id, version id (omitted when equal to `lesson_version_id`), mcq option order, and the points fixed at start (so a config edit mid-attempt can't change the marks) |
 | answers | jsonb | Array aligned with `items`: `"B"` \| `[true,false,null,true]` \| `"1,5"` \| `null` |
@@ -278,6 +279,7 @@ type QuestionBase = {
   explanation?: string;  // teacher-written, shown after submit
   free?: true;           // "Tặng điểm" (B-10): every answer, blank included, gets the points
   removed?: true;        // removed from a version attempts use (B-10): worth 0 there, never in new attempts, counts or the text
+  at?: number;           // video lessons (B-13): second of the video it is asked at ([Video 1:23]); unset = at the end
 };
 
 type McqQuestion = QuestionBase & {
@@ -319,6 +321,8 @@ type LessonConfig = {
   tfScoring: 'thpt2025' | 'proportional';
   // B-11 (ADR-010): played as a game; needs after_submit, no startsAt, no time limit, no exam guard
   game: { kind: 'zombie'; lives: 1 | 3; secondsPerQuestion: 10 | 15 | 20 | 30 | 45 | 60 | 90 | 120 | null } | null;
+  // B-13 (ADR-011): learned along a YouTube video; no shuffleQuestions, pool, time limit, exam guard or game
+  video: { youtubeId: string; seek: 'after_first' | 'never' | 'always'; durationSec: number | null } | null;
 };
 ```
 Defaults match v1 behaviour: THPT scoring for tf, `revealAnswers: 'after_submit'`, `countsForRating: true`, `startsAt: null`.
@@ -349,6 +353,7 @@ Implemented in `src/features/lessons/domain/` (`parser.ts`, `serializer.ts`, wit
 - Header `Câu N:` (or `Câu N.` followed by a space), any case. The number is ignored and the serializer renumbers. Text before the first header is dropped with a warning.
 - Points: `[0.25 pts]`, `[1 pt]`, `[1,5 điểm]` on their own line, or at the end of the header line (a v1 habit).
 - `[Tặng điểm]` (or `[free]`) on its own line (B-10): everyone gets the question's points. A removed question (`removed: true`) is never written to the text.
+- `[Video 1:23]` (or `[Video 1:02:03]`, `[Video 83]`) on its own line (B-13): `at`, the second a video lesson asks the question. Questions with the same second are asked together; without one, at the end of the video. A second marker wins with a warning; an unreadable time is an error.
 - Short answers: `Answer: 0,63` is stored canonically as `"0.63"`. `Answer: 1.5 ± 0.05` (or `+-`) sets an absolute tolerance.
 - Images: a line `![alt](media:2026/09/x.webp =640x360)` (size optional) sets the image of the stem, or of the MCQ option just above it. One image per element; true/false statements take none. A stem may be only an image (`Câu 1:` followed by the image line); such questions keep their id across edits by image path. More images can sit inline in the text.
 - `Giải thích:` runs until the next `Câu N:` and keeps blank lines.
