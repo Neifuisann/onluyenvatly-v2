@@ -40,7 +40,7 @@ Storage (ADR-006): Production needs all three of `SUPABASE_URL` (`https://<ref>.
 - Commit messages: Conventional Commits (`feat:`, `fix:`, `chore:`) so the changelog is generated.
 - **DB migrations:** `drizzle-kit generate` on the dev machine creates SQL files that are committed. `migrate.yml` applies them:
   - to Neon staging automatically on PR merge (before the preview is promoted),
-  - to production by a **manual** `workflow_dispatch` with the environment protection rule (owner approval), run **before** merging code that depends on it.
+  - to production right after staging on the same merge (job `migrate-production`). A manual `workflow_dispatch` with `target: production` is still how to migrate a branch **before** merging it, which avoids the short window where the new deploy is live but its migration is still running. Production once ran without `classes.join_code` for hours because the manual run was forgotten, so the merge no longer depends on it.
   - Migrations must be backward compatible (expand → deploy → contract), so a rollback of the app never needs a DB rollback.
 - **Rollback:** Vercel Instant Rollback to the previous production deployment. Hobby supports rolling back to the immediately previous deployment. Test this once in Sprint 0.
 - **Feature flags:** columns in `settings` (e.g. `ai_enabled`, `rating_formula`), toggled in `/admin/settings`.
@@ -49,7 +49,7 @@ Workflows:
 | File | Trigger | Does |
 |---|---|---|
 | `ci.yml` | push / PR | lint, typecheck, unit + integration (Postgres service), build, bundle budget, E2E |
-| `migrate.yml` | merge to main (staging) / manual (prod) | `drizzle-kit migrate` |
+| `migrate.yml` | merge to main touching migrations (staging, then prod) / manual (either, plus rehearsals) | `drizzle-kit migrate` |
 | `backup.yml` | cron `0 19 * * *` (02:00 VN) | `pg_dump` prod → `age`-encrypt → upload to R2; prune to 30 daily + 12 monthly |
 | `quota-check.yml` | cron daily 07:00 VN | runs `scripts/check-quotas.ts`: DB size, table sizes, storage bytes, attempts/day, AI calls/day → opens a GitHub issue if any metric is above 60 % of its free limit |
 | `restore-drill.yml` | manual, monthly | restores the latest backup into Neon staging and runs `verify-migration.ts`-style sanity checks |
