@@ -66,7 +66,7 @@ test("a PDF becomes a draft lesson through the AI, its missing key solved by AI"
     (await aiCalls()).filter((c) => c.prompt.includes("Chuyển đề sau"));
   const before = (await importCalls()).length;
 
-  // One of the three ways to create a lesson.
+  // One of the ways to create a lesson.
   await page.goto("/admin/lessons/create");
   await page.getByRole("link", { name: "Chọn file đề" }).click();
   await expect(page).toHaveURL(/\/admin\/lessons\/create\?mode=file$/);

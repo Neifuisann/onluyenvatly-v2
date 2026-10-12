@@ -7,7 +7,7 @@ import { emulateScheme, type StorageState } from "./runner-helpers";
 /**
  * S5-01/S5-07 `/admin/lessons`: filters, sorting by the column arrows,
  * reorder in the manual order (keyboard and pointer drag), duplicate,
- * archive/restore and delete; "Tạo bài mới" and its three ways. Mutations
+ * archive/restore and delete; "Tạo bài mới" and its four ways. Mutations
  * run in the desktop project only, on a copy of the seeded draft, so the
  * catalog specs never see them.
  */
@@ -155,7 +155,7 @@ test("sorts by the newest change by default, and by name or creation from the co
   ).toHaveCount(0);
 });
 
-test("“Tạo bài mới” offers three ways; “Tạo từ bài có sẵn” draws a review draft", async ({
+test("“Tạo bài mới” offers four ways; “Tạo từ bài có sẵn” draws a review draft", async ({
   page,
 }, info) => {
   await page.goto("/admin/lessons");
@@ -166,6 +166,7 @@ test("“Tạo bài mới” offers three ways; “Tạo từ bài có sẵn” 
     "Tự soạn",
     "Nhập từ file bằng AI",
     "Tạo từ bài có sẵn",
+    "Học qua video",
   ]);
   await expectAccessible(page);
 
