@@ -296,6 +296,8 @@ One arena for the projector and the phones: every game screen sits on the navy `
 ## 7. PWA
 `app/manifest.ts` (name "Ôn Luyện Vật Lý", theme color primary, icons) makes the site installable on the home screen. **No service-worker caching of pages in v2.0**, to avoid serving stale tests. Offline tolerance inside the runner comes from localStorage.
 
+**In-app browsers (2026-10-12).** Links shared in Zalo, Messenger, Facebook, Instagram, Threads, TikTok and LINE open in the app's webview, which loses sign-in cookies, blocks fullscreen and kills a test in progress. `InAppBrowserPrompt` (root layout, every route) detects them by user agent on the client (`src/lib/in-app-browser.ts`; any Android `; wv)` webview counts too) and shows a bottom sheet: "Mở trong trình duyệt" (Android: an `intent://` to the default browser; iOS 17+: `x-safari-https://`), "Sao chép liên kết", and the app-menu steps as a fallback. "Vẫn tiếp tục ở đây" dismisses it for the tab (sessionStorage). Real browsers and home-screen installs never see it.
+
 ## 8. Design deliverables per sprint
 - Sprint 1: tokens + typography + AppShell + auth screens in Storybook-less "/dev/ui" page (a hidden route that lists components; free and no extra tooling).
 - Sprint 3: runner and result screens tested with 3 students on real phones (hallway test, 15 min each).
