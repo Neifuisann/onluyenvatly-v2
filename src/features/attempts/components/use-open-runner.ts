@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { type FormEvent, useState } from "react";
+import { type FormEvent, useEffect, useState } from "react";
 
 /**
  * Submits a start form (`/api/attempts/start`, `/api/review/start`) with
@@ -13,6 +13,22 @@ export function useOpenRunner(failed: string) {
   const router = useRouter();
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // `pending` deliberately outlives `router.push`, but this page is not
+  // unmounted: Cache Components keep it in a hidden <Activity>, and the browser
+  // may keep it in the back-forward cache. Reset it on hide (Activity runs
+  // effect cleanups) and on bfcache restore, or the button stays stuck on
+  // "Đang gọi zombie…" when the student comes back to play again.
+  useEffect(() => {
+    const onPageShow = (e: PageTransitionEvent) => {
+      if (e.persisted) setPending(false);
+    };
+    window.addEventListener("pageshow", onPageShow);
+    return () => {
+      window.removeEventListener("pageshow", onPageShow);
+      setPending(false);
+    };
+  }, []);
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();

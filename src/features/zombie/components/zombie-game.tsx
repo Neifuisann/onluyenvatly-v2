@@ -109,6 +109,11 @@ export function ZombieGame(props: Props) {
     }
   }, []);
 
+  // Leaving the game (any exit: menu, end panel, back button) hands the
+  // page back windowed and unlocked. Cleanup also runs when the route is
+  // hidden in an <Activity>, not only on unmount.
+  useEffect(() => leaveFullscreen, []);
+
   // The walk: CSS variables set every frame, no React render per frame.
   useEffect(() => {
     let frame = 0;
@@ -312,6 +317,17 @@ async function goLandscape() {
   } catch {
     // iOS and desktop browsers: no lock; turning the phone still works.
   }
+}
+
+/** Undoes `goLandscape` and the HUD toggle; quiet where unsupported. */
+function leaveFullscreen() {
+  try {
+    screen.orientation?.unlock?.();
+  } catch {
+    // No lock was held, or the browser has no lock API.
+  }
+  if (document.fullscreenElement)
+    void document.exitFullscreen().catch(() => {});
 }
 
 /** Phones held upright see this instead of the game (CSS decides when). */
