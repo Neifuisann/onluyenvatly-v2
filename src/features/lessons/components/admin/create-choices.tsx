@@ -2,6 +2,7 @@ import {
   ArrowRight,
   FileUp,
   type LucideIcon,
+  MonitorPlay,
   PencilLine,
   Shuffle,
 } from "lucide-react";
@@ -62,13 +63,16 @@ function Choice({
 }
 
 /**
- * `/admin/lessons/create` (S5-07, Azota-style): three ways to start a
- * lesson. "Tự soạn" creates the empty draft at once; the other two open
- * their panel on the same page (`?mode=`).
+ * `/admin/lessons/create` (S5-07, Azota-style): four ways to start a
+ * lesson. "Tự soạn" creates the empty draft at once; the others open their
+ * panel on the same page (`?mode=`).
  */
 export function CreateChoices({ aiEnabled }: { aiEnabled: boolean }) {
   return (
-    <ul aria-label={t.choicesLabel} className="grid gap-4 md:grid-cols-3">
+    <ul
+      aria-label={t.choicesLabel}
+      className="grid gap-4 md:grid-cols-2 xl:grid-cols-4"
+    >
       <Choice
         icon={PencilLine}
         tone="bg-accent-soft text-accent-text"
@@ -121,6 +125,21 @@ export function CreateChoices({ aiEnabled }: { aiEnabled: boolean }) {
           className={cn(actionClass, cover)}
         >
           {t.compose.action}
+          <ArrowRight aria-hidden className="size-4" />
+        </Link>
+      </Choice>
+      <Choice
+        icon={MonitorPlay}
+        tone="bg-danger-soft text-danger-text"
+        title={t.video.title}
+        body={t.video.body}
+      >
+        <Link
+          href="/admin/lessons/create?mode=video"
+          prefetch={false}
+          className={cn(actionClass, cover)}
+        >
+          {t.video.action}
           <ArrowRight aria-hidden className="size-4" />
         </Link>
       </Choice>

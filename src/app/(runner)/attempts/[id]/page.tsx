@@ -20,6 +20,8 @@ import {
   practiceFeedback,
 } from "@/features/review/domain/practice";
 import { reviewCopy } from "@/features/review/messages";
+import { VideoLesson } from "@/features/video/components/video-lesson";
+import { finishVideo } from "@/features/video/service";
 import { ZombieGame } from "@/features/zombie/components/zombie-game";
 import { finishGame } from "@/features/zombie/service";
 
@@ -77,6 +79,40 @@ export default async function AttemptPage({
         )}
         initial={attempt.game}
         serverNow={now.getTime()}
+      />
+    );
+  }
+  if (attempt.mode === "video") {
+    const video = attempt.video;
+    // Every cue answered and the last one was the end of the video: the
+    // grading failed after the answers were stored. Grade it now.
+    const over =
+      !video ||
+      (video.done === video.cues.length && video.cues.at(-1)?.at === null);
+    const [lesson, questions] = await Promise.all([
+      lessonId ? getLessonOverview(lessonId, true) : null,
+      itemPublicQuestions(attempt),
+    ]);
+    // The teacher removed the video meanwhile: grade what was answered.
+    if (over || !lesson?.video) {
+      const done = await finishVideo(user.id, attempt.id, now);
+      if (done.ok) redirect(`/attempts/${attempt.id}/result`);
+    }
+    if (!video || !lesson?.video || !questions) notFound();
+    return (
+      <VideoLesson
+        attemptId={attempt.id}
+        lessonId={lessonId}
+        title={lesson.title}
+        youtubeId={lesson.video.youtubeId}
+        questions={attempt.items.map((item, i) =>
+          toRunnerQuestion(
+            withOptionOrder(questions[i] as (typeof questions)[number], item.o),
+            item.p,
+          ),
+        )}
+        saved={attempt.answers}
+        initial={video}
       />
     );
   }

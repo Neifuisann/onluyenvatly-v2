@@ -14,6 +14,7 @@ import {
 } from "drizzle-orm";
 import { db } from "@/db/client";
 import {
+  type Attempt,
   attemptOverrides,
   attempts,
   classes,
@@ -217,7 +218,7 @@ export type StudentAttemptRow = {
   id: string;
   /** null for personalized practice. */
   lessonTitle: string | null;
-  mode: "test" | "practice" | "review" | "game";
+  mode: Attempt["mode"];
   score10: number | null;
   submittedAt: Date | null;
 };

@@ -12,6 +12,7 @@
 | [008](008-game-rooms-bounded-polling.md) | Live game rooms: student-paced race, bounded polling, no realtime service | Proposed |
 | [009](009-multi-teacher-classes.md) | Multiple teachers, classes and subjects: ownership columns, classes as the only bridge to students | Proposed |
 | [010](010-solo-zombie-game.md) | "Bắn zombie": a lesson played as a solo game, graded per shot | Proposed |
+| [011](011-video-lessons.md) | "Học qua video": questions along a YouTube video, no skipping on the first viewing | Proposed |
 
 To add one, copy the template below to `NNN-short-title.md`, then set Status to `Accepted` when the owner signs off (Sprint 0, task S0-02).
 

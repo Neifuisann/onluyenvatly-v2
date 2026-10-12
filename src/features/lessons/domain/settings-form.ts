@@ -15,14 +15,18 @@ import {
   GAME_SECONDS,
   type LessonConfig,
   LessonConfigSchema,
+  MAX_VIDEO_SECONDS,
   QUESTION_TYPES,
   type QuestionType,
+  VIDEO_SEEK,
+  type VideoSeek,
 } from "../schema.ts";
 import type { TypeCounts } from "./summary.ts";
+import { parseYoutubeId, youtubeWatchUrl } from "./video.ts";
 
 export type PoolMode = "off" | "size" | "byType";
-/** A test, or played as a game (B-11). */
-export type LessonFormat = "test" | "zombie";
+/** A test, played as a game (B-11), or learned along a video. */
+export type LessonFormat = "test" | "zombie" | "video";
 
 /** Everything as the inputs hold it: text for numbers, "" for "none". */
 export type SettingsForm = {
@@ -56,6 +60,11 @@ export type SettingsForm = {
   gameLives: "1" | "3";
   /** Seconds per question; "" = no clock. */
   gameSeconds: string;
+  /** A YouTube link (or id) as pasted. */
+  videoUrl: string;
+  videoSeek: VideoSeek;
+  /** Whole seconds read from the editor's player; "" = not known yet. */
+  videoDuration: string;
 };
 
 export type SettingsField =
@@ -142,11 +151,14 @@ export function toSettingsForm(
     revealAnswers: config.revealAnswers,
     countsForRating: config.countsForRating,
     examGuard: config.examGuard,
-    format: config.game ? "zombie" : "test",
+    format: config.video ? "video" : config.game ? "zombie" : "test",
     gameLives: config.game?.lives === 1 ? "1" : "3",
     gameSeconds: config.game
       ? num(config.game.secondsPerQuestion)
       : String(DEFAULT_GAME_SECONDS),
+    videoUrl: config.video ? youtubeWatchUrl(config.video.youtubeId) : "",
+    videoSeek: config.video?.seek ?? "after_first",
+    videoDuration: num(config.video?.durationSec),
   };
 }
 
@@ -212,7 +224,25 @@ export function fromSettingsForm(
     };
   }
 
-  const minutes = game ? undefined : parseNumber(f.timeLimitMin);
+  // A video asks its questions in video order, with no clock (04 §3.2).
+  const video = f.format === "video";
+  let videoConfig: LessonConfig["video"] = null;
+  if (video) {
+    const youtubeId = parseYoutubeId(f.videoUrl);
+    const duration = parseNumber(f.videoDuration);
+    if (!youtubeId) errors.videoUrl = M.errors.videoUrl;
+    else
+      videoConfig = {
+        youtubeId,
+        seek: f.videoSeek,
+        durationSec:
+          duration !== undefined && isInt(duration) && duration > 0
+            ? Math.min(duration, MAX_VIDEO_SECONDS)
+            : null,
+      };
+  }
+
+  const minutes = game || video ? undefined : parseNumber(f.timeLimitMin);
   // Decimals are fine: v1 limits were set to the second (45,5 phút).
   if (minutes !== undefined && !(minutes >= 1 && minutes <= 360))
     errors.timeLimitMin = M.errors.timeLimit;
@@ -227,21 +257,26 @@ export function fromSettingsForm(
   const startsRaw = game ? "" : f.startsAt.trim();
   const startsAt = startsRaw ? vnLocalToIso(startsRaw) : null;
   if (startsRaw && !startsAt) errors.startsAt = M.errors.startsAt;
-  const revealAnswers = game ? "after_submit" : f.revealAnswers;
+  const revealAnswers =
+    game || (video && f.revealAnswers === "after_deadline")
+      ? "after_submit"
+      : f.revealAnswers;
 
   // Pool: one of "total" or "per type", checked against the content.
   const total = available
     ? QUESTION_TYPES.reduce((s, t) => s + available[t], 0)
     : undefined;
+  // A video asks every question, in video order.
+  const poolMode = video ? "off" : f.poolMode;
   let pool: LessonConfig["pool"] = { enabled: false };
-  if (f.poolMode === "size") {
+  if (poolMode === "size") {
     const size = parseNumber(f.poolSize);
     if (size === undefined || !isInt(size) || size < 1 || size > 200)
       errors.poolSize = M.errors.poolSize;
     else if (total !== undefined && size > total)
       errors.poolSize = M.errors.poolSizeTooBig(total);
     else pool = { enabled: true, size };
-  } else if (f.poolMode === "byType") {
+  } else if (poolMode === "byType") {
     const byType: Partial<Record<QuestionType, number>> = {};
     let any = false;
     for (const t of QUESTION_TYPES) {
@@ -297,7 +332,7 @@ export function fromSettingsForm(
 
   const config = LessonConfigSchema.safeParse({
     timeLimitSec: minutes === undefined ? null : Math.round(minutes * 60),
-    shuffleQuestions: f.shuffleQuestions,
+    shuffleQuestions: video ? false : f.shuffleQuestions,
     shuffleOptions: f.shuffleOptions,
     pool,
     points,
@@ -305,9 +340,10 @@ export function fromSettingsForm(
     startsAt,
     revealAnswers,
     countsForRating: f.countsForRating,
-    examGuard: game ? false : f.examGuard,
+    examGuard: game || video ? false : f.examGuard,
     tfScoring: f.tfScoring,
     game: gameConfig,
+    video: videoConfig,
   });
   // The checks above cover the schema; this only guards against drift.
   if (!config.success) return { ok: false, errors: { form: M.errors.invalid } };
@@ -354,7 +390,10 @@ export const SettingsFormSchema = z.strictObject({
   revealAnswers: z.enum(["after_submit", "after_deadline", "never"]),
   countsForRating: z.boolean(),
   examGuard: z.boolean(),
-  format: z.enum(["test", "zombie"]),
+  format: z.enum(["test", "zombie", "video"]),
   gameLives: z.enum(["1", "3"]),
   gameSeconds: field(20),
+  videoUrl: field(500),
+  videoSeek: z.enum(VIDEO_SEEK),
+  videoDuration: field(20),
 }) satisfies z.ZodType<SettingsForm>;

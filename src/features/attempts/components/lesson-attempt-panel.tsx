@@ -13,7 +13,13 @@ import { formatDateTime, formatScore } from "@/lib/dates";
 import { canStart, revealAt, type Schedule } from "../domain/schedule";
 import { startCopy as t } from "../messages";
 import { getMyExtraAttempts, getMyLessonAttempts } from "../queries";
-import { StartAttemptButton } from "./start-attempt-button";
+import { type LessonKind, StartAttemptButton } from "./start-attempt-button";
+
+const CONTINUE = {
+  test: { note: t.inProgress, action: t.continue },
+  game: { note: t.gameInProgress, action: t.continueGame },
+  video: { note: t.videoInProgress, action: t.continueVideo },
+} as const;
 
 /**
  * "Bắt đầu" / "Tiếp tục" and my past attempts on a lesson overview. Per-user,
@@ -24,15 +30,14 @@ export async function LessonAttemptPanel({
   lessonId,
   schedule,
   unlimited,
-  game = false,
+  kind = "test",
 }: {
   userId: string;
   lessonId: number;
   schedule: Schedule & { maxAttempts: number | null };
   /** Admins are not limited (06 §2). */
   unlimited: boolean;
-  /** Played as a game (B-11). */
-  game?: boolean;
+  kind?: LessonKind;
 }) {
   const now = new Date();
   const close = revealAt(schedule);
@@ -108,9 +113,7 @@ export async function LessonAttemptPanel({
             <p className="font-medium text-sm">{t.timeUp}</p>
           ) : (
             <div className="space-y-1 text-sm">
-              <p className="font-medium">
-                {game ? t.gameInProgress : t.inProgress}
-              </p>
+              <p className="font-medium">{CONTINUE[kind].note}</p>
               {open.deadlineAt && (
                 <p className="text-muted-foreground">
                   {t.timeRunning(formatDateTime(open.deadlineAt))}
@@ -126,12 +129,12 @@ export async function LessonAttemptPanel({
             })}
             prefetch={false}
           >
-            {timeUp ? t.viewResult : game ? t.continueGame : t.continue}
+            {timeUp ? t.viewResult : CONTINUE[kind].action}
             <ArrowRight aria-hidden />
           </Link>
         </div>
       ) : check.ok ? (
-        <StartAttemptButton lessonId={lessonId} game={game} />
+        <StartAttemptButton lessonId={lessonId} kind={kind} />
       ) : (
         <div className="flex items-center gap-3 rounded-md bg-muted p-4">
           <Mascot

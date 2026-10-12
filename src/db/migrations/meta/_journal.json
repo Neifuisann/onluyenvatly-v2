@@ -148,6 +148,13 @@
       "when": 1791737450990,
       "tag": "0020_class_join_codes",
       "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1791806042965,
+      "tag": "0021_video_lessons",
+      "breakpoints": true
     }
   ]
 }

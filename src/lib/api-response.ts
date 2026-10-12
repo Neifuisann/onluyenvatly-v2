@@ -13,6 +13,7 @@ const STATUS: Partial<Record<ErrorCode, number>> = {
   DEADLINE_PASSED: 409,
   GAME_OVER: 409,
   GAME_FULL: 409,
+  VIDEO_TOO_EARLY: 409,
   AI_QUOTA: 429,
   AI_UNAVAILABLE: 503,
   INTERNAL: 500,

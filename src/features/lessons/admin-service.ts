@@ -12,8 +12,10 @@ import { adminLessonsCopy, settingsCopy } from "./messages";
 import { type Owner, ownedBy } from "./ownership";
 import {
   DEFAULT_LESSON_CONFIG,
+  type LessonConfig,
   LessonConfigSchema,
   QuestionsSchema,
+  type VideoConfig,
 } from "./schema";
 
 /**
@@ -259,6 +261,7 @@ export async function insertLesson(
   tx: Tx,
   actor: Actor,
   title: string,
+  config: LessonConfig = DEFAULT_LESSON_CONFIG,
 ): Promise<number> {
   const [last] = await tx
     .select({ max: sql<number | null>`max(${lessons.sortOrder})` })
@@ -269,7 +272,7 @@ export async function insertLesson(
     .values({
       title,
       status: "draft",
-      config: DEFAULT_LESSON_CONFIG,
+      config,
       sortOrder: (last?.max ?? -1) + 1,
       createdBy: actor.id,
       ownerId: actor.id,
@@ -279,17 +282,61 @@ export async function insertLesson(
   return row.id;
 }
 
-export async function createLesson(actor: Actor): Promise<{ id: number }> {
+/**
+ * A new empty draft; with `video`, a video lesson ("Học qua video") on
+ * that video, titled after it when its title is known.
+ */
+export async function createLesson(
+  actor: Actor,
+  video?: { config: VideoConfig; title: string | null },
+): Promise<{ id: number }> {
   return db.transaction(async (tx) => {
-    const id = await insertLesson(tx, actor, adminLessonsCopy.newTitle);
+    const id = await insertLesson(
+      tx,
+      actor,
+      video?.title ?? adminLessonsCopy.newTitle,
+      video
+        ? { ...DEFAULT_LESSON_CONFIG, video: video.config }
+        : DEFAULT_LESSON_CONFIG,
+    );
     await writeAudit(tx, {
       actorId: actor.id,
       action: "lesson.create",
       targetType: "lesson",
       targetId: id,
+      ...(video && { data: { video: video.config.youtubeId } }),
     });
     return { id };
   });
+}
+
+/**
+ * The video's length, read by the editor's player (video lessons). Only
+ * for the video the lesson still has, and only when it changed; not
+ * audited: it describes the video, the teacher chose nothing.
+ */
+export async function setVideoDuration(
+  actor: Actor,
+  id: number,
+  youtubeId: string,
+  durationSec: number,
+): Promise<Result<{ changed: boolean }>> {
+  const rows = await db
+    .update(lessons)
+    .set({
+      config: sql`jsonb_set(${lessons.config}, '{video,durationSec}', to_jsonb(${durationSec}::int))`,
+      updatedAt: sql`now()`,
+    })
+    .where(
+      and(
+        eq(lessons.id, id),
+        live(actor),
+        sql`${lessons.config}->'video'->>'youtubeId' = ${youtubeId}`,
+        sql`(${lessons.config}->'video'->>'durationSec') is distinct from ${String(durationSec)}`,
+      ),
+    )
+    .returning({ id: lessons.id });
+  return ok({ changed: rows.length > 0 });
 }
 
 /**

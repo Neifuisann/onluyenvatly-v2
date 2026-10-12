@@ -6,6 +6,7 @@ import {
   questionAtLine,
   questionTemplate,
   renumberQuestions,
+  setVideoTime,
   toggleCorrect,
 } from "./editor-commands";
 import { parseLessonText } from "./parser";
@@ -138,5 +139,64 @@ describe("mathSnippet", () => {
     ["giá \\$5 và ", "$\\pi$"],
   ])("after %j inserts %j", (before, out) => {
     expect(mathSnippet(before, "\\pi")).toBe(out);
+  });
+});
+
+describe("setVideoTime", () => {
+  const text = [
+    "Câu 1: Chu kì?",
+    "A. một",
+    "*B. hai",
+    "Giải thích: [Video 9:99] is text here",
+    "",
+    "Câu 2: Lực?",
+    "Answer: 10",
+    "[Video 0:30]",
+    "[2 pts]",
+    "[Video 0:45]",
+  ].join("\n");
+  const at = (t: string, i: number) => parseLessonText(t).questions[i]?.at;
+
+  it("adds a marker after the question's last line, before the explanation", () => {
+    const out = applyEdits(text, setVideoTime(text, 0, 83));
+    expect(out.split("\n").slice(0, 5)).toEqual([
+      "Câu 1: Chu kì?",
+      "A. một",
+      "*B. hai",
+      "[Video 1:23]",
+      "Giải thích: [Video 9:99] is text here",
+    ]);
+    expect(at(out, 0)).toBe(83);
+  });
+
+  it("rewrites the first marker and drops the others", () => {
+    const out = applyEdits(text, setVideoTime(text, 1, 3723));
+    expect(out.split("\n").slice(5)).toEqual([
+      "Câu 2: Lực?",
+      "Answer: 10",
+      "[Video 1:02:03]",
+      "[2 pts]",
+    ]);
+    expect(at(out, 1)).toBe(3723);
+  });
+
+  it("removes every marker for the end of the video", () => {
+    const out = applyEdits(text, setVideoTime(text, 1, null));
+    expect(out.split("\n").slice(5)).toEqual([
+      "Câu 2: Lực?",
+      "Answer: 10",
+      "[2 pts]",
+    ]);
+    expect(at(out, 1)).toBeUndefined();
+  });
+
+  it("changes nothing when it is already so, or the question is missing", () => {
+    const one = "Câu 1: ?\nAnswer: 1\n[Video 0:30]";
+    expect(setVideoTime(one, 0, 30)).toEqual([]);
+    expect(setVideoTime(one, 3, 30)).toEqual([]);
+    expect(setVideoTime("Câu 1: ?\nAnswer: 1", 0, null)).toEqual([]);
+    expect(applyEdits(one, setVideoTime(one, 0, null))).toBe(
+      "Câu 1: ?\nAnswer: 1",
+    );
   });
 });

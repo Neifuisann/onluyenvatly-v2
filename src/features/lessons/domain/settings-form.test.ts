@@ -69,6 +69,7 @@ describe("round trip", () => {
       examGuard: true,
       tfScoring: "proportional",
       game: null,
+      video: null,
     };
     const f = toSettingsForm({ ...meta, description: "Mô tả" }, config);
     expect(f.timeLimitMin).toBe("45,5");
@@ -271,5 +272,84 @@ describe("game format (B-11)", () => {
     expect(errorsOf(form({ format: "zombie", gameSeconds: "17" }))).toEqual({
       gameSeconds: "Cài đặt không hợp lệ.",
     });
+  });
+});
+
+describe("video format", () => {
+  const video = {
+    youtubeId: "dQw4w9WgXcQ",
+    seek: "after_first",
+    durationSec: 754,
+  } as const;
+
+  it("round-trips a video lesson; a test defaults to seeking after the first view", () => {
+    expect(base).toMatchObject({
+      videoUrl: "",
+      videoSeek: "after_first",
+      videoDuration: "",
+    });
+    const config: LessonConfig = {
+      ...DEFAULT_LESSON_CONFIG,
+      video: { ...video, seek: "never" },
+    };
+    const f = toSettingsForm(meta, config);
+    expect(f).toMatchObject({
+      format: "video",
+      videoUrl: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+      videoSeek: "never",
+      videoDuration: "754",
+    });
+    expect(fromSettingsForm(f, available)).toEqual({ ok: true, meta, config });
+  });
+
+  it("reads any YouTube link and drops what a video lesson can't have", () => {
+    expect(
+      fromSettingsForm(
+        form({
+          format: "video",
+          videoUrl: "https://youtu.be/dQw4w9WgXcQ?si=x",
+          videoDuration: "754",
+          timeLimitMin: "45",
+          shuffleQuestions: true,
+          poolMode: "size",
+          poolSize: "3",
+          revealAnswers: "after_deadline",
+          examGuard: true,
+          startsAt: "2026-10-20T07:30",
+        }),
+        available,
+      ),
+    ).toMatchObject({
+      ok: true,
+      config: {
+        timeLimitSec: null,
+        shuffleQuestions: false,
+        pool: { enabled: false },
+        revealAnswers: "after_submit",
+        examGuard: false,
+        startsAt: "2026-10-20T07:30:00+07:00",
+        game: null,
+        video,
+      },
+    });
+  });
+
+  it("keeps an unknown or junk length as unknown", () => {
+    for (const videoDuration of ["", "abc", "0", "12,5"])
+      expect(
+        fromSettingsForm(
+          form({ format: "video", videoUrl: "dQw4w9WgXcQ", videoDuration }),
+          available,
+        ),
+      ).toMatchObject({ ok: true, config: { video: { durationSec: null } } });
+  });
+
+  it("needs a YouTube link", () => {
+    expect(errorsOf(form({ format: "video", videoUrl: "" }))).toEqual({
+      videoUrl: "Dán một link video YouTube hợp lệ.",
+    });
+    expect(
+      errorsOf(form({ format: "video", videoUrl: "https://vimeo.com/1" })),
+    ).toEqual({ videoUrl: "Dán một link video YouTube hợp lệ." });
   });
 });

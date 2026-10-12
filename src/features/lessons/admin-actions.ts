@@ -10,7 +10,9 @@ import {
   suggestTags as suggestTagsService,
 } from "@/features/ai/lesson-helpers-service";
 import { requireTeacher } from "@/features/auth/guards";
+import { lookupVideo } from "@/features/video/oembed";
 import { tags } from "@/lib/cache-tags";
+import { errorMessages } from "@/lib/messages";
 import { rateLimit } from "@/lib/rate-limit";
 import { err, ok, type Result } from "@/lib/result";
 import { getOwnerTags } from "./admin-queries";
@@ -21,6 +23,7 @@ import {
   reorderLessons,
   setArchived,
   setLessonCover,
+  setVideoDuration,
   updateLessonSettings,
 } from "./admin-service";
 import {
@@ -38,7 +41,15 @@ import { ComposeSchema } from "./domain/compose";
 import { SourceTextSchema } from "./domain/content";
 import { parseSingleQuestion } from "./domain/corrections";
 import { SettingsFormSchema } from "./domain/settings-form";
-import { MAX_QUESTIONS, MediaPathSchema, QuestionIdSchema } from "./schema";
+import { parseYoutubeId } from "./domain/video";
+import { createCopy, settingsCopy } from "./messages";
+import {
+  MAX_QUESTIONS,
+  MAX_VIDEO_SECONDS,
+  MediaPathSchema,
+  QuestionIdSchema,
+  YoutubeIdSchema,
+} from "./schema";
 
 /**
  * Admin lesson actions (05 §2). Every one: `requireTeacher()` first, Zod, the
@@ -126,6 +137,57 @@ export async function createLesson(): Promise<void> {
   const { id } = await createLessonService(user);
   // Drafts are invisible to students: no shared tag changes.
   redirect(`/admin/lessons/${id}/edit`);
+}
+
+export type CreateVideoState = { error: string | null; url: string };
+
+/**
+ * "Học qua video": a new video lesson from a YouTube link, titled after the
+ * video, opened in the editor to attach questions along it. Drafts are
+ * invisible to students: no shared tag changes.
+ */
+export async function createVideoLesson(
+  _prev: CreateVideoState,
+  form: FormData,
+): Promise<CreateVideoState> {
+  const user = await requireTeacher();
+  const raw = form.get("url");
+  const url = typeof raw === "string" ? raw.slice(0, 500) : "";
+  const youtubeId = parseYoutubeId(url);
+  if (!youtubeId) return { error: settingsCopy.errors.videoUrl, url };
+  const limit = await rateLimit(`lesson:video:${user.id}`, 20, "10m");
+  if (!limit.ok) return { error: errorMessages.RATE_LIMITED, url };
+  const found = await lookupVideo(youtubeId);
+  if (found.kind === "unavailable")
+    return { error: createCopy.video.unavailable, url };
+  const { id } = await createLessonService(user, {
+    config: { youtubeId, seek: "after_first", durationSec: null },
+    title: found.title,
+  });
+  redirect(`/admin/lessons/${id}/edit`);
+}
+
+const VideoDurationSchema = z.strictObject({
+  id: LessonIdSchema,
+  youtubeId: YoutubeIdSchema,
+  durationSec: z.number().int().positive().max(MAX_VIDEO_SECONDS),
+});
+
+/**
+ * The editor's player reports the video's length (video lessons): kept in
+ * the config so questions past the end are asked at the end and the
+ * overview shows it.
+ */
+export async function saveVideoDuration(
+  input: unknown,
+): Promise<Result<{ changed: boolean }>> {
+  const user = await requireTeacher();
+  const parsed = VideoDurationSchema.safeParse(input);
+  if (!parsed.success) return err("VALIDATION");
+  const { id, youtubeId, durationSec } = parsed.data;
+  const result = await setVideoDuration(user, id, youtubeId, durationSec);
+  if (result.ok && result.data.changed) updateTag(tags.lesson(id));
+  return result;
 }
 
 /**

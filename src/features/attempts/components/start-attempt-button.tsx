@@ -6,14 +6,22 @@ import { Button } from "@/components/ui/button";
 import { startCopy as t } from "../messages";
 import { useOpenRunner } from "./use-open-runner";
 
+/** How the lesson is taken: a test, a game (B-11) or a video lesson. */
+export type LessonKind = "test" | "game" | "video";
+
+const LABELS = {
+  test: { idle: t.start, pending: t.starting },
+  game: { idle: t.play, pending: t.playing },
+  video: { idle: t.watch, pending: t.opening },
+} as const;
+
 /** Posts to `/api/attempts/start`; works without JavaScript as a plain form. */
 export function StartAttemptButton({
   lessonId,
-  game = false,
+  kind = "test",
 }: {
   lessonId: number;
-  /** A game lesson (B-11): "Chơi ngay". */
-  game?: boolean;
+  kind?: LessonKind;
 }) {
   const { onSubmit, pending, error } = useOpenRunner(t.failed);
   return (
@@ -33,7 +41,7 @@ export function StartAttemptButton({
         className="h-13 w-full text-base"
       >
         <Play aria-hidden className="fill-current" />
-        {game ? (pending ? t.playing : t.play) : pending ? t.starting : t.start}
+        {pending ? LABELS[kind].pending : LABELS[kind].idle}
       </Button>
     </form>
   );

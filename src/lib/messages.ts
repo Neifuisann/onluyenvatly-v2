@@ -23,6 +23,7 @@ export const errorMessages = {
   DEADLINE_PASSED: "Đã hết thời gian làm bài.",
   GAME_OVER: "Cuộc đua đã kết thúc.",
   GAME_FULL: "Phòng đã đủ người chơi.",
+  VIDEO_TOO_EARLY: "Bạn cần xem video đến đoạn này trước đã.",
   AI_UNAVAILABLE: "Tính năng AI đang tạm dừng. Vui lòng thử lại sau.",
   AI_QUOTA: "Hôm nay đã hết lượt dùng AI. Vui lòng thử lại vào ngày mai.",
   STORAGE_UNAVAILABLE:
