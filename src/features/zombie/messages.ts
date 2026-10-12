@@ -18,6 +18,7 @@ export const zombieCopy = {
   lives: (left: number, total: number) => `Còn ${left}/${total} mạng`,
   wave: (n: number, total: number) => `Đợt ${n}/${total}`,
   question: (n: number) => `Câu ${n}`,
+  options: "Các đáp án",
   statement: (letter: string) => `Ý ${letter})`,
   true: "Đúng",
   false: "Sai",
@@ -28,7 +29,8 @@ export const zombieCopy = {
   // Intro
   introLead: "Zombie cầm biển đáp án đang kéo tới hàng rào.",
   rules: [
-    "Chạm vào zombie cầm đáp án đúng để bắn. Trúng là cả đợt bị hạ.",
+    "Đọc câu hỏi và các đáp án ở bảng bên trái.",
+    "Chạm vào zombie ở làn có chữ cái của đáp án đúng để bắn. Trúng là cả đợt bị hạ.",
     "Bắn nhầm: zombie đó ngã, bạn mất một mạng.",
   ],
   ruleClock: (s: number) =>

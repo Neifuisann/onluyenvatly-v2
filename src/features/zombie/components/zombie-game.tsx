@@ -73,9 +73,10 @@ type Props = {
 };
 
 /**
- * "Bắn zombie" (B-11): one wave on screen at a time. The question sits on a
- * paper card in the sky; each answer is a sign held by a zombie walking
- * down its lane toward the barricade. Tapping a sign (or its key) fires.
+ * "Bắn zombie" (B-11): one wave on screen at a time. The question and its
+ * lettered answers sit on a paper sheet on the left; each lane is marked
+ * by a letter on the floor. Tapping the zombie walking down a lane (or
+ * pressing its key) fires.
  */
 export function ZombieGame(props: Props) {
   const g = useZombieGame(props);
@@ -195,6 +196,7 @@ export function ZombieGame(props: Props) {
               waveIndex={shown}
               waves={game.waves.length}
               question={question}
+              down={down}
               secondsLeft={secondsLeft}
               timed={game.sec !== null}
             />
@@ -229,7 +231,6 @@ export function ZombieGame(props: Props) {
               lane={lane}
               wave={wave}
               waveIndex={shown}
-              question={question}
               down={down.includes(lane)}
               fx={fx}
               disabled={!g.playable || g.pending}
@@ -483,6 +484,7 @@ function QuestionCard({
   waveIndex,
   waves,
   question,
+  down,
   secondsLeft,
   timed,
 }: {
@@ -490,17 +492,21 @@ function QuestionCard({
   waveIndex: number;
   waves: number;
   question: RunnerQuestion;
+  down: number[];
   secondsLeft: number | null;
   timed: boolean;
 }) {
-  const statement =
-    wave.p !== undefined ? question.statements?.[wave.p] : undefined;
+  const tf = wave.p !== undefined;
+  const statement = tf ? question.statements?.[wave.p as number] : undefined;
+  const options: ReactNode[] = tf
+    ? [t.true, t.false]
+    : (question.options ?? []);
   return (
     <section
       aria-label={t.question(wave.i + 1)}
       className={cn(s.card, s.cardEnter)}
     >
-      <header className="mb-2 flex items-center gap-2">
+      <header className="mb-2 flex shrink-0 items-center gap-2">
         <span className={s.chip}>{t.question(wave.i + 1)}</span>
         <span className="font-semibold text-xs opacity-70">
           {t.wave(waveIndex + 1, waves)}
@@ -516,22 +522,48 @@ function QuestionCard({
           </span>
         )}
       </header>
-      <div
-        className={cn(
-          "break-words",
-          statement ? "text-sm opacity-80" : "text-base sm:text-lg",
-        )}
-      >
-        {question.stem}
-      </div>
-      {statement && wave.p !== undefined && (
-        <div className={s.statement}>
-          <span className="mr-1 font-extrabold text-zb-red-deep">
-            {statementLetter(wave.p)})
-          </span>
-          {statement}
+      <div className={s.cardBody}>
+        <div
+          className={cn(
+            "break-words",
+            statement ? "text-sm opacity-80" : s.stem,
+          )}
+        >
+          {question.stem}
         </div>
-      )}
+        {statement && wave.p !== undefined && (
+          <div className={s.statement}>
+            <span className="mr-1 font-extrabold text-zb-red-deep">
+              {statementLetter(wave.p)})
+            </span>
+            {statement}
+          </div>
+        )}
+        {/* What each letter means: each lane is marked only by its letter. */}
+        <ul aria-label={t.options} className={cn(s.options, tf && s.optionsTf)}>
+          {options.map((content, lane) => {
+            const isKey = wave.k === lane && wave.e !== undefined;
+            const wrong = down.includes(lane);
+            return (
+              <li
+                // biome-ignore lint/suspicious/noArrayIndexKey: lanes are fixed
+                key={lane}
+                id={`opt-${waveIndex}-${lane}`}
+                className={cn(
+                  s.option,
+                  wrong && s.optionWrong,
+                  isKey && s.optionKey,
+                )}
+              >
+                <span className={s.letter} aria-hidden>
+                  {laneLetter(wave, lane)}
+                </span>
+                <span className="min-w-0 flex-1 break-words">{content}</span>
+              </li>
+            );
+          })}
+        </ul>
+      </div>
       {timed && (
         <div className={s.fuse} aria-hidden>
           <div className={s.fuseFill} />
@@ -545,7 +577,6 @@ function Lane({
   lane,
   wave,
   waveIndex,
-  question,
   down,
   fx,
   disabled,
@@ -554,7 +585,6 @@ function Lane({
   lane: number;
   wave: ZombieWave;
   waveIndex: number;
-  question: RunnerQuestion | undefined;
   down: boolean;
   fx: Fx | null;
   disabled: boolean;
@@ -562,18 +592,12 @@ function Lane({
 }) {
   const tf = wave.p !== undefined;
   const letter = laneLetter(wave, lane);
-  const content: ReactNode = tf
-    ? lane === 0
-      ? t.true
-      : t.false
-    : question?.options?.[lane];
   const hitHere =
     fx?.kind === "hit" && fx.wave === waveIndex && fx.lane === lane;
   const isKey = wave.k === lane;
   const revealed = isKey && (wave.e === "miss" || wave.e === "timeout");
   const cleared = wave.e === "hit" && !isKey && !down;
   const pose = down || hitHere ? "hit" : "walk";
-  const labelId = `lane-${waveIndex}-${lane}`;
   return (
     <div
       className={cn(
@@ -588,36 +612,22 @@ function Lane({
     >
       <span className={s.laneTag} aria-hidden>
         {letter}
+        {revealed && <span className={s.stamp}>{t.answerWas}</span>}
       </span>
       <div className={s.group}>
+        {/* The whole zombie is the target; the sheet says what it means. */}
         <button
           type="button"
-          className={cn(s.sign, tf && "justify-center")}
+          className={s.hitbox}
           onClick={onFire}
           disabled={disabled || down || wave.e !== undefined}
-          aria-labelledby={labelId}
-        >
-          <span className={s.letter} aria-hidden>
-            {letter}
-          </span>
-          <span
-            id={labelId}
-            className={cn(
-              s.signText,
-              tf && "flex-none font-display font-extrabold text-xl",
-            )}
-          >
-            <span className="sr-only">
-              {tf ? t.tfLaneLabel(String(content)) : t.laneLabel(letter)}:{" "}
-            </span>
-            {tf ? <span aria-hidden>{content}</span> : content}
-          </span>
-          {revealed && (
-            <span className={s.stamp} aria-hidden>
-              {t.answerWas}
-            </span>
-          )}
-        </button>
+          aria-label={
+            tf
+              ? t.tfLaneLabel(lane === 0 ? t.true : t.false)
+              : t.laneLabel(letter)
+          }
+          aria-describedby={`opt-${waveIndex}-${lane}`}
+        />
         <div className={s.zombie}>
           <Zombie
             kind={zombieKind(waveIndex, lane)}
@@ -645,12 +655,12 @@ function Effects({ fx, shown }: { fx: Fx | null; shown: number }) {
     const field = ref.current?.parentElement;
     const lane = field?.querySelector<HTMLElement>(`[data-lane="${fx.lane}"]`);
     const hero = field?.querySelector<HTMLElement>(`.${s.hero}`);
-    const sign = lane?.querySelector<HTMLElement>(`.${s.sign}`);
-    if (!field || !lane || !hero || !sign) return;
+    const zombie = lane?.querySelector<HTMLElement>(`.${s.group}`);
+    if (!field || !lane || !hero || !zombie) return;
     const f = field.getBoundingClientRect();
     const l = lane.getBoundingClientRect();
     const h = hero.getBoundingClientRect();
-    const target = sign.getBoundingClientRect();
+    const target = zombie.getBoundingClientRect();
     setPos({
       id: fx.id,
       fromX: h.right - f.left - 20,

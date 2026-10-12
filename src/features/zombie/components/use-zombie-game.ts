@@ -7,7 +7,7 @@ import type { Result } from "@/lib/result";
 import { AFTERMATH_MS, laneForKey } from "../domain/view";
 import type { GameMove } from "../schemas";
 import type { GameView } from "../service";
-import { play, readMuted, type Sound, writeMuted } from "./sfx";
+import { play, readMuted, type Sound, setMusic, writeMuted } from "./sfx";
 
 /** How long the ink takes to reach a zombie. */
 export const FLIGHT_MS = 220;
@@ -51,6 +51,8 @@ export function useZombieGame({
   const [result, setResult] = useState<GameView["result"]>();
   const [error, setError] = useState<string | null>(null);
   const [muted, setMuted] = useState(false);
+  // False until the saved mute choice is read: no music before that.
+  const [soundReady, setSoundReady] = useState(false);
   const [announce, setAnnounce] = useState("");
   const offset = useRef(serverNow - Date.now());
   const fxId = useRef(0);
@@ -61,6 +63,7 @@ export function useZombieGame({
   useEffect(() => {
     const m = readMuted();
     setMuted(m);
+    setSoundReady(true);
     mutedRef.current = m;
   }, []);
 
@@ -161,16 +164,39 @@ export function useZombieGame({
     busy.current = true;
     setPending(true);
     sound("tick");
+    // Inside the tap: iOS plays media only from a gesture.
+    setMusic(!mutedRef.current);
     const r = await send({ kind: "begin" });
     if (r?.ok) {
       setGame(r.data.state);
       setShown(r.data.state.wave);
-    } else setError("failed");
+    } else {
+      setError("failed");
+      setMusic(false);
+    }
     setPending(false);
     busy.current = false;
   }, [send, sound]);
 
   const playable = !ended && game.at !== null && shown === game.wave;
+
+  // Music from "Bắt đầu" until the end screen (its jingle plays alone);
+  // paused while the tab is hidden. Any tap retries a play the browser
+  // blocked (a reload mid-game has had no gesture yet).
+  const musicWanted = soundReady && !muted && !ended && game.at !== null;
+  useEffect(() => {
+    const sync = () => setMusic(musicWanted && !document.hidden);
+    sync();
+    window.addEventListener("pointerdown", sync);
+    window.addEventListener("keydown", sync);
+    document.addEventListener("visibilitychange", sync);
+    return () => {
+      window.removeEventListener("pointerdown", sync);
+      window.removeEventListener("keydown", sync);
+      document.removeEventListener("visibilitychange", sync);
+    };
+  }, [musicWanted]);
+  useEffect(() => () => setMusic(false), []);
 
   const fire = useCallback(
     async (lane: number) => {
