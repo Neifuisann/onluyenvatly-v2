@@ -1,8 +1,10 @@
 name: Migrate
 
-# 12 §3: staging is migrated automatically when migrations land on main;
-# production only by a manual run with the `production` environment approval,
-# BEFORE merging code that depends on the new schema.
+# 12 §3: when migrations land on main, staging is migrated and then
+# production, so the deploy of that merge finds its schema (a forgotten manual
+# production run once left `classes.join_code` missing in prod). Migrations stay
+# additive so the code still running in prod tolerates them. Manual runs remain
+# for rehearsals and for migrating a branch before it merges.
 on:
   push:
     branches: [main]
@@ -75,3 +77,31 @@ jobs:
             tmp/migration-history-report.json
             tmp/migration-verification.json
           retention-days: 30
+
+  # Same steps against production, only for merges to main and only after
+  # staging migrated cleanly.
+  migrate-production:
+    name: drizzle-kit migrate (production, after merge)
+    if: github.event_name == 'push'
+    needs: migrate
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: production
+    concurrency:
+      group: migrate-production
+      cancel-in-progress: false
+    env:
+      DATABASE_URL_DIRECT: ${{ secrets.DATABASE_URL_DIRECT }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Configure IPv4 session connection
+        run: node scripts/configure-ci-database.ts
+        env:
+          SUPABASE_SESSION_POOLER_HOST: ${{ vars.SUPABASE_SESSION_POOLER_HOST }}
+      - run: pnpm db:migrate
