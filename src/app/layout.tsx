@@ -3,6 +3,7 @@ import { SpeedInsights } from "@vercel/speed-insights/next";
 import type { Metadata, Viewport } from "next";
 import { JetBrains_Mono } from "next/font/google";
 import localFont from "next/font/local";
+import { InAppBrowserPrompt } from "@/components/in-app-browser-prompt";
 import { shellCopy } from "@/lib/messages";
 import { siteUrl } from "@/lib/site";
 import { themeScript } from "@/lib/theme";
@@ -81,6 +82,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       </head>
       <body className="flex min-h-full flex-col">
         {children}
+        <InAppBrowserPrompt />
         <Analytics />
         <SpeedInsights />
       </body>
