@@ -1,7 +1,8 @@
 /**
- * The game's sounds (B-11), synthesized with WebAudio: nothing to download.
- * Muted by the HUD toggle (remembered per browser). Browsers allow audio
- * only after a tap, so the context starts on the first "Bắt đầu" or shot.
+ * The game's sounds (B-11): effects synthesized with WebAudio, plus one
+ * looping music track. Both muted by the HUD toggle (remembered per
+ * browser). Browsers allow audio only after a tap, so the context starts on
+ * the first "Bắt đầu" or shot.
  */
 export type Sound =
   | "shoot"
@@ -22,6 +23,51 @@ function audio(): AudioContext | null {
   ctx ??= new AudioContext();
   if (ctx.state === "suspended") void ctx.resume();
   return ctx;
+}
+
+/** Background music, kept well under the effects. */
+const MUSIC_SRC = "/games/zombie/music.mp3";
+const MUSIC_GAIN = 0.28;
+const FADE_S = 0.6;
+
+let music: { el: HTMLAudioElement; gain: GainNode } | null = null;
+let musicOn = false;
+
+/**
+ * Fades the music in or out. Idempotent, so it is safe to call on every tap:
+ * a play the browser blocked before the first gesture is retried. Routed
+ * through a gain node because iOS ignores `HTMLMediaElement.volume`.
+ */
+export function setMusic(on: boolean) {
+  if (!on && !music) return;
+  const a = audio();
+  if (!a) return;
+  if (!music) {
+    const el = new Audio(MUSIC_SRC);
+    el.loop = true;
+    el.preload = "auto";
+    const gain = a.createGain();
+    gain.gain.value = 0;
+    a.createMediaElementSource(el).connect(gain).connect(a.destination);
+    music = { el, gain };
+  }
+  const { el, gain } = music;
+  if (on && musicOn && !el.paused) return;
+  if (!on && !musicOn) return;
+  musicOn = on;
+  const t = a.currentTime;
+  gain.gain.cancelScheduledValues(t);
+  gain.gain.setValueAtTime(gain.gain.value, t);
+  gain.gain.linearRampToValueAtTime(on ? MUSIC_GAIN : 0, t + FADE_S);
+  if (on) {
+    el.play().catch(() => {
+      // Not allowed yet: the next tap tries again.
+      musicOn = false;
+    });
+  } else
+    setTimeout(() => {
+      if (!musicOn) el.pause();
+    }, FADE_S * 1000);
 }
 
 export function readMuted(): boolean {
