@@ -199,6 +199,34 @@ export const onboardingCopy = {
   welcomeCta: "Xem lớp của tôi",
 } as const;
 
+/** Page opened inside Zalo, Messenger… (`InAppBrowserPrompt`). */
+export const inAppBrowserCopy = {
+  title: "Mở bằng trình duyệt",
+  lead: (app: string | null) =>
+    `Bạn đang mở trang trong ${app ? `ứng dụng ${app}` : "một ứng dụng"}. Trình duyệt bên trong ứng dụng dễ mất đăng nhập, mất bài đang làm và không bật được toàn màn hình.`,
+  advice: "Mở bằng Chrome hoặc Safari để dùng thuận tiện nhất.",
+  open: "Mở trong trình duyệt",
+  copy: "Sao chép liên kết",
+  copied: "Đã sao chép liên kết",
+  manualIos:
+    "Nếu nút trên không mở được: bấm nút ••• ở góc màn hình rồi chọn “Mở trong trình duyệt” (hoặc “Mở bằng Safari”).",
+  manualAndroid:
+    "Nếu nút trên không mở được: bấm nút ⋮ ở góc trên rồi chọn “Mở bằng trình duyệt”.",
+  manualOther:
+    "Bấm nút menu của ứng dụng rồi chọn “Mở trong trình duyệt”, hoặc sao chép liên kết và dán vào trình duyệt.",
+  stay: "Vẫn tiếp tục ở đây",
+  apps: {
+    zalo: "Zalo",
+    messenger: "Messenger",
+    threads: "Threads",
+    instagram: "Instagram",
+    facebook: "Facebook",
+    tiktok: "TikTok",
+    line: "LINE",
+    other: null,
+  },
+} as const;
+
 /** Error boundaries without a feature of their own (root, global, public). */
 export const stateCopy = {
   errorTitle: "Có lỗi xảy ra",
