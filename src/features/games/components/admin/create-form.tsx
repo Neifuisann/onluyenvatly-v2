@@ -252,7 +252,9 @@ export function CreateGameForm({ lessons }: { lessons: LessonChoice[] }) {
             aria-describedby={
               failed?.fieldErrors?.lessonIds ? "lessons-error" : undefined
             }
-            className="max-h-96 overflow-y-auto rounded-md border"
+            // `relative`: the hidden (`sr-only`, absolute) checkboxes stay in
+            // this scroll box instead of stretching the page below the form.
+            className="relative max-h-96 overflow-y-auto rounded-md border"
           >
             <legend className="sr-only">{t.lessonsLabel}</legend>
             {shown.length === 0 ? (
