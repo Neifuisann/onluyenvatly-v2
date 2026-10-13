@@ -63,6 +63,10 @@ export const zombieCopy = {
   // In a "Thi đấu" room (B-14)
   alive: (n: number, total: number) => `${n}/${total} người còn trụ`,
   ruleRoom: "Cả lớp cùng chống zombie. Ai trụ được nhiều đợt nhất sẽ thắng.",
+  ruleShared:
+    "Cả lớp cùng một đợt, cùng lúc. Bắn xong thì chờ hết giờ để sang đợt tiếp.",
+  waitClass: "Chờ cả lớp…",
+  waitNext: (s: number) => `Đợt tiếp theo sau ${s} giây`,
   roomWonLead: "Bạn đã trụ hết các đợt zombie!",
   roomLostLead: "Hết mạng mất rồi. Xem các bạn khác trụ đến đâu nhé.",
   survived: "Số đợt trụ được",

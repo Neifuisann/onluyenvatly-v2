@@ -18,7 +18,7 @@ import {
   getRoomSnapshot,
 } from "@/features/games/queries";
 import { RoomIdSchema } from "@/features/games/schemas";
-import { hosts, roomState } from "@/features/games/service";
+import { hosts, roomState, startIfDue } from "@/features/games/service";
 import { siteUrl } from "@/lib/site";
 
 const t = gameCopy.host;
@@ -41,7 +41,10 @@ export default async function HostPage({ params }: PageProps<"/host/[id]">) {
   const id = RoomIdSchema.safeParse((await params).id);
   const found = id.success ? await getRoom(id.data) : null;
   // Only the teacher who created the room hosts it (B-03).
-  const room = found && hosts(user, found.hostId) ? found : null;
+  const mine = found && hosts(user, found.hostId) ? found : null;
+  const now = new Date();
+  // A scheduled room past its time starts as the page opens (B-15).
+  const room = mine && (await startIfDue(mine, now));
   if (!room)
     return (
       <StageMessage
@@ -51,7 +54,6 @@ export default async function HostPage({ params }: PageProps<"/host/[id]">) {
       />
     );
 
-  const now = new Date();
   const snapshot = await getRoomSnapshot(room.id, now.getTime());
   const state = roomState(room, snapshot?.players ?? [], null, now);
   const joinUrl = new URL(`/play/${room.pin}`, siteUrl()).toString();
@@ -96,7 +98,7 @@ export default async function HostPage({ params }: PageProps<"/host/[id]">) {
               room.waves ?? 0,
               room.lives ?? 0,
               room.seconds,
-              room.lockJoin,
+              room,
             )
           : t.settings(room.bankTypes.length, paceCopy[room.pace].name, room)
       }
