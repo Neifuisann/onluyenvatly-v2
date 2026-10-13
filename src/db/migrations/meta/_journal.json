@@ -169,6 +169,13 @@
       "when": 1791886776567,
       "tag": "0023_room_schedule",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1791891326289,
+      "tag": "0024_class_join_requests",
+      "breakpoints": true
     }
   ]
 }

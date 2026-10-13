@@ -40,6 +40,11 @@ export function ClassList({
                     {t.archivedBadge}
                   </span>
                 )}
+                {c.requests > 0 && (
+                  <span className="rounded-full bg-accent-soft px-2 py-0.5 font-semibold text-accent-text text-xs">
+                    {t.requests(c.requests)}
+                  </span>
+                )}
               </span>
               <span className="block text-muted-foreground text-sm">
                 {[

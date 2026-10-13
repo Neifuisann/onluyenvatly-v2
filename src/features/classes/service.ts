@@ -149,9 +149,10 @@ export async function deleteClass(
 
 /**
  * "Thêm học sinh": the teacher pastes phone numbers. Each one that belongs
- * to a student account (any status but rejected) joins the class; the rest
- * are reported back so the teacher can ask those students to register.
- * Teachers and admins can't be added.
+ * to a student account (any status but rejected) joins the class (a pending
+ * request from the invite link is approved); the rest are reported back so
+ * the teacher can ask those students to register. Teachers and admins can't
+ * be added.
  */
 export async function addMembers(
   actor: Actor,
@@ -197,21 +198,108 @@ export async function addMembers(
           .onConflictDoNothing()
           .returning({ userId: classMembers.userId })
       : [];
+    const approved = found.length
+      ? await tx
+          .update(classMembers)
+          .set({ status: "active", addedBy: actor.id })
+          .where(
+            and(
+              eq(classMembers.classId, id),
+              eq(classMembers.status, "pending"),
+              inArray(
+                classMembers.userId,
+                found.map((u) => u.id),
+              ),
+            ),
+          )
+          .returning({ userId: classMembers.userId })
+      : [];
+    const added = inserted.length + approved.length;
     const change: MemberChange = {
-      added: inserted.length,
-      already: found.length - inserted.length,
+      added,
+      already: found.length - added,
       notFound: phones.filter((p) => !byPhone.has(p)),
       invalid,
     };
-    if (inserted.length)
+    if (added)
       await writeAudit(tx, {
         actorId: actor.id,
         action: "class.add_members",
         targetType: "class",
         targetId: id,
-        data: { added: inserted.length },
+        data: { added },
       });
     return ok(change);
+  });
+}
+
+/**
+ * "Duyệt": a student who asked through the invite link joins the class.
+ * NOT_FOUND when there is no pending request (already approved, or the
+ * student withdrew).
+ */
+export async function approveMember(
+  actor: Actor,
+  id: number,
+  userId: string,
+): Promise<Result<{ id: number }>> {
+  return db.transaction(async (tx) => {
+    const row = await lockClass(tx, actor, id);
+    if (!row) return err("NOT_FOUND");
+    if (row.archivedAt) return err("CONFLICT", { message: M.errors.archived });
+    const approved = await tx
+      .update(classMembers)
+      .set({ status: "active", addedBy: actor.id })
+      .where(
+        and(
+          eq(classMembers.classId, id),
+          eq(classMembers.userId, userId),
+          eq(classMembers.status, "pending"),
+        ),
+      )
+      .returning({ userId: classMembers.userId });
+    if (approved.length === 0) return err("NOT_FOUND");
+    await writeAudit(tx, {
+      actorId: actor.id,
+      action: "class.approve_member",
+      targetType: "class",
+      targetId: id,
+      data: { userId },
+    });
+    return ok({ id });
+  });
+}
+
+/**
+ * "Từ chối": drops a pending request. The student may ask again with the
+ * link; "Đổi liên kết" stops that.
+ */
+export async function rejectMember(
+  actor: Actor,
+  id: number,
+  userId: string,
+): Promise<Result<{ id: number }>> {
+  return db.transaction(async (tx) => {
+    if (!(await lockClass(tx, actor, id))) return err("NOT_FOUND");
+    const rejected = await tx
+      .delete(classMembers)
+      .where(
+        and(
+          eq(classMembers.classId, id),
+          eq(classMembers.userId, userId),
+          eq(classMembers.status, "pending"),
+        ),
+      )
+      .returning({ userId: classMembers.userId });
+    if (rejected.length === 0) return err("NOT_FOUND");
+    await writeAudit(tx, {
+      actorId: actor.id,
+      action: "class.reject_member",
+      targetType: "class",
+      targetId: id,
+      data: { userId },
+    });
+    return ok({ id });
   });
 }
 
@@ -328,8 +416,8 @@ export async function resetJoinCode(
 
 /**
  * "Chia sẻ" on a lesson: gives it to one of the actor's classes (if it isn't
- * there yet) and returns that class's invite code, so the copied link lets
- * any student who opens it into a class that has the lesson. Same rules as
+ * there yet) and returns that class's invite code, so a student who opens
+ * the copied link asks to join a class that has the lesson. Same rules as
  * "Giao bài": the actor's own published lesson, a class that isn't archived.
  */
 export async function shareLessonToClass(
@@ -380,16 +468,19 @@ export async function shareLessonToClass(
 
 export type JoinOutcome = {
   classId: number;
-  /** False when the student was already in the class. */
-  joined: boolean;
+  /** False when the student was already in the class or had asked. */
+  requested: boolean;
+  /** The student's membership now: waiting for the teacher, or in. */
+  status: "pending" | "active";
   /** Whether the class has the lesson the link pointed at. */
   hasLesson: boolean;
 };
 
 /**
- * A student opens an invite link and confirms: they join the class (once;
- * joining again changes nothing). Archived classes and unknown codes read
- * as NOT_FOUND. Teachers and admins don't join classes.
+ * A student opens an invite link and confirms: they ask to join the class
+ * and wait for the teacher to approve (once; asking again changes nothing).
+ * Archived classes and unknown codes read as NOT_FOUND. Teachers and admins
+ * don't join classes.
  */
 export async function joinClass(
   user: { id: string; role: Role },
@@ -411,12 +502,25 @@ export async function joinClass(
         classId: cls.id,
         userId: user.id,
         addedBy: user.id,
+        status: "pending",
         createdAt: now,
       })
       .onConflictDoNothing()
       .returning({ userId: classMembers.userId });
-    const joined = inserted.length > 0;
-    if (joined)
+    const requested = inserted.length > 0;
+    const [membership] = requested
+      ? [{ status: "pending" as const }]
+      : await tx
+          .select({ status: classMembers.status })
+          .from(classMembers)
+          .where(
+            and(
+              eq(classMembers.classId, cls.id),
+              eq(classMembers.userId, user.id),
+            ),
+          )
+          .limit(1);
+    if (requested)
       await writeAudit(tx, {
         actorId: user.id,
         action: "class.join",
@@ -437,6 +541,11 @@ export async function joinClass(
             .limit(1)
         ).length > 0
       : false;
-    return ok({ classId: cls.id, joined, hasLesson });
+    return ok({
+      classId: cls.id,
+      requested,
+      status: membership?.status ?? "pending",
+      hasLesson,
+    });
   });
 }

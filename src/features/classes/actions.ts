@@ -19,8 +19,10 @@ import {
 import { joinPath, ShareLessonSchema } from "./domain/invite";
 import {
   addMembers as addMembersService,
+  approveMember as approveMemberService,
   createClass as createClassService,
   deleteClass as deleteClassService,
+  rejectMember as rejectMemberService,
   removeMember as removeMemberService,
   resetJoinCode as resetJoinCodeService,
   setClassArchived,
@@ -118,6 +120,38 @@ export async function removeMember(
   const parsed = RemoveMemberSchema.safeParse(input);
   if (!parsed.success) return err("VALIDATION");
   const result = await removeMemberService(
+    user,
+    parsed.data.id,
+    parsed.data.userId,
+  );
+  if (result.ok) refresh();
+  return result;
+}
+
+/** "Duyệt": a student who asked through the invite link joins the class. */
+export async function approveMember(
+  input: unknown,
+): Promise<Result<{ id: number }>> {
+  const user = await requireTeacher();
+  const parsed = RemoveMemberSchema.safeParse(input);
+  if (!parsed.success) return err("VALIDATION");
+  const result = await approveMemberService(
+    user,
+    parsed.data.id,
+    parsed.data.userId,
+  );
+  if (result.ok) refresh();
+  return result;
+}
+
+/** "Từ chối": drops a student's pending request to join. */
+export async function rejectMember(
+  input: unknown,
+): Promise<Result<{ id: number }>> {
+  const user = await requireTeacher();
+  const parsed = RemoveMemberSchema.safeParse(input);
+  if (!parsed.success) return err("VALIDATION");
+  const result = await rejectMemberService(
     user,
     parsed.data.id,
     parsed.data.userId,

@@ -31,7 +31,8 @@ export const metadata: Metadata = {
  * `/join/<code>?bai=<lessonId>` (B-03): a teacher's invite link. Signed out,
  * the proxy sends the visitor through login or register and back here. A
  * student already in the class goes straight on (to the lesson when the
- * class has it); anyone else confirms with "Vào lớp" (a server action).
+ * class has it); one who asked sees that the teacher has yet to approve;
+ * anyone else asks with "Xin vào lớp" (a server action).
  * Lookups are rate limited so codes can't be found by trying many.
  */
 export default async function JoinPage({
@@ -62,8 +63,9 @@ export default async function JoinPage({
     );
   const target = await getJoinTarget(code.data, user.id, lessonId);
   if (!target) return <Invalid />;
-  if (target.member)
+  if (target.membership === "active")
     redirect(afterJoinPath(target.id, lessonId, target.hasLesson));
+  const pending = target.membership === "pending";
 
   return (
     <div
@@ -74,7 +76,9 @@ export default async function JoinPage({
     >
       <Mascot pose="wave" size={112} />
       <div className="space-y-2">
-        <h1 className="heading-section">{t.title}</h1>
+        <h1 className="heading-section">
+          {pending ? t.pendingTitle : t.title}
+        </h1>
         <p className="text-muted-foreground">{t.lead(target.teacherName)}</p>
         <p className="break-words font-bold font-display text-2xl tracking-tight">
           {target.name}
@@ -91,9 +95,22 @@ export default async function JoinPage({
       {lessonId && target.hasLesson && (
         <p className="text-muted-foreground text-sm">{t.lessonNote}</p>
       )}
-      <div className="w-full">
-        <JoinButton code={code.data} lessonId={lessonId} />
-      </div>
+      {pending ? (
+        <>
+          <p className="text-muted-foreground text-sm">{t.pendingBody}</p>
+          <Link
+            href="/classes"
+            prefetch={false}
+            className={buttonVariants({ variant: "secondary" })}
+          >
+            {t.toClasses}
+          </Link>
+        </>
+      ) : (
+        <div className="w-full">
+          <JoinButton code={code.data} lessonId={lessonId} />
+        </div>
+      )}
     </div>
   );
 }

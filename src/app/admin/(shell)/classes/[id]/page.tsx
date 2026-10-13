@@ -21,7 +21,7 @@ export const metadata: Metadata = { title: t.title };
 
 /**
  * `/admin/classes/[id]` (B-03): one of the teacher's classes: its details,
- * students (add by phone, remove) and lessons ("Giao bài"). Another
+ * students (add by phone, approve or reject requests, remove) and lessons ("Giao bài"). Another
  * teacher's class is a 404. Per request.
  */
 export default async function AdminClassPage({
@@ -38,6 +38,7 @@ export default async function AdminClassPage({
     getAssignableLessons(user),
   ]);
   const archived = Boolean(cls.archivedAt);
+  const requests = members.filter((m) => m.requested).length;
   return (
     <div className="mx-auto flex max-w-4xl flex-col gap-6">
       <PageHeader
@@ -46,7 +47,8 @@ export default async function AdminClassPage({
         lead={[
           subjectLabel(cls.subject),
           cls.grade ? t.gradeOption(cls.grade) : null,
-          t.members(members.length),
+          t.members(members.length - requests),
+          requests ? t.requests(requests) : null,
           t.lessons(assigned.length),
         ]
           .filter(Boolean)

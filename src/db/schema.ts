@@ -830,8 +830,8 @@ export const gamePlayers = pgTable(
 ).enableRLS();
 
 /**
- * A teacher's class (B-03). Students join only when the teacher adds them;
- * they see the lessons given to the class. `archived_at` hides the class
+ * A teacher's class (B-03). Students join when the teacher adds them or
+ * approves their request from the invite link; they see the lessons given to the class. `archived_at` hides the class
  * from its students and stops its lessons from being opened through it.
  */
 export const classes = pgTable(
@@ -868,7 +868,17 @@ export const classes = pgTable(
   ],
 ).enableRLS();
 
-/** Students of a class, added by its teacher (B-03). */
+/**
+ * A class membership: `pending` is a student who asked through the invite
+ * link and waits for the teacher to approve; only `active` members are in
+ * the class (see its lessons, its leaderboard).
+ */
+export const classMemberStatus = pgEnum("class_member_status", [
+  "pending",
+  "active",
+]);
+
+/** Students of a class: added by its teacher, or asked and approved (B-03). */
 export const classMembers = pgTable(
   "class_members",
   {
@@ -881,6 +891,7 @@ export const classMembers = pgTable(
     addedBy: uuid("added_by").references(() => users.id, {
       onDelete: "set null",
     }),
+    status: classMemberStatus("status").notNull().default("active"),
     createdAt: timestamptz("created_at").notNull().defaultNow(),
   },
   (t) => [

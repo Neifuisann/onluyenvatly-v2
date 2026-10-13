@@ -76,6 +76,7 @@ export async function getLeaderboard(f: {
     .where(
       and(
         eq(classMembers.classId, f.classId),
+        eq(classMembers.status, "active"),
         eq(users.role, "student"),
         eq(users.status, "active"),
         // "Most improved" lists only students who did a rated test this week.

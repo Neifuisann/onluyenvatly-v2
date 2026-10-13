@@ -45,6 +45,8 @@ const actions: Record<string, string> = {
   "class.delete": "Xóa lớp",
   "class.add_members": "Thêm học sinh vào lớp",
   "class.remove_member": "Xóa học sinh khỏi lớp",
+  "class.approve_member": "Duyệt học sinh vào lớp",
+  "class.reject_member": "Từ chối học sinh xin vào lớp",
   "class.lessons": "Giao bài cho lớp",
   "lesson.correct": "Sửa đáp án và chấm lại",
 };

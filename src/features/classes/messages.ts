@@ -22,6 +22,7 @@ export const classesCopy = {
   newClass: "Tạo lớp",
   newClassTitle: "Tạo lớp mới",
   members: (n: number) => `${n} học sinh`,
+  requests: (n: number) => `${n} xin vào lớp`,
   lessons: (n: number) => `${n} bài`,
   archivedBadge: "Đã lưu trữ",
   showArchived: (n: number) => `Lớp đã lưu trữ (${n})`,
@@ -51,7 +52,7 @@ export const classesCopy = {
   settingsSection: "Thông tin lớp",
   membersSection: "Học sinh",
   membersLead:
-    "Học sinh vào lớp bằng liên kết mời ở trên, hoặc bạn thêm em bằng số điện thoại em đã đăng ký. Một học sinh có thể ở nhiều lớp.",
+    "Học sinh mở liên kết mời ở trên để xin vào lớp, bạn duyệt hoặc từ chối từng em. Bạn cũng có thể thêm em bằng số điện thoại em đã đăng ký. Một học sinh có thể ở nhiều lớp.",
   addMembers: "Thêm học sinh",
   addMembersLabel: "Số điện thoại học sinh",
   addMembersHint:
@@ -64,6 +65,17 @@ export const classesCopy = {
   invalid: (entries: string) => `Không đọc được số điện thoại: ${entries}.`,
   membersEmpty: "Lớp chưa có học sinh nào.",
   membersLabel: "Học sinh trong lớp",
+  requestsLabel: "Học sinh xin vào lớp",
+  requestBadge: "Chờ duyệt",
+  requestedAt: (when: string) => `Xin vào lớp ${when}`,
+  approve: "Duyệt",
+  approveName: (name: string) => `Duyệt ${name} vào lớp`,
+  approved: "Đã duyệt vào lớp.",
+  reject: "Từ chối",
+  rejectName: (name: string) => `Từ chối ${name}`,
+  rejectConfirm: (name: string) =>
+    `Từ chối ${name}? Em sẽ không vào lớp. Em vẫn có thể xin lại bằng liên kết mời, trừ khi bạn đổi liên kết.`,
+  rejected: "Đã từ chối.",
   phone: "Số điện thoại",
   addedAt: (when: string) => `Vào lớp ${when}`,
   remove: "Xóa khỏi lớp",
@@ -90,7 +102,7 @@ export const classesCopy = {
 
   inviteSection: "Liên kết mời vào lớp",
   inviteLead:
-    "Gửi liên kết này qua Zalo hoặc Messenger. Học sinh đăng nhập (hoặc đăng ký) rồi bấm “Vào lớp” là vào lớp ngay, không cần bạn thêm số điện thoại.",
+    "Gửi liên kết này qua Zalo hoặc Messenger. Học sinh đăng nhập (hoặc đăng ký) rồi bấm “Xin vào lớp”; em hiện trong danh sách học sinh bên dưới để bạn duyệt, không cần nhập số điện thoại.",
   inviteCode: "Mã lớp",
   inviteLink: "Liên kết mời",
   copyInvite: "Sao chép liên kết",
@@ -105,9 +117,13 @@ export const classesCopy = {
     title: "Vào lớp học",
     lead: (teacher: string) => `${teacher} mời bạn vào lớp:`,
     lessonNote:
-      "Sau khi vào lớp, bạn sẽ được chuyển thẳng tới bài giáo viên đã gửi.",
-    join: "Vào lớp",
-    joining: "Đang vào lớp…",
+      "Khi giáo viên duyệt, mở lại liên kết này để vào thẳng bài giáo viên đã gửi.",
+    join: "Xin vào lớp",
+    joining: "Đang gửi…",
+    pendingTitle: "Đã gửi yêu cầu vào lớp",
+    pendingBody:
+      "Giáo viên cần duyệt trước khi bạn vào lớp. Khi được duyệt, lớp sẽ hiện ở mục Lớp học của bạn.",
+    toClasses: "Xem lớp của tôi",
     notFoundTitle: "Liên kết mời không còn dùng được",
     notFoundBody:
       "Lớp này không tồn tại, đã lưu trữ hoặc giáo viên đã đổi liên kết. Bạn xin giáo viên liên kết mới nhé.",
@@ -132,8 +148,8 @@ export const classesCopy = {
   studentEmptyTitle: "Bạn chưa ở lớp nào",
   studentEmptyBody: (phone: string | null) =>
     phone
-      ? `Gửi số điện thoại ${phone} cho giáo viên để được thêm vào lớp. Bài của lớp sẽ hiện ra ngay sau đó.`
-      : "Gửi số điện thoại bạn dùng để đăng nhập cho giáo viên để được thêm vào lớp.",
+      ? `Mở liên kết mời giáo viên gửi để xin vào lớp, hoặc gửi số điện thoại ${phone} cho giáo viên. Bài của lớp sẽ hiện ra khi giáo viên duyệt.`
+      : "Mở liên kết mời giáo viên gửi để xin vào lớp, hoặc gửi số điện thoại bạn dùng để đăng nhập cho giáo viên.",
   teacher: (name: string) => `Giáo viên: ${name}`,
   openClass: (name: string) => `Vào lớp ${name}`,
   classLessonsLead: "Các bài giáo viên đã giao cho lớp.",
