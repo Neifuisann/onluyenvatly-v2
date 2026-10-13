@@ -68,7 +68,7 @@ Priority: **P0** is required for launch (parity with v1 plus the fixes), **P1** 
 | Q1 | Starting a test creates an **attempt** on the server. The server picks questions (pool/distribution), fixes the order and option shuffle, and sets a deadline. | P0 |
 | Q2 | The client gets question content **without answers**. | P0 |
 | Q3 | Question types: MCQ (A–D, one correct), true/false with 4 statements (THPT scoring), short numeric answer (comma or dot decimals, optional tolerance). Math via KaTeX, optional image per question and per option. | P0 |
-| Q4 | Answers autosave to local storage on every change and sync to the server every 30 s and on page hide. A reload or phone lock resumes the attempt. | P0 |
+| Q4 | Answers autosave to local storage on every change and sync to the server every 60 s and on page hide. A reload or phone lock resumes the attempt. | P0 |
 | Q5 | Timer shows server-authoritative remaining time, warns at 5 min and 1 min, and auto-submits at 0. The server rejects answers after deadline + 30 s grace. | P0 |
 | Q6 | Question navigator (grid showing answered, flagged, current), flag for review, and a confirmation listing unanswered questions before submit. | P0 |
 | Q7 | Submit → the server grades, stores the attempt, updates rating, and returns the result. Submitting twice is safe (idempotent). | P0 |

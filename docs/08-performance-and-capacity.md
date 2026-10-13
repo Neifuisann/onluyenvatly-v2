@@ -18,7 +18,7 @@
 
 ### Techniques that achieve these
 - RSC by default. Client components only for interactive islands (runner, filters, editor, charts).
-- KaTeX rendered on the server and cached with the lesson. Only `katex.min.css` (~23 KB) plus the fonts that are actually used get shipped.
+- KaTeX rendered on the server and memoised per formula in each instance (a plain `Map` in `math-text/render.tsx`, not a `"use cache"` entry per text: hundreds of those per test page cost ~30 % of the runner's CPU even when warm). Only `katex.min.css` (~23 KB) plus the fonts that are actually used get shipped.
 - Self-hosted fonts via `next/font/local`: one Latin + Vietnamese subset per family (`src/app/fonts`, built by `scripts/subset-fonts.py`), `display: swap`, Inter preloaded. Google's per-subset files made every Vietnamese page download latin, latin-ext and vietnamese (6–7 files, ~215–234 KB); now 2 files, 119 KB, same axes and features.
 - Icons via `lucide-react`, tree-shaken (v1 loads all of Font Awesome).
 - Images: browser-resized WebP, explicit width/height, `loading="lazy"` below the fold.
@@ -34,7 +34,7 @@
 | Phase | Requests | Rate | Cost per request | Load |
 |---|---|---|---|---|
 | Start | 100 × (`startAttempt` + runner page) | ~2 rps over 2 min | ~3 queries, 20–40 ms | trivial |
-| Autosave | Each client syncs **only if answers changed**, at most every 30 s, plus on page hide | ≤ 3.3 rps, typically ~1.5 rps | 1 UPDATE, ~5 ms | trivial |
+| Autosave | Each client syncs **only if answers changed**, at most every 60 s, plus on page hide | ≤ 1.7 rps, typically ~0.8 rps | 1 UPDATE, ~5 ms | trivial |
 | Submit burst | 100 submits in ~10 s | **~10 rps peak** | lock + grade (pure, < 5 ms CPU) + 1 tx with 4–6 statements ≈ 30–60 ms | light |
 | Result pages | 100 | ~10 rps | 2 queries | light |
 
@@ -77,8 +77,10 @@ Assumptions:
 **Rule:** if any line goes over **60 %** in the daily quota check (12 §5), stop feature work and optimise. The usual fixes are more caching, less prefetching, longer autosave intervals, and smaller payloads.
 
 ## 4. Cost-control guardrails built into the code
-1. `<Link prefetch={false}>` on lesson-card grids and leaderboard rows. The app-shell nav (5–8 links) keeps the default prefetch: for these PPR routes it fetches only the prerendered shell up to `loading.tsx` (static segment files, no function, no query; checked with the Postgres statement log), so a tap shows the next page's skeleton at once.
-2. Autosave is dirty-checked and throttled (30 s), with a flush on `pagehide`.
+1. `<Link prefetch={false}>` on lesson-card grids and leaderboard rows. The app-shell nav (5–10 links) prefetches on intent (hover or focus, `NavLink`): for these PPR routes that is only the prerendered shell up to `loading.tsx` (static segment files, no query), so a click shows the next page's skeleton at once. `proxy.ts` skips prefetch requests (`missing: next-router-prefetch`), so the CDN serves them without starting a function.
+2. Autosave is dirty-checked and throttled (60 s), with a flush on `pagehide` and when the tab is hidden.
+
+**Measured 2026-10-13 (Vercel Observability, 12 h, Hobby):** of ~9.3K CDN requests, autosave was 2.3K and the nav prefetches ~1.8K (5 per student page view, 10 per admin page view), each also running the Node proxy as a function (half of all invocations in the request logs). Active CPU per request was ~550 ms for `/attempts/[id]/result` and ~525 ms for `/attempts/[id]`, ~20 ms for a save. The fixes above, server tracing off (12 §4) and browser caching for unhashed static files (`next.config.ts`: icons a day, artwork a week) came out of that review.
 3. No polling outside live game rooms, and no realtime. Timers are client-side against the server `deadline_at`. Game rooms (B-05) poll within ADR-008: the lobby and the projector every 2 s, finished players every 3 s, nobody during the race, never in a hidden tab, 204 with no body while the room’s `rev` is unchanged, and a 1 s per-instance snapshot shared by the class.
 4. Student game screens stay under 150 KB by loading one phase per request (`PlayScreen`), keeping Zod out of `games/domain/rules.ts`, and using `clsx` instead of `cn` (tailwind-merge) on phone-only components: `/play/[pin]` measured 145.4 KB, `/play` 139.5 KB (2026-10-06).
 5. Shared data goes through tagged caching (ADR-005). Admin mutations invalidate precisely.

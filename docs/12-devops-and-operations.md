@@ -67,7 +67,7 @@ As built (S7-04): the route exists and only removes AI import files older than 2
 | Signal | Source | Alert |
 |---|---|---|
 | Site down | UptimeRobot → `/api/health` (checks DB) | Email/Telegram after 2 failures |
-| Errors and performance | Sentry (server + client), sample traces at 5 % to stay in the free tier. Spans keep route templates (`GET /lessons/[id]`), op and Web Vitals only; errors keep build-chunk frames and source map debug IDs, nothing personal (`operations/domain/telemetry.ts`) | Email on new issue |
+| Errors and performance | Sentry (server + client). The browser samples traces at 5 % to stay in the free tier; the server reports errors only (tracing instruments every request and Active CPU is the scarcer quota, 08 §4). Spans keep route templates (`GET /lessons/[id]`), op and Web Vitals only; errors keep build-chunk frames and source map debug IDs, nothing personal (`operations/domain/telemetry.ts`) | Email on new issue |
 | Page views | Vercel Web Analytics (`@vercel/analytics/next` in the root layout); enable Web Analytics in the Vercel project dashboard and monitor its allowance | Weekly review |
 | Web Vitals | Vercel Speed Insights (`@vercel/speed-insights/next` in the root layout); view real-user metrics in the project's Speed Insights dashboard after deployment and monitor its allowance | Weekly review |
 | Quotas | Vercel dashboard usage notifications (turn on email alerts) + `quota-check.yml` | GitHub issue at 60 % |

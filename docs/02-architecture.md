@@ -94,7 +94,7 @@ sequenceDiagram
   loop every change
     B->>B: save answers to localStorage
   end
-  loop every 30 s / visibilitychange=hidden
+  loop every 60 s / visibilitychange=hidden
     B->>N: saveProgress(attemptId, answers, flags) (beacon/action)
     N->>D: UPDATE attempt SET answers, guard_flags WHERE status='in_progress'
   end

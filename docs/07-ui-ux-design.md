@@ -154,7 +154,7 @@ The wireframes below describe the information hierarchy. The Lagoon redesign add
 ```
 Behaviour:
 - One question per screen on mobile, swipe or buttons to move; "Xem tất cả" switches to a scrolling list (preference is remembered). On desktop, the list is shown with the navigator in a sticky side panel.
-- Answers are saved locally on every change and synced every 30 s and on page hide. The save indicator is always visible.
+- Answers are saved locally on every change and synced every 60 s and on page hide. The save indicator is always visible.
 - Offline: banner "Mất kết nối – bài làm vẫn được lưu trên máy". Submit queues and retries with backoff; the deadline has 30 s of grace.
 - Submit is on the last question and in the navigator sheet → `SubmitDialog`.
 - Exam-guard mode: a small shield icon "Chế độ thi" in the header, a toast on return from a tab switch ("Đã ghi nhận rời khỏi bài thi"), selection and copy disabled only inside the runner.
