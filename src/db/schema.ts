@@ -353,6 +353,12 @@ export type ZombieState = {
   sec: number | null;
   /** Epoch ms when the current wave's clock starts; null before the start. */
   at: number | null;
+  /**
+   * Same-question zombie rooms (B-15): when wave 0's clock starts for the
+   * whole class. Wave `j` starts `j` times (`sec` plus the break) later,
+   * whoever cleared it early.
+   */
+  clock?: number;
   wave: number;
   misses: number;
   over: "won" | "lost" | null;
@@ -741,6 +747,11 @@ export const gameRooms = pgTable(
     waves: smallint("waves"),
     rev: integer("rev").notNull().default(0),
     createdAt: timestamptz("created_at").notNull().defaultNow(),
+    /**
+     * "Hẹn giờ" (B-15): the lobby starts itself at this moment, with the
+     * players waiting in it. Null for a room the host starts by hand.
+     */
+    scheduledAt: timestamptz("scheduled_at"),
     startedAt: timestamptz("started_at"),
     /** Past it a running room counts as finished (`raceHardEnd`). */
     hardEndAt: timestamptz("hard_end_at"),

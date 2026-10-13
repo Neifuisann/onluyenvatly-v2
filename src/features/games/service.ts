@@ -2,7 +2,7 @@ import "server-only";
 import { randomInt } from "node:crypto";
 import { and, count, eq, isNull, sql } from "drizzle-orm";
 import { db } from "@/db/client";
-import { gamePlayers, gameRooms } from "@/db/schema";
+import { gamePlayers, gameRooms, type ZombieState } from "@/db/schema";
 import { createRng } from "@/features/attempts/domain/random";
 import {
   expectedAnswer,
@@ -42,7 +42,9 @@ import {
   DEFAULT_SETTINGS,
   generatePin,
   MAX_PLAYERS,
+  MAX_SCHEDULE_AHEAD_MS,
   MIN_QUESTIONS,
+  MIN_SCHEDULE_LEAD_MS,
   type Pace,
   ZOMBIE_TYPES,
   type ZombieLives,
@@ -56,6 +58,8 @@ import {
   passedMarks,
   playerShownAt,
   raceHardEnd,
+  scheduleDue,
+  scheduledStart,
   scoreAnswer,
   sharedPosition,
 } from "./domain/scoring";
@@ -65,6 +69,7 @@ import {
   type StandingInput,
 } from "./domain/standings";
 import {
+  catchUp,
   countWaves,
   roomStartState,
   tallyMove,
@@ -111,7 +116,8 @@ const hostedBy = (user: Owner) =>
 /**
  * "Tạo phòng" (B-05): draws the bank from the chosen lessons and opens a
  * lobby with a fresh PIN. Only lessons whose keys may be shown now take part
- * (`lessonAllowsGame`): a race shows the key after every answer.
+ * (`lessonAllowsGame`): a race shows the key after every answer. With
+ * "Hẹn giờ" (B-15) the lobby starts itself at `scheduledAt`.
  */
 export async function createGame(
   host: Actor,
@@ -128,6 +134,15 @@ export async function createGame(
     now,
   );
   if (!limit.ok) return err("RATE_LIMITED");
+
+  const scheduledAt = input.scheduledAt ?? null;
+  if (scheduledAt) {
+    const ahead = scheduledAt.getTime() - now.getTime();
+    if (ahead < MIN_SCHEDULE_LEAD_MS || ahead > MAX_SCHEDULE_AHEAD_MS)
+      return err("VALIDATION", {
+        fieldErrors: { scheduledAt: t.create.scheduleWindow },
+      });
+  }
 
   const wanted = new Set(input.lessonIds);
   const chosen = (await getGameLessonChoices(host)).filter((l) => {
@@ -189,6 +204,7 @@ export async function createGame(
             lockJoin: input.lockJoin ?? DEFAULT_SETTINGS.lockJoin,
             lives: input.lives ?? DEFAULT_SETTINGS.lives,
             mode: input.mode ?? "race",
+            scheduledAt,
             ...(zombie && {
               seconds: input.seconds ?? null,
               waves: countWaves(bankQs),
@@ -206,6 +222,7 @@ export async function createGame(
             lessons: chosen.length,
             questions: bank.length,
             mode: input.mode ?? "race",
+            scheduled: scheduledAt !== null,
           },
         });
         return room.id;
@@ -220,6 +237,46 @@ export async function createGame(
 }
 
 const bumpRev = { rev: sql`${gameRooms.rev} + 1` };
+
+/**
+ * lobby → running at `startedAt`, if still in the lobby: by "Bắt đầu" or
+ * on schedule (B-15), whichever comes first. True when this call did it.
+ */
+async function launch(room: RoomRow, startedAt: Date) {
+  const [started] = await db
+    .update(gameRooms)
+    .set({
+      ...bumpRev,
+      status: "running",
+      startedAt,
+      hardEndAt:
+        room.mode === "zombie"
+          ? zombieHardEnd(
+              startedAt,
+              room.waves ?? 0,
+              room.seconds,
+              room.sameQuestion,
+            )
+          : raceHardEnd(startedAt, room.bankTypes, room.pace),
+    })
+    .where(and(eq(gameRooms.id, room.id), eq(gameRooms.status, "lobby")))
+    .returning({ id: gameRooms.id });
+  forgetSnapshot(room.id);
+  return Boolean(started);
+}
+
+/**
+ * "Hẹn giờ" (B-15): starts a scheduled lobby whose time has come, with
+ * whoever is waiting in it, and returns the room as it is now. No cron:
+ * the lobby's own polls (every 2 s per player and the host), the play page
+ * and a join all call this, so the room starts on time while anyone is
+ * there and costs nothing otherwise.
+ */
+export async function startIfDue(room: RoomRow, now: Date): Promise<RoomRow> {
+  if (!room.scheduledAt || !scheduleDue(room, now)) return room;
+  await launch(room, scheduledStart(room.scheduledAt, now));
+  return (await getRoom(room.id)) ?? room;
+}
 
 /**
  * Joins a room, or changes racer while still in the lobby. Joining a race
@@ -238,8 +295,10 @@ export async function joinGame(
     now,
   );
   if (!limit.ok) return err("RATE_LIMITED");
-  const room = await getRoom(input.roomId);
-  if (!room) return err("NOT_FOUND", { message: t.play.notFound });
+  const found = await getRoom(input.roomId);
+  if (!found) return err("NOT_FOUND", { message: t.play.notFound });
+  // A scheduled room past its time has started: a locked one is closed.
+  const room = await startIfDue(found, now);
   if (effectiveStatus(room, now) === "finished") return err("GAME_OVER");
 
   const existing = await getPlayer(room.id, user.id);
@@ -293,7 +352,10 @@ export async function joinGame(
   return winner ? ok({ playerId: winner.id }) : err("CONFLICT");
 }
 
-/** "Bắt đầu": lobby → running, with at least one player. The host only. */
+/**
+ * "Bắt đầu": lobby → running, with at least one player. The host only; a
+ * scheduled room (B-15) may be started early this way.
+ */
 export async function startGame(
   host: Actor,
   roomId: string,
@@ -310,20 +372,12 @@ export async function startGame(
     .from(gamePlayers)
     .where(and(eq(gamePlayers.roomId, roomId), isNull(gamePlayers.removedAt)));
   if (!players?.n) return err("VALIDATION", { message: t.host.noPlayers });
-  await db
-    .update(gameRooms)
-    .set({
-      ...bumpRev,
-      status: "running",
-      startedAt: now,
-      hardEndAt:
-        room.mode === "zombie"
-          ? zombieHardEnd(now, room.waves ?? 0, room.seconds)
-          : raceHardEnd(now, room.bankTypes, room.pace),
-    })
-    .where(and(eq(gameRooms.id, roomId), eq(gameRooms.status, "lobby")));
-  forgetSnapshot(roomId);
-  return ok({ startedAt: now.toISOString() });
+  if (await launch(room, now)) return ok({ startedAt: now.toISOString() });
+  // Its schedule came first.
+  const started = await getRoom(roomId);
+  return started?.startedAt
+    ? ok({ startedAt: started.startedAt.toISOString() })
+    : err("GAME_OVER");
 }
 
 /** "Kết thúc": the race is over for everyone, whatever they were doing. */
@@ -674,8 +728,11 @@ export async function zombieMove(
       lives: gameRooms.lives,
       seconds: gameRooms.seconds,
       bank: gameRooms.bank,
+      sameQuestion: gameRooms.sameQuestion,
+      startedAt: gameRooms.startedAt,
       playerId: gamePlayers.id,
       seed: gamePlayers.seed,
+      joinedAt: gamePlayers.joinedAt,
       removedAt: gamePlayers.removedAt,
     })
     .from(gamePlayers)
@@ -691,9 +748,27 @@ export async function zombieMove(
   // From the shared lesson cache: a class playing together reads it once.
   const questions = await bankQuestions(row.bank);
   if (!questions) return err("INTERNAL");
-  const plan = playerPlan(optionCounts(questions), createRng(row.seed));
+  // A same-question room (B-15): the bank's order for all, on one clock.
+  const plan = playerPlan(
+    optionCounts(questions),
+    createRng(row.seed),
+    row.sameQuestion,
+  );
   const inOrder = plan.order.map((i) => questions[i] as Question);
   const t0 = now.getTime();
+  /** The right lane of `wave`, or null for a wave that doesn't exist. */
+  const keyOf = (state: ZombieState, wave: number) => {
+    const w = state.waves[wave];
+    const bankIndex = w && plan.order[w.i];
+    const question = bankIndex !== undefined && questions[bankIndex];
+    const bankItem = bankIndex !== undefined && row.bank[bankIndex];
+    if (!w || !question || !bankItem) return null;
+    return waveKey(
+      question,
+      gradingItem(bankItem, plan.options[bankIndex as number]),
+      w,
+    );
+  };
 
   const step = await db.transaction(async (tx) => {
     const [room] = await tx
@@ -724,35 +799,43 @@ export async function zombieMove(
     const state =
       p.zombie ??
       roomStartState(
-        { lives: row.lives as ZombieLives, seconds: row.seconds },
+        {
+          lives: row.lives as ZombieLives,
+          seconds: row.seconds,
+          shared:
+            row.sameQuestion && row.startedAt
+              ? { startedAt: row.startedAt }
+              : null,
+        },
         inOrder,
       );
+    // On the class's clock, waves this player missed have ended (B-15).
+    const started = move.kind === "begin" ? begin(state, t0) : state;
+    const synced = catchUp(
+      started,
+      t0,
+      row.joinedAt.getTime(),
+      (wave) => keyOf(started, wave) ?? 0,
+    );
 
     let r: ReturnType<typeof shoot>;
     if (move.kind === "begin") {
-      const next = begin(state, t0);
-      r = { ok: true, state: next, event: { kind: "stale" } };
+      r = { ok: true, state: synced, event: { kind: "stale" } };
     } else {
-      const wave = state.waves[move.wave];
-      const bankIndex = wave && plan.order[wave.i];
-      const question = bankIndex !== undefined && questions[bankIndex];
-      const bankItem = bankIndex !== undefined && row.bank[bankIndex];
-      if (!wave || !question || !bankItem) return err("VALIDATION");
-      const key = waveKey(
-        question,
-        gradingItem(bankItem, plan.options[bankIndex as number]),
-        wave,
-      );
+      const key = keyOf(synced, move.wave);
+      if (key === null) return err("VALIDATION");
       r =
         move.kind === "shoot"
-          ? shoot(state, move, key, t0)
-          : timeout(state, move.wave, key, t0);
+          ? shoot(synced, move, key, t0)
+          : timeout(synced, move.wave, key, t0);
     }
     if (!r.ok) return err(r.code === "OVER" ? "GAME_OVER" : "VALIDATION");
     const event = move.kind === "begin" ? null : r.event;
     if (r.state === state && p.zombie) return ok({ state, event, me: p });
 
-    const stats = tallyMove(state, r.state, p, plan.order, t0);
+    // The waves missed first (no points), then the move itself.
+    const missed = tallyMove(state, synced, p, plan.order, t0);
+    const stats = tallyMove(synced, r.state, missed, plan.order, t0);
     const over = r.state.over !== null;
     const me = {
       ...stats,
@@ -810,8 +893,14 @@ export async function pollRoom(
   rev: number,
   now = new Date(),
 ): Promise<Result<StatePoll>> {
-  const snapshot = await getRoomSnapshot(roomId, now.getTime());
+  let snapshot = await getRoomSnapshot(roomId, now.getTime());
   if (!snapshot) return err("NOT_FOUND");
+  if (scheduleDue(snapshot.room, now)) {
+    // The class's countdown ran out (B-15): this poll starts the room.
+    await startIfDue(snapshot.room, now);
+    snapshot = await getRoomSnapshot(roomId, now.getTime());
+    if (!snapshot) return err("NOT_FOUND");
+  }
   const { room, players } = snapshot;
   const me = players.find((p) => p.userId === user.id) ?? null;
   if (!me && !hosts(user, room.hostId)) {
@@ -842,6 +931,7 @@ export function roomState(
     status: effectiveStatus(room, now),
     questionCount: room.bankTypes.length,
     startedAt: room.startedAt?.toISOString() ?? null,
+    scheduledAt: room.scheduledAt?.toISOString() ?? null,
     serverNow: now.toISOString(),
     players: rankPlayers(
       players.map((p) => toStanding(p, room.lives)),

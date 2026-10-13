@@ -35,8 +35,8 @@ const unique = <T>(items: T[]) => new Set(items).size === items.length;
 
 /**
  * The teacher's create form (`/admin/games/new`). A zombie room (B-14)
- * needs lives of 1 or 3, mcq/tf only, and no same-question rule; its pace
- * is unused (`seconds` is its clock).
+ * needs lives of 1 or 3 and mcq/tf only; its pace is unused (`seconds` is
+ * its clock), and its same-question rule (B-15) needs that clock.
  */
 export const CreateGameSchema = z
   .object({
@@ -71,6 +71,16 @@ export const CreateGameSchema = z
       .refine((n) => (GAME_SECONDS as readonly number[]).includes(n))
       .nullable()
       .default(null),
+    /**
+     * "Hẹn giờ" (B-15): when the lobby starts itself; null when the host
+     * starts it. The window (`MIN_SCHEDULE_LEAD_MS`…) is checked against the
+     * clock in `createGame`.
+     */
+    scheduledAt: z.iso
+      .datetime({ offset: true })
+      .transform((s) => new Date(s))
+      .nullable()
+      .default(null),
   })
   .superRefine((v, ctx) => {
     if (v.mode !== "zombie") return;
@@ -78,16 +88,18 @@ export const CreateGameSchema = z
       ctx.addIssue({ code: "custom", path: ["lives"], message: "lives" });
     if (v.types.some((ty) => !(ZOMBIE_TYPES as readonly string[]).includes(ty)))
       ctx.addIssue({ code: "custom", path: ["types"], message: "types" });
-    if (v.sameQuestion)
+    if (v.sameQuestion && v.seconds === null)
       ctx.addIssue({ code: "custom", path: ["sameQuestion"], message: "rule" });
   });
-/** Settings and the mode left out mean "off" and a race. */
+/** Settings, the mode and the schedule left out mean "off", a race, now. */
 export type CreateGameInput = Omit<
   z.infer<typeof CreateGameSchema>,
-  keyof GameSettings | "mode" | "seconds"
+  keyof GameSettings | "mode" | "seconds" | "scheduledAt"
 > &
   Partial<GameSettings> &
-  Partial<Pick<z.infer<typeof CreateGameSchema>, "mode" | "seconds">>;
+  Partial<
+    Pick<z.infer<typeof CreateGameSchema>, "mode" | "seconds" | "scheduledAt">
+  >;
 
 /** Joining, or changing racer while waiting in the lobby. */
 export const JoinGameSchema = z.object({

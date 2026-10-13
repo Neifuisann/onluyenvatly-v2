@@ -13,6 +13,7 @@ import {
   LATE_GRACE_MS,
   livesLeft,
   shapeOf,
+  sharedWaveAt,
   shoot,
   summary,
   timeLeftMs,
@@ -266,5 +267,25 @@ describe("applyAnswer", () => {
 
   it("writes null for a lane that has no letter", () => {
     expect(applyAnswer([null], { item: 0, lane: 9 }, 0)).toEqual([null]);
+  });
+});
+
+describe("the class's clock (B-15)", () => {
+  const shared: ZombieState = {
+    ...initialState({ lives: 3, secondsPerQuestion: 20 }, [
+      { type: "mcq", options: 4 },
+    ]),
+    clock: 50_000,
+  };
+
+  it("wave j starts j full waves and breaks after wave 0", () => {
+    expect(sharedWaveAt(shared, 0)).toBe(50_000);
+    expect(sharedWaveAt(shared, 2)).toBe(50_000 + 2 * (20_000 + BREAK_MS));
+    expect(sharedWaveAt({ sec: 20 }, 1)).toBeNull();
+    expect(sharedWaveAt({ clock: 1, sec: null }, 1)).toBeNull();
+  });
+
+  it("'Bắt đầu' joins the class's clock", () => {
+    expect(begin(shared, 1).at).toBe(50_000);
   });
 });

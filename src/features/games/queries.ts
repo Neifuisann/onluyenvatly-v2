@@ -30,6 +30,7 @@ const roomColumns = {
   waves: gameRooms.waves,
   rev: gameRooms.rev,
   createdAt: gameRooms.createdAt,
+  scheduledAt: gameRooms.scheduledAt,
   startedAt: gameRooms.startedAt,
   hardEndAt: gameRooms.hardEndAt,
   finishedAt: gameRooms.finishedAt,
@@ -54,6 +55,8 @@ export type RoomRow = {
   waves: number | null;
   rev: number;
   createdAt: Date;
+  /** "Hẹn giờ" (B-15): the lobby starts itself then. */
+  scheduledAt: Date | null;
   startedAt: Date | null;
   hardEndAt: Date | null;
   finishedAt: Date | null;
@@ -223,6 +226,7 @@ export type HostRoomItem = {
   questionCount: number;
   players: number;
   createdAt: Date;
+  scheduledAt: Date | null;
 };
 
 /** `/admin/games`: the teacher's latest rooms with their player counts. */
@@ -246,6 +250,7 @@ export async function getHostRooms(
       questionCount: sql<number>`cardinality(${gameRooms.bankTypes})`,
       players: sql<number>`coalesce(${players.n}, 0)::int`,
       createdAt: gameRooms.createdAt,
+      scheduledAt: gameRooms.scheduledAt,
     })
     .from(gameRooms)
     .leftJoin(players, eq(players.roomId, gameRooms.id))

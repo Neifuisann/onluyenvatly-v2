@@ -1,12 +1,22 @@
 "use client";
 
-import { Check, Copy, Flag, Play, RotateCcw, Users, X } from "lucide-react";
+import {
+  AlarmClock,
+  Check,
+  Copy,
+  Flag,
+  Play,
+  RotateCcw,
+  Users,
+  X,
+} from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { ReactNode } from "react";
 import { useEffect, useState, useTransition } from "react";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
+import { formatClock, formatDateTime } from "@/lib/dates";
 import { cn } from "@/lib/utils";
 import {
   endGameAction,
@@ -21,6 +31,7 @@ import { Confetti, Podium } from "../podium";
 import { RaceTrack } from "../race-track";
 import { RacerChip } from "../racer";
 import { StageBar } from "../stage";
+import { useCountdown } from "../use-countdown";
 import { useRoomPoll } from "../use-room-poll";
 
 const t = gameCopy.host;
@@ -29,6 +40,8 @@ const t = gameCopy.host;
  * The teacher's projector (B-05): the PIN, link and QR in the lobby, the
  * whole class on the track during the race, the podium and the hardest
  * questions at the end. Polls every 2 s while the room is open (ADR-008).
+ * A scheduled room (B-15) counts down in the lobby and starts itself; the
+ * host may still start it early.
  */
 export function HostScreen({
   roomId,
@@ -64,6 +77,15 @@ export function HostScreen({
   const [pending, startTransition] = useTransition();
   const [confirmEnd, setConfirmEnd] = useState(false);
   const [removing, setRemoving] = useState<Standing | null>(null);
+  const left = useCountdown(
+    room.status === "lobby" ? room.scheduledAt : null,
+    room.serverNow,
+  );
+
+  // The scheduled time: poll at once, the room starts on this poll.
+  useEffect(() => {
+    if (left === 0) pollNow();
+  }, [left, pollNow]);
 
   // The report is rendered on the server: fetch the page once it's over.
   useEffect(() => {
@@ -102,7 +124,7 @@ export function HostScreen({
             onClick={() => run(() => startGameAction(roomId))}
           >
             <Play aria-hidden className="fill-current" />
-            {pending ? t.starting : t.start}
+            {pending ? t.starting : room.scheduledAt ? t.startNow : t.start}
           </Button>
         )}
         {room.status === "running" && (
@@ -143,6 +165,17 @@ export function HostScreen({
                 </p>
               </div>
               <CopyLink url={joinUrl} />
+              {room.scheduledAt && left !== null && (
+                <p className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+                  <span className="inline-flex items-center gap-2 font-semibold text-lg">
+                    <AlarmClock aria-hidden className="size-5 text-accent" />
+                    {t.scheduledFor(formatDateTime(new Date(room.scheduledAt)))}
+                  </span>
+                  <span className="num font-bold font-display text-3xl text-accent tabular-nums">
+                    {t.startsIn} {formatClock(left)}
+                  </span>
+                </p>
+              )}
               <p className="text-ink-muted text-sm">{settings}</p>
             </div>
             <div className="mx-auto w-48 rounded-xl bg-ink-foreground p-3 text-ink sm:w-60 lg:w-72">

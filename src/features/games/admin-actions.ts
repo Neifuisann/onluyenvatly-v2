@@ -28,7 +28,7 @@ export async function createGameAction(
     count: formData.get("count"),
     pace: formData.get("pace") ?? undefined,
     types: formData.getAll("types"),
-    sameQuestion: !zombie && formData.get("sameQuestion") === "on",
+    sameQuestion: formData.get("sameQuestion") === "on",
     lockJoin: formData.get("lockJoin") === "on",
     lives: zombie
       ? formData.get("zombieLives")
@@ -37,6 +37,11 @@ export async function createGameAction(
         : null,
     mode: zombie ? "zombie" : "race",
     seconds: zombie ? formData.get("seconds") || null : null,
+    // "Hẹn giờ" (B-15): the browser sends the local time as ISO.
+    scheduledAt:
+      formData.get("scheduleOn") === "on"
+        ? formData.get("scheduledAt") || ""
+        : null,
   });
   if (!parsed.success) return err("VALIDATION");
   const result = await createGame(user, parsed.data);

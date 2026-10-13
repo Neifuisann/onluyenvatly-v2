@@ -63,6 +63,7 @@ export const gameCopy = {
       finished: "Đã kết thúc",
     } as const,
     zombie: "Bắn zombie",
+    scheduled: (at: string) => `Hẹn giờ ${at}`,
     loading: "Đang tải danh sách phòng",
     errorTitle: "Không tải được danh sách phòng",
   },
@@ -131,6 +132,13 @@ export const gameCopy = {
       "Mọi người cùng thấy một câu, cùng lúc. Trả lời xong thì chờ hết giờ để sang câu tiếp.",
     lockJoin: "Khóa phòng khi bắt đầu",
     lockJoinHint: "Học sinh không vào thêm được sau khi cuộc đua bắt đầu.",
+    zombieSharedClock: "Cả lớp làm cùng một câu cần thời gian cho mỗi đợt.",
+    schedule: "Hẹn giờ mở phòng",
+    scheduleHint:
+      "Gửi liên kết trước cho học sinh. Ai vào sớm sẽ chờ trong phòng, đến giờ cả phòng cùng bắt đầu.",
+    scheduleAt: "Thời gian bắt đầu",
+    scheduleWindow:
+      "Chọn thời điểm sau ít nhất 1 phút và trong vòng 30 ngày tới.",
     lives: "Loại khi sai nhiều",
     livesHint: (n: number) =>
       `Sai, bỏ trống hoặc hết giờ ${vi(n)} lần là bị loại.`,
@@ -160,7 +168,10 @@ export const gameCopy = {
     waiting: "Đang chờ học sinh vào phòng…",
     playerCount: (n: number) => `${vi(n)} người chơi`,
     start: "Bắt đầu đua",
+    startNow: "Bắt đầu ngay",
     starting: "Đang bắt đầu…",
+    scheduledFor: (at: string) => `Tự động bắt đầu lúc ${at}`,
+    startsIn: "Bắt đầu sau",
     noPlayers: "Cần ít nhất một người chơi để bắt đầu.",
     remove: (name: string) => `Mời ${name} rời phòng`,
     removeAction: "Mời rời phòng",
@@ -208,14 +219,15 @@ export const gameCopy = {
       waves: number,
       lives: number,
       seconds: number | null,
-      lockJoin: boolean,
+      rules: { sameQuestion: boolean; lockJoin: boolean },
     ) =>
       [
         "Bắn zombie",
         `${vi(count)} câu (${vi(waves)} đợt)`,
         `${vi(lives)} mạng`,
         seconds === null ? "Không giới hạn giờ" : `${vi(seconds)} giây mỗi đợt`,
-        lockJoin && "Khóa phòng khi bắt đầu",
+        rules.sameQuestion && "Cùng một câu",
+        rules.lockJoin && "Khóa phòng khi bắt đầu",
       ]
         .filter(Boolean)
         .join(" · "),
@@ -271,6 +283,11 @@ export const gameCopy = {
     running: "Cuộc đua đang diễn ra. Vào là đua ngay!",
     lobbyTitle: "Bạn đã vào phòng!",
     lobbyWait: "Chờ giáo viên bắt đầu cuộc đua…",
+    startsAt: (at: string) => `Phòng bắt đầu lúc ${at}`,
+    startsIn: "Bắt đầu sau",
+    startingNow: "Bắt đầu!",
+    musicOn: "Bật nhạc",
+    musicOff: "Tắt nhạc",
     lobbyPlayers: (n: number) => `${vi(n)} người chơi trong phòng`,
     change: "Đổi tay đua",
     save: "Lưu",

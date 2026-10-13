@@ -8,6 +8,8 @@ import {
   playerShownAt,
   questionShownAt,
   raceHardEnd,
+  scheduleDue,
+  scheduledStart,
   scoreAnswer,
   sharedPosition,
   sharedShownAt,
@@ -207,5 +209,27 @@ describe("lives (B-12)", () => {
     expect(livesLeft(3, 1)).toBe(2);
     expect(livesLeft(3, 5)).toBe(0);
     expect(livesLeft(null, 2)).toBeNull();
+  });
+});
+
+describe("scheduled rooms (B-15)", () => {
+  const room = (scheduledAt: Date | null, status = "lobby" as const) => ({
+    status,
+    scheduledAt,
+  });
+
+  it("is due from the time set, in the lobby only", () => {
+    expect(scheduleDue(room(at(10)), at(9))).toBe(false);
+    expect(scheduleDue(room(at(10)), at(10))).toBe(true);
+    expect(scheduleDue(room(null), at(10))).toBe(false);
+    expect(
+      scheduleDue({ status: "running", scheduledAt: at(10) }, at(20)),
+    ).toBe(false);
+  });
+
+  it("starts on the time set, or now when nobody came for a while", () => {
+    expect(scheduledStart(at(10), at(12))).toEqual(at(10));
+    expect(scheduledStart(at(10), at(25))).toEqual(at(10));
+    expect(scheduledStart(at(10), at(40))).toEqual(at(40));
   });
 });

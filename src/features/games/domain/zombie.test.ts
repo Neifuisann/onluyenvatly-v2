@@ -5,14 +5,17 @@ import {
   BREAK_MS,
   begin,
   COUNTDOWN_MS,
+  LATE_GRACE_MS,
   shoot,
   timeout,
 } from "../../zombie/domain/engine.ts";
 import { MAX_POINTS, STALE_AFTER_MS } from "./rules.ts";
 import {
+  catchUp,
   countWaves,
   questionMark,
   roomStartState,
+  SHARED_LEAD_MS,
   scoreWave,
   tallyMove,
   UNTIMED_SCORE_MS,
@@ -176,5 +179,76 @@ describe("zombieHardEnd", () => {
   it("untimed waves count UNTIMED_WAVE_MS each", () => {
     const end = zombieHardEnd(start, 3, null).getTime();
     expect(end - base).toBeGreaterThanOrEqual(3 * UNTIMED_WAVE_MS);
+  });
+});
+
+describe("same-question rooms (B-15)", () => {
+  const startedAt = new Date(1_000_000);
+  const clock = startedAt.getTime() + SHARED_LEAD_MS;
+  const STEP = 20_000 + BREAK_MS;
+  const shared = (lives: 1 | 3 = 3) =>
+    roomStartState({ lives, seconds: 20, shared: { startedAt } }, [
+      mcq,
+      mcq,
+      mcq,
+    ]);
+  /** Every key is lane 0. */
+  const key = () => 0;
+
+  it("puts everyone on the class's clock, only with a clock per wave", () => {
+    expect(shared().clock).toBe(clock);
+    expect(begin(shared(), startedAt.getTime() + 1).at).toBe(clock);
+    expect(
+      roomStartState({ lives: 3, seconds: null, shared: { startedAt } }, [mcq])
+        .clock,
+    ).toBeUndefined();
+  });
+
+  it("an early hit waits for the next wave's start", () => {
+    const s = begin(shared(), startedAt.getTime());
+    const r = shoot(s, { wave: 0, lane: 0 }, 0, clock + 3000);
+    expect(r.ok && r.state.at).toBe(clock + STEP);
+  });
+
+  it("waves let pass are timeouts; those closed before joining are skipped", () => {
+    const s = begin(shared(), clock);
+    const closes = (w: number) => clock + w * STEP + 20_000 + LATE_GRACE_MS;
+    // Still open: nothing changes.
+    expect(catchUp(s, closes(0), 0, key)).toBe(s);
+    const missed = catchUp(s, closes(1) + 1, 0, key);
+    expect(missed).toMatchObject({ wave: 2, misses: 2, at: clock + 2 * STEP });
+    expect(missed.waves.map((w) => w.e)).toEqual([
+      "timeout",
+      "timeout",
+      undefined,
+    ]);
+    // Joined after wave 0 closed: only wave 1 counts.
+    const late = catchUp(s, closes(1) + 1, closes(0) + 1, key);
+    expect(late).toMatchObject({ wave: 2, misses: 1 });
+    expect(late.waves[0]?.e).toBeUndefined();
+  });
+
+  it("the last life lost to the clock ends the game", () => {
+    const s = begin(shared(1), clock);
+    expect(catchUp(s, clock + 3 * STEP, 0, key)).toMatchObject({
+      over: "lost",
+      misses: 1,
+    });
+  });
+
+  it("not before 'Bắt đầu', nor on a player's own clock", () => {
+    expect(catchUp(shared(), clock + 9 * STEP, 0, key).wave).toBe(0);
+    const own = begin(
+      roomStartState({ lives: 3, seconds: 20 }, [mcq, mcq]),
+      clock,
+    );
+    expect(catchUp(own, clock + 9 * STEP, 0, key)).toBe(own);
+  });
+
+  it("the hard end leaves room for the lead", () => {
+    expect(
+      zombieHardEnd(startedAt, 3, 20, true).getTime() -
+        zombieHardEnd(startedAt, 3, 20).getTime(),
+    ).toBe(SHARED_LEAD_MS - COUNTDOWN_MS);
   });
 });

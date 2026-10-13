@@ -17,6 +17,8 @@ export type RoomState = {
   status: RoomStatus;
   questionCount: number;
   startedAt: string | null;
+  /** "Hẹn giờ" (B-15): when the lobby starts itself; null if by hand. */
+  scheduledAt: string | null;
   serverNow: string;
   /** Ranked; in the lobby everyone has 0 points, in join order. */
   players: Standing[];

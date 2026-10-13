@@ -103,10 +103,25 @@ export function timeLeftMs(s: ZombieState, now: number): number | null {
   return s.at + s.sec * 1000 - now;
 }
 
-/** "Bắt đầu": starts the first wave's clock after the countdown. Idempotent. */
+/**
+ * Same-question rooms (B-15): when wave `wave` starts for the whole class.
+ * Each wave gets its full clock plus the break, whoever cleared it early.
+ */
+export function sharedWaveAt(
+  s: Pick<ZombieState, "clock" | "sec">,
+  wave: number,
+): number | null {
+  if (s.clock === undefined || s.sec === null) return null;
+  return s.clock + wave * (s.sec * 1000 + BREAK_MS);
+}
+
+/**
+ * "Bắt đầu": starts the first wave's clock after the countdown, or on the
+ * class's clock in a same-question room. Idempotent.
+ */
 export function begin(s: ZombieState, now: number): ZombieState {
   if (s.at !== null || s.over) return s;
-  return { ...s, at: now + COUNTDOWN_MS };
+  return { ...s, at: sharedWaveAt(s, s.wave) ?? now + COUNTDOWN_MS };
 }
 
 /** Where a first shot goes in `answers`: the item, and the value there. */
@@ -139,7 +154,7 @@ function endWave(
     waves,
     misses,
     wave: lost ? s.wave : next,
-    at: lost || won ? s.at : now + BREAK_MS,
+    at: lost || won ? s.at : (sharedWaveAt(s, next) ?? now + BREAK_MS),
     over: lost ? "lost" : won ? "won" : null,
   };
 }
