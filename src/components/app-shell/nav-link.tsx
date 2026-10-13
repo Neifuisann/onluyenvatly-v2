@@ -2,13 +2,14 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import type { ReactNode } from "react";
+import { type ReactNode, useState } from "react";
 
 /**
  * Icons, labels and styles are rendered by the server; only selection hydrates.
- * Default prefetch: for these PPR routes that is the prerendered shell up to
- * `loading.tsx`, a static file from the CDN (no function, no query), so a tap
- * shows the next page's skeleton at once instead of waiting for the server.
+ * Prefetch on intent (hover, focus): the prerendered shell up to `loading.tsx`,
+ * a static file from the CDN (no function, no query), so a click shows the next
+ * page's skeleton at once. Prefetching every nav link on every page view was a
+ * fifth of all CDN requests (08 §4).
  */
 export function NavLink({
   href,
@@ -26,12 +27,17 @@ export function NavLink({
   children: ReactNode;
 }) {
   const pathname = usePathname();
+  const [intent, setIntent] = useState(false);
+  const prefetch = () => setIntent(true);
   const active = exact
     ? pathname === href
     : pathname === href || pathname.startsWith(`${href}/`);
   return (
     <Link
       href={href}
+      prefetch={intent ? null : false}
+      onMouseEnter={prefetch}
+      onFocus={prefetch}
       aria-label={label}
       aria-current={active ? "page" : undefined}
       className={active ? selectedClassName : className}

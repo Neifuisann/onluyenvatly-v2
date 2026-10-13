@@ -1,4 +1,5 @@
 import { existsSync, readFileSync } from "node:fs";
+import katex from "katex";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 import { normalizeV1Questions } from "@/features/lessons/domain/legacy";
@@ -78,6 +79,17 @@ describe("renderTex (KaTeX, trust: false)", () => {
   it("bounds macro expansion", () => {
     const bomb = "\\def\\a{\\a\\a}\\a";
     expect(() => renderTex(bomb, false)).not.toThrow();
+  });
+
+  it("renders each formula once per instance, inline and display apart", () => {
+    const spy = vi.spyOn(katex, "renderToString");
+    const tex = "v_{memo} = \\omega A";
+    const inline = renderTex(tex, false);
+    expect(renderTex(tex, false)).toBe(inline);
+    expect(spy).toHaveBeenCalledTimes(1);
+    expect(renderTex(tex, true)).toContain("katex-display");
+    expect(spy).toHaveBeenCalledTimes(2);
+    spy.mockRestore();
   });
 });
 

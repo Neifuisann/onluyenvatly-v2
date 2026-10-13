@@ -11,7 +11,9 @@ export function initializeMonitoring() {
     ...(env.VERCEL_GIT_COMMIT_SHA
       ? { release: env.VERCEL_GIT_COMMIT_SHA }
       : {}),
-    tracesSampleRate: 0.05,
+    // Errors only: tracing instruments every request even when the trace is
+    // not sampled, and Active CPU is the scarcest quota (08 §3). Speed
+    // Insights and the browser's sampled traces cover performance.
     ...telemetryPrivacy,
   });
 }

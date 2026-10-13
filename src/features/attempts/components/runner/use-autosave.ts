@@ -5,8 +5,11 @@ import { localToRestore, retryDelayMs } from "../../domain/runner-state";
 import { clearLocal, readLocal, writeLocal } from "./local-copy";
 import { useRunnerApi } from "./store";
 
-/** 08 §4: dirty-checked, at most every 30 s, plus a flush on page hide. */
-export const AUTOSAVE_MS = 30_000;
+/**
+ * 08 §4: dirty-checked, at most every 60 s, plus a flush on page hide. Saves
+ * were a quarter of all requests at 30 s; answers are in localStorage at once.
+ */
+export const AUTOSAVE_MS = 60_000;
 
 export type SaveStatus =
   /** The server has everything. */
@@ -24,7 +27,7 @@ type Json = { ok?: boolean };
 
 /**
  * Autosave queue (S3-05). Every change goes to localStorage at once; the
- * server gets the whole (small) state when it changed: every 30 s, when the
+ * server gets the whole (small) state when it changed: every 60 s, when the
  * tab is hidden, when the network comes back, and by `sendBeacon` on page
  * hide. Failures retry with backoff. A 409/404 means the attempt closed.
  */

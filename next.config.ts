@@ -31,6 +31,26 @@ const nextConfig: NextConfig = {
           telemetryOrigin: originOf(process.env.NEXT_PUBLIC_SENTRY_DSN),
         }),
       },
+      // Unhashed static files default to `max-age=0`, so every page load
+      // revalidated the logo, icons and mascots: one CDN request each (08 §4).
+      // Browsers keep them a day (icons) or a week (artwork); to change one at
+      // once, give it a new file name.
+      ...["/favicon.ico", "/icon.png", "/apple-icon.png", "/icons/:file*"].map(
+        (source) => ({
+          source,
+          headers: [{ key: "Cache-Control", value: "public, max-age=86400" }],
+        }),
+      ),
+      ...[
+        "/brand/:file*",
+        "/mascot/:file*",
+        "/tiers/:file*",
+        "/gallery/:file*",
+        "/games/:file*",
+      ].map((source) => ({
+        source,
+        headers: [{ key: "Cache-Control", value: "public, max-age=604800" }],
+      })),
       // Private areas stay out of search results even if a link leaks (08 §5).
       ...[
         "/admin/:path*",
