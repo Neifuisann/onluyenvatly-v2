@@ -17,6 +17,13 @@ import {
   type Question,
   type QuestionType,
 } from "@/features/lessons/schema";
+import {
+  begin,
+  shoot,
+  timeout,
+  waveKey,
+} from "@/features/zombie/domain/engine";
+import type { GameMove } from "@/features/zombie/schemas";
 import { writeAudit } from "@/lib/audit";
 import { pgErrorCode } from "@/lib/pg-error";
 import { rateLimit } from "@/lib/rate-limit";
@@ -37,6 +44,8 @@ import {
   MAX_PLAYERS,
   MIN_QUESTIONS,
   type Pace,
+  ZOMBIE_TYPES,
+  type ZombieLives,
 } from "./domain/rules";
 import {
   costsLife,
@@ -55,6 +64,12 @@ import {
   rankPlayers,
   type StandingInput,
 } from "./domain/standings";
+import {
+  countWaves,
+  roomStartState,
+  tallyMove,
+  zombieHardEnd,
+} from "./domain/zombie";
 import { gameCopy as t } from "./messages";
 import {
   forgetSnapshot,
@@ -70,7 +85,7 @@ import type {
   GameAnswerInput,
   JoinGameInput,
 } from "./schemas";
-import type { AnswerOutcome, RoomState } from "./types";
+import type { AnswerOutcome, RoomState, ZombieMoveOutcome } from "./types";
 
 /** 06 §4. Tune here only; the integration tests read these values. */
 export const GAME_LIMITS = {
@@ -135,15 +150,23 @@ export async function createGame(
         question,
       });
   }
-  const types = new Map(
-    candidates.map((c) => [`${c.lessonId}:${c.question.id}`, c.question.type]),
+  const byKey = new Map(
+    candidates.map((c) => [`${c.lessonId}:${c.question.id}`, c.question]),
   );
-  const bank = drawBank(candidates, input.types, input.count, createRng(seed));
+  // A zombie room (B-14) plays mcq and tf only.
+  const zombie = input.mode === "zombie";
+  const allowed = zombie
+    ? input.types.filter((ty) =>
+        (ZOMBIE_TYPES as readonly QuestionType[]).includes(ty),
+      )
+    : input.types;
+  const bank = drawBank(candidates, allowed, input.count, createRng(seed));
   if (bank.length < MIN_QUESTIONS)
     return err("VALIDATION", {
       fieldErrors: { count: t.create.notEnough(bank.length) },
     });
-  const bankTypes = bank.map((b) => types.get(`${b.l}:${b.q}`) as QuestionType);
+  const bankQs = bank.map((b) => byKey.get(`${b.l}:${b.q}`) as Question);
+  const bankTypes = bankQs.map((q) => q.type);
   const first = chosen.find((l) => l.id === input.lessonIds[0]);
   const title =
     input.title ?? t.create.defaultTitle(first?.title ?? "", chosen.length - 1);
@@ -165,6 +188,11 @@ export async function createGame(
             sameQuestion: input.sameQuestion ?? DEFAULT_SETTINGS.sameQuestion,
             lockJoin: input.lockJoin ?? DEFAULT_SETTINGS.lockJoin,
             lives: input.lives ?? DEFAULT_SETTINGS.lives,
+            mode: input.mode ?? "race",
+            ...(zombie && {
+              seconds: input.seconds ?? null,
+              waves: countWaves(bankQs),
+            }),
             createdAt: now,
           })
           .returning({ id: gameRooms.id });
@@ -174,7 +202,11 @@ export async function createGame(
           action: "game.create",
           targetType: "game",
           targetId: room.id,
-          data: { lessons: chosen.length, questions: bank.length },
+          data: {
+            lessons: chosen.length,
+            questions: bank.length,
+            mode: input.mode ?? "race",
+          },
         });
         return room.id;
       });
@@ -284,7 +316,10 @@ export async function startGame(
       ...bumpRev,
       status: "running",
       startedAt: now,
-      hardEndAt: raceHardEnd(now, room.bankTypes, room.pace),
+      hardEndAt:
+        room.mode === "zombie"
+          ? zombieHardEnd(now, room.waves ?? 0, room.seconds)
+          : raceHardEnd(now, room.bankTypes, room.pace),
     })
     .where(and(eq(gameRooms.id, roomId), eq(gameRooms.status, "lobby")));
   forgetSnapshot(roomId);
@@ -427,6 +462,7 @@ export async function answerQuestion(
       bankTypes: gameRooms.bankTypes,
       sameQuestion: gameRooms.sameQuestion,
       lives: gameRooms.lives,
+      mode: gameRooms.mode,
       playerId: gamePlayers.id,
       seed: gamePlayers.seed,
       answered: gamePlayers.answered,
@@ -444,6 +480,8 @@ export async function answerQuestion(
     .limit(1);
   if (!row) return err("NOT_FOUND");
   if (row.removedAt) return err("FORBIDDEN", { message: t.play.removed });
+  // A zombie room's moves go through `zombieMove`.
+  if (row.mode !== "race") return err("CONFLICT");
   const size = row.bank.length;
   const pace = row.pace as Pace;
   if (input.index >= size) return err("VALIDATION");
@@ -611,6 +649,152 @@ export async function answerQuestion(
   });
 }
 
+/**
+ * One move in a zombie room (B-14): "Bắt đầu", a shot or a timeout, with
+ * the solo game's rules (`zombie/domain/engine.ts`) on this player's own
+ * waves. The key of a wave leaves the server only once it has ended
+ * (ADR-004). The room row is locked first (as `answerQuestion` does), which
+ * serializes the player's moves, refuses one after the room ended, and
+ * lets the last player down close the room. A retried or doubled move
+ * comes back `stale` and counts once.
+ *
+ * Not rate limited, like the solo game: the rules bound the moves.
+ */
+export async function zombieMove(
+  userId: string,
+  roomId: string,
+  move: GameMove,
+  now = new Date(),
+): Promise<Result<ZombieMoveOutcome>> {
+  const [row] = await db
+    .select({
+      status: gameRooms.status,
+      hardEndAt: gameRooms.hardEndAt,
+      mode: gameRooms.mode,
+      lives: gameRooms.lives,
+      seconds: gameRooms.seconds,
+      bank: gameRooms.bank,
+      playerId: gamePlayers.id,
+      seed: gamePlayers.seed,
+      removedAt: gamePlayers.removedAt,
+    })
+    .from(gamePlayers)
+    .innerJoin(gameRooms, eq(gameRooms.id, gamePlayers.roomId))
+    .where(and(eq(gamePlayers.roomId, roomId), eq(gamePlayers.userId, userId)))
+    .limit(1);
+  if (!row) return err("NOT_FOUND");
+  if (row.removedAt) return err("FORBIDDEN", { message: t.play.removed });
+  if (row.mode !== "zombie" || row.lives === null) return err("CONFLICT");
+  if (row.status !== "running" || effectiveStatus(row, now) !== "running")
+    return err("GAME_OVER");
+
+  // From the shared lesson cache: a class playing together reads it once.
+  const questions = await bankQuestions(row.bank);
+  if (!questions) return err("INTERNAL");
+  const plan = playerPlan(optionCounts(questions), createRng(row.seed));
+  const inOrder = plan.order.map((i) => questions[i] as Question);
+  const t0 = now.getTime();
+
+  const step = await db.transaction(async (tx) => {
+    const [room] = await tx
+      .select({ id: gameRooms.id })
+      .from(gameRooms)
+      .where(and(eq(gameRooms.id, roomId), eq(gameRooms.status, "running")))
+      .for("update")
+      .limit(1);
+    if (!room) return err("GAME_OVER");
+    const [p] = await tx
+      .select({
+        zombie: gamePlayers.zombie,
+        score: gamePlayers.score,
+        streak: gamePlayers.streak,
+        bestStreak: gamePlayers.bestStreak,
+        marks: gamePlayers.marks,
+        answered: gamePlayers.answered,
+        correct: gamePlayers.correct,
+        misses: gamePlayers.misses,
+        lastAnsweredAt: gamePlayers.lastAnsweredAt,
+        finishedAt: gamePlayers.finishedAt,
+        eliminatedAt: gamePlayers.eliminatedAt,
+      })
+      .from(gamePlayers)
+      .where(eq(gamePlayers.id, row.playerId))
+      .limit(1);
+    if (!p) return err("NOT_FOUND");
+    const state =
+      p.zombie ??
+      roomStartState(
+        { lives: row.lives as ZombieLives, seconds: row.seconds },
+        inOrder,
+      );
+
+    let r: ReturnType<typeof shoot>;
+    if (move.kind === "begin") {
+      const next = begin(state, t0);
+      r = { ok: true, state: next, event: { kind: "stale" } };
+    } else {
+      const wave = state.waves[move.wave];
+      const bankIndex = wave && plan.order[wave.i];
+      const question = bankIndex !== undefined && questions[bankIndex];
+      const bankItem = bankIndex !== undefined && row.bank[bankIndex];
+      if (!wave || !question || !bankItem) return err("VALIDATION");
+      const key = waveKey(
+        question,
+        gradingItem(bankItem, plan.options[bankIndex as number]),
+        wave,
+      );
+      r =
+        move.kind === "shoot"
+          ? shoot(state, move, key, t0)
+          : timeout(state, move.wave, key, t0);
+    }
+    if (!r.ok) return err(r.code === "OVER" ? "GAME_OVER" : "VALIDATION");
+    const event = move.kind === "begin" ? null : r.event;
+    if (r.state === state && p.zombie) return ok({ state, event, me: p });
+
+    const stats = tallyMove(state, r.state, p, plan.order, t0);
+    const over = r.state.over !== null;
+    const me = {
+      ...stats,
+      lastAnsweredAt: r.state.waves !== state.waves ? now : p.lastAnsweredAt,
+      finishedAt: over ? (p.finishedAt ?? now) : p.finishedAt,
+      eliminatedAt:
+        r.state.over === "lost" ? (p.eliminatedAt ?? now) : p.eliminatedAt,
+    };
+    await tx
+      .update(gamePlayers)
+      .set({ zombie: r.state, ...me })
+      .where(eq(gamePlayers.id, row.playerId));
+    await tx.update(gameRooms).set(bumpRev).where(eq(gameRooms.id, roomId));
+    if (over) await finishIfAllDone(tx, roomId, now);
+    return ok({ state: r.state, event, me });
+  });
+  if (!step.ok) return step;
+  const { state, event, me } = step.data;
+  if (state.over) forgetSnapshot(roomId);
+
+  const snapshot = await getRoomSnapshot(roomId, t0);
+  // The snapshot may be up to a second old: my own row is fresh.
+  const ranked = rankPlayers(
+    (snapshot?.players ?? []).map((pl) =>
+      toStanding(pl.id === row.playerId ? { ...pl, ...me } : pl, row.lives),
+    ),
+    true,
+  );
+  const view = playerView(ranked, row.playerId);
+  return ok({
+    state,
+    event,
+    now: t0,
+    room: {
+      alive: view.alive,
+      total: view.total,
+      rank: view.me?.rank ?? null,
+      score: me.score,
+    },
+  });
+}
+
 export type StatePoll =
   | { kind: "unchanged" }
   | { kind: "state"; state: RoomState };
@@ -659,13 +843,21 @@ export function roomState(
     questionCount: room.bankTypes.length,
     startedAt: room.startedAt?.toISOString() ?? null,
     serverNow: now.toISOString(),
-    players: rankPlayers(players.map((p) => toStanding(p, room.lives))),
+    players: rankPlayers(
+      players.map((p) => toStanding(p, room.lives)),
+      room.mode === "zombie",
+    ),
     meId,
     settings: {
       sameQuestion: room.sameQuestion,
       lockJoin: room.lockJoin,
       lives: room.lives,
     },
+    mode: room.mode,
+    zombie:
+      room.mode === "zombie"
+        ? { waves: room.waves ?? 0, seconds: room.seconds }
+        : null,
   };
 }
 

@@ -730,6 +730,15 @@ export const gameRooms = pgTable(
     sameQuestion: boolean("same_question").notNull().default(false),
     lockJoin: boolean("lock_join").notNull().default(false),
     lives: smallint("lives"),
+    /**
+     * `race` (B-05) or `zombie` (B-14, "Bắn zombie" together): each player
+     * plays the bank as zombie waves and the longest survivor wins. A zombie
+     * room always has `lives` (1 or 3) and `waves` (the total, fixed by the
+     * bank); `seconds` is its clock per wave, null for none.
+     */
+    mode: text("mode").$type<"race" | "zombie">().notNull().default("race"),
+    seconds: smallint("seconds"),
+    waves: smallint("waves"),
     rev: integer("rev").notNull().default(0),
     createdAt: timestamptz("created_at").notNull().defaultNow(),
     startedAt: timestamptz("started_at"),
@@ -751,6 +760,10 @@ export const gameRooms = pgTable(
     check(
       "game_rooms_lives_check",
       sql`${t.lives} is null or ${t.lives} between 1 and 5`,
+    ),
+    check(
+      "game_rooms_mode_check",
+      sql`${t.mode} = 'race' or (${t.mode} = 'zombie' and ${t.lives} in (1, 3) and ${t.waves} > 0)`,
     ),
   ],
 ).enableRLS();
@@ -785,6 +798,12 @@ export const gamePlayers = pgTable(
     misses: smallint("misses").notNull().default(0),
     /** Bank-aligned; null where not reached yet. */
     marks: jsonb("marks").$type<(GameMarkRow | null)[]>().notNull(),
+    /**
+     * Zombie rooms only (B-14): this player's game, written only by the
+     * server. Waves follow the player's own order (`ZombieWave.i` is a
+     * position in it). Null until they press "Bắt đầu".
+     */
+    zombie: jsonb("zombie").$type<ZombieState>(),
     joinedAt: timestamptz("joined_at").notNull().defaultNow(),
     lastAnsweredAt: timestamptz("last_answered_at"),
     finishedAt: timestamptz("finished_at"),

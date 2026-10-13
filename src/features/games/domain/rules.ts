@@ -31,6 +31,21 @@ export const PACES = {
 export type Pace = keyof typeof PACES;
 export const PACE_NAMES = Object.keys(PACES) as Pace[];
 
+/**
+ * What a room plays (B-14): the B-05 race, or "Bắn zombie" together, where
+ * every player fights the bank as zombie waves and the longest survivor
+ * wins.
+ */
+export const GAME_MODES = ["race", "zombie"] as const;
+export type GameMode = (typeof GAME_MODES)[number];
+/** A zombie room plays mcq and tf questions only (one wave per statement). */
+export const ZOMBIE_TYPES = ["mcq", "tf"] as const satisfies QuestionType[];
+/** Lives in a zombie room: as in the solo game (B-11). */
+export const ZOMBIE_LIVES = [3, 1] as const;
+export type ZombieLives = (typeof ZOMBIE_LIVES)[number];
+/** Seconds per wave a zombie room starts with. */
+export const DEFAULT_ZOMBIE_SECONDS = 20;
+
 /** Lives a teacher may give when misses knock players out (B-12). */
 export const MIN_LIVES = 1;
 export const MAX_LIVES = 5;

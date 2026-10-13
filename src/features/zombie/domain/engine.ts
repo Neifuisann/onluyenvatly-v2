@@ -18,6 +18,7 @@ import type {
   ZombieWave,
 } from "../../../db/schema.ts";
 import { expectedAnswer, OPTION_LETTERS } from "../../grading/domain/grade.ts";
+import type { PublicQuestion } from "../../lessons/domain/public-question.ts";
 import type { GameConfig, Question } from "../../lessons/schema.ts";
 
 /** The "3, 2, 1" before the first wave. */
@@ -41,7 +42,7 @@ export const PLAYABLE_TYPES = ["mcq", "tf"] as const;
 export const isPlayable = (q: { type: string }) =>
   (PLAYABLE_TYPES as readonly string[]).includes(q.type);
 
-export function shapeOf(q: Question): QuestionShape | null {
+export function shapeOf(q: Question | PublicQuestion): QuestionShape | null {
   if (q.type === "mcq") return { type: "mcq", options: q.options.length };
   if (q.type === "tf") return { type: "tf", statements: q.statements.length };
   return null;

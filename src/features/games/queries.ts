@@ -5,7 +5,7 @@ import { gamePlayers, gameRooms, lessons, users } from "@/db/schema";
 import { type Owner, ownedBy } from "@/features/lessons/ownership";
 import type { QuestionType } from "@/features/lessons/schema";
 import { publicName } from "@/features/rating/domain/leaderboard";
-import type { Pace } from "./domain/rules";
+import type { GameMode, Pace } from "./domain/rules";
 
 /**
  * Game room reads (B-05, ADR-008). Rooms are live, per-class data: never in
@@ -25,6 +25,9 @@ const roomColumns = {
   sameQuestion: gameRooms.sameQuestion,
   lockJoin: gameRooms.lockJoin,
   lives: gameRooms.lives,
+  mode: gameRooms.mode,
+  seconds: gameRooms.seconds,
+  waves: gameRooms.waves,
   rev: gameRooms.rev,
   createdAt: gameRooms.createdAt,
   startedAt: gameRooms.startedAt,
@@ -45,6 +48,10 @@ export type RoomRow = {
   sameQuestion: boolean;
   lockJoin: boolean;
   lives: number | null;
+  /** B-14: a zombie room has `lives`, `waves` and maybe `seconds`. */
+  mode: GameMode;
+  seconds: number | null;
+  waves: number | null;
   rev: number;
   createdAt: Date;
   startedAt: Date | null;
@@ -178,6 +185,7 @@ export async function getPlayer(roomId: string, userId: string) {
       finishedAt: gamePlayers.finishedAt,
       eliminatedAt: gamePlayers.eliminatedAt,
       removedAt: gamePlayers.removedAt,
+      zombie: gamePlayers.zombie,
     })
     .from(gamePlayers)
     .where(and(eq(gamePlayers.roomId, roomId), eq(gamePlayers.userId, userId)))
@@ -211,6 +219,7 @@ export type HostRoomItem = {
   pin: string;
   title: string;
   status: "lobby" | "running" | "finished";
+  mode: GameMode;
   questionCount: number;
   players: number;
   createdAt: Date;
@@ -233,6 +242,7 @@ export async function getHostRooms(
       pin: gameRooms.pin,
       title: gameRooms.title,
       status: gameRooms.status,
+      mode: gameRooms.mode,
       questionCount: sql<number>`cardinality(${gameRooms.bankTypes})`,
       players: sql<number>`coalesce(${players.n}, 0)::int`,
       createdAt: gameRooms.createdAt,

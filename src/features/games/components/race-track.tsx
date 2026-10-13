@@ -31,17 +31,20 @@ const LANE = {
  * sit at absolute offsets, so an overtake glides instead of jumping, and a
  * racer's position is its points against a perfect, instant race. A list for
  * screen readers too: each lane reads as rank, name and points. A player
- * knocked out (B-12) is greyed out and labelled.
+ * knocked out (B-12) is greyed out and labelled. In a zombie room (B-14)
+ * `waves` is set: a lane fills with the waves survived, which it shows.
  */
 export function RaceTrack({
   players,
   questionCount,
+  waves = null,
   meId = null,
   size = "phone",
   label,
 }: {
   players: readonly Standing[];
   questionCount: number;
+  waves?: number | null;
   meId?: number | null;
   size?: keyof typeof LANE;
   label: string;
@@ -54,7 +57,10 @@ export function RaceTrack({
       style={{ height: players.length * (lane.h + lane.gap) - lane.gap }}
     >
       {players.map((p, i) => {
-        const progress = trackProgress(p.score, questionCount);
+        const progress =
+          waves !== null
+            ? Math.min(1, p.answered / Math.max(1, waves))
+            : trackProgress(p.score, questionCount);
         const me = p.id === meId;
         return (
           <li
@@ -82,7 +88,10 @@ export function RaceTrack({
             >
               {me ? t.you : p.name}
               <span className="sr-only">
-                {me && ` (${p.name})`}, {t.points(p.score)}
+                {me && ` (${p.name})`},{" "}
+                {waves !== null
+                  ? t.survivedWaves(p.answered)
+                  : t.points(p.score)}
                 {p.eliminated && `, ${t.eliminated}`}
               </span>
             </span>
@@ -120,7 +129,9 @@ export function RaceTrack({
                 lane.score,
               )}
             >
-              {t.pointsShort(p.score)}
+              {waves !== null
+                ? t.wavesShort(p.answered)
+                : t.pointsShort(p.score)}
             </span>
           </li>
         );

@@ -38,6 +38,10 @@ export function Finish({
   const over = room.status === "finished";
   const me = room.players.find((p) => p.id === room.meId) ?? null;
   const knockedOut = !over && Boolean(me?.eliminated);
+  // A zombie room (B-14): the longest survivor wins.
+  const waves = room.zombie?.waves ?? null;
+  const survival = waves !== null;
+  const alive = room.players.filter((p) => !p.eliminated).length;
 
   if (problem === "removed")
     return <StageMessage pose="sleeping" title={t.removed} />;
@@ -61,15 +65,30 @@ export function Finish({
                 <Flag aria-hidden className="size-10 fill-accent text-accent" />
               )}
               <h1 className="font-bold font-display text-4xl">
-                {knockedOut ? t.eliminatedTitle : t.finishTitle}
+                {survival
+                  ? knockedOut
+                    ? t.zombieOutTitle
+                    : t.zombieDoneTitle
+                  : knockedOut
+                    ? t.eliminatedTitle
+                    : t.finishTitle}
               </h1>
               <output className="block text-ink-muted">
                 {problem === "offline"
                   ? gameCopy.host.connection
-                  : knockedOut
-                    ? t.eliminatedBody
-                    : t.finishWait}
+                  : survival
+                    ? knockedOut
+                      ? t.zombieOutBody
+                      : t.zombieWait
+                    : knockedOut
+                      ? t.eliminatedBody
+                      : t.finishWait}
               </output>
+              {survival && (
+                <p className="num font-bold font-display text-accent text-xl">
+                  {t.aliveOf(alive, room.players.length)}
+                </p>
+              )}
             </>
           )}
         </section>
@@ -79,6 +98,7 @@ export function Finish({
             players={room.players}
             meId={room.meId}
             label={gameCopy.host.podium}
+            survival={survival}
           />
         )}
 
@@ -96,11 +116,25 @@ export function Finish({
                   / {room.players.length}
                 </span>
               </p>
-              <p className="num font-semibold">{t.points(me.score)}</p>
-              <p className="num text-ink-muted text-sm">
-                {t.correctOf(me.correct, room.questionCount)}
-                {me.bestStreak >= 2 && `. ${t.bestStreak(me.bestStreak)}`}
-              </p>
+              {waves !== null ? (
+                <>
+                  <p className="num font-semibold">
+                    {t.survivedOf(me.answered, waves)}
+                  </p>
+                  <p className="num text-ink-muted text-sm">
+                    {t.points(me.score)}
+                    {me.bestStreak >= 2 && `. ${t.bestStreak(me.bestStreak)}`}
+                  </p>
+                </>
+              ) : (
+                <>
+                  <p className="num font-semibold">{t.points(me.score)}</p>
+                  <p className="num text-ink-muted text-sm">
+                    {t.correctOf(me.correct, room.questionCount)}
+                    {me.bestStreak >= 2 && `. ${t.bestStreak(me.bestStreak)}`}
+                  </p>
+                </>
+              )}
             </div>
           </section>
         )}
@@ -115,6 +149,7 @@ export function Finish({
           <RaceTrack
             players={lanes}
             questionCount={room.questionCount}
+            waves={waves}
             meId={room.meId}
             label={gameCopy.host.leaderboard}
           />

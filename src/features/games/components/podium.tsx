@@ -16,15 +16,18 @@ const STEPS = [
 /**
  * The top three rise one after the other, third first. Ties keep their
  * shared rank number. With reduced motion everything is simply there.
+ * `survival` (a zombie room, B-14) shows the waves survived, not points.
  */
 export function Podium({
   players,
   meId = null,
   label,
+  survival = false,
 }: {
   players: readonly Standing[];
   meId?: number | null;
   label: string;
+  survival?: boolean;
 }) {
   return (
     <ol
@@ -58,7 +61,7 @@ export function Podium({
               {p.id === meId ? `${p.name} (${t.you})` : p.name}
             </span>
             <span className="num font-display text-ink-muted text-sm">
-              {t.points(p.score)}
+              {survival ? t.survivedWaves(p.answered) : t.points(p.score)}
             </span>
             <span
               className={clsx(

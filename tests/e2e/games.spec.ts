@@ -6,6 +6,8 @@ import {
   type TestInfo,
   test,
 } from "@playwright/test";
+import { COUNTDOWN_MS as ZOMBIE_COUNTDOWN_MS } from "../../src/features/zombie/domain/engine.ts";
+import { ENTER_MS } from "../../src/features/zombie/domain/view.ts";
 import { expectAccessible } from "./a11y";
 import { loginAdminOnce } from "./admin-helpers";
 import { ANSWER_MARKER, GAME_RIGHT } from "./fixtures/lessons";
@@ -99,7 +101,10 @@ async function race(
   }
 }
 
-/** Opens `/admin/games/new` and creates a 5-question room from the project lesson. */
+/**
+ * Opens `/admin/games/new` and creates a 5-question room from the project
+ * lesson. `rules` picks the settings (the mode too); the pace otherwise.
+ */
 async function createRoom(
   host: Page,
   p: "d" | "m",
@@ -111,9 +116,7 @@ async function createRoom(
   // The default size is 10, more than the lesson has: the summary says so.
   const summary = host.getByRole("status").filter({ hasText: /câu/ });
   await expect(summary).toHaveText("Chỉ có 5 câu phù hợp: bộ đề sẽ có 5 câu.");
-  await host
-    .locator("label", { has: host.locator('input[name="count"][value="5"]') })
-    .click();
+  await host.getByLabel("Số câu trong bộ đề").fill("5");
   await expect(summary).toHaveText("Rút ngẫu nhiên 5 câu từ 5 câu.");
   if (rules) await rules(host);
   else await host.getByText("Thong thả").click();
@@ -446,5 +449,102 @@ test("room rules: same question, locked room, knocked out", async ({
   await expect(
     host.getByRole("heading", { name: "Bục vinh quang" }),
   ).toBeVisible({ timeout: 20_000 });
+  await close();
+});
+
+/**
+ * Shoots the lane whose sign stands for the right option (or the next one)
+ * with its key; the zombies walk, so a tap would chase a moving target.
+ */
+async function shootWave(page: Page, right: boolean) {
+  const card = page.locator("section[aria-label^='Câu']");
+  const texts = await card.locator("ul li").allInnerTexts();
+  const key = texts.findIndex((t) => t.includes(GAME_RIGHT));
+  expect(key).toBeGreaterThanOrEqual(0);
+  const lane = right ? key : (key + 1) % texts.length;
+  await expect(page.locator(`[data-lane="${lane}"] button`)).toBeEnabled({
+    timeout: 10_000,
+  });
+  await page.keyboard.press("abcdef"[lane] as string);
+}
+
+test("a zombie room: the longest survivor wins (B-14)", async ({
+  browser,
+}, info) => {
+  test.setTimeout(240_000);
+  const { p, a, b, host, playerA, playerB, close } = await openRoles(
+    browser,
+    info,
+  );
+  // The game wants a landscape screen; portrait phones are asked to turn.
+  for (const page of [playerA, playerB])
+    await page.setViewportSize({ width: 844, height: 390 });
+  const pin = await createRoom(host, p, async (h) => {
+    await h.getByText("Bắn zombie", { exact: true }).first().click();
+    await h.getByText("Một mạng", { exact: false }).first().click();
+    await h.getByLabel("Thời gian mỗi đợt").selectOption("60");
+  });
+  await expect(
+    host.getByText(/Bắn zombie · 5 câu \(5 đợt\) · 1 mạng/),
+  ).toBeVisible();
+
+  await joinRoom(playerA, pin);
+  await joinRoom(playerB, pin);
+  await expect(
+    playerA.getByText(/Ai trụ được nhiều đợt nhất sẽ thắng/),
+  ).toBeVisible();
+  await host.getByRole("button", { name: "Bắt đầu đua" }).click();
+  await expect(
+    host.getByRole("heading", { name: "Chống zombie" }),
+  ).toBeVisible();
+
+  for (const page of [playerA, playerB]) {
+    await page.getByRole("button", { name: "Bắt đầu", exact: true }).click();
+    await expect(page.getByText("2/2", { exact: true })).toBeVisible();
+  }
+  // The "3, 2, 1" before the first wave: shots wait for it.
+  await playerB.waitForTimeout(ZOMBIE_COUNTDOWN_MS + 300);
+  // B misses once: one life, out.
+  await shootWave(playerB, false);
+  await expect(
+    playerB.getByRole("heading", { name: "BỊ VÂY RỒI!" }),
+  ).toBeVisible();
+  await expect(
+    host.getByRole("status").getByText("1/2 người còn trụ"),
+  ).toBeVisible();
+
+  // A clears every wave; each shot brings the survivors count back.
+  for (let wave = 1; wave <= 5; wave++) {
+    await shootWave(playerA, true);
+    if (wave === 1)
+      await expect(playerA.getByText("1/2", { exact: true })).toBeVisible();
+    if (wave < 5) {
+      await expect(
+        playerA.getByText(`Đợt ${wave + 1}/5`).first(),
+      ).toBeVisible();
+      // The next zombies walk in first; shots wait for them.
+      await playerA.waitForTimeout(ENTER_MS + 300);
+    }
+  }
+  await expect(
+    playerA.getByRole("heading", { name: "THOÁT VÒNG VÂY!" }),
+  ).toBeVisible();
+  await attachShot(playerA, info, "zombie-won");
+  await playerA.getByRole("button", { name: "Xem bảng xếp hạng" }).click();
+  await expect(
+    playerA.getByRole("heading", { name: "Kết quả chung cuộc" }),
+  ).toBeVisible({ timeout: 20_000 });
+  await expect(playerA.getByText("Trụ được 5/5 đợt")).toBeVisible();
+
+  // Everyone is down or through: the room closes on its own.
+  await expect(
+    host.getByRole("heading", { name: "Bục vinh quang" }),
+  ).toBeVisible({ timeout: 20_000 });
+  const podium = host.getByRole("list", { name: "Bục vinh quang" });
+  await expect(podium.getByRole("listitem").nth(1)).toContainText(a.fullName);
+  await expect(podium.getByRole("listitem").nth(1)).toContainText("Trụ 5 đợt");
+  await expect(podium.getByRole("listitem").nth(0)).toContainText(b.fullName);
+  await expect(podium.getByRole("listitem").nth(0)).toContainText("Trụ 0 đợt");
+  await attachShot(host, info, "zombie-host-final");
   await close();
 });

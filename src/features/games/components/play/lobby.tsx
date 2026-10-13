@@ -75,13 +75,22 @@ export function Lobby({
                 />
                 {problem === "offline" ? gameCopy.host.connection : t.lobbyWait}
               </output>
-              {(room.settings.sameQuestion || room.settings.lives !== null) && (
-                <ul className="space-y-1 text-ink-muted text-sm">
-                  {room.settings.sameQuestion && <li>{t.rulesSameQuestion}</li>}
-                  {room.settings.lives !== null && (
-                    <li>{t.rulesLives(room.settings.lives)}</li>
-                  )}
-                </ul>
+              {room.zombie ? (
+                <p className="text-ink-muted text-sm">
+                  {t.rulesZombie(room.settings.lives ?? 0, room.zombie.seconds)}
+                </p>
+              ) : (
+                (room.settings.sameQuestion ||
+                  room.settings.lives !== null) && (
+                  <ul className="space-y-1 text-ink-muted text-sm">
+                    {room.settings.sameQuestion && (
+                      <li>{t.rulesSameQuestion}</li>
+                    )}
+                    {room.settings.lives !== null && (
+                      <li>{t.rulesLives(room.settings.lives)}</li>
+                    )}
+                  </ul>
+                )
               )}
               <button
                 type="button"

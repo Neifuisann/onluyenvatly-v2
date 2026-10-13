@@ -68,8 +68,7 @@ export default async function AttemptPage({
     if (!lesson || !questions || !attempt.game) notFound();
     return (
       <ZombieGame
-        attemptId={attempt.id}
-        lessonId={lessonId}
+        host={{ kind: "attempt", attemptId: attempt.id, lessonId }}
         title={lesson.title}
         questions={attempt.items.map((item, i) =>
           toRunnerQuestion(

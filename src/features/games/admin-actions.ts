@@ -20,18 +20,23 @@ export async function createGameAction(
   formData: FormData,
 ): Promise<FormState> {
   const user = await requireTeacher();
+  // A zombie room (B-14) always has lives and its own clock.
+  const zombie = formData.get("mode") === "zombie";
   const parsed = CreateGameSchema.safeParse({
     title: formData.get("title") ?? "",
     lessonIds: formData.getAll("lessonIds"),
     count: formData.get("count"),
-    pace: formData.get("pace"),
+    pace: formData.get("pace") ?? undefined,
     types: formData.getAll("types"),
-    sameQuestion: formData.get("sameQuestion") === "on",
+    sameQuestion: !zombie && formData.get("sameQuestion") === "on",
     lockJoin: formData.get("lockJoin") === "on",
-    lives:
-      formData.get("livesOn") === "on"
+    lives: zombie
+      ? formData.get("zombieLives")
+      : formData.get("livesOn") === "on"
         ? (formData.get("lives") ?? DEFAULT_LIVES)
         : null,
+    mode: zombie ? "zombie" : "race",
+    seconds: zombie ? formData.get("seconds") || null : null,
   });
   if (!parsed.success) return err("VALIDATION");
   const result = await createGame(user, parsed.data);
@@ -39,7 +44,7 @@ export async function createGameAction(
   redirect(`/host/${result.data.roomId}`);
 }
 
-/** "Chơi lại": a new room with the same lessons, size, pace, types and settings. */
+/** "Chơi lại": a new room with the same lessons, size, pace, types, settings and mode. */
 export async function replayGameAction(roomId: unknown): Promise<Result<null>> {
   const user = await requireTeacher();
   const id = RoomIdSchema.safeParse(roomId);
@@ -55,6 +60,8 @@ export async function replayGameAction(roomId: unknown): Promise<Result<null>> {
     sameQuestion: room.sameQuestion,
     lockJoin: room.lockJoin,
     lives: room.lives,
+    mode: room.mode,
+    seconds: room.seconds,
   });
   if (!result.ok) return result;
   redirect(`/host/${result.data.roomId}`);

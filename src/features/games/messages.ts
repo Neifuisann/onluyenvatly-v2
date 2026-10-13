@@ -62,6 +62,7 @@ export const gameCopy = {
       running: "Đang đua",
       finished: "Đã kết thúc",
     } as const,
+    zombie: "Bắn zombie",
     loading: "Đang tải danh sách phòng",
     errorTitle: "Không tải được danh sách phòng",
   },
@@ -97,6 +98,32 @@ export const gameCopy = {
       short: "Trả lời ngắn",
     } as const,
     countLabel: "Số câu trong bộ đề",
+    countPresets: "Chọn nhanh số câu",
+    countHint: (min: number, max: number) =>
+      `Từ ${vi(min)} đến ${vi(max)} câu.`,
+    modeLabel: "Chế độ chơi",
+    modes: {
+      race: {
+        name: "Đua tốc độ",
+        hint: "Trả lời nhanh và đúng để về đích trước.",
+      },
+      zombie: {
+        name: "Bắn zombie",
+        hint: "Bắn zombie cầm đáp án đúng. Ai trụ lâu nhất thắng.",
+      },
+    } as const,
+    zombieTypes:
+      "Bắn zombie dùng câu trắc nghiệm và đúng/sai (mỗi ý là một đợt).",
+    zombieLives: "Số mạng",
+    zombieLivesOptions: {
+      3: "Ba mạng: nhầm đến lần thứ ba thì thua",
+      1: "Một mạng: bắn nhầm một lần là thua",
+    } as const,
+    zombieSeconds: "Thời gian mỗi đợt",
+    zombieSecondsOption: (s: number) => `${vi(s)} giây`,
+    zombieSecondsNone: "Không giới hạn (zombie đứng chờ)",
+    zombieSecondsHint:
+      "Hết giờ thì zombie chạm hàng rào, học sinh mất một mạng.",
     paceLabel: "Nhịp độ",
     rulesLabel: "Luật chơi",
     sameQuestion: "Cả lớp làm cùng một câu",
@@ -173,6 +200,25 @@ export const gameCopy = {
         .filter(Boolean)
         .join(" · "),
     eliminatedCount: (n: number) => `${vi(n)} bị loại`,
+    aliveCount: (n: number, total: number) =>
+      `${vi(n)}/${vi(total)} người còn trụ`,
+    zombieTrack: "Chống zombie",
+    zombieSettings: (
+      count: number,
+      waves: number,
+      lives: number,
+      seconds: number | null,
+      lockJoin: boolean,
+    ) =>
+      [
+        "Bắn zombie",
+        `${vi(count)} câu (${vi(waves)} đợt)`,
+        `${vi(lives)} mạng`,
+        seconds === null ? "Không giới hạn giờ" : `${vi(seconds)} giây mỗi đợt`,
+        lockJoin && "Khóa phòng khi bắt đầu",
+      ]
+        .filter(Boolean)
+        .join(" · "),
     elapsed: "Thời gian",
     nobody: "Không có ai về đích.",
     connection: "Mất kết nối, đang thử lại…",
@@ -198,6 +244,20 @@ export const gameCopy = {
     eliminatedTitle: "Bị loại!",
     eliminatedBody: "Bạn đã hết lượt sai. Xem các bạn khác đua tiếp nhé.",
     eliminated: "Bị loại",
+    survivedWaves: (n: number) => `Trụ ${vi(n)} đợt`,
+    wavesShort: (n: number) => `${vi(n)} đợt`,
+    survivedOf: (n: number, total: number) =>
+      `Trụ được ${vi(n)}/${vi(total)} đợt`,
+    aliveOf: (n: number, total: number) =>
+      `${vi(n)}/${vi(total)} người còn trụ`,
+    zombieOutTitle: "Bị zombie bắt!",
+    zombieOutBody: "Bạn đã hết mạng. Xem các bạn khác trụ đến đâu nhé.",
+    zombieDoneTitle: "Trụ vững!",
+    zombieWait: "Các bạn khác vẫn đang chống zombie…",
+    rulesZombie: (lives: number, seconds: number | null) =>
+      `Bắn zombie: ${vi(lives)} mạng, ${
+        seconds === null ? "không giới hạn giờ" : `${vi(seconds)} giây mỗi đợt`
+      }. Ai trụ được nhiều đợt nhất sẽ thắng.`,
     waitNext: (s: number) => `Câu tiếp theo sau ${vi(s)} giây`,
     rulesSameQuestion: "Cả lớp làm cùng một câu, cùng lúc.",
     rulesLives: (n: number) => `Sai ${vi(n)} lần là bị loại.`,

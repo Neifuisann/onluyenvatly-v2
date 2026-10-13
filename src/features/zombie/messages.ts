@@ -60,6 +60,19 @@ export const zombieCopy = {
   grading: "Đang chấm điểm…",
   viewResult: "Xem bài làm",
   backToLesson: "Về trang bài",
+  // In a "Thi đấu" room (B-14)
+  alive: (n: number, total: number) => `${n}/${total} người còn trụ`,
+  ruleRoom: "Cả lớp cùng chống zombie. Ai trụ được nhiều đợt nhất sẽ thắng.",
+  roomWonLead: "Bạn đã trụ hết các đợt zombie!",
+  roomLostLead: "Hết mạng mất rồi. Xem các bạn khác trụ đến đâu nhé.",
+  survived: "Số đợt trụ được",
+  waves: (n: number) => `${n} đợt`,
+  rankNow: "Hạng hiện tại",
+  standing: "Còn trụ",
+  toBoard: "Xem bảng xếp hạng",
+  leaveRoom: "Rời phòng",
+  roomExitBody:
+    "Bạn có thể vào lại bằng mã phòng. Nếu phòng có giờ cho mỗi đợt, zombie vẫn tiến khi bạn rời đi.",
   // Phones held upright
   rotateTitle: "Xoay ngang điện thoại",
   rotateBody:
