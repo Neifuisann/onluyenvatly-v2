@@ -19,12 +19,13 @@ import {
   type LessonConfig,
   type Question,
 } from "@/features/lessons/schema";
-import { waveKey } from "@/features/zombie/domain/engine";
+import { BREAK_MS, waveKey } from "@/features/zombie/domain/engine";
 import { resetDb, type TestDb } from "@/test/db";
 import { gradingItem, optionCounts, playerPlan } from "./domain/bank";
 import { COUNTDOWN_MS, FEEDBACK_MS, MAX_PLAYERS } from "./domain/rules";
 import { sharedShownAt } from "./domain/scoring";
-import type { CreateGameInput } from "./schemas";
+import { SHARED_LEAD_MS } from "./domain/zombie";
+import { type CreateGameInput, CreateGameSchema } from "./schemas";
 import {
   answerQuestion,
   createGame,
@@ -887,6 +888,89 @@ describe("room settings (B-12)", () => {
   });
 });
 
+describe("scheduled rooms (B-15)", () => {
+  const MIN = 60_000;
+  const due = at(10 * MIN);
+
+  it("refuses a time too soon or too far ahead", async () => {
+    for (const scheduledAt of [at(30_000), at(31 * 24 * 60 * MIN)])
+      expect(
+        await createGame(host, input({ scheduledAt }), { now: NOW, seed: 1 }),
+      ).toMatchObject({
+        ok: false,
+        code: "VALIDATION",
+        fieldErrors: { scheduledAt: expect.any(String) },
+      });
+  });
+
+  it("waits in the lobby, then the first poll after the time starts it on the minute", async () => {
+    const roomId = await newRoom({ scheduledAt: due });
+    const student = { id: students[0] as string, role: "student" as const };
+    await join(roomId, student.id, at(MIN));
+    const before = await pollRoom(student, roomId, -1, at(5 * MIN));
+    expect(before).toMatchObject({
+      ok: true,
+      data: {
+        kind: "state",
+        state: { status: "lobby", scheduledAt: due.toISOString() },
+      },
+    });
+    const after = await pollRoom(student, roomId, -1, at(10 * MIN + 2000));
+    expect(after).toMatchObject({
+      ok: true,
+      data: {
+        kind: "state",
+        state: { status: "running", startedAt: due.toISOString() },
+      },
+    });
+    // The class answers on the scheduled clock.
+    const r = await answerQuestion(
+      student.id,
+      roomId,
+      { index: 0, answer: await keyAt(roomId, student.id, 0) },
+      new Date(due.getTime() + COUNTDOWN_MS + 1000),
+    );
+    expect(r).toMatchObject({ ok: true, data: { mark: { k: "correct" } } });
+  });
+
+  it("a locked room plays with those who waited and refuses latecomers", async () => {
+    const roomId = await newRoom({ scheduledAt: due, lockJoin: true });
+    await join(roomId, students[0] as string, at(MIN));
+    // Nobody polled: the late join itself starts the room, then is refused.
+    expect(
+      await joinGame(
+        { id: students[1] as string },
+        { roomId, ...look },
+        at(20 * MIN),
+      ),
+    ).toMatchObject({ ok: false, code: "FORBIDDEN" });
+    const [room] = await tdb
+      .select({ status: gameRooms.status, startedAt: gameRooms.startedAt })
+      .from(gameRooms)
+      .where(eq(gameRooms.id, roomId));
+    // Long after the time: started now, so nobody finds it half over.
+    expect(room).toEqual({ status: "running", startedAt: at(20 * MIN) });
+    // The player who waited is still in.
+    expect(await join(roomId, students[0] as string, at(20 * MIN))).toEqual(
+      expect.any(Number),
+    );
+  });
+
+  it("the host may start it early", async () => {
+    const roomId = await newRoom({ scheduledAt: due });
+    await join(roomId, students[0] as string);
+    expect(await startGame(host, roomId, at(MIN))).toEqual({
+      ok: true,
+      data: { startedAt: at(MIN).toISOString() },
+    });
+    expect(await pollRoom(host, roomId, -1, at(11 * MIN))).toMatchObject({
+      ok: true,
+      // Its schedule does not start it again.
+      data: { state: { startedAt: at(MIN).toISOString() } },
+    });
+  });
+});
+
 describe("zombie rooms (B-14)", () => {
   const zombie = (patch: Partial<CreateGameInput> = {}) =>
     newRoom({
@@ -901,7 +985,7 @@ describe("zombie rooms (B-14)", () => {
   /** The wave on screen for this player and the lane that is its key. */
   async function zombieKey(roomId: string, userId: string) {
     const [room] = await tdb
-      .select({ bank: gameRooms.bank })
+      .select({ bank: gameRooms.bank, sameQuestion: gameRooms.sameQuestion })
       .from(gameRooms)
       .where(eq(gameRooms.id, roomId));
     const [player] = await tdb
@@ -917,6 +1001,7 @@ describe("zombie rooms (B-14)", () => {
     const plan = playerPlan(
       optionCounts(questions),
       createRng(player?.seed ?? 0),
+      room?.sameQuestion,
     );
     const state = player?.zombie;
     if (!state) throw new Error("not started");
@@ -927,7 +1012,15 @@ describe("zombie rooms (B-14)", () => {
       gradingItem(bank[bankIndex] as GameBankItem, plan.options[bankIndex]),
       wave,
     );
-    return { wave: state.wave, key, n: wave.n, at: state.at ?? 0 };
+    return {
+      wave: state.wave,
+      key,
+      n: wave.n,
+      at: state.at ?? 0,
+      i: wave.i,
+      bankIndex,
+      misses: state.misses,
+    };
   }
 
   /** Starts the room with both students in and both games begun. */
@@ -1080,6 +1173,101 @@ describe("zombie rooms (B-14)", () => {
         at(6000),
       ),
     ).toMatchObject({ ok: false, code: "GAME_OVER" });
+  });
+
+  describe("same question (B-15)", () => {
+    /** One wave on the class clock: 20 s plus the break. */
+    const STEP = 20_000 + BREAK_MS;
+    const clock = NOW.getTime() + SHARED_LEAD_MS;
+
+    it("needs a clock per wave", () => {
+      const base = {
+        title: "",
+        lessonIds: [1],
+        count: 5,
+        types: ["mcq"],
+        mode: "zombie",
+        lives: 3,
+        sameQuestion: true,
+      };
+      expect(CreateGameSchema.safeParse(base).success).toBe(false);
+      expect(CreateGameSchema.safeParse({ ...base, seconds: 20 }).success).toBe(
+        true,
+      );
+    });
+
+    it("everyone meets the same wave, and an early hit waits for the class", async () => {
+      const roomId = await playing({ sameQuestion: true });
+      const a = await zombieKey(roomId, students[0] as string);
+      const b = await zombieKey(roomId, students[1] as string);
+      // The bank's order for all, on one clock that leaves time to start.
+      expect([a.i, a.bankIndex]).toEqual([b.i, b.bankIndex]);
+      expect(a.at).toBe(clock);
+      expect(b.at).toBe(clock);
+      const r = await zombieMove(
+        students[0] as string,
+        roomId,
+        { kind: "shoot", wave: 0, lane: a.key },
+        new Date(clock + 2000),
+      );
+      expect(r).toMatchObject({ ok: true, data: { event: { kind: "hit" } } });
+      if (!r.ok) return;
+      // The next wave starts with the class, not after the hit's break.
+      expect(r.data.state.at).toBe(clock + STEP);
+      // Too early to shoot it.
+      const next = await zombieKey(roomId, students[0] as string);
+      expect(
+        await zombieMove(
+          students[0] as string,
+          roomId,
+          { kind: "shoot", wave: 1, lane: next.key },
+          new Date(clock + 5000),
+        ),
+      ).toMatchObject({ ok: false, code: "VALIDATION" });
+    });
+
+    it("waves a player let pass are timeouts that cost a life", async () => {
+      const roomId = await zombie({ sameQuestion: true });
+      for (const s of students) await join(roomId, s);
+      await startGame(host, roomId, NOW);
+      // "Bắt đầu" two waves late: both are lost to the zombies.
+      const late = new Date(clock + 2 * STEP + 1000);
+      const r = await zombieMove(
+        students[0] as string,
+        roomId,
+        { kind: "begin" },
+        late,
+      );
+      expect(r).toMatchObject({ ok: true, data: { state: { wave: 2 } } });
+      if (!r.ok) return;
+      expect(r.data.state.misses).toBe(2);
+      expect(r.data.state.waves.slice(0, 2).map((w) => w.e)).toEqual([
+        "timeout",
+        "timeout",
+      ]);
+      expect(r.data.state.at).toBe(clock + 2 * STEP);
+    });
+
+    it("a late joiner skips the waves that closed before they came", async () => {
+      const roomId = await zombie({ sameQuestion: true });
+      await join(roomId, students[0] as string);
+      await startGame(host, roomId, NOW);
+      const came = new Date(clock + STEP + 5000);
+      await join(roomId, students[1] as string, came);
+      const r = await zombieMove(
+        students[1] as string,
+        roomId,
+        { kind: "begin" },
+        new Date(came.getTime() + 1000),
+      );
+      expect(r).toMatchObject({
+        ok: true,
+        data: { state: { wave: 1, misses: 0 } },
+      });
+      if (!r.ok) return;
+      expect(r.data.state.waves[0]?.e).toBeUndefined();
+      expect(r.data.state.at).toBe(clock + STEP);
+    });
   });
 
   it("a race room refuses zombie moves", async () => {

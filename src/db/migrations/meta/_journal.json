@@ -162,6 +162,13 @@
       "when": 1791880314368,
       "tag": "0022_zombie_rooms",
       "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1791886776567,
+      "tag": "0023_room_schedule",
+      "breakpoints": true
     }
   ]
 }

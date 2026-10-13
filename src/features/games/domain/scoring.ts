@@ -17,6 +17,7 @@ import {
   MIN_POINTS,
   PACES,
   type Pace,
+  SCHEDULE_SLACK_MS,
   STALE_AFTER_MS,
   STREAK_STEP,
 } from "./rules.ts";
@@ -193,6 +194,30 @@ export function effectiveStatus(
   if (room.status === "running" && room.hardEndAt && now >= room.hardEndAt)
     return "finished";
   return room.status;
+}
+
+/** A scheduled lobby (B-15) whose time has come. */
+export function scheduleDue(
+  room: { status: RoomStatus; scheduledAt: Date | null },
+  now: Date,
+): boolean {
+  return (
+    room.status === "lobby" &&
+    room.scheduledAt !== null &&
+    now.getTime() >= room.scheduledAt.getTime()
+  );
+}
+
+/**
+ * When a due room starts: at the time set, so every lobby's countdown and
+ * the race's "3, 2, 1" line up, unless the first request after it came
+ * more than `SCHEDULE_SLACK_MS` late (an empty room): then now, so nobody
+ * finds the race half over.
+ */
+export function scheduledStart(scheduledAt: Date, now: Date): Date {
+  return now.getTime() - scheduledAt.getTime() <= SCHEDULE_SLACK_MS
+    ? scheduledAt
+    : now;
 }
 
 /** Car position on the track, 0–1: points against a perfect, instant race. */

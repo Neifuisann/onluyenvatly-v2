@@ -42,6 +42,7 @@ export type LessonChoice = {
 };
 
 const SIZES = [5, 10, 15, 20, 30, 40] as const;
+const DEFAULT_SECONDS = String(DEFAULT_ZOMBIE_SECONDS);
 const TYPES: QuestionType[] = ["mcq", "tf", "short"];
 const MODE_ICON = { race: Flag, zombie: Skull } as const;
 const playable = (mode: GameMode, ty: QuestionType) =>
@@ -50,6 +51,18 @@ const LIFE_CHOICES = Array.from(
   { length: MAX_LIVES - MIN_LIVES + 1 },
   (_, i) => MIN_LIVES + i,
 );
+
+/** `YYYY-MM-DDTHH:mm` in this browser's time zone, for datetime-local. */
+const localInput = (d: Date) => {
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+};
+
+/** A first suggestion: the next quarter hour at least 10 minutes away. */
+function suggestedStart(now = new Date()) {
+  const quarter = 15 * 60_000;
+  return new Date(Math.ceil((now.getTime() + 10 * 60_000) / quarter) * quarter);
+}
 
 /** Lowercase without Vietnamese marks, so "dao dong" finds "Dao động". */
 const fold = (s: string) =>
@@ -108,7 +121,8 @@ function RuleToggle({
  * live count of the questions the draw can use. A plain form: the action
  * reads checkboxes and radios, so it posts the same before hydration.
  * "Bắn zombie" (B-14) swaps the pace for the solo game's options (lives,
- * seconds per wave) and plays mcq and tf only.
+ * seconds per wave) and plays mcq and tf only. "Hẹn giờ" (B-15) needs
+ * JavaScript: the browser turns its local time into an ISO instant.
  */
 export function CreateGameForm({ lessons }: { lessons: LessonChoice[] }) {
   const [state, action, pending] = useActionState(createGameAction, null);
@@ -121,6 +135,9 @@ export function CreateGameForm({ lessons }: { lessons: LessonChoice[] }) {
   const [zombieLives, setZombieLives] = useState<ZombieLives>(3);
   const [seconds, setSeconds] = useState(String(DEFAULT_ZOMBIE_SECONDS));
   const [livesOn, setLivesOn] = useState(false);
+  const [sameQuestion, setSameQuestion] = useState(false);
+  const [scheduleOn, setScheduleOn] = useState(false);
+  const [startLocal, setStartLocal] = useState("");
   const [lives, setLives] = useState<number>(DEFAULT_LIVES);
   const failed = state && !state.ok ? state : null;
 
@@ -166,6 +183,13 @@ export function CreateGameForm({ lessons }: { lessons: LessonChoice[] }) {
   const toggleType = (ty: QuestionType) =>
     setTypes((s) => (s.includes(ty) ? s.filter((x) => x !== ty) : [...s, ty]));
 
+  // Same question in a zombie room runs on a clock (B-15).
+  const sharedZombie = mode === "zombie" && sameQuestion;
+  const startAt = startLocal ? new Date(startLocal) : null;
+  const startIso =
+    startAt && !Number.isNaN(startAt.getTime()) ? startAt.toISOString() : "";
+  const scheduleOk = !scheduleOn || startIso !== "";
+
   const size = Number(count);
   const sizeOk =
     Number.isInteger(size) && size >= MIN_QUESTIONS && size <= MAX_QUESTIONS;
@@ -173,7 +197,8 @@ export function CreateGameForm({ lessons }: { lessons: LessonChoice[] }) {
     selected.length > 0 &&
     activeTypes.length > 0 &&
     pool >= MIN_QUESTIONS &&
-    sizeOk;
+    sizeOk &&
+    scheduleOk;
   const chosen = lessons.filter((l) => selected.includes(l.id));
 
   return (
@@ -227,7 +252,9 @@ export function CreateGameForm({ lessons }: { lessons: LessonChoice[] }) {
             aria-describedby={
               failed?.fieldErrors?.lessonIds ? "lessons-error" : undefined
             }
-            className="max-h-96 overflow-y-auto rounded-md border"
+            // `relative`: the hidden (`sr-only`, absolute) checkboxes stay in
+            // this scroll box instead of stretching the page below the form.
+            className="relative max-h-96 overflow-y-auto rounded-md border"
           >
             <legend className="sr-only">{t.lessonsLabel}</legend>
             {shown.length === 0 ? (
@@ -495,7 +522,7 @@ export function CreateGameForm({ lessons }: { lessons: LessonChoice[] }) {
                 <Select
                   id="game-seconds"
                   name="seconds"
-                  value={seconds}
+                  value={sharedZombie && !seconds ? DEFAULT_SECONDS : seconds}
                   onChange={(e) => setSeconds(e.target.value)}
                   aria-describedby="game-seconds-hint"
                 >
@@ -504,13 +531,16 @@ export function CreateGameForm({ lessons }: { lessons: LessonChoice[] }) {
                       {t.zombieSecondsOption(n)}
                     </option>
                   ))}
-                  <option value="">{t.zombieSecondsNone}</option>
+                  {!sharedZombie && (
+                    <option value="">{t.zombieSecondsNone}</option>
+                  )}
                 </Select>
                 <p
                   id="game-seconds-hint"
                   className="text-muted-foreground text-xs"
                 >
                   {t.zombieSecondsHint}
+                  {sharedZombie && ` ${t.zombieSharedClock}`}
                 </p>
               </div>
             </>
@@ -561,13 +591,13 @@ export function CreateGameForm({ lessons }: { lessons: LessonChoice[] }) {
 
           <fieldset className="grid gap-2">
             <legend className="mb-2 font-medium text-sm">{t.rulesLabel}</legend>
-            {mode === "race" && (
-              <RuleToggle
-                name="sameQuestion"
-                label={t.sameQuestion}
-                hint={t.sameQuestionHint}
-              />
-            )}
+            <RuleToggle
+              name="sameQuestion"
+              label={t.sameQuestion}
+              hint={t.sameQuestionHint}
+              checked={sameQuestion}
+              onChange={setSameQuestion}
+            />
             <RuleToggle
               name="lockJoin"
               label={t.lockJoin}
@@ -612,6 +642,46 @@ export function CreateGameForm({ lessons }: { lessons: LessonChoice[] }) {
                 )}
               </RuleToggle>
             )}
+            <RuleToggle
+              name="scheduleOn"
+              label={t.schedule}
+              hint={t.scheduleHint}
+              checked={scheduleOn}
+              onChange={(on) => {
+                setScheduleOn(on);
+                if (on && !startLocal)
+                  setStartLocal(localInput(suggestedStart()));
+              }}
+            >
+              {scheduleOn && (
+                <div className="mt-2 grid gap-1.5">
+                  <Label htmlFor="game-start">{t.scheduleAt}</Label>
+                  <Input
+                    id="game-start"
+                    type="datetime-local"
+                    value={startLocal}
+                    min={localInput(new Date())}
+                    onChange={(e) => setStartLocal(e.target.value)}
+                    required
+                    aria-invalid={Boolean(failed?.fieldErrors?.scheduledAt)}
+                    aria-describedby={
+                      failed?.fieldErrors?.scheduledAt
+                        ? "game-start-error"
+                        : undefined
+                    }
+                  />
+                  <input type="hidden" name="scheduledAt" value={startIso} />
+                </div>
+              )}
+              {failed?.fieldErrors?.scheduledAt && (
+                <p
+                  id="game-start-error"
+                  className="mt-1 text-danger-text text-sm"
+                >
+                  {failed.fieldErrors.scheduledAt}
+                </p>
+              )}
+            </RuleToggle>
           </fieldset>
 
           <output className="block rounded-md bg-muted px-3.5 py-3 text-sm">

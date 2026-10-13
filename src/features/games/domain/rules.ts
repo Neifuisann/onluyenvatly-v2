@@ -69,6 +69,19 @@ export const DEFAULT_SETTINGS: GameSettings = {
   lives: null,
 };
 
+/**
+ * "Hẹn giờ" (B-15): a room may open at a set time, at least this far ahead
+ * (a time already past is a mistake) and at most this far (a PIN held for
+ * months is a PIN nobody else can draw).
+ */
+export const MIN_SCHEDULE_LEAD_MS = 60_000;
+export const MAX_SCHEDULE_AHEAD_MS = 30 * 24 * 60 * 60_000;
+/**
+ * A scheduled room starts on the minute set when the first request after it
+ * comes within this; later than that (nobody was waiting), it starts then.
+ */
+export const SCHEDULE_SLACK_MS = 15_000;
+
 /** "3, 2, 1, Chạy!" before the first question. */
 export const COUNTDOWN_MS = 4_000;
 /** How long the right/wrong card stays before the next question. */

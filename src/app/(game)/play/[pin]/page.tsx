@@ -27,7 +27,8 @@ import {
   getRoomSnapshot,
 } from "@/features/games/queries";
 import { PinSchema } from "@/features/games/schemas";
-import { notePinMiss, roomState } from "@/features/games/service";
+import { notePinMiss, roomState, startIfDue } from "@/features/games/service";
+import { formatDateTime } from "@/lib/dates";
 
 const t = gameCopy.play;
 
@@ -48,7 +49,10 @@ export const metadata: Metadata = {
 export default async function PlayPage({ params }: PageProps<"/play/[pin]">) {
   const user = await requireStudent();
   const pin = PinSchema.safeParse((await params).pin);
-  const room = pin.success ? await getRoomByPin(pin.data) : null;
+  const found = pin.success ? await getRoomByPin(pin.data) : null;
+  const now = new Date();
+  // A scheduled room past its time starts as the page opens (B-15).
+  const room = found && (await startIfDue(found, now));
   if (!room) {
     const allowed = await notePinMiss(user.id);
     return (
@@ -60,7 +64,6 @@ export default async function PlayPage({ params }: PageProps<"/play/[pin]">) {
     );
   }
 
-  const now = new Date();
   const status = effectiveStatus(room, now);
   const player = await getPlayer(room.id, user.id);
   if (player?.removedAt)
@@ -94,6 +97,11 @@ export default async function PlayPage({ params }: PageProps<"/play/[pin]">) {
             <p className="text-ink-muted">
               {status === "running" ? t.running : t.joinLead(room.title)}
             </p>
+            {status === "lobby" && room.scheduledAt && (
+              <p className="font-semibold text-accent">
+                {t.startsAt(formatDateTime(room.scheduledAt))}
+              </p>
+            )}
           </div>
           {others.length > 0 && (
             <div className="flex items-center justify-center gap-2 text-ink-muted text-sm">
@@ -151,7 +159,13 @@ export default async function PlayPage({ params }: PageProps<"/play/[pin]">) {
 
   // A zombie room (B-14): the whole bank as waves, in this player's order.
   if (room.mode === "zombie" && room.lives !== null) {
-    const ordered = remainingQuestions(publicQuestions, player.seed, 0);
+    // Same question (B-15): the bank's order for all, on the class's clock.
+    const ordered = remainingQuestions(
+      publicQuestions,
+      player.seed,
+      0,
+      room.sameQuestion,
+    );
     const view = playerView(state.players, player.id);
     return (
       <PlayScreen
@@ -171,7 +185,11 @@ export default async function PlayPage({ params }: PageProps<"/play/[pin]">) {
         initial={
           player.zombie ??
           roomStartState(
-            { lives: room.lives as ZombieLives, seconds: room.seconds },
+            {
+              lives: room.lives as ZombieLives,
+              seconds: room.seconds,
+              shared: room.sameQuestion ? { startedAt: room.startedAt } : null,
+            },
             ordered,
           )
         }

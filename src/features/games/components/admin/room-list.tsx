@@ -1,4 +1,4 @@
-import { ChevronRight, Skull, Users } from "lucide-react";
+import { AlarmClock, ChevronRight, Skull, Users } from "lucide-react";
 import Link from "next/link";
 import { formatDateTime } from "@/lib/dates";
 import { cn } from "@/lib/utils";
@@ -48,6 +48,12 @@ export function RoomList({ rooms }: { rooms: HostRoomItem[] }) {
                   />
                   {t.status[room.status]}
                 </span>
+                {room.status === "lobby" && room.scheduledAt && (
+                  <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-accent-soft px-2.5 py-0.5 font-semibold text-accent-text text-xs">
+                    <AlarmClock aria-hidden className="size-3.5" />
+                    {t.scheduled(formatDateTime(room.scheduledAt))}
+                  </span>
+                )}
                 {room.mode === "zombie" && (
                   <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-muted px-2.5 py-0.5 font-semibold text-muted-foreground text-xs">
                     <Skull aria-hidden className="size-3.5" />

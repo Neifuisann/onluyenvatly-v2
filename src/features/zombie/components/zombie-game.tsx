@@ -125,6 +125,11 @@ export function ZombieGame(props: Props) {
   const stageRef = useRef<HTMLDivElement>(null);
   const [countdown, setCountdown] = useState<number | null>(null);
   const [secondsLeft, setSecondsLeft] = useState<number | null>(null);
+  /**
+   * Same-question rooms (B-15): seconds until the class's next wave. Its
+   * question stays hidden till then, so nobody reads it early.
+   */
+  const [waitLeft, setWaitLeft] = useState<number | null>(null);
   const [exitOpen, setExitOpen] = useState(false);
   const exitHref =
     host.kind === "room"
@@ -178,6 +183,7 @@ export function ZombieGame(props: Props) {
   useEffect(() => {
     let lastCount: number | null = null;
     let lastSec: number | null = null;
+    let lastWait: number | null = null;
     const tick = () => {
       const now = g.now();
       const first = game.wave === 0 && game.waves[0]?.s.length === 0;
@@ -198,6 +204,14 @@ export function ZombieGame(props: Props) {
       if (left !== lastSec) {
         lastSec = left;
         setSecondsLeft(left);
+      }
+      const wait =
+        game.clock !== undefined && game.at !== null && now < game.at
+          ? Math.ceil((game.at - now) / 1000)
+          : null;
+      if (wait !== lastWait) {
+        lastWait = wait;
+        setWaitLeft(wait);
       }
     };
     tick();
@@ -234,18 +248,29 @@ export function ZombieGame(props: Props) {
       />
       <div ref={stageRef} className={s.stage}>
         <Sky>
-          {question && (
-            <QuestionCard
-              key={shown}
-              wave={wave}
-              waveIndex={shown}
-              waves={game.waves.length}
-              question={question}
-              down={down}
-              secondsLeft={secondsLeft}
-              timed={game.sec !== null}
-            />
-          )}
+          {game.clock !== undefined &&
+          shown === game.wave &&
+          !game.over &&
+          (game.at === null || waitLeft !== null)
+            ? waitLeft !== null &&
+              countdown === null && (
+                <section className={cn(s.card, s.cardEnter)} aria-live="polite">
+                  <p className="font-extrabold text-lg">{t.waitClass}</p>
+                  <p className="mt-1 opacity-80">{t.waitNext(waitLeft)}</p>
+                </section>
+              )
+            : question && (
+                <QuestionCard
+                  key={shown}
+                  wave={wave}
+                  waveIndex={shown}
+                  waves={game.waves.length}
+                  question={question}
+                  down={down}
+                  secondsLeft={secondsLeft}
+                  timed={game.sec !== null}
+                />
+              )}
         </Sky>
         <div
           className={cn(s.field, !GROUND && s.halftone, overrun && s.overrun)}
@@ -849,6 +874,7 @@ function Intro({
               game.sec ? t.ruleClock(game.sec) : t.ruleNoClock,
               t.ruleLives(game.lives),
               ...(inRoom ? [t.ruleRoom] : []),
+              ...(game.clock !== undefined ? [t.ruleShared] : []),
             ].map((rule) => (
               <li key={rule} className="flex gap-2">
                 <span aria-hidden className="font-black text-zb-red">
