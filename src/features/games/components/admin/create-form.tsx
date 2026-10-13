@@ -1,24 +1,31 @@
 "use client";
 
-import { Check, EyeOff, Search, X } from "lucide-react";
+import { Check, EyeOff, Flag, Search, Skull, X } from "lucide-react";
 import { type ReactNode, useActionState, useMemo, useState } from "react";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { Input, Select } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import type { QuestionType } from "@/features/lessons/schema";
+import { GAME_SECONDS, type QuestionType } from "@/features/lessons/schema";
 import { cn } from "@/lib/utils";
 import { createGameAction } from "../../admin-actions";
 import {
   DEFAULT_LIVES,
   DEFAULT_QUESTIONS,
+  DEFAULT_ZOMBIE_SECONDS,
+  GAME_MODES,
+  type GameMode,
   MAX_LESSONS,
   MAX_LIVES,
+  MAX_QUESTIONS,
   MIN_LIVES,
   MIN_QUESTIONS,
   PACE_NAMES,
   PACES,
   type Pace,
+  ZOMBIE_LIVES,
+  ZOMBIE_TYPES,
+  type ZombieLives,
 } from "../../domain/rules";
 import { gameCopy, paceCopy } from "../../messages";
 
@@ -36,6 +43,9 @@ export type LessonChoice = {
 
 const SIZES = [5, 10, 15, 20, 30, 40] as const;
 const TYPES: QuestionType[] = ["mcq", "tf", "short"];
+const MODE_ICON = { race: Flag, zombie: Skull } as const;
+const playable = (mode: GameMode, ty: QuestionType) =>
+  mode === "race" || (ZOMBIE_TYPES as readonly QuestionType[]).includes(ty);
 const LIFE_CHOICES = Array.from(
   { length: MAX_LIVES - MIN_LIVES + 1 },
   (_, i) => MIN_LIVES + i,
@@ -97,14 +107,19 @@ function RuleToggle({
  * "Tạo phòng thi đấu" (B-05): lessons, question types, size and pace, with a
  * live count of the questions the draw can use. A plain form: the action
  * reads checkboxes and radios, so it posts the same before hydration.
+ * "Bắn zombie" (B-14) swaps the pace for the solo game's options (lives,
+ * seconds per wave) and plays mcq and tf only.
  */
 export function CreateGameForm({ lessons }: { lessons: LessonChoice[] }) {
   const [state, action, pending] = useActionState(createGameAction, null);
   const [query, setQuery] = useState("");
   const [selected, setSelected] = useState<number[]>([]);
   const [types, setTypes] = useState<QuestionType[]>(["mcq"]);
-  const [count, setCount] = useState<number>(DEFAULT_QUESTIONS);
+  const [mode, setMode] = useState<GameMode>("race");
+  const [count, setCount] = useState(String(DEFAULT_QUESTIONS));
   const [pace, setPace] = useState<Pace>("normal");
+  const [zombieLives, setZombieLives] = useState<ZombieLives>(3);
+  const [seconds, setSeconds] = useState(String(DEFAULT_ZOMBIE_SECONDS));
   const [livesOn, setLivesOn] = useState(false);
   const [lives, setLives] = useState<number>(DEFAULT_LIVES);
   const failed = state && !state.ok ? state : null;
@@ -117,15 +132,20 @@ export function CreateGameForm({ lessons }: { lessons: LessonChoice[] }) {
     });
   }, [lessons, query]);
 
+  const activeTypes = types.filter((ty) => playable(mode, ty));
   const pool = useMemo(
     () =>
       lessons
         .filter((l) => selected.includes(l.id))
         .reduce(
-          (sum, l) => sum + types.reduce((s, ty) => s + l.counts[ty], 0),
+          (sum, l) =>
+            sum +
+            types
+              .filter((ty) => playable(mode, ty))
+              .reduce((s, ty) => s + l.counts[ty], 0),
           0,
         ),
-    [lessons, selected, types],
+    [lessons, selected, types, mode],
   );
   const typeTotals = useMemo(() => {
     const totals: Record<QuestionType, number> = { mcq: 0, tf: 0, short: 0 };
@@ -146,8 +166,14 @@ export function CreateGameForm({ lessons }: { lessons: LessonChoice[] }) {
   const toggleType = (ty: QuestionType) =>
     setTypes((s) => (s.includes(ty) ? s.filter((x) => x !== ty) : [...s, ty]));
 
+  const size = Number(count);
+  const sizeOk =
+    Number.isInteger(size) && size >= MIN_QUESTIONS && size <= MAX_QUESTIONS;
   const ready =
-    selected.length > 0 && types.length > 0 && pool >= MIN_QUESTIONS;
+    selected.length > 0 &&
+    activeTypes.length > 0 &&
+    pool >= MIN_QUESTIONS &&
+    sizeOk;
   const chosen = lessons.filter((l) => selected.includes(l.id));
 
   return (
@@ -286,6 +312,42 @@ export function CreateGameForm({ lessons }: { lessons: LessonChoice[] }) {
 
       <div className="grid content-start gap-6">
         <section className="grid gap-5 rounded-lg border border-border/70 bg-surface p-5 shadow-card lg:sticky lg:top-6 dark:border-border">
+          <fieldset className="grid gap-2">
+            <legend className="mb-2 font-medium text-sm">{t.modeLabel}</legend>
+            <div className="grid grid-cols-2 gap-2">
+              {GAME_MODES.map((m) => {
+                const Icon = MODE_ICON[m];
+                return (
+                  <label
+                    key={m}
+                    className={cn(
+                      "flex cursor-pointer flex-col gap-1 rounded-md border px-3 py-2.5 transition-colors has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ring",
+                      mode === m
+                        ? "border-primary bg-primary-soft"
+                        : "border-border hover:bg-muted/60",
+                    )}
+                  >
+                    <input
+                      type="radio"
+                      name="mode"
+                      value={m}
+                      checked={mode === m}
+                      onChange={() => setMode(m)}
+                      className="sr-only"
+                    />
+                    <span className="flex items-center gap-1.5 font-semibold text-sm">
+                      <Icon aria-hidden className="size-4" />
+                      {t.modes[m].name}
+                    </span>
+                    <span className="text-muted-foreground text-xs">
+                      {t.modes[m].hint}
+                    </span>
+                  </label>
+                );
+              })}
+            </div>
+          </fieldset>
+
           <div className="grid gap-1.5">
             <Label htmlFor="game-title">{t.nameLabel}</Label>
             <Input
@@ -303,7 +365,7 @@ export function CreateGameForm({ lessons }: { lessons: LessonChoice[] }) {
           <fieldset className="grid gap-2">
             <legend className="mb-2 font-medium text-sm">{t.typesLabel}</legend>
             <div className="flex flex-wrap gap-2">
-              {TYPES.map((ty) => {
+              {TYPES.filter((ty) => playable(mode, ty)).map((ty) => {
                 const on = types.includes(ty);
                 return (
                   <label
@@ -336,134 +398,228 @@ export function CreateGameForm({ lessons }: { lessons: LessonChoice[] }) {
                 );
               })}
             </div>
+            {mode === "zombie" && (
+              <p className="text-muted-foreground text-xs">{t.zombieTypes}</p>
+            )}
           </fieldset>
 
-          <fieldset className="grid gap-2">
-            <legend className="mb-2 font-medium text-sm">{t.countLabel}</legend>
-            <div className="grid grid-cols-6 gap-1 rounded-full bg-muted p-1">
+          <div className="grid gap-2">
+            <Label htmlFor="game-count">{t.countLabel}</Label>
+            <Input
+              id="game-count"
+              name="count"
+              type="number"
+              inputMode="numeric"
+              min={MIN_QUESTIONS}
+              max={MAX_QUESTIONS}
+              step={1}
+              required
+              value={count}
+              onChange={(e) => setCount(e.target.value)}
+              aria-invalid={!sizeOk || undefined}
+              aria-describedby="game-count-hint"
+              className="num sm:max-w-40"
+            />
+            <fieldset className="flex flex-wrap gap-1.5">
+              <legend className="sr-only">{t.countPresets}</legend>
               {SIZES.map((n) => (
-                <label
+                <button
                   key={n}
+                  type="button"
+                  onClick={() => setCount(String(n))}
+                  aria-pressed={size === n}
                   className={cn(
-                    "num flex h-9 cursor-pointer items-center justify-center rounded-full font-semibold text-sm transition-colors has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ring",
-                    count === n
-                      ? "bg-surface text-foreground shadow-card"
-                      : "text-muted-foreground hover:text-foreground",
+                    "num h-8 min-w-10 rounded-full border px-3 font-semibold text-sm transition-colors focus-visible:ring-2 focus-visible:ring-ring",
+                    size === n
+                      ? "border-primary bg-primary-soft"
+                      : "border-border text-muted-foreground hover:text-foreground",
                   )}
                 >
-                  <input
-                    type="radio"
-                    name="count"
-                    value={n}
-                    checked={count === n}
-                    onChange={() => setCount(n)}
-                    className="sr-only"
-                  />
                   {n}
-                </label>
+                </button>
               ))}
-            </div>
+            </fieldset>
+            <p
+              id="game-count-hint"
+              className={cn(
+                "text-xs",
+                sizeOk ? "text-muted-foreground" : "text-danger-text",
+              )}
+            >
+              {t.countHint(MIN_QUESTIONS, MAX_QUESTIONS)}
+            </p>
             {failed?.fieldErrors?.count && (
               <p className="text-danger-text text-sm">
                 {failed.fieldErrors.count}
               </p>
             )}
-          </fieldset>
+          </div>
 
-          <fieldset className="grid gap-2">
-            <legend className="mb-2 font-medium text-sm">{t.paceLabel}</legend>
-            {PACE_NAMES.map((p) => (
-              <label
-                key={p}
-                className={cn(
-                  "flex cursor-pointer items-center gap-3 rounded-md border px-3.5 py-2.5 transition-colors has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ring",
-                  pace === p
-                    ? "border-primary bg-primary-soft"
-                    : "border-border hover:bg-muted/60",
-                )}
-              >
-                <input
-                  type="radio"
-                  name="pace"
-                  value={p}
-                  checked={pace === p}
-                  onChange={() => setPace(p)}
-                  className="sr-only"
-                />
-                <span
-                  aria-hidden
+          {mode === "zombie" && (
+            <>
+              <fieldset className="grid gap-2">
+                <legend className="mb-2 font-medium text-sm">
+                  {t.zombieLives}
+                </legend>
+                {ZOMBIE_LIVES.map((n) => (
+                  <label
+                    key={n}
+                    className={cn(
+                      "flex cursor-pointer items-center gap-3 rounded-md border px-3.5 py-2.5 transition-colors has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ring",
+                      zombieLives === n
+                        ? "border-primary bg-primary-soft"
+                        : "border-border hover:bg-muted/60",
+                    )}
+                  >
+                    <input
+                      type="radio"
+                      name="zombieLives"
+                      value={n}
+                      checked={zombieLives === n}
+                      onChange={() => setZombieLives(n)}
+                      className="sr-only"
+                    />
+                    <span
+                      aria-hidden
+                      className={cn(
+                        "size-4 shrink-0 rounded-full border-2 border-input",
+                        zombieLives === n && "border-[5px] border-primary",
+                      )}
+                    />
+                    <span className="text-sm">{t.zombieLivesOptions[n]}</span>
+                  </label>
+                ))}
+              </fieldset>
+              <div className="grid gap-1.5">
+                <Label htmlFor="game-seconds">{t.zombieSeconds}</Label>
+                <Select
+                  id="game-seconds"
+                  name="seconds"
+                  value={seconds}
+                  onChange={(e) => setSeconds(e.target.value)}
+                  aria-describedby="game-seconds-hint"
+                >
+                  {GAME_SECONDS.map((n) => (
+                    <option key={n} value={String(n)}>
+                      {t.zombieSecondsOption(n)}
+                    </option>
+                  ))}
+                  <option value="">{t.zombieSecondsNone}</option>
+                </Select>
+                <p
+                  id="game-seconds-hint"
+                  className="text-muted-foreground text-xs"
+                >
+                  {t.zombieSecondsHint}
+                </p>
+              </div>
+            </>
+          )}
+
+          {mode === "race" && (
+            <fieldset className="grid gap-2">
+              <legend className="mb-2 font-medium text-sm">
+                {t.paceLabel}
+              </legend>
+              {PACE_NAMES.map((p) => (
+                <label
+                  key={p}
                   className={cn(
-                    "size-4 shrink-0 rounded-full border-2 border-input",
-                    pace === p && "border-[5px] border-primary",
+                    "flex cursor-pointer items-center gap-3 rounded-md border px-3.5 py-2.5 transition-colors has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ring",
+                    pace === p
+                      ? "border-primary bg-primary-soft"
+                      : "border-border hover:bg-muted/60",
                   )}
-                />
-                <span className="flex-1">
-                  <span className="block font-semibold text-sm">
-                    {paceCopy[p].name}
+                >
+                  <input
+                    type="radio"
+                    name="pace"
+                    value={p}
+                    checked={pace === p}
+                    onChange={() => setPace(p)}
+                    className="sr-only"
+                  />
+                  <span
+                    aria-hidden
+                    className={cn(
+                      "size-4 shrink-0 rounded-full border-2 border-input",
+                      pace === p && "border-[5px] border-primary",
+                    )}
+                  />
+                  <span className="flex-1">
+                    <span className="block font-semibold text-sm">
+                      {paceCopy[p].name}
+                    </span>
+                    <span className="num block text-muted-foreground text-xs">
+                      {paceCopy[p].hint(PACES[p].mcq)}
+                    </span>
                   </span>
-                  <span className="num block text-muted-foreground text-xs">
-                    {paceCopy[p].hint(PACES[p].mcq)}
-                  </span>
-                </span>
-              </label>
-            ))}
-          </fieldset>
+                </label>
+              ))}
+            </fieldset>
+          )}
 
           <fieldset className="grid gap-2">
             <legend className="mb-2 font-medium text-sm">{t.rulesLabel}</legend>
-            <RuleToggle
-              name="sameQuestion"
-              label={t.sameQuestion}
-              hint={t.sameQuestionHint}
-            />
+            {mode === "race" && (
+              <RuleToggle
+                name="sameQuestion"
+                label={t.sameQuestion}
+                hint={t.sameQuestionHint}
+              />
+            )}
             <RuleToggle
               name="lockJoin"
               label={t.lockJoin}
               hint={t.lockJoinHint}
             />
-            <RuleToggle
-              name="livesOn"
-              label={t.lives}
-              hint={t.livesHint(lives)}
-              checked={livesOn}
-              onChange={setLivesOn}
-            >
-              {livesOn && (
-                <div
-                  role="radiogroup"
-                  aria-label={t.livesCount}
-                  className="mt-1 grid grid-cols-5 gap-1 rounded-full bg-muted p-1"
-                >
-                  {LIFE_CHOICES.map((n) => (
-                    <label
-                      key={n}
-                      className={cn(
-                        "num flex h-8 cursor-pointer items-center justify-center rounded-full font-semibold text-sm transition-colors has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ring",
-                        lives === n
-                          ? "bg-surface text-foreground shadow-card"
-                          : "text-muted-foreground hover:text-foreground",
-                      )}
-                    >
-                      <input
-                        type="radio"
-                        name="lives"
-                        value={n}
-                        checked={lives === n}
-                        onChange={() => setLives(n)}
-                        className="sr-only"
-                      />
-                      {n}
-                    </label>
-                  ))}
-                </div>
-              )}
-            </RuleToggle>
+            {mode === "race" && (
+              <RuleToggle
+                name="livesOn"
+                label={t.lives}
+                hint={t.livesHint(lives)}
+                checked={livesOn}
+                onChange={setLivesOn}
+              >
+                {livesOn && (
+                  <div
+                    role="radiogroup"
+                    aria-label={t.livesCount}
+                    className="mt-1 grid grid-cols-5 gap-1 rounded-full bg-muted p-1"
+                  >
+                    {LIFE_CHOICES.map((n) => (
+                      <label
+                        key={n}
+                        className={cn(
+                          "num flex h-8 cursor-pointer items-center justify-center rounded-full font-semibold text-sm transition-colors has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ring",
+                          lives === n
+                            ? "bg-surface text-foreground shadow-card"
+                            : "text-muted-foreground hover:text-foreground",
+                        )}
+                      >
+                        <input
+                          type="radio"
+                          name="lives"
+                          value={n}
+                          checked={lives === n}
+                          onChange={() => setLives(n)}
+                          className="sr-only"
+                        />
+                        {n}
+                      </label>
+                    ))}
+                  </div>
+                )}
+              </RuleToggle>
+            )}
           </fieldset>
 
           <output className="block rounded-md bg-muted px-3.5 py-3 text-sm">
             {selected.length === 0
               ? t.lessonsHint(MAX_LESSONS)
-              : t.summary(count, pool)}
+              : sizeOk
+                ? t.summary(size, pool)
+                : t.countHint(MIN_QUESTIONS, MAX_QUESTIONS)}
           </output>
           {failed && !failed.fieldErrors && (
             <Alert variant="danger">{failed.message}</Alert>

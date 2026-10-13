@@ -81,6 +81,9 @@ export function HostScreen({
 
   const done = room.players.filter((p) => p.finished).length;
   const out = room.players.filter((p) => p.eliminated).length;
+  // A zombie room (B-14): the longest survivor wins.
+  const waves = room.zombie?.waves ?? null;
+  const survival = waves !== null;
 
   return (
     <div className="flex min-h-dvh flex-col">
@@ -193,15 +196,26 @@ export function HostScreen({
       {room.status === "running" && (
         <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-4 px-4 py-6 sm:px-8">
           <div className="flex flex-wrap items-baseline justify-between gap-3">
-            <h1 className="font-bold font-display text-2xl">{t.track}</h1>
+            <h1 className="font-bold font-display text-2xl">
+              {survival ? t.zombieTrack : t.track}
+            </h1>
             <output className="num text-ink-muted text-lg">
-              {t.finishedCount(done, room.players.length)}
-              {out > 0 && ` · ${t.eliminatedCount(out)}`}
+              {survival ? (
+                <span className="font-bold font-display text-2xl text-accent">
+                  {t.aliveCount(room.players.length - out, room.players.length)}
+                </span>
+              ) : (
+                <>
+                  {t.finishedCount(done, room.players.length)}
+                  {out > 0 && ` · ${t.eliminatedCount(out)}`}
+                </>
+              )}
             </output>
           </div>
           <RaceTrack
             players={room.players}
             questionCount={room.questionCount}
+            waves={waves}
             size="stage"
             label={t.leaderboard}
           />
@@ -218,7 +232,11 @@ export function HostScreen({
               {t.podium}
             </h1>
             {room.players.length > 0 ? (
-              <Podium players={room.players} label={t.podium} />
+              <Podium
+                players={room.players}
+                label={t.podium}
+                survival={survival}
+              />
             ) : (
               <p className="text-center text-ink-muted">{t.nobody}</p>
             )}
@@ -234,6 +252,7 @@ export function HostScreen({
               <RaceTrack
                 players={room.players}
                 questionCount={room.questionCount}
+                waves={waves}
                 size="stage"
                 label={t.leaderboard}
               />
@@ -284,7 +303,11 @@ export function HostScreen({
           </>
         }
       >
-        <p>{t.finishedCount(done, room.players.length)}</p>
+        <p>
+          {survival
+            ? t.aliveCount(room.players.length - out, room.players.length)
+            : t.finishedCount(done, room.players.length)}
+        </p>
       </Dialog>
       <Dialog
         open={removing !== null}

@@ -84,6 +84,52 @@ describe("rankPlayers", () => {
   });
 });
 
+describe("rankPlayers with survival (zombie rooms, B-14)", () => {
+  const out = new Date("2026-10-13T10:00:00Z");
+
+  it("ranks by waves survived first, whatever the points", () => {
+    const ranked = rankPlayers(
+      [
+        row(1, 5000, { answered: 3, eliminatedAt: out }),
+        row(2, 900, { answered: 8, eliminatedAt: out }),
+        row(3, 2000, { answered: 5 }),
+      ],
+      true,
+    );
+    expect(ranked.map((r) => [r.id, r.rank])).toEqual([
+      [2, 1],
+      [3, 2],
+      [1, 3],
+    ]);
+  });
+
+  it("on the same wave, still standing beats knocked out, then points", () => {
+    const ranked = rankPlayers(
+      [
+        row(1, 3000, { answered: 4, eliminatedAt: out }),
+        row(2, 1000, { answered: 4 }),
+        row(3, 1500, { answered: 4 }),
+        row(4, 1500, { answered: 4, correct: 2 }),
+      ],
+      true,
+    );
+    expect(ranked.map((r) => [r.id, r.rank])).toEqual([
+      [4, 1],
+      [3, 1],
+      [2, 3],
+      [1, 4],
+    ]);
+  });
+
+  it("a race ignores waves (no survival flag)", () => {
+    const ranked = rankPlayers([
+      row(1, 100, { answered: 9 }),
+      row(2, 200, { answered: 1 }),
+    ]);
+    expect(ranked.map((r) => r.id)).toEqual([2, 1]);
+  });
+});
+
 describe("playerView", () => {
   const ranked = rankPlayers(
     [900, 800, 700, 600, 500, 400, 300].map((s, i) => row(i + 1, s)),
@@ -95,6 +141,16 @@ describe("playerView", () => {
     expect(view.me?.rank).toBe(7);
     expect(view.ahead).toEqual({ name: "P6", gap: 100 });
     expect(view.total).toBe(7);
+    expect(view.alive).toBe(7);
+  });
+
+  it("counts the players still standing", () => {
+    const out = new Date("2026-10-13T10:00:00Z");
+    const view = playerView(
+      rankPlayers([row(1, 0), row(2, 0, { eliminatedAt: out }), row(3, 0)]),
+      1,
+    );
+    expect(view.alive).toBe(2);
   });
 
   it("the leader has nobody ahead; a stranger has no row", () => {

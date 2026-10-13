@@ -3,8 +3,9 @@
  * shared by the route handlers and the client components. Nothing here ever
  * carries a key before the player has answered.
  */
-import type { AttemptAnswer } from "@/db/schema";
-import type { GameSettings } from "./domain/rules";
+import type { AttemptAnswer, ZombieState } from "@/db/schema";
+import type { GameEvent } from "@/features/zombie/domain/engine";
+import type { GameMode, GameSettings } from "./domain/rules";
 import type { GameMark, RoomStatus } from "./domain/scoring";
 import type { PlayerView, Standing } from "./domain/standings";
 
@@ -23,6 +24,32 @@ export type RoomState = {
   meId: number | null;
   /** What the teacher turned on (B-12). */
   settings: GameSettings;
+  /** A race (B-05) or a zombie room (B-14). */
+  mode: GameMode;
+  /** Zombie rooms only: waves per player and seconds per wave. */
+  zombie: ZombieRoomRules | null;
+};
+
+/** A zombie room's rules (B-14); lives are in `settings.lives`. */
+export type ZombieRoomRules = { waves: number; seconds: number | null };
+
+/** Where a zombie player stands in the room (B-14), after every move. */
+export type ZombieRoomInfo = {
+  /** Players not knocked out, me included. */
+  alive: number;
+  total: number;
+  /** My rank: waves survived first (`rankPlayers` with `survival`). */
+  rank: number | null;
+  score: number;
+};
+
+/** `POST /api/games/[id]/zombie`: one move in a zombie room (B-14). */
+export type ZombieMoveOutcome = {
+  state: ZombieState;
+  event: GameEvent | null;
+  /** Server clock (epoch ms). */
+  now: number;
+  room: ZombieRoomInfo;
 };
 
 /** `POST /api/games/[id]/answer`. */

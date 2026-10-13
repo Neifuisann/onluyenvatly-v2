@@ -5,6 +5,8 @@ import {
   Maximize,
   Minimize,
   RotateCcw,
+  Trophy,
+  Users,
   Volume2,
   VolumeX,
   WifiOff,
@@ -14,6 +16,7 @@ import { useRouter } from "next/navigation";
 import {
   type CSSProperties,
   type ReactNode,
+  useCallback,
   useEffect,
   useLayoutEffect,
   useRef,
@@ -23,6 +26,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import type { ZombieState, ZombieWave } from "@/db/schema";
 import type { RunnerQuestion } from "@/features/attempts/components/runner/types";
+import type { ZombieRoomInfo } from "@/features/games/types";
 import { formatScore } from "@/lib/dates";
 import { cn } from "@/lib/utils";
 import { artUrl, PLAY_ART, zombieKind } from "../assets";
@@ -62,11 +66,21 @@ const GROUND_LAYERS = GROUND
   ? `linear-gradient(color-mix(in oklch, var(--zb-ink) 38%, transparent), color-mix(in oklch, var(--zb-ink) 38%, transparent)), url(${GROUND})`
   : undefined;
 
+/** Where the game is played: a lesson's solo game (B-11) or a room (B-14). */
+export type ZombieHost =
+  | { kind: "attempt"; attemptId: string; lessonId: number | null }
+  | { kind: "room"; roomId: string; room: ZombieRoomInfo };
+
+/** Refusals that mean the room is over for this player: the page knows. */
+const ROOM_CLOSED = ["GAME_OVER", "FORBIDDEN", "NOT_FOUND", "CONFLICT"];
+
 type Props = {
-  attemptId: string;
-  lessonId: number | null;
+  host: ZombieHost;
   title: string;
-  /** Aligned with the attempt's items, options in display order. */
+  /**
+   * Aligned with the waves' `i`: the attempt's items, or the player's own
+   * order in a room; options in display order.
+   */
   questions: RunnerQuestion[];
   initial: ZombieState;
   serverNow: number;
@@ -79,7 +93,32 @@ type Props = {
  * pressing its key) fires.
  */
 export function ZombieGame(props: Props) {
-  const g = useZombieGame(props);
+  const { host } = props;
+  const router = useRouter();
+  const attemptId = host.kind === "attempt" ? host.attemptId : null;
+  const onClosed = useCallback(
+    (code: string) => {
+      if (attemptId !== null) {
+        if (code !== "ATTEMPT_CLOSED") return false;
+        router.replace(`/attempts/${attemptId}/result`);
+        return true;
+      }
+      if (!ROOM_CLOSED.includes(code)) return false;
+      router.refresh();
+      return true;
+    },
+    [attemptId, router],
+  );
+  const g = useZombieGame({
+    endpoint:
+      host.kind === "attempt"
+        ? `/api/attempts/${host.attemptId}/game`
+        : `/api/games/${host.roomId}/zombie`,
+    initial: props.initial,
+    serverNow: props.serverNow,
+    initialRoom: host.kind === "room" ? host.room : undefined,
+    onClosed,
+  });
   const { game, shown, fx } = g;
   const wave = game.waves[shown] as ZombieWave;
   const question = props.questions[wave.i];
@@ -87,7 +126,12 @@ export function ZombieGame(props: Props) {
   const [countdown, setCountdown] = useState<number | null>(null);
   const [secondsLeft, setSecondsLeft] = useState<number | null>(null);
   const [exitOpen, setExitOpen] = useState(false);
-  const exitHref = props.lessonId ? `/lessons/${props.lessonId}` : "/lessons";
+  const exitHref =
+    host.kind === "room"
+      ? "/play"
+      : host.lessonId
+        ? `/lessons/${host.lessonId}`
+        : "/lessons";
 
   // A miss shakes the stage. Web Animations, so nothing remounts (a key
   // change would reload every sprite mid-effect).
@@ -186,6 +230,7 @@ export function ZombieGame(props: Props) {
         onMute={g.toggleMute}
         onExit={() => setExitOpen(true)}
         lostId={badFx?.id ?? null}
+        room={g.room}
       />
       <div ref={stageRef} className={s.stage}>
         <Sky>
@@ -267,6 +312,7 @@ export function ZombieGame(props: Props) {
       {game.at === null && !g.ended && (
         <Intro
           title={props.title}
+          inRoom={host.kind === "room"}
           game={game}
           pending={g.pending}
           onStart={() => {
@@ -282,21 +328,32 @@ export function ZombieGame(props: Props) {
           </p>
         </div>
       )}
-      {g.ended && (
-        <EndScreen
-          attemptId={props.attemptId}
+      {g.ended &&
+        (attemptId !== null ? (
+          <EndScreen
+            attemptId={attemptId}
+            exitHref={exitHref}
+            game={game}
+            result={g.result}
+          />
+        ) : (
+          <RoomEndScreen game={game} room={g.room} />
+        ))}
+      <RotatePrompt />
+      {attemptId !== null ? (
+        <ExitDialog
+          open={exitOpen}
+          onClose={() => setExitOpen(false)}
+          attemptId={attemptId}
           exitHref={exitHref}
-          game={game}
-          result={g.result}
+        />
+      ) : (
+        <RoomExitDialog
+          open={exitOpen}
+          onClose={() => setExitOpen(false)}
+          exitHref={exitHref}
         />
       )}
-      <RotatePrompt />
-      <ExitDialog
-        open={exitOpen}
-        onClose={() => setExitOpen(false)}
-        attemptId={props.attemptId}
-        exitHref={exitHref}
-      />
     </div>
   );
 }
@@ -357,6 +414,7 @@ function Hud({
   onMute,
   onExit,
   lostId,
+  room,
 }: {
   title: string;
   game: ZombieState;
@@ -365,6 +423,8 @@ function Hud({
   onMute: () => void;
   onExit: () => void;
   lostId: number | null;
+  /** In a room (B-14): who is still standing. */
+  room?: ZombieRoomInfo | undefined;
 }) {
   const [full, setFull] = useState(false);
   useEffect(() => {
@@ -384,6 +444,15 @@ function Hud({
         {title}
       </p>
       <div className="flex min-w-0 flex-1 items-center justify-end gap-2 sm:gap-3 md:flex-none">
+        {room && (
+          <p className={s.survivors}>
+            <Users aria-hidden className="size-4 shrink-0" />
+            <span className="num" aria-hidden>
+              {room.alive}/{room.total}
+            </span>
+            <span className="sr-only">{t.alive(room.alive, room.total)}</span>
+          </p>
+        )}
         <ul
           aria-label={t.lives(left, game.lives)}
           className="flex shrink-0 items-center gap-1"
@@ -752,11 +821,13 @@ function PaperBits({ x, y }: { x: number; y: number }) {
 
 function Intro({
   title,
+  inRoom,
   game,
   pending,
   onStart,
 }: {
   title: string;
+  inRoom: boolean;
   game: ZombieState;
   pending: boolean;
   onStart: () => void;
@@ -777,6 +848,7 @@ function Intro({
               ...t.rules,
               game.sec ? t.ruleClock(game.sec) : t.ruleNoClock,
               t.ruleLives(game.lives),
+              ...(inRoom ? [t.ruleRoom] : []),
             ].map((rule) => (
               <li key={rule} className="flex gap-2">
                 <span aria-hidden className="font-black text-zb-red">
@@ -886,6 +958,114 @@ function EndScreen({
         </section>
       </div>
     </div>
+  );
+}
+
+/** A room's end panel (B-14): how long I lasted; the board is next. */
+function RoomEndScreen({
+  game,
+  room,
+}: {
+  game: ZombieState;
+  room: ZombieRoomInfo | undefined;
+}) {
+  const router = useRouter();
+  const won = game.over === "won";
+  const sum = summary(game);
+  const survived = Math.max(0, sum.cleared - (won ? 0 : 1));
+  const scene = artUrl(won ? "win" : "lose");
+  return (
+    <div className={cn(s.overlay, s.halftone)}>
+      {scene && <Backdrop src={scene} fit="cover" />}
+      <div className={cn(s.poster, scene && s.posterEnd)}>
+        {!scene && <Hero pose={won ? "win" : "lose"} className={s.posterArt} />}
+        <section className={s.panel} aria-labelledby="zb-end-title">
+          <h2 id="zb-end-title" className={s.title}>
+            {won ? t.won : t.lost}
+          </h2>
+          <p className="mt-3 opacity-80">
+            {won ? t.roomWonLead : t.roomLostLead}
+          </p>
+          <dl className="mt-4 grid grid-cols-2 gap-2">
+            <div className={cn(s.stat, "col-span-2")}>
+              <dt className="font-semibold text-xs opacity-70">{t.survived}</dt>
+              <dd className="num font-display font-extrabold text-4xl">
+                {survived}
+                <span className="font-bold text-base opacity-60">
+                  {" "}
+                  / {t.waves(sum.waves)}
+                </span>
+              </dd>
+            </div>
+            {room && room.rank !== null && (
+              <div className={s.stat}>
+                <dt className="font-semibold text-xs opacity-70">
+                  {t.rankNow}
+                </dt>
+                <dd className="num font-extrabold text-xl">
+                  {room.rank}/{room.total}
+                </dd>
+              </div>
+            )}
+            {room && (
+              <div className={s.stat}>
+                <dt className="font-semibold text-xs opacity-70">
+                  {t.standing}
+                </dt>
+                <dd className="num font-extrabold text-xl">
+                  {room.alive}/{room.total}
+                </dd>
+              </div>
+            )}
+          </dl>
+          <button
+            type="button"
+            className={cn(s.bigButton, "mt-5 w-full")}
+            onClick={() => router.refresh()}
+          >
+            <Trophy aria-hidden className="size-5" />
+            {t.toBoard}
+          </button>
+        </section>
+      </div>
+    </div>
+  );
+}
+
+/** Leaving a room mid-game: the game waits, the PIN brings you back. */
+function RoomExitDialog({
+  open,
+  onClose,
+  exitHref,
+}: {
+  open: boolean;
+  onClose: () => void;
+  exitHref: string;
+}) {
+  const router = useRouter();
+  return (
+    <Dialog
+      open={open}
+      onClose={onClose}
+      title={t.exitTitle}
+      closeLabel={t.close}
+      footer={
+        <>
+          <Button type="button" variant="secondary" onClick={onClose}>
+            {t.keepPlaying}
+          </Button>
+          <Button
+            type="button"
+            variant="danger"
+            onClick={() => router.push(exitHref)}
+          >
+            {t.leaveRoom}
+          </Button>
+        </>
+      }
+    >
+      <p>{t.roomExitBody}</p>
+    </Dialog>
   );
 }
 

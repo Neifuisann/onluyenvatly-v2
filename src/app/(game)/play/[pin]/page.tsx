@@ -9,7 +9,7 @@ import {
   bankPublicQuestions,
   remainingQuestions,
 } from "@/features/games/content";
-import { defaultRacer } from "@/features/games/domain/rules";
+import { defaultRacer, type ZombieLives } from "@/features/games/domain/rules";
 import {
   effectiveStatus,
   limitMs,
@@ -18,6 +18,7 @@ import {
   sharedPosition,
 } from "@/features/games/domain/scoring";
 import { playerView } from "@/features/games/domain/standings";
+import { roomStartState } from "@/features/games/domain/zombie";
 import { gameCopy } from "@/features/games/messages";
 import {
   getPlayer,
@@ -147,6 +148,38 @@ export default async function PlayPage({ params }: PageProps<"/play/[pin]">) {
   const publicQuestions = bank && (await bankPublicQuestions(bank));
   if (!publicQuestions)
     return <StageMessage pose="broken" title={gameCopy.create.errorTitle} />;
+
+  // A zombie room (B-14): the whole bank as waves, in this player's order.
+  if (room.mode === "zombie" && room.lives !== null) {
+    const ordered = remainingQuestions(publicQuestions, player.seed, 0);
+    const view = playerView(state.players, player.id);
+    return (
+      <PlayScreen
+        phase="zombie"
+        host={{
+          kind: "room",
+          roomId: room.id,
+          room: {
+            alive: view.alive,
+            total: view.total,
+            rank: view.me?.rank ?? null,
+            score: player.score,
+          },
+        }}
+        title={room.title}
+        questions={ordered.map((q) => toRunnerQuestion(q, 1))}
+        initial={
+          player.zombie ??
+          roomStartState(
+            { lives: room.lives as ZombieLives, seconds: room.seconds },
+            ordered,
+          )
+        }
+        serverNow={now.getTime()}
+      />
+    );
+  }
+
   // A same-question race (B-12) may have moved on while this tab was closed.
   const startIndex = room.sameQuestion
     ? Math.max(

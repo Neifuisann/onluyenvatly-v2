@@ -89,11 +89,17 @@ export default async function HostPage({ params }: PageProps<"/host/[id]">) {
       qr={
         <QrCode text={joinUrl} label={t.qrLabel(joinUrl)} className="w-full" />
       }
-      settings={t.settings(
-        room.bankTypes.length,
-        paceCopy[room.pace].name,
-        room,
-      )}
+      settings={
+        room.mode === "zombie"
+          ? t.zombieSettings(
+              room.bankTypes.length,
+              room.waves ?? 0,
+              room.lives ?? 0,
+              room.seconds,
+              room.lockJoin,
+            )
+          : t.settings(room.bankTypes.length, paceCopy[room.pace].name, room)
+      }
       initial={state}
       report={report}
     />

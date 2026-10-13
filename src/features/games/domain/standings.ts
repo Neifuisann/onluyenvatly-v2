@@ -32,13 +32,22 @@ export type Standing = Omit<StandingInput, "finishedAt" | "eliminatedAt"> & {
  * tie, more correct answers, then whoever crossed the line first, are listed
  * first, but the rank stays shared. Players knocked out (B-12) rank below
  * everyone still in, whatever their points.
+ *
+ * `survival` (a zombie room, B-14): who lasted longest wins. Most waves
+ * survived (`answered`) first; on the same wave, still standing beats
+ * knocked out; then points.
  */
-export function rankPlayers(rows: readonly StandingInput[]): Standing[] {
+export function rankPlayers(
+  rows: readonly StandingInput[],
+  survival = false,
+): Standing[] {
   const finishMs = (r: StandingInput) =>
     r.finishedAt?.getTime() ?? Number.POSITIVE_INFINITY;
   const out = (r: StandingInput) => (r.eliminatedAt ? 1 : 0);
+  const lasted = (r: StandingInput) => (survival ? r.answered : 0);
   const sorted = [...rows].sort(
     (a, b) =>
+      lasted(b) - lasted(a) ||
       out(a) - out(b) ||
       b.score - a.score ||
       b.correct - a.correct ||
@@ -48,7 +57,7 @@ export function rankPlayers(rows: readonly StandingInput[]): Standing[] {
   let rank = 0;
   let previous: string | undefined;
   return sorted.map(({ finishedAt, eliminatedAt, ...row }, i) => {
-    const key = `${eliminatedAt ? 1 : 0}:${row.score}`;
+    const key = `${survival ? row.answered : 0}:${eliminatedAt ? 1 : 0}:${row.score}`;
     if (key !== previous) rank = i + 1;
     previous = key;
     return {
@@ -69,6 +78,8 @@ export type PlayerView = {
   /** The player just ahead of me and how many points behind I am. */
   ahead: { name: string; gap: number } | null;
   total: number;
+  /** Players not knocked out, me included (B-14 shows it during play). */
+  alive: number;
 };
 
 /** What one player's screen shows: the top 5, themselves and the gap ahead. */
@@ -88,6 +99,7 @@ export function playerView(
         ? { name: before.name, gap: before.score - me.score }
         : null,
     total: ranked.length,
+    alive: ranked.filter((r) => !r.eliminated).length,
   };
 }
 

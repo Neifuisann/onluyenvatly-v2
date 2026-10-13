@@ -27,5 +27,5 @@ Option 3.
 - **Requests:** one per shot or timeout. A 20-question game is about 25–30 requests, about what a test's autosaves cost. No polling.
 - **Art:** the client draws placeholder SVG art. Generated images replace it by name via `features/zombie/assets.ts` (prompts in `docs/games/zombie-art-prompts.md`).
 - **Phones:** the game needs landscape. Phones held upright see a rotate prompt (CSS only); "Bắt đầu" asks Android for fullscreen and a landscape lock.
-- **Multiplayer later:** the engine knows nothing of storage or transport. A room variant can run one `ZombieState` per player on `game_players` and reuse ADR-008's polling for the standings.
+- **Multiplayer later:** the engine knows nothing of storage or transport. A room variant can run one `ZombieState` per player on `game_players` and reuse ADR-008's polling for the standings. Built that way in B-14 (`games/domain/zombie.ts`, `POST /api/games/[id]/zombie`): players don't poll while they play, each move's response carries how many are still standing.
 - **Leaving mid-game:** with a clock, the zombies keep walking. Coming back after a wave's time ran out costs that wave's life at once. There is no pause, because a pause would let a student read a question without the clock running.

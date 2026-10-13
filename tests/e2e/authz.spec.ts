@@ -95,6 +95,11 @@ test.describe("a visitor", () => {
       data: { index: 0, answer: "A" },
     });
     expect(answer.status()).toBe(401);
+    const shot = await request.post(`/api/games/${UUID}/zombie`, {
+      headers: { origin: baseURL ?? "" },
+      data: { kind: "begin" },
+    });
+    expect(shot.status()).toBe(401);
     // The link a teacher shares survives the login.
     await page.goto("/play/482913");
     await expect(page).toHaveURL(/\/login\?next=%2Fplay%2F482913$/);
@@ -172,6 +177,11 @@ test.describe("a student", () => {
       data: { index: 0, answer: "A" },
     });
     expect(answer.status()).toBe(403);
+    const shot = await page.request.post(`/api/games/${UUID}/zombie`, {
+      headers: { origin: "https://evil.example" },
+      data: { kind: "begin" },
+    });
+    expect(shot.status()).toBe(403);
   });
 
   test("opens the student pages", async ({ page }) => {

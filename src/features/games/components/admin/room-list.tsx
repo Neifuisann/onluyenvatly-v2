@@ -1,4 +1,4 @@
-import { ChevronRight, Users } from "lucide-react";
+import { ChevronRight, Skull, Users } from "lucide-react";
 import Link from "next/link";
 import { formatDateTime } from "@/lib/dates";
 import { cn } from "@/lib/utils";
@@ -48,6 +48,12 @@ export function RoomList({ rooms }: { rooms: HostRoomItem[] }) {
                   />
                   {t.status[room.status]}
                 </span>
+                {room.mode === "zombie" && (
+                  <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-muted px-2.5 py-0.5 font-semibold text-muted-foreground text-xs">
+                    <Skull aria-hidden className="size-3.5" />
+                    {t.zombie}
+                  </span>
+                )}
               </span>
               <span className="num flex flex-wrap items-center gap-x-3 gap-y-1 text-muted-foreground text-sm">
                 <span className="sm:hidden">{t.pin(room.pin)}</span>

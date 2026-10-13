@@ -42,6 +42,21 @@
   z-index: 5;
 }
 
+/* In a room (B-14): how many are still standing. */
+.survivors {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  min-height: 2rem;
+  padding: 0 0.625rem;
+  border-radius: 999px;
+  background: var(--zb-cream);
+  color: var(--zb-ink);
+  font-weight: 800;
+  font-size: 0.875rem;
+  white-space: nowrap;
+}
+
 .hudButton {
   display: inline-flex;
   align-items: center;
