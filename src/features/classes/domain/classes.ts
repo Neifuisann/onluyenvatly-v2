@@ -54,6 +54,7 @@ export const AddMembersSchema = z.strictObject({
   phones: z.string().max(20_000),
 });
 
+/** One student of a class: remove, approve or reject them. */
 export const RemoveMemberSchema = z.strictObject({
   id: ClassIdSchema,
   userId: z.uuid(),

@@ -210,7 +210,7 @@ test("journey 1: register → no class → the teacher adds the student and a le
   ).toHaveCount(0);
 });
 
-test("invite link: the teacher shares a lesson through a class; a new student registers from the link and lands on it", async ({
+test("invite link: the teacher shares a lesson through a class; a new student registers from the link, asks, and lands on it once approved", async ({
   page,
   browser,
 }, info) => {
@@ -242,7 +242,7 @@ test("invite link: the teacher shares a lesson through a class; a new student re
   const shared = new URL((await link.textContent()) ?? "");
   const invitePath = `${shared.pathname}${shared.search}`;
 
-  // A new student opens it signed out, registers, and joins the class.
+  // A new student opens it signed out, registers, and asks to join.
   const student = await visitor(browser);
   const s = student.page;
   await s.goto(invitePath);
@@ -265,21 +265,33 @@ test("invite link: the teacher shares a lesson through a class; a new student re
   await s.waitForURL((url) => `${url.pathname}${url.search}` === invitePath);
   await expect(s.getByText(className)).toBeVisible();
   await expectGood(s);
-  await s.getByRole("button", { name: "Vào lớp", exact: true }).click();
+  await s.getByRole("button", { name: "Xin vào lớp", exact: true }).click();
+  // Not in yet: the request waits for the teacher.
+  await expect(
+    s.getByRole("heading", { name: "Đã gửi yêu cầu vào lớp" }),
+  ).toBeVisible();
+
+  // The teacher sees the request and approves it.
+  await page.goto(classUrl);
+  const requests = page.getByRole("list", { name: "Học sinh xin vào lớp" });
+  await expect(requests).toContainText(fullName);
+  await requests
+    .getByRole("button", { name: `Duyệt ${fullName} vào lớp` })
+    .click();
+  await expect(
+    page.getByRole("list", { name: "Học sinh trong lớp" }),
+  ).toContainText(fullName);
+  await expect(requests).toHaveCount(0);
+
+  // Opening the link again now goes straight to the lesson.
+  await s.goto(invitePath);
   await expect(s).toHaveURL(/\/lessons\/\d+$/);
   await expect(
     s.getByRole("button", { name: "Bắt đầu làm bài" }),
   ).toBeVisible();
-  // Opening the link again goes straight on.
-  await s.goto(invitePath);
-  await expect(s).toHaveURL(/\/lessons\/\d+$/);
   await student.context.close();
 
-  // The teacher sees the student in the class, then deletes it.
-  await page.goto(classUrl);
-  await expect(
-    page.getByRole("list", { name: "Học sinh trong lớp" }),
-  ).toContainText(fullName);
+  // The teacher deletes the class.
   await page.getByRole("button", { name: "Xóa lớp" }).click();
   await page
     .getByRole("dialog", { name: "Xóa lớp" })

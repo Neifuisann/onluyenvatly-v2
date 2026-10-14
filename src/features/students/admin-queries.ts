@@ -46,7 +46,11 @@ const isStudent = eq(users.role, "student");
 
 export type Viewer = { id: string; role: Role };
 
-/** A student the viewer may see: any for an admin, their classes' for a teacher. */
+/**
+ * A student the viewer may see: any for an admin, their classes' for a
+ * teacher, including one who asked to join (so the teacher can see who
+ * they approve).
+ */
 export function visibleTo(viewer: Viewer): SQL | undefined {
   if (viewer.role === "admin") return undefined;
   return sql`exists (select 1 from ${classMembers} inner join ${classes} on ${classes.id} = ${classMembers.classId} where ${classMembers.userId} = ${users.id} and ${classes.ownerId} = ${viewer.id})`;

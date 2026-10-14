@@ -25,9 +25,11 @@ import {
 } from "./queries";
 import {
   addMembers,
+  approveMember,
   createClass,
   deleteClass,
   joinClass,
+  rejectMember,
   removeMember,
   resetJoinCode,
   setClassArchived,
@@ -347,7 +349,7 @@ describe("invite links", () => {
     });
   });
 
-  it("joins a student once and says whether the class has the linked lesson", async () => {
+  it("asks to join once; the student is in only after the teacher approves", async () => {
     const { id } = await createClass(teacher, form, NOW);
     const lessonId = await addLesson(teacher.id);
     const elsewhere = await addLesson(teacher.id);
@@ -358,25 +360,108 @@ describe("invite links", () => {
 
     expect(await getJoinTarget(code, s.id, lessonId)).toMatchObject({
       id,
-      member: false,
+      membership: null,
       hasLesson: true,
     });
     expect(await joinClass(student, code, lessonId, NOW)).toEqual({
       ok: true,
-      data: { classId: id, joined: true, hasLesson: true },
+      data: {
+        classId: id,
+        requested: true,
+        status: "pending",
+        hasLesson: true,
+      },
     });
-    expect(await canOpenLesson(s.id, "student", lessonId)).toBe(true);
+    // Waiting: no lessons, no class, not counted, but on the teacher's list.
+    expect(await canOpenLesson(s.id, "student", lessonId)).toBe(false);
+    expect(await getStudentClasses(s.id)).toEqual([]);
+    expect(await getStudentClass(s.id, id)).toBeNull();
+    expect(await getTeacherClasses(teacher)).toMatchObject([
+      { id, members: 0, requests: 1 },
+    ]);
+    expect(await countTeacherStudents(teacher)).toBe(0);
+    expect(await getClassMembers(id)).toMatchObject([
+      { userId: s.id, requested: true },
+    ]);
+    expect(await getJoinTarget(code, s.id)).toMatchObject({
+      membership: "pending",
+    });
+    // Asking again changes nothing.
     expect(await joinClass(student, code, elsewhere)).toEqual({
       ok: true,
-      data: { classId: id, joined: false, hasLesson: false },
+      data: {
+        classId: id,
+        requested: false,
+        status: "pending",
+        hasLesson: false,
+      },
     });
-    expect(await getJoinTarget(code, s.id)).toMatchObject({
-      member: true,
-      hasLesson: false,
+
+    expect(await approveMember(other, id, s.id)).toMatchObject({
+      code: "NOT_FOUND",
     });
-    const members = await getClassMembers(id);
-    expect(members.map((m) => m.userId)).toEqual([s.id]);
-    expect((await audit()).map((a) => a.action)).toContain("class.join");
+    expect(await approveMember(teacher, id, s.id)).toEqual({
+      ok: true,
+      data: { id },
+    });
+    expect(await approveMember(teacher, id, s.id)).toMatchObject({
+      code: "NOT_FOUND",
+    });
+    expect(await canOpenLesson(s.id, "student", lessonId)).toBe(true);
+    expect(await getClassMembers(id)).toMatchObject([
+      { userId: s.id, requested: false },
+    ]);
+    expect(await joinClass(student, code, lessonId)).toMatchObject({
+      data: { requested: false, status: "active", hasLesson: true },
+    });
+    // An approved student can't be "rejected"; removing is a separate step.
+    expect(await rejectMember(teacher, id, s.id)).toMatchObject({
+      code: "NOT_FOUND",
+    });
+    expect((await audit()).map((a) => a.action)).toEqual([
+      "class.create",
+      "class.lessons",
+      "class.join",
+      "class.approve_member",
+    ]);
+  });
+
+  it("rejecting drops the request; adding by phone approves one", async () => {
+    const { id } = await createClass(teacher, form, NOW);
+    const code = await codeOf(id);
+    const a = await addUser("student");
+    const b = await addUser("student");
+    await joinClass({ id: a.id, role: "student" }, code, undefined, NOW);
+    await joinClass({ id: b.id, role: "student" }, code, undefined, NOW);
+
+    expect(await rejectMember(other, id, a.id)).toMatchObject({
+      code: "NOT_FOUND",
+    });
+    expect(await rejectMember(teacher, id, a.id)).toEqual({
+      ok: true,
+      data: { id },
+    });
+    expect(await getJoinTarget(code, a.id)).toMatchObject({
+      membership: null,
+    });
+
+    expect(await addMembers(teacher, id, b.phone, NOW)).toMatchObject({
+      ok: true,
+      data: { added: 1, already: 0 },
+    });
+    expect(await getClassMembers(id)).toMatchObject([
+      { userId: b.id, requested: false },
+    ]);
+    expect(await getStudentClasses(b.id)).toMatchObject([{ id }]);
+
+    await setClassArchived(teacher, id, true, NOW);
+    await tdb
+      .update(classMembers)
+      .set({ status: "pending" })
+      .where(eq(classMembers.userId, b.id));
+    expect(await approveMember(teacher, id, b.id)).toMatchObject({
+      code: "CONFLICT",
+    });
   });
 
   it("refuses teachers, unknown codes and archived classes", async () => {

@@ -23,7 +23,10 @@ const managedBy = (owner: Owner) =>
  * (`lessons/queries.ts` `getCatalog`).
  */
 
-const memberCount = sql<number>`(select count(*)::int from ${classMembers} where ${classMembers.classId} = ${classes.id})`;
+/** Only `active` members are in a class; `pending` ones wait for the teacher. */
+const isActive = eq(classMembers.status, "active");
+const memberCount = sql<number>`(select count(*)::int from ${classMembers} where ${classMembers.classId} = ${classes.id} and ${classMembers.status} = 'active')`;
+const requestCount = sql<number>`(select count(*)::int from ${classMembers} where ${classMembers.classId} = ${classes.id} and ${classMembers.status} = 'pending')`;
 const lessonCount = sql<number>`(select count(*)::int from ${classLessons} where ${classLessons.classId} = ${classes.id})`;
 /** What students of the class see: published lessons only. */
 const publishedLessonCount = sql<number>`(select count(*)::int from ${classLessons} join ${lessons} on ${lessons.id} = ${classLessons.lessonId} where ${classLessons.classId} = ${classes.id} and ${lessons.status} = 'published')`;
@@ -40,6 +43,8 @@ export type TeacherClassRow = {
   archivedAt: Date | null;
   createdAt: Date;
   members: number;
+  /** Students who asked through the invite link and wait for approval. */
+  requests: number;
   lessons: number;
 };
 
@@ -62,6 +67,7 @@ export async function getTeacherClasses(
       archivedAt: classes.archivedAt,
       createdAt: classes.createdAt,
       members: memberCount,
+      requests: requestCount,
       lessons: lessonCount,
     })
     .from(classes)
@@ -77,7 +83,7 @@ export async function countTeacherStudents(owner: Owner): Promise<number> {
     .select({ n: sql<number>`count(distinct ${classMembers.userId})::int` })
     .from(classMembers)
     .innerJoin(classes, eq(classes.id, classMembers.classId))
-    .where(managedBy(owner));
+    .where(and(managedBy(owner), isActive));
   return row?.n ?? 0;
 }
 
@@ -111,10 +117,15 @@ export type ClassMemberRow = {
   grade: number | null;
   className: string | null;
   status: "pending" | "active" | "rejected" | "disabled";
+  /** True for a request from the invite link the teacher hasn't answered. */
+  requested: boolean;
   addedAt: Date;
 };
 
-/** A class's students in accent-free name order. Call after the owner check. */
+/**
+ * A class's students and requests in accent-free name order. Call after the
+ * owner check.
+ */
 export async function getClassMembers(
   classId: number,
 ): Promise<ClassMemberRow[]> {
@@ -126,6 +137,7 @@ export async function getClassMembers(
       grade: users.grade,
       className: users.className,
       status: users.status,
+      requested: sql<boolean>`${classMembers.status} = 'pending'`,
       addedAt: classMembers.createdAt,
     })
     .from(classMembers)
@@ -174,7 +186,13 @@ export const getStudentClasses = cache(
       .from(classMembers)
       .innerJoin(classes, eq(classes.id, classMembers.classId))
       .innerJoin(users, eq(users.id, classes.ownerId))
-      .where(and(eq(classMembers.userId, userId), isNull(classes.archivedAt)))
+      .where(
+        and(
+          eq(classMembers.userId, userId),
+          isActive,
+          isNull(classes.archivedAt),
+        ),
+      )
       .orderBy(
         sql`lower(immutable_unaccent(${classes.name}))`,
         asc(classes.id),
@@ -193,6 +211,7 @@ export const getStudentClass = cache(
         and(
           eq(classMembers.userId, userId),
           eq(classMembers.classId, classId),
+          isActive,
           isNull(classes.archivedAt),
         ),
       )
@@ -232,6 +251,7 @@ export const canOpenLesson = cache(
         and(
           eq(classMembers.classId, classLessons.classId),
           eq(classMembers.userId, userId),
+          isActive,
         ),
       )
       .innerJoin(classes, eq(classes.id, classLessons.classId))
@@ -275,15 +295,15 @@ export type JoinTarget = {
   subject: string;
   grade: number | null;
   teacherName: string;
-  /** The signed-in student is already in the class. */
-  member: boolean;
+  /** The signed-in student's membership: in, asked and waiting, or none. */
+  membership: "active" | "pending" | null;
   /** The class has the lesson the link points at (false without one). */
   hasLesson: boolean;
 };
 
 /**
  * What `/join/<code>` shows: the open class behind the code
- * (`classes_join_code_uq`), with the visitor's membership and whether the
+ * (`classes_join_code_uq`), with the visitor's membership (or request) and whether the
  * linked lesson is in it, in one read. Null for an unknown or archived class.
  */
 export async function getJoinTarget(
@@ -298,7 +318,9 @@ export async function getJoinTarget(
       subject: classes.subject,
       grade: classes.grade,
       teacherName: users.fullName,
-      member: sql<boolean>`exists (select 1 from ${classMembers} where ${classMembers.classId} = ${classes.id} and ${classMembers.userId} = ${userId})`,
+      membership: sql<
+        "active" | "pending" | null
+      >`(select ${classMembers.status} from ${classMembers} where ${classMembers.classId} = ${classes.id} and ${classMembers.userId} = ${userId})`,
       hasLesson: lessonId
         ? sql<boolean>`exists (select 1 from ${classLessons} where ${classLessons.classId} = ${classes.id} and ${classLessons.lessonId} = ${lessonId})`
         : sql<boolean>`false`,
