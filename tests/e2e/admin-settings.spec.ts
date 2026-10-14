@@ -58,8 +58,10 @@ test("the announcement shows in the student shell, then goes away", async ({
   try {
     await saveAnnouncement(page, `  ${text}\n`);
     await expect(general(page).locator("output")).toHaveText("Đã lưu cài đặt.");
-    // Admins may open student pages, which carry the student shell.
-    await page.goto("/lessons");
+    // Admins may open student pages, which carry the student shell. Not
+    // `/lessons`: it redirects to `/classes`, and mid-redirect the streamed
+    // shell is briefly in the DOM twice (strict-mode flake).
+    await page.goto("/classes");
     await expect(page.getByText(text, { exact: true })).toBeVisible();
 
     // Over 300 characters is refused on the field, nothing saved.
@@ -79,7 +81,7 @@ test("the announcement shows in the student shell, then goes away", async ({
   } finally {
     await saveAnnouncement(page, "");
   }
-  await page.goto("/lessons");
+  await page.goto("/classes");
   await expect(page.getByText(text)).toHaveCount(0);
 });
 
